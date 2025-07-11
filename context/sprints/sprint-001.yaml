@@ -46,9 +46,9 @@ phases:
   - Schema caching for performance
   - Configurable thresholds
   - Improved exception handling
-- phase: 3a
-  name: Vector Database
-  duration_days: 2
+- phase: 3
+  name: Vector Database and Graph Layer
+  duration_days: 4
   status: completed
   tasks:
   - Deploy Qdrant v1.14.x configuration
@@ -56,11 +56,6 @@ phases:
   - hash_diff_embedder.py with change detection
   - sum_scores_api.py with advanced ranking
   - Vector database tests
-- phase: 3b
-  name: Graph Layer
-  duration_days: 2
-  status: completed
-  tasks:
   - Deploy Neo4j configuration
   - neo4j_init.py implementation
   - graph_builder.py for YAML to graph conversion

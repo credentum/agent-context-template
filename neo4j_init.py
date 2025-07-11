@@ -68,7 +68,11 @@ class Neo4jInitializer:
             click.echo("✗ Authentication failed", err=True)
             return False
         except Exception as e:
-            click.echo(f"✗ Failed to connect: {e}", err=True)
+            # Sanitize error message to remove potential passwords
+            error_msg = str(e)
+            if password and password in error_msg:
+                error_msg = error_msg.replace(password, "***")
+            click.echo(f"✗ Failed to connect: {error_msg}", err=True)
             return False
     
     def create_constraints(self) -> bool:
@@ -198,13 +202,18 @@ class Neo4jInitializer:
                 ]
                 
                 for type_id, type_name, rel_type in doc_types:
+                    # Create document type node with parameterized query
+                    session.run("""
+                        MERGE (dt:DocumentType {id: $type_id})
+                        SET dt.name = $type_name
+                    """, type_id=type_id, type_name=type_name)
+                    
+                    # Create relationship with dynamic type
                     session.run(f"""
-                        MERGE (dt:DocumentType {{id: '{type_id}'}})
-                        SET dt.name = '{type_name}'
-                        WITH dt
                         MATCH (s:System {{id: 'agent-context-system'}})
+                        MATCH (dt:DocumentType {{id: $type_id}})
                         MERGE (s)-[:{rel_type}]->(dt)
-                    """)
+                    """, type_id=type_id)
                 
                 click.echo("✓ Graph schema initialized")
                 return True

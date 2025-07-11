@@ -15,6 +15,17 @@ from graph_builder import GraphBuilder
 from graphrag_integration import GraphRAGIntegration, GraphRAGResult
 
 
+def create_mock_neo4j_driver():
+    """Helper to create properly mocked Neo4j driver with session context manager"""
+    mock_driver = Mock()
+    mock_session = Mock()
+    mock_session_cm = Mock()
+    mock_session_cm.__enter__ = Mock(return_value=mock_session)
+    mock_session_cm.__exit__ = Mock(return_value=None)
+    mock_driver.session.return_value = mock_session_cm
+    return mock_driver, mock_session
+
+
 class TestNeo4jInitializer:
     """Test Neo4j initialization"""
     
@@ -49,10 +60,8 @@ class TestNeo4jInitializer:
     @patch('neo4j_init.GraphDatabase.driver')
     def test_connect_success(self, mock_driver, config_file):
         """Test successful connection"""
-        # Setup mock
-        mock_driver_instance = Mock()
-        mock_session = Mock()
-        mock_driver_instance.session.return_value.__enter__.return_value = mock_session
+        # Setup mock with proper context manager
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
         mock_driver.return_value = mock_driver_instance
         
         initializer = Neo4jInitializer(config_file)
@@ -64,10 +73,8 @@ class TestNeo4jInitializer:
     @patch('neo4j_init.GraphDatabase.driver')
     def test_create_constraints(self, mock_driver, config_file):
         """Test constraint creation"""
-        # Setup mock
-        mock_driver_instance = Mock()
-        mock_session = Mock()
-        mock_driver_instance.session.return_value.__enter__.return_value = mock_session
+        # Setup mock with proper context manager
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
         
         initializer = Neo4jInitializer(config_file)
         initializer.driver = mock_driver_instance
@@ -91,9 +98,7 @@ class TestNeo4jInitializer:
     def test_setup_graph_schema(self, mock_driver, config_file):
         """Test graph schema setup"""
         # Setup mock
-        mock_driver_instance = Mock()
-        mock_session = Mock()
-        mock_driver_instance.session.return_value.__enter__.return_value = mock_session
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
         
         initializer = Neo4jInitializer(config_file)
         initializer.driver = mock_driver_instance
@@ -143,9 +148,7 @@ class TestGraphBuilder:
     def test_create_document_node(self, mock_driver, builder, test_dir):
         """Test document node creation"""
         # Setup mock
-        mock_driver_instance = Mock()
-        mock_session = Mock()
-        mock_driver_instance.session.return_value.__enter__.return_value = mock_session
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
         builder.driver = mock_driver_instance
         
         # Test data
@@ -189,9 +192,7 @@ class TestGraphBuilder:
     def test_process_document(self, mock_driver, builder, test_dir):
         """Test document processing"""
         # Setup mock
-        mock_driver_instance = Mock()
-        mock_session = Mock()
-        mock_driver_instance.session.return_value.__enter__.return_value = mock_session
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
         builder.driver = mock_driver_instance
         
         # Create test document
@@ -272,9 +273,7 @@ class TestGraphRAGIntegration:
         mock_qdrant_instance = Mock()
         mock_qdrant.return_value = mock_qdrant_instance
         
-        mock_neo4j_instance = Mock()
-        mock_session = Mock()
-        mock_neo4j_instance.session.return_value.__enter__.return_value = mock_session
+        mock_neo4j_instance, mock_session = create_mock_neo4j_driver()
         mock_neo4j.return_value = mock_neo4j_instance
         
         graphrag.qdrant_client = mock_qdrant_instance

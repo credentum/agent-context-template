@@ -30,6 +30,14 @@ class GraphBuilder:
         self.verbose = verbose
         self.processed_cache_path = Path("context/.graph_cache/processed.json")
         self.processed_docs: Dict[str, str] = self._load_processed_cache()
+    
+    def __enter__(self):
+        """Context manager entry"""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - ensure cleanup"""
+        self.close()
         
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load configuration from .ctxrc.yaml"""

@@ -142,18 +142,21 @@ class TestHashDiffEmbedder:
         assert needs is True
         assert existing_id is None
     
-    @patch('hash_diff_embedder.openai.Embedding.create')
+    @patch('hash_diff_embedder.openai.OpenAI')
     @patch('hash_diff_embedder.QdrantClient')
-    def test_embed_document(self, mock_qdrant_class, mock_openai, embedder, test_dir):
+    def test_embed_document(self, mock_qdrant_class, mock_openai_class, embedder, test_dir):
         """Test document embedding"""
         # Setup mocks
         mock_client = Mock()
         mock_qdrant_class.return_value = mock_client
         embedder.client = mock_client
         
-        mock_openai.return_value = {
-            'data': [{'embedding': [0.1] * 1536}]
-        }
+        # Mock new OpenAI client
+        mock_openai = Mock()
+        mock_openai_class.return_value = mock_openai
+        mock_response = Mock()
+        mock_response.data = [Mock(embedding=[0.1] * 1536)]
+        mock_openai.embeddings.create.return_value = mock_response
         
         # Create test document
         test_file = test_dir / "test.yaml"

@@ -42,6 +42,14 @@ class GraphRAGIntegration:
         self.verbose = verbose
         self.database = self.config.get('neo4j', {}).get('database', 'context_graph')
         self.collection_name = self.config.get('qdrant', {}).get('collection_name', 'project_context')
+    
+    def __enter__(self):
+        """Context manager entry"""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - ensure cleanup"""
+        self.close()
         
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load configuration from .ctxrc.yaml"""
@@ -233,8 +241,9 @@ class GraphRAGIntegration:
         # Add graph context
         context_parts.append("\nGraph Context:")
         for node_id, node in list(neighborhood['nodes'].items())[:5]:
-            if node.get('title'):
-                context_parts.append(f"- {node['title']} ({node.get('document_type', 'unknown')})")
+            title = node.get('title', node_id)
+            doc_type = node.get('document_type', 'unknown')
+            context_parts.append(f"- {title} ({doc_type}) [ID: {node_id}]")
         
         # Add relationships
         unique_rels = set()

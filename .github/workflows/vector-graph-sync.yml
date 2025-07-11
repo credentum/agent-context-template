@@ -89,19 +89,32 @@ jobs:
           done
       
       - name: Initialize Qdrant
+        id: init-qdrant
         run: |
-          python vector_db_init.py --skip-test
-        continue-on-error: true
+          python vector_db_init.py --skip-test || {
+            echo "::warning::Failed to initialize Qdrant, will retry"
+            sleep 5
+            python vector_db_init.py --skip-test
+          }
       
       - name: Initialize Neo4j
+        id: init-neo4j
         run: |
-          python neo4j_init.py --username neo4j --password testpassword
-        continue-on-error: true
+          python neo4j_init.py --username neo4j --password testpassword || {
+            echo "::warning::Failed to initialize Neo4j, will retry"
+            sleep 5
+            python neo4j_init.py --username neo4j --password testpassword
+          }
       
       - name: Sync vector embeddings
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "Warning: OPENAI_API_KEY not set, skipping vector embeddings"
+            exit 0
+          fi
+          
           if [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then
             echo "Force rebuilding all embeddings..."
             python hash_diff_embedder.py context/ --force --verbose
@@ -109,7 +122,6 @@ jobs:
             echo "Syncing changed documents..."
             python hash_diff_embedder.py context/ --cleanup --verbose
           fi
-        if: env.OPENAI_API_KEY != ''
       
       - name: Build context graph
         run: |

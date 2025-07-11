@@ -14,6 +14,7 @@ import json
 import click
 import yaml
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Any
@@ -37,12 +38,13 @@ class DocumentHash:
 class HashDiffEmbedder:
     """Smart embedder with hash-based change detection"""
     
-    def __init__(self, config_path: str = ".ctxrc.yaml"):
+    def __init__(self, config_path: str = ".ctxrc.yaml", verbose: bool = False):
         self.config = self._load_config(config_path)
         self.hash_cache_path = Path("context/.embeddings_cache/hash_cache.json")
         self.hash_cache: Dict[str, DocumentHash] = self._load_hash_cache()
         self.client = None
         self.embedding_model = self.config.get('qdrant', {}).get('embedding_model', 'text-embedding-ada-002')
+        self.verbose = verbose
         
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load configuration from .ctxrc.yaml"""
@@ -104,7 +106,15 @@ class HashDiffEmbedder:
                 click.echo("Error: OPENAI_API_KEY environment variable not set", err=True)
                 return False
                 
-            openai.api_key = api_key
+            # Test OpenAI connection with new client
+            try:
+                client = openai.OpenAI(api_key=api_key)
+                # Quick test
+                client.models.list()
+            except Exception as e:
+                click.echo(f"Failed to connect to OpenAI: {e}", err=True)
+                return False
+                
             return True
             
         except Exception as e:
@@ -167,16 +177,32 @@ class HashDiffEmbedder:
             # Combine content
             embedding_text = "\n\n".join(content_parts)
             
-            # Generate embedding
+            # Generate embedding with retry logic
             if self.verbose:
                 click.echo(f"  Embedding {file_path}...")
             
-            response = openai.Embedding.create(
-                model=self.embedding_model,
-                input=embedding_text
-            )
+            max_retries = 3
+            retry_delay = 1.0
             
-            embedding = response['data'][0]['embedding']
+            for attempt in range(max_retries):
+                try:
+                    # Use the new OpenAI client API
+                    client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+                    response = client.embeddings.create(
+                        model=self.embedding_model,
+                        input=embedding_text
+                    )
+                    break
+                except openai.RateLimitError as e:
+                    if attempt < max_retries - 1:
+                        if self.verbose:
+                            click.echo(f"    Rate limit hit, retrying in {retry_delay}s...")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                    else:
+                        raise e
+            
+            embedding = response.data[0].embedding
             embedding_hash = self._compute_embedding_hash(embedding)
             
             # Generate vector ID
@@ -293,13 +319,6 @@ class HashDiffEmbedder:
         
         return removed_count
     
-    def __init__(self, config_path: str = ".ctxrc.yaml", verbose: bool = False):
-        self.config = self._load_config(config_path)
-        self.hash_cache_path = Path("context/.embeddings_cache/hash_cache.json")
-        self.hash_cache: Dict[str, DocumentHash] = self._load_hash_cache()
-        self.client = None
-        self.embedding_model = self.config.get('qdrant', {}).get('embedding_model', 'text-embedding-ada-002')
-        self.verbose = verbose
 
 
 @click.command()
