@@ -177,8 +177,6 @@ class RedisConnector(DatabaseComponent):
             prefixed_key = self.get_prefixed_key(key, "cache")
             if not self.redis_client:
                 return None
-            if not self.redis_client:
-                return None
             data = self.redis_client.get(prefixed_key)
 
             if data:
@@ -195,7 +193,9 @@ class RedisConnector(DatabaseComponent):
                 if self.redis_client:
                     ttl = self.redis_client.ttl(prefixed_key)
                     if ttl > 0:
-                        self.redis_client.setex(prefixed_key, ttl, json.dumps(entry_dict, default=str))
+                        self.redis_client.setex(
+                            prefixed_key, ttl, json.dumps(entry_dict, default=str)
+                        )
 
                 return entry_dict.get("value")
 
@@ -354,7 +354,8 @@ class RedisConnector(DatabaseComponent):
             # Store metric
             if self.redis_client:
                 self.redis_client.zadd(
-                    metric_key, {json.dumps(asdict(metric), default=str): metric.timestamp.timestamp()}
+                    metric_key,
+                    {json.dumps(asdict(metric), default=str): metric.timestamp.timestamp()},
                 )
 
                 # Set expiration (7 days)
@@ -445,7 +446,8 @@ class DuckDBAnalytics(DatabaseComponent):
         try:
             with open("performance.yaml", "r") as f:
                 perf = yaml.safe_load(f)
-                return perf.get("kv_store", {}).get("duckdb", {})
+                kv_config = perf.get("kv_store", {})
+                return kv_config.get("duckdb", {}) if kv_config else {}
         except FileNotFoundError:
             return {}
 
@@ -475,14 +477,11 @@ class DuckDBAnalytics(DatabaseComponent):
             self.log_success(f"Connected to DuckDB at {db_path}")
             return True
 
-        except Exception as e:
-            self.log_error(f"DuckDB database error: {e}", e)
-            return False
         except OSError as e:
             self.log_error(f"Failed to create DuckDB directory: {e}", e)
             return False
         except Exception as e:
-            self.log_error("Unexpected error connecting to DuckDB", e)
+            self.log_error(f"DuckDB connection error: {e}", e)
             return False
 
     def _initialize_tables(self):
@@ -579,14 +578,15 @@ class DuckDBAnalytics(DatabaseComponent):
                 )
 
             # Batch insert
-            self.conn.executemany(
-                f"""
-                INSERT INTO {metrics_table} 
-                (timestamp, metric_name, value, document_id, agent_id, tags)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """,
-                values,
-            )
+            if self.conn:
+                self.conn.executemany(
+                    f"""
+                    INSERT INTO {metrics_table} 
+                    (timestamp, metric_name, value, document_id, agent_id, tags)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                    values,
+                )
 
             return True
 
@@ -740,13 +740,13 @@ class DuckDBAnalytics(DatabaseComponent):
             # Store summary
             if self.conn:
                 self.conn.execute(
-                f"""
+                    f"""
                 INSERT OR REPLACE INTO {summaries_table}
                 (summary_date, summary_type, metrics)
                 VALUES (?, ?, ?)
             """,
-                [summary_date, summary_type, json.dumps(summary)],
-            )
+                    [summary_date, summary_type, json.dumps(summary)],
+                )
 
             return summary
 
@@ -782,7 +782,7 @@ class DuckDBAnalytics(DatabaseComponent):
             """
 
             if not self.conn:
-                return []
+                return {}
             results = self.conn.execute(query, [metric_name, start_time, end_time]).fetchall()
 
             if len(results) < 2:

@@ -50,7 +50,7 @@ class ContextAnalytics(DuckDBAnalytics):
                 period_end=datetime.utcnow(),
                 metrics={},
                 insights=[],
-                recommendations=[]
+                recommendations=[],
             )
 
         end_date = datetime.utcnow()
@@ -141,7 +141,7 @@ class ContextAnalytics(DuckDBAnalytics):
                 period_end=datetime.utcnow(),
                 metrics={},
                 insights=[],
-                recommendations=[]
+                recommendations=[],
             )
 
     def analyze_agent_performance(self, days: int = 7) -> AnalyticsReport:
@@ -153,7 +153,7 @@ class ContextAnalytics(DuckDBAnalytics):
                 period_end=datetime.utcnow(),
                 metrics={},
                 insights=[],
-                recommendations=[]
+                recommendations=[],
             )
 
         end_date = datetime.utcnow()
@@ -252,7 +252,7 @@ class ContextAnalytics(DuckDBAnalytics):
                 period_end=datetime.utcnow(),
                 metrics={},
                 insights=[],
-                recommendations=[]
+                recommendations=[],
             )
 
     def analyze_system_health(self) -> AnalyticsReport:
@@ -264,7 +264,7 @@ class ContextAnalytics(DuckDBAnalytics):
                 period_end=datetime.utcnow(),
                 metrics={},
                 insights=[],
-                recommendations=[]
+                recommendations=[],
             )
 
         end_date = datetime.utcnow()
@@ -370,7 +370,7 @@ class ContextAnalytics(DuckDBAnalytics):
                 period_end=datetime.utcnow(),
                 metrics={},
                 insights=[],
-                recommendations=[]
+                recommendations=[],
             )
 
     def generate_executive_summary(self, days: int = 30) -> Dict[str, Any]:
