@@ -52,16 +52,21 @@ def sanitize_error_message(error_msg: str, sensitive_values: Optional[List[str]]
     sanitized = re.sub(r'://[^:/\s]+:[^@/\s]+@', '://***:***@', sanitized)
     
     # Remove auth headers and tokens
-    # Handle patterns with capture groups
+    # First handle specific auth header patterns
+    sanitized = re.sub(r'Authorization:\s*Bearer\s+[A-Za-z0-9\-_]+(?:\.[A-Za-z0-9\-_]+)*', 'Authorization: ***', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'Authorization:\s*Basic\s+[A-Za-z0-9+/=]+', 'Authorization: ***', sanitized, flags=re.IGNORECASE)
+    
+    # Then handle general patterns with capture groups
     sanitized = re.sub(
-        r'(authorization|auth|password|api[_-]?key|token|secret|credential)[\s:=]+["\']?([^"\'\s]+)["\']?',
+        r'(password|api[_-]?key|token|secret|credential)[\s:=]+["\']?([^"\'\s]+)["\']?',
         r'\1: ***',
         sanitized,
         flags=re.IGNORECASE
     )
     
     # Handle patterns without capture groups
-    sanitized = re.sub(r'Bearer\s+[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+', 'Bearer ***', sanitized)
+    # Match both JWT format (xxx.yyy.zzz) and simple tokens
+    sanitized = re.sub(r'Bearer\s+[A-Za-z0-9\-_]+(?:\.[A-Za-z0-9\-_]+)*', 'Bearer ***', sanitized)
     sanitized = re.sub(r'Basic\s+[A-Za-z0-9+/=]+', 'Basic ***', sanitized)
     
     # Remove common password patterns in JSON/dict representations
