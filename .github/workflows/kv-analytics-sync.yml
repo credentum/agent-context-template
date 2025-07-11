@@ -87,7 +87,7 @@ jobs:
           python scripts/record_deployment_event.py
           
           # Process document metrics
-          yaml_files=$(find context -name "*.yaml" -type f)
+          yaml_files=$(find context -name "*.yaml" -type f | grep -v "/schemas/")
           if [ -n "$yaml_files" ]; then
             python scripts/process_document_metrics.py $yaml_files
           else
