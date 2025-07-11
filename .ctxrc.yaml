@@ -15,12 +15,18 @@ qdrant:
   port: 6333
   collection_name: "project_context"
   embedding_model: "text-embedding-ada-002"
+  ssl: false  # Enable in production
+  verify_ssl: true
+  timeout: 30
   
 neo4j:
   version: "5.x"
   host: "localhost"
   port: 7687
   database: "context_graph"
+  ssl: false  # Enable in production
+  verify_ssl: true
+  timeout: 30
   
 storage:
   retention_days: 90
