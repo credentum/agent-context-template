@@ -54,6 +54,12 @@ jobs:
           mkdir -p context/.graph_cache
           mkdir -p context/.vector_cache
           mkdir -p context/trace
+          mkdir -p context/archive
+          mkdir -p context/logs/cleanup
+          mkdir -p context/logs/eval
+          mkdir -p context/logs/kv
+          mkdir -p context/logs/prompts
+          mkdir -p context/logs/signatures
 
       - name: Run unit tests
         run: |
