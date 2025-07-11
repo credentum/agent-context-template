@@ -1,0 +1,79 @@
+schema_version: "1.0.0"
+document_type: "decision"
+id: "001-technology-stack"
+title: "Technology Stack Selection"
+status: "active"
+decision_date: "2025-07-11"
+last_modified: "2025-07-11"
+last_referenced: "2025-07-11"
+expires: null
+authors:
+  - "system"
+tags:
+  - "decision"
+  - "technology"
+  - "infrastructure"
+
+decision: |
+  # Technology Stack Decisions
+  
+  ## Vector Database: Qdrant v1.14.x
+  **Rationale**: 
+  - Native support for hybrid search (vector + metadata filtering)
+  - Excellent performance at scale
+  - REST and gRPC APIs
+  - Built-in persistence and snapshots
+  
+  ## Graph Database: Neo4j 5.x
+  **Rationale**:
+  - Industry standard for graph operations
+  - Mature GraphRAG capabilities
+  - Strong Python client support
+  - ACID compliance
+  
+  ## Key-Value Store: Redis
+  **Rationale**:
+  - Low latency for ephemeral state
+  - Pub/sub capabilities for agent coordination
+  - Widespread adoption and tooling
+  - Optional persistence with AOF
+  
+  ## Embedding Model: OpenAI text-embedding-ada-002
+  **Rationale**:
+  - Excellent quality/cost ratio
+  - Fast inference
+  - 1536 dimensions suitable for our use case
+  - Stable API
+  
+  ## Schema Validation: Yamale
+  **Rationale**:
+  - Python-native YAML validation
+  - Clear error messages
+  - Extensible validation rules
+  - CI/CD friendly
+
+alternatives_considered:
+  vector_db:
+    - name: "Pinecone"
+      reason_rejected: "Vendor lock-in, no self-hosting option"
+    - name: "Weaviate"
+      reason_rejected: "More complex setup, overkill for our needs"
+  
+  graph_db:
+    - name: "ArangoDB"
+      reason_rejected: "Less mature GraphRAG ecosystem"
+    - name: "Amazon Neptune"
+      reason_rejected: "Cloud-only, vendor lock-in"
+
+impacts:
+  - "Requires Docker/Kubernetes for local development"
+  - "Need to manage multiple database connections"
+  - "OpenAI API dependency for embeddings"
+
+graph_metadata:
+  node_type: "decision_document"
+  relationships:
+    - type: "influences"
+      target: "system_architecture"
+    - type: "constrains"
+      target: "deployment_options"
