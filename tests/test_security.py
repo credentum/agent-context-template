@@ -6,6 +6,7 @@ import pytest
 from unittest.mock import Mock, patch
 import tempfile
 from pathlib import Path
+import os
 
 # Import components to test
 from neo4j_init import Neo4jInitializer
@@ -161,6 +162,7 @@ class TestAuthenticationSecurity:
 class TestSSLConfiguration:
     """Test SSL/TLS configuration"""
     
+    @patch.dict(os.environ, {'ENVIRONMENT': 'production'})
     def test_ssl_config_loading(self):
         """Test that SSL configuration is properly loaded"""
         from utils import get_secure_connection_config
@@ -169,8 +171,7 @@ class TestSSLConfiguration:
         config = {
             'neo4j': {
                 'host': 'prod.example.com',
-                'port': 7687,
-                'environment': 'production'
+                'port': 7687
             }
         }
         
