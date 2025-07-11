@@ -124,7 +124,7 @@ jobs:
       
       - name: Upload analytics report
         if: always() && github.event.inputs.generate_reports != 'false'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: analytics-report
           path: analytics_report.md
@@ -132,7 +132,7 @@ jobs:
       
       - name: Upload exported data
         if: github.event.inputs.export_data == 'true'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: analytics-export
           path: analytics_export/
