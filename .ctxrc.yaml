@@ -27,6 +27,36 @@ neo4j:
   ssl: false  # Enable in production
   verify_ssl: true
   timeout: 30
+
+redis:
+  version: "7.x"
+  host: "localhost"
+  port: 6379
+  database: 0
+  ssl: false  # Enable for production (requires valid certificates)
+  verify_ssl: true
+  timeout: 30
+  max_connections: 50
+  # Key prefixes for different data types
+  prefixes:
+    session: "session:"
+    cache: "cache:"
+    lock: "lock:"
+    metric: "metric:"
+    state: "state:"
+
+duckdb:
+  version: "0.10.x"
+  database_path: "context/.duckdb/analytics.db"
+  memory_limit: "2GB"
+  threads: 4
+  # Note: DuckDB is a local file-based database and doesn't support SSL
+  # Analytics tables
+  tables:
+    metrics: "context_metrics"
+    events: "context_events"
+    summaries: "context_summaries"
+    trends: "context_trends"
   
 storage:
   retention_days: 90

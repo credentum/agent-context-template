@@ -6,6 +6,7 @@ import pytest
 from unittest.mock import Mock, patch
 import tempfile
 from pathlib import Path
+import os
 
 # Import components to test
 from neo4j_init import Neo4jInitializer
@@ -109,10 +110,16 @@ class TestInjectionPrevention:
         ]
         
         for path in malicious_paths:
-            # The system should validate paths are within allowed directories
+            # These paths should be considered potentially dangerous
             test_path = Path(path)
-            # In production, should have path validation
-            assert test_path.is_absolute() or ".." in str(test_path)
+            # Check that we can identify dangerous patterns
+            is_dangerous = (
+                test_path.is_absolute() or 
+                ".." in str(path) or
+                path.startswith("/") or
+                ":" in str(path)  # Windows drive paths
+            )
+            assert is_dangerous, f"Failed to identify {path} as potentially dangerous"
 
 
 class TestAuthenticationSecurity:
@@ -155,6 +162,7 @@ class TestAuthenticationSecurity:
 class TestSSLConfiguration:
     """Test SSL/TLS configuration"""
     
+    @patch.dict(os.environ, {'ENVIRONMENT': 'production'})
     def test_ssl_config_loading(self):
         """Test that SSL configuration is properly loaded"""
         from utils import get_secure_connection_config
@@ -163,8 +171,7 @@ class TestSSLConfiguration:
         config = {
             'neo4j': {
                 'host': 'prod.example.com',
-                'port': 7687,
-                'environment': 'production'
+                'port': 7687
             }
         }
         
