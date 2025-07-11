@@ -6,11 +6,17 @@ on:
       - 'context/**/*.yaml'
       - 'context_lint.py'
       - '.ctxrc.yaml'
+      - '**/*.py'
+      - 'pyproject.toml'
+      - 'mypy.ini'
   pull_request:
     paths:
       - 'context/**/*.yaml'
       - 'context_lint.py'
       - '.ctxrc.yaml'
+      - '**/*.py'
+      - 'pyproject.toml'
+      - 'mypy.ini'
   workflow_dispatch:
 
 jobs:
@@ -28,7 +34,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install click yamale pyyaml
+        pip install -r requirements.txt
     
     - name: Check configuration
       run: python context_lint.py check-config --verbose
@@ -39,5 +45,13 @@ jobs:
     - name: Show context statistics
       run: python context_lint.py stats context/
       
+    - name: Check Python formatting with Black
+      run: |
+        black --check --diff .
+        
+    - name: Run type checking with mypy
+      run: |
+        mypy . --config-file mypy.ini || true  # Allow failures initially
+    
     - name: Run cleanup agent (dry run)
       run: python cleanup_agent.py --dry-run --verbose
