@@ -38,12 +38,52 @@ from yamale import YamaleError
 class ContextLinter:
     """Main linter class for context system validation"""
     
+    # Class-level schema cache
+    _schema_cache: Dict[str, Any] = {}
+    
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
         self.schema_dir = Path(__file__).parent / "context" / "schemas"
         self.errors: List[str] = []
         self.warnings: List[str] = []
         self.fixed_count = 0
+        self.config = self._load_config()
+    
+    def _load_config(self) -> Dict[str, Any]:
+        """Load configuration from .ctxrc.yaml"""
+        try:
+            with open(".ctxrc.yaml", 'r') as f:
+                return yaml.safe_load(f)
+        except FileNotFoundError:
+            if self.verbose:
+                click.echo("Warning: .ctxrc.yaml not found, using defaults")
+        except yaml.YAMLError as e:
+            if self.verbose:
+                click.echo(f"Warning: Invalid YAML in .ctxrc.yaml: {e}")
+        except IOError as e:
+            if self.verbose:
+                click.echo(f"Warning: Could not read .ctxrc.yaml: {e}")
+        
+        # Return default config with configurable thresholds
+        return {
+            'linter': {
+                'warning_days_old': 90,
+                'warning_days_until_expire': 7
+            },
+            'storage': {'retention_days': 90},
+            'agents': {'cleanup': {'expire_after_days': 30}}
+        }
+    
+    def _get_cached_schema(self, schema_file: Path) -> Any:
+        """Get schema from cache or load and cache it"""
+        cache_key = str(schema_file)
+        
+        if cache_key not in ContextLinter._schema_cache:
+            if self.verbose:
+                click.echo(f"Loading schema: {schema_file.name}")
+            ContextLinter._schema_cache[cache_key] = yamale.make_schema(str(schema_file))
+        
+        return ContextLinter._schema_cache[cache_key]
         
     def validate_file(self, file_path: Path, fix: bool = False) -> bool:
         """Validate a single YAML file against its schema"""
@@ -71,8 +111,8 @@ class ContextLinter:
                 self.errors.append(f"{file_path}: Unknown document type '{doc_type}'")
                 return False
             
-            # Validate against schema
-            schema = yamale.make_schema(str(schema_file))
+            # Validate against schema (with caching)
+            schema = self._get_cached_schema(schema_file)
             data_obj = yamale.make_data(str(file_path))
             
             try:
@@ -141,12 +181,16 @@ class ContextLinter:
     
     def _check_warnings(self, file_path: Path, data: Dict[str, Any]) -> None:
         """Check for non-critical issues that should be warnings"""
+        # Get configurable thresholds
+        warning_days_until_expire = self.config.get('linter', {}).get('warning_days_until_expire', 7)
+        warning_days_old = self.config.get('linter', {}).get('warning_days_old', 90)
+        
         # Check if document is about to expire
         expires = data.get('expires')
         if expires:
             expire_date = datetime.strptime(expires, '%Y-%m-%d')
             days_until = (expire_date - datetime.now()).days
-            if 0 < days_until <= 7:
+            if 0 < days_until <= warning_days_until_expire:
                 self.warnings.append(f"{file_path}: Document expires in {days_until} days")
         
         # Check if document hasn't been modified in a while
@@ -154,7 +198,7 @@ class ContextLinter:
         if last_modified:
             mod_date = datetime.strptime(last_modified, '%Y-%m-%d')
             days_old = (datetime.now() - mod_date).days
-            if days_old > 90:
+            if days_old > warning_days_old:
                 self.warnings.append(f"{file_path}: Document hasn't been modified in {days_old} days")
     
     def validate_directory(self, path: Path, fix: bool = False) -> Tuple[int, int]:
