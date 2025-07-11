@@ -1,81 +1,74 @@
-schema_version: "1.0.0"
-document_type: "sprint"
-id: "sprint-001"
-title: "MVP Implementation Sprint"
-status: "planning"
-created_date: "2025-07-11"
+schema_version: 1.0.0
+document_type: sprint
+id: sprint-001
+title: MVP Implementation Sprint
+status: in_progress
+created_date: '2025-07-11'
 sprint_number: 1
-start_date: "2025-07-11"
-end_date: "2025-07-29"
-last_modified: "2025-07-11"
-last_referenced: "2025-07-11"
-
+start_date: '2025-07-11'
+end_date: '2025-07-29'
+last_modified: '2025-07-11'
+last_referenced: '2025-07-11'
 goals:
-  - "Complete Phase 0-6 implementation"
-  - "Deploy working vector and graph databases"
-  - "Integrate core agent framework"
-  - "Establish security and evaluation baselines"
-
+- Complete Phase 0-6 implementation
+- Deploy working vector and graph databases
+- Integrate core agent framework
+- Establish security and evaluation baselines
 phases:
-  - phase: 0
-    name: "Project Scaffolding"
-    duration_days: 1
-    status: "completed"
-    tasks:
-      - "Create repository structure"
-      - "Setup context/ directories"
-      - "Configure .ctxrc.yaml"
-      - "Write initial documentation"
-  
-  - phase: 1
-    name: "Metadata & Cleanup"
-    duration_days: 2
-    status: "completed"
-    tasks:
-      - "Define YAML schema with yamale"
-      - "Implement context-lint CLI"
-      - "Create cleanup_agent.py"
-      - "Add yamale schema validation tests"
-      - "Include config parsing validation"
-      - "Add smoke tests for directory structure"
-  
-  - phase: 2
-    name: "Task Loop Integration"
-    duration_days: 3
-    status: "in_progress"
-    tasks:
-      - "Sprint YAML automation"
-      - "update_sprint.py implementation"
-      - "GitHub issue integration"
-      - "Schema caching for performance"
-      - "Configurable thresholds"
-      - "Improved exception handling"
-
+- phase: 0
+  name: Project Scaffolding
+  duration_days: 1
+  status: completed
+  tasks:
+  - Create repository structure
+  - Setup context/ directories
+  - Configure .ctxrc.yaml
+  - Write initial documentation
+- phase: 1
+  name: Metadata & Cleanup
+  duration_days: 2
+  status: completed
+  tasks:
+  - Define YAML schema with yamale
+  - Implement context-lint CLI
+  - Create cleanup_agent.py
+  - Add yamale schema validation tests
+  - Include config parsing validation
+  - Add smoke tests for directory structure
+- phase: 2
+  name: Task Loop Integration
+  duration_days: 3
+  status: in_progress
+  tasks:
+  - Sprint YAML automation
+  - update_sprint.py implementation
+  - GitHub issue integration
+  - Schema caching for performance
+  - Configurable thresholds
+  - Improved exception handling
 team:
-  - role: "lead"
-    agent: "pm_agent"
-  - role: "implementation"
-    agent: "code_agent"
-  - role: "documentation"
-    agent: "doc_agent"
-  - role: "validation"
-    agent: "ci_agent"
-
+- role: lead
+  agent: pm_agent
+- role: implementation
+  agent: code_agent
+- role: documentation
+  agent: doc_agent
+- role: validation
+  agent: ci_agent
 success_metrics:
-  - metric: "schema_compliance"
-    target: 100
-    unit: "percent"
-  - metric: "vector_recall"
-    target: 0.85
-    unit: "cosine_similarity"
-  - metric: "graph_coverage"
-    target: 95
-    unit: "percent"
-
+- metric: schema_compliance
+  target: 100
+  unit: percent
+- metric: vector_recall
+  target: 0.85
+  unit: cosine_similarity
+- metric: graph_coverage
+  target: 95
+  unit: percent
 graph_metadata:
-  node_type: "sprint_document"
+  node_type: sprint_document
   relationships:
-    - type: "implements"
-      target: "system_architecture"
-    - type: "tracks"
-      target: "project_phases"
+  - type: implements
+    target: system_architecture
+  - type: tracks
+    target: project_phases
