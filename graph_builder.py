@@ -37,7 +37,15 @@ class GraphBuilder:
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit - ensure cleanup"""
-        self.close()
+        try:
+            self.close()
+        except Exception as e:
+            # Log the error but don't raise to avoid masking the original exception
+            if self.verbose:
+                click.echo(f"Error during cleanup: {e}", err=True)
+        
+        # Return False to propagate any exception that occurred in the with block
+        return False
         
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load configuration from .ctxrc.yaml"""

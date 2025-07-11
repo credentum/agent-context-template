@@ -38,7 +38,7 @@ jobs:
           - 7687:7687
           - 7474:7474
         env:
-          NEO4J_AUTH: neo4j/testpassword
+          NEO4J_AUTH: neo4j/${{ secrets.NEO4J_TEST_PASSWORD || 'testpassword' }}
           NEO4J_ACCEPT_LICENSE_AGREEMENT: 'yes'
         options: >-
           --health-cmd "curl -f http://localhost:7474 || exit 1"
@@ -99,11 +99,13 @@ jobs:
       
       - name: Initialize Neo4j
         id: init-neo4j
+        env:
+          NEO4J_TEST_PASSWORD: ${{ secrets.NEO4J_TEST_PASSWORD || 'testpassword' }}
         run: |
-          python neo4j_init.py --username neo4j --password testpassword || {
+          python neo4j_init.py --username neo4j --password "$NEO4J_TEST_PASSWORD" || {
             echo "::warning::Failed to initialize Neo4j, will retry"
             sleep 5
-            python neo4j_init.py --username neo4j --password testpassword
+            python neo4j_init.py --username neo4j --password "$NEO4J_TEST_PASSWORD"
           }
       
       - name: Sync vector embeddings
@@ -124,13 +126,15 @@ jobs:
           fi
       
       - name: Build context graph
+        env:
+          NEO4J_TEST_PASSWORD: ${{ secrets.NEO4J_TEST_PASSWORD || 'testpassword' }}
         run: |
           if [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then
             echo "Force rebuilding entire graph..."
-            python graph_builder.py context/ --username neo4j --password testpassword --force --cleanup --verbose
+            python graph_builder.py context/ --username neo4j --password "$NEO4J_TEST_PASSWORD" --force --cleanup --verbose
           else
             echo "Updating graph with changes..."
-            python graph_builder.py context/ --username neo4j --password testpassword --cleanup --verbose
+            python graph_builder.py context/ --username neo4j --password "$NEO4J_TEST_PASSWORD" --cleanup --verbose
           fi
       
       - name: Generate sync report
@@ -159,7 +163,7 @@ jobs:
           echo "### Database Statistics" >> sync_report.md
           python sum_scores_api.py stats || echo "- Vector stats unavailable"
           echo "" >> sync_report.md
-          python graph_builder.py context/ --stats --username neo4j --password testpassword || echo "- Graph stats unavailable"
+          python graph_builder.py context/ --stats --username neo4j --password "${NEO4J_TEST_PASSWORD:-testpassword}" || echo "- Graph stats unavailable"
       
       - name: Upload sync report
         if: always()

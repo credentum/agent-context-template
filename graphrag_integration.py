@@ -49,7 +49,15 @@ class GraphRAGIntegration:
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit - ensure cleanup"""
-        self.close()
+        try:
+            self.close()
+        except Exception as e:
+            # Log the error but don't raise to avoid masking the original exception
+            if self.verbose:
+                click.echo(f"Error during cleanup: {e}", err=True)
+        
+        # Return False to propagate any exception that occurred in the with block
+        return False
         
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load configuration from .ctxrc.yaml"""
@@ -420,8 +428,24 @@ class GraphRAGIntegration:
     
     def close(self):
         """Close connections"""
+        exceptions = []
+        
+        # Close Neo4j
         if self.neo4j_driver:
-            self.neo4j_driver.close()
+            try:
+                self.neo4j_driver.close()
+            except Exception as e:
+                exceptions.append(f"Neo4j close error: {e}")
+            finally:
+                self.neo4j_driver = None
+        
+        # Close Qdrant if needed (currently using stateless client)
+        # In future, if we use persistent connections, close here
+        
+        # If there were exceptions, log them
+        if exceptions and self.verbose:
+            for exc in exceptions:
+                click.echo(f"Cleanup error: {exc}", err=True)
 
 
 @click.group()

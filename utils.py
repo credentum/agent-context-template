@@ -18,38 +18,83 @@ def sanitize_error_message(error_msg: str, sensitive_values: Optional[List[str]]
     Returns:
         Sanitized error message
     """
-    if not sensitive_values:
+    if not error_msg:
         return error_msg
-    
+        
     sanitized = error_msg
     
-    for value in sensitive_values:
-        if not value:
-            continue
+    # First, handle provided sensitive values
+    if sensitive_values:
+        for value in sensitive_values:
+            if not value or len(value) < 3:
+                continue
             
-        # Don't sanitize very short values to avoid breaking messages
-        if len(value) < 3:
-            continue
-        
-        # Replace the value with asterisks
-        # Use word boundaries to avoid partial replacements
-        pattern = re.escape(value)
-        sanitized = re.sub(pattern, "***", sanitized)
-        
-        # Also sanitize URL-encoded versions
-        import urllib.parse
-        encoded_value = urllib.parse.quote(value)
-        if encoded_value != value:
-            sanitized = re.sub(re.escape(encoded_value), "***", sanitized)
+            # Replace the value with asterisks
+            pattern = re.escape(value)
+            sanitized = re.sub(pattern, "***", sanitized, flags=re.IGNORECASE)
+            
+            # Also sanitize URL-encoded versions
+            import urllib.parse
+            encoded_value = urllib.parse.quote(value)
+            if encoded_value != value:
+                sanitized = re.sub(re.escape(encoded_value), "***", sanitized)
+            
+            # Base64 encoded version
+            import base64
+            try:
+                b64_value = base64.b64encode(value.encode()).decode()
+                sanitized = re.sub(re.escape(b64_value), "***", sanitized)
+            except Exception:
+                pass
     
     # Remove connection strings that might contain passwords
     # Match patterns like username:password@host
-    sanitized = re.sub(r'://[^:]+:[^@]+@', '://***:***@', sanitized)
+    sanitized = re.sub(r'://[^:/\s]+:[^@/\s]+@', '://***:***@', sanitized)
     
-    # Remove auth headers
-    sanitized = re.sub(r'(authorization|auth|password|api[_-]key)[\'":\s]+[^\s\'"]+', r'\1: ***', sanitized, flags=re.IGNORECASE)
+    # Remove auth headers and tokens
+    auth_patterns = [
+        r'(authorization|auth|password|api[_-]?key|token|secret|credential)[\s:=]+["\']?([^"\'\s]+)["\']?',
+        r'Bearer\s+[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+',  # JWT tokens
+        r'Basic\s+[A-Za-z0-9+/=]+',  # Basic auth
+    ]
+    
+    for pattern in auth_patterns:
+        sanitized = re.sub(pattern, r'\1: ***', sanitized, flags=re.IGNORECASE)
+    
+    # Remove common password patterns in JSON/dict representations
+    sanitized = re.sub(r'(["\']password["\']\s*:\s*["\'])[^"\']+(["\'])', r'\1***\2', sanitized, flags=re.IGNORECASE)
+    
+    # Remove database connection strings
+    db_patterns = [
+        r'(mongodb|postgres|postgresql|mysql|redis|neo4j)://[^@\s]+@[^\s]+',
+        r'bolt\+s?://[^@\s]+@[^\s]+',
+    ]
+    
+    for pattern in db_patterns:
+        sanitized = re.sub(pattern, r'\1://***:***@***', sanitized, flags=re.IGNORECASE)
     
     return sanitized
+
+
+def get_environment() -> str:
+    """
+    Detect the current environment
+    
+    Returns:
+        Environment name: 'production', 'staging', or 'development'
+    """
+    import os
+    
+    # Check multiple environment variables
+    env = os.getenv('ENVIRONMENT', os.getenv('ENV', os.getenv('NODE_ENV', 'development'))).lower()
+    
+    # Map common variations
+    if env in ['prod', 'production']:
+        return 'production'
+    elif env in ['stage', 'staging']:
+        return 'staging'
+    else:
+        return 'development'
 
 
 def get_secure_connection_config(config: dict, service: str) -> dict:
@@ -64,16 +109,28 @@ def get_secure_connection_config(config: dict, service: str) -> dict:
         Connection configuration with security options
     """
     service_config = config.get(service, {})
+    environment = get_environment()
     
-    # Default to secure connections in production
-    default_ssl = service_config.get('environment', 'development') == 'production'
+    # Force SSL in production unless explicitly disabled
+    if environment == 'production':
+        default_ssl = service_config.get('ssl', True)
+        if not default_ssl:
+            import warnings
+            warnings.warn(
+                f"SSL is disabled for {service} in production environment. "
+                "This is a security risk!", 
+                RuntimeWarning
+            )
+    else:
+        default_ssl = service_config.get('ssl', False)
     
     secure_config = {
         'host': service_config.get('host', 'localhost'),
         'port': service_config.get('port'),
-        'ssl': service_config.get('ssl', default_ssl),
+        'ssl': default_ssl,
         'verify_ssl': service_config.get('verify_ssl', True),
         'timeout': service_config.get('timeout', 30),
+        'environment': environment,
     }
     
     # Add SSL certificate paths if provided

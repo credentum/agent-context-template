@@ -214,12 +214,14 @@ class Neo4jInitializer:
                         SET dt.name = $type_name
                     """, type_id=type_id, type_name=type_name)
                     
-                    # Create relationship with dynamic type
-                    session.run(f"""
-                        MATCH (s:System {{id: 'agent-context-system'}})
-                        MATCH (dt:DocumentType {{id: $type_id}})
-                        MERGE (s)-[:{rel_type}]->(dt)
-                    """, type_id=type_id)
+                    # Create relationship - use a generic relationship with type property
+                    # This avoids dynamic query construction
+                    session.run("""
+                        MATCH (s:System {id: 'agent-context-system'})
+                        MATCH (dt:DocumentType {id: $type_id})
+                        MERGE (s)-[r:HAS_DOCUMENT_TYPE]->(dt)
+                        SET r.semantic_type = $rel_type
+                    """, type_id=type_id, rel_type=rel_type)
                 
                 click.echo("✓ Graph schema initialized")
                 return True
