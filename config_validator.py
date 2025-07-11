@@ -50,11 +50,31 @@ class ConfigValidator:
             if neo4j.get('port', 7687) < 1 or neo4j.get('port', 7687) > 65535:
                 self.errors.append("neo4j.port must be between 1 and 65535")
         
+        # Validate Redis configuration
+        if 'redis' in config:
+            redis_conf = config['redis']
+            if not isinstance(redis_conf.get('port', 6379), int):
+                self.errors.append("redis.port must be an integer")
+            if redis_conf.get('port', 6379) < 1 or redis_conf.get('port', 6379) > 65535:
+                self.errors.append("redis.port must be between 1 and 65535")
+            if not isinstance(redis_conf.get('database', 0), int) or redis_conf.get('database', 0) < 0:
+                self.errors.append("redis.database must be a non-negative integer")
+        
+        # Validate DuckDB configuration
+        if 'duckdb' in config:
+            duckdb_conf = config['duckdb']
+            if 'database_path' not in duckdb_conf:
+                self.errors.append("duckdb.database_path is required")
+            if not isinstance(duckdb_conf.get('threads', 4), int) or duckdb_conf.get('threads', 4) < 1:
+                self.errors.append("duckdb.threads must be a positive integer")
+        
         # Security warnings
         if config.get('qdrant', {}).get('ssl', False) is False:
             self.warnings.append("SSL is disabled for Qdrant - consider enabling for production")
         if config.get('neo4j', {}).get('ssl', False) is False:
             self.warnings.append("SSL is disabled for Neo4j - consider enabling for production")
+        if config.get('redis', {}).get('ssl', False) is False:
+            self.warnings.append("SSL is disabled for Redis - consider enabling for production")
         
         return len(self.errors) == 0
     
@@ -131,6 +151,36 @@ class ConfigValidator:
                 self.errors.append("resources.max_memory_gb must be at least 0.5")
             if not isinstance(resources.get('max_cpu_percent', 80), (int, float)) or resources.get('max_cpu_percent', 80) < 1 or resources.get('max_cpu_percent', 80) > 100:
                 self.errors.append("resources.max_cpu_percent must be between 1 and 100")
+        
+        # Validate KV store settings
+        if 'kv_store' in config:
+            kv = config['kv_store']
+            
+            # Redis settings
+            if 'redis' in kv:
+                redis = kv['redis']
+                if 'connection_pool' in redis:
+                    pool = redis['connection_pool']
+                    if pool.get('max_size', 50) < pool.get('min_size', 5):
+                        self.errors.append("kv_store.redis.connection_pool.max_size must be >= min_size")
+                
+                if 'cache' in redis:
+                    cache = redis['cache']
+                    if not isinstance(cache.get('ttl_seconds', 3600), int) or cache.get('ttl_seconds', 3600) < 1:
+                        self.errors.append("kv_store.redis.cache.ttl_seconds must be a positive integer")
+            
+            # DuckDB settings
+            if 'duckdb' in kv:
+                duckdb = kv['duckdb']
+                if 'batch_insert' in duckdb:
+                    batch = duckdb['batch_insert']
+                    if not isinstance(batch.get('size', 1000), int) or batch.get('size', 1000) < 1:
+                        self.errors.append("kv_store.duckdb.batch_insert.size must be a positive integer")
+                
+                if 'analytics' in duckdb:
+                    analytics = duckdb['analytics']
+                    if not isinstance(analytics.get('retention_days', 90), int) or analytics.get('retention_days', 90) < 1:
+                        self.errors.append("kv_store.duckdb.analytics.retention_days must be a positive integer")
         
         return len(self.errors) == 0
     

@@ -80,6 +80,31 @@ resources:
   max_cpu_percent: 80
   disk_cache_size_gb: 10
   
+# Key-Value store performance
+kv_store:
+  redis:
+    connection_pool:
+      min_size: 5
+      max_size: 50
+      timeout: 5
+    cache:
+      ttl_seconds: 3600
+      max_entries: 10000
+    pipeline:
+      batch_size: 100
+      flush_interval_ms: 50
+  
+  duckdb:
+    batch_insert:
+      size: 1000
+      timeout_seconds: 30
+    query:
+      timeout_seconds: 60
+      max_results: 10000
+    analytics:
+      aggregation_interval: "5 minutes"
+      retention_days: 90
+  
 # Monitoring
 monitoring:
   metrics_enabled: true

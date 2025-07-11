@@ -1,0 +1,223 @@
+name: KV Store & Analytics Sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'context/**'
+      - '.ctxrc.yaml'
+      - 'performance.yaml'
+  
+  pull_request:
+    paths:
+      - 'context/**'
+      - 'context_kv.py'
+      - 'context_analytics.py'
+  
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  
+  workflow_dispatch:
+    inputs:
+      generate_reports:
+        description: 'Generate analytics reports'
+        required: false
+        default: 'true'
+      export_data:
+        description: 'Export analytics data'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+  
+jobs:
+  kv-analytics:
+    name: KV Store & Analytics Sync
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pandas numpy  # Additional deps for analytics
+      
+      - name: Create DuckDB directory
+        run: |
+          mkdir -p context/.duckdb
+      
+      - name: Test KV Store connections
+        run: |
+          python context_kv.py test-connection --verbose
+      
+      - name: Process context metrics
+        id: process-metrics
+        run: |
+          echo "Processing context changes..."
+          
+          # Record deployment event
+          python -c "
+          from context_kv import ContextKV
+          from datetime import datetime
+          kv = ContextKV()
+          if kv.connect():
+              kv.record_event('deployment', data={
+                  'branch': '${{ github.ref_name }}',
+                  'commit': '${{ github.sha }}',
+                  'workflow': '${{ github.workflow }}'
+              })
+              kv.close()
+          "
+          
+          # Process document metrics
+          for yaml_file in $(find context -name "*.yaml" -type f); do
+            echo "Processing: $yaml_file"
+            
+            # Extract document metadata and record metrics
+            python -c "
+          import yaml
+          from pathlib import Path
+          from datetime import datetime
+          from context_kv import ContextKV, MetricEvent
+          
+          file_path = '$yaml_file'
+          try:
+              with open(file_path, 'r') as f:
+                  data = yaml.safe_load(f)
+              
+              if data and isinstance(data, dict):
+                  doc_id = data.get('id', Path(file_path).stem)
+                  doc_type = data.get('document_type', 'unknown')
+                  
+                  kv = ContextKV()
+                  if kv.connect():
+                      # Record document access
+                      metric = MetricEvent(
+                          timestamp=datetime.utcnow(),
+                          metric_name='document.accessed',
+                          value=1.0,
+                          tags={'type': doc_type, 'source': 'workflow'},
+                          document_id=doc_id
+                      )
+                      kv.redis.record_metric(metric)
+                      kv.duckdb.insert_metrics([metric])
+                      kv.close()
+          except Exception as e:
+              print(f'Error processing {file_path}: {e}')
+            "
+          done
+      
+      - name: Generate analytics reports
+        if: github.event.inputs.generate_reports != 'false'
+        run: |
+          echo "## Analytics Reports" > analytics_report.md
+          echo "" >> analytics_report.md
+          echo "**Generated:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> analytics_report.md
+          echo "" >> analytics_report.md
+          
+          # Generate all reports
+          python context_analytics.py analyze --days 30 --report-type all >> analytics_report.md 2>&1 || true
+          
+          # Show recent activity
+          echo "" >> analytics_report.md
+          echo "### Recent Activity (24h)" >> analytics_report.md
+          python context_kv.py activity-summary --hours 24 >> analytics_report.md 2>&1 || true
+      
+      - name: Export analytics data
+        if: github.event.inputs.export_data == 'true'
+        run: |
+          mkdir -p analytics_export
+          python context_analytics.py export --output-dir analytics_export --format parquet || \
+          python context_analytics.py export --output-dir analytics_export --format csv
+      
+      - name: Upload analytics report
+        if: always() && github.event.inputs.generate_reports != 'false'
+        uses: actions/upload-artifact@v3
+        with:
+          name: analytics-report
+          path: analytics_report.md
+          retention-days: 30
+      
+      - name: Upload exported data
+        if: github.event.inputs.export_data == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: analytics-export
+          path: analytics_export/
+          retention-days: 7
+      
+      - name: Cache metrics summary
+        if: success()
+        run: |
+          # Generate metrics summary for caching
+          python -c "
+          from context_kv import ContextKV
+          import json
+          
+          kv = ContextKV()
+          if kv.connect():
+              summary = kv.get_recent_activity(hours=24)
+              with open('metrics_summary.json', 'w') as f:
+                  json.dump(summary, f, indent=2)
+              kv.close()
+          "
+          
+          # Display summary
+          if [ -f metrics_summary.json ]; then
+            echo "### Metrics Summary"
+            cat metrics_summary.json
+          fi
+      
+      - name: Performance monitoring
+        if: always()
+        run: |
+          # Record workflow performance metrics
+          python -c "
+          from context_kv import ContextKV, MetricEvent
+          from datetime import datetime
+          
+          kv = ContextKV()
+          if kv.connect():
+              # Record workflow duration
+              metric = MetricEvent(
+                  timestamp=datetime.utcnow(),
+                  metric_name='workflow.duration',
+                  value=${{ job.duration || 0 }},
+                  tags={
+                      'workflow': 'kv-analytics-sync',
+                      'status': '${{ job.status }}'
+                  }
+              )
+              kv.redis.record_metric(metric)
+              kv.duckdb.insert_metrics([metric])
+              kv.close()
+          "
