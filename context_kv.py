@@ -14,7 +14,7 @@ import yaml
 import json
 import redis
 import duckdb
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
