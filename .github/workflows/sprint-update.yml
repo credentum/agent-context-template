@@ -42,11 +42,13 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        set -e  # Exit on error
         if [ -n "${{ github.event.inputs.sprint_id }}" ]; then
           python update_sprint.py update --sprint "${{ github.event.inputs.sprint_id }}" --verbose
         else
           python update_sprint.py update --verbose
         fi
+        echo "update_status=$?" >> $GITHUB_OUTPUT
     
     - name: Generate sprint report
       if: success()
@@ -64,10 +66,11 @@ jobs:
           echo "No changes to commit"
         else
           git add context/sprints/*.yaml
+          EVENT_NAME=$(echo "${{ github.event_name }}" | tr -cd '[:alnum:]_-')
           git commit -m "chore: update sprint status via automation
           
           Updated based on issue/PR activity
-          Triggered by: ${{ github.event_name }}
+          Triggered by: ${EVENT_NAME}
           
           Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
           

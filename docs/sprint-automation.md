@@ -206,6 +206,28 @@ linter:
    - Review and update next sprint during planning
    - Use sprint retrospectives to improve process
 
+## Security Considerations
+
+### Input Validation
+
+The sprint automation system validates all user inputs:
+- Sprint numbers must be numeric (1-999)
+- Label names are sanitized before use
+- File paths are validated to prevent traversal
+
+### GitHub CLI Requirements
+
+Both `update_sprint.py` and `sprint_issue_linker.py` require GitHub CLI:
+- Checks authentication status on startup
+- Provides clear error messages if not configured
+- Dry-run mode bypasses GitHub CLI for testing
+
+### Workflow Security
+
+- Minimal permissions requested (contents: write, issues: read)
+- Input sanitization for commit messages
+- External scripts for complex operations
+
 ## Troubleshooting
 
 ### Issues Not Linking
@@ -225,6 +247,17 @@ linter:
 - Check workflow permissions
 - Verify event triggers match your usage
 - Review GitHub Actions quotas
+
+### GitHub CLI Errors
+
+If you see "GitHub CLI not found" or "not authenticated":
+```bash
+# Install GitHub CLI
+# See: https://cli.github.com/
+
+# Authenticate
+gh auth login
+```
 
 ## Example Sprint Lifecycle
 

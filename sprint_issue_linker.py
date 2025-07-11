@@ -25,6 +25,24 @@ class SprintIssueLinker:
         self.verbose = verbose
         self.context_dir = Path("context")
         self.sprints_dir = self.context_dir / "sprints"
+        self._check_gh_cli()
+    
+    def _check_gh_cli(self) -> None:
+        """Check if GitHub CLI is available and authenticated"""
+        if self.dry_run:
+            return  # Skip check in dry-run mode
+            
+        try:
+            result = subprocess.run(["gh", "auth", "status"], 
+                                  capture_output=True, text=True, check=True)
+            if self.verbose:
+                click.echo("✓ GitHub CLI authenticated")
+        except FileNotFoundError:
+            click.echo("Error: GitHub CLI not found. Please install: https://cli.github.com/")
+            sys.exit(1)
+        except subprocess.CalledProcessError:
+            click.echo("Error: GitHub CLI not authenticated. Run: gh auth login")
+            sys.exit(1)
         
     def _get_sprint_file(self) -> Optional[Path]:
         """Get the sprint file to work with"""

@@ -30,6 +30,7 @@ class SprintUpdater:
         self.sprint_id = sprint_id
         self.updates_made = []
         self.config = self._load_config()
+        self._check_gh_cli()
         
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from .ctxrc.yaml"""
@@ -40,6 +41,20 @@ class SprintUpdater:
             if self.verbose:
                 click.echo(f"Warning: Could not load .ctxrc.yaml: {e}")
             return {'agents': {'pm_agent': {'sprint_duration_days': 14}}}
+    
+    def _check_gh_cli(self) -> None:
+        """Check if GitHub CLI is available and authenticated"""
+        try:
+            result = subprocess.run(["gh", "auth", "status"], 
+                                  capture_output=True, text=True, check=True)
+            if self.verbose:
+                click.echo("✓ GitHub CLI authenticated")
+        except FileNotFoundError:
+            if self.verbose:
+                click.echo("⚠️  GitHub CLI not found, issue tracking will be limited")
+        except subprocess.CalledProcessError:
+            if self.verbose:
+                click.echo("⚠️  GitHub CLI not authenticated, issue tracking will be limited")
     
     def _get_current_sprint(self) -> Optional[Path]:
         """Find the current active sprint document"""
@@ -90,6 +105,33 @@ class SprintUpdater:
                 click.echo(f"Error parsing GitHub issues JSON: {e}")
             return []
     
+    def _match_task_to_issue(self, task: str, issue_title: str) -> bool:
+        """Match task to issue using normalized comparison"""
+        import re
+        
+        # Normalize both strings: remove punctuation, extra spaces
+        def normalize(text: str) -> str:
+            # Remove special characters but keep alphanumeric and spaces
+            text = re.sub(r'[^\w\s]', ' ', text.lower())
+            # Collapse multiple spaces
+            text = re.sub(r'\s+', ' ', text)
+            return text.strip()
+        
+        normalized_task = normalize(task)
+        normalized_title = normalize(issue_title)
+        
+        # Check if the task appears as a distinct phrase in the title
+        # This prevents "test" from matching "integration tests completed"
+        task_words = normalized_task.split()
+        title_words = normalized_title.split()
+        
+        # Look for exact sequence of words
+        for i in range(len(title_words) - len(task_words) + 1):
+            if title_words[i:i+len(task_words)] == task_words:
+                return True
+        
+        return False
+    
     def _update_phase_status(self, phases: List[Dict[str, Any]], issues: List[Dict[str, Any]]) -> bool:
         """Update phase status based on task completion"""
         updated = False
@@ -105,9 +147,9 @@ class SprintUpdater:
             # Check if all tasks are mentioned in closed issues
             completed_tasks = 0
             for task in tasks:
-                # Simple matching - look for task text in closed issues
+                # Improved matching - look for task text in closed issues
                 for issue in issues:
-                    if issue['state'] == 'CLOSED' and task.lower() in issue['title'].lower():
+                    if issue['state'] == 'CLOSED' and self._match_task_to_issue(task, issue['title']):
                         completed_tasks += 1
                         break
             

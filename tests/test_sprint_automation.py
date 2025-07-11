@@ -194,6 +194,26 @@ class TestSprintUpdater:
         assert new_data['status'] == 'planning'
         assert new_data['team'] == sprint_data['team']
     
+    def test_task_matching_logic(self):
+        """Test improved task matching to prevent false positives"""
+        updater = SprintUpdater()
+        
+        # Test cases for task matching
+        test_cases = [
+            # (task, issue_title, should_match)
+            ("Write tests", "[Sprint 1] Phase 2: Write tests", True),
+            ("Write tests", "Write tests for feature A", True),
+            ("test", "Integration tests completed", False),  # Should not match
+            ("test", "Run test suite", False),  # Should not match
+            ("test", "[Sprint 1] Phase 1: test", True),  # Exact word match
+            ("implement feature A", "Task: Implement feature A and B", True),
+            ("feature A", "Implement feature A", True),
+        ]
+        
+        for task, issue_title, expected in test_cases:
+            result = updater._match_task_to_issue(task, issue_title)
+            assert result == expected, f"Task '{task}' vs '{issue_title}' - expected {expected}, got {result}"
+    
     def test_sprint_status_progression(self, temp_context_dir):
         """Test sprint status progression logic"""
         sprint_data = {
