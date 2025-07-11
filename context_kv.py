@@ -22,6 +22,10 @@ import time
 import hashlib
 from base_component import DatabaseComponent
 from utils import sanitize_error_message, get_environment
+from kv_validators import (
+    validate_cache_entry, validate_metric_event, sanitize_metric_name,
+    validate_time_range, validate_redis_key, validate_session_data
+)
 
 
 @dataclass
@@ -81,16 +85,24 @@ class RedisConnector(DatabaseComponent):
         
         try:
             # Create connection pool
-            pool = redis.ConnectionPool(
-                host=host,
-                port=port,
-                db=db,
-                password=password,
-                max_connections=max_connections,
-                decode_responses=True,
-                ssl=ssl,
-                ssl_cert_reqs='required' if ssl else None
-            )
+            pool_kwargs = {
+                'host': host,
+                'port': port,
+                'db': db,
+                'password': password,
+                'max_connections': max_connections,
+                'decode_responses': True
+            }
+            
+            # Add SSL configuration if enabled
+            if ssl:
+                pool_kwargs['ssl'] = True
+                pool_kwargs['ssl_cert_reqs'] = 'required'
+                # For local development with self-signed certs
+                if self.environment != 'production':
+                    pool_kwargs['ssl_cert_reqs'] = 'none'
+            
+            pool = redis.ConnectionPool(**pool_kwargs)
             
             self.redis_client = redis.Redis(connection_pool=pool)
             
@@ -102,7 +114,9 @@ class RedisConnector(DatabaseComponent):
             return True
             
         except Exception as e:
-            self.log_error("Failed to connect to Redis", e, [password] if password else None)
+            # Sanitize error message to avoid exposing password
+            sensitive_values = [password] if password else []
+            self.log_error("Failed to connect to Redis", e, sensitive_values)
             return False
     
     def get_prefixed_key(self, key: str, prefix_type: str = 'cache') -> str:
@@ -114,6 +128,11 @@ class RedisConnector(DatabaseComponent):
     def set_cache(self, key: str, value: Any, ttl_seconds: Optional[int] = None) -> bool:
         """Set cache value with optional TTL"""
         if not self.ensure_connected():
+            return False
+        
+        # Validate key
+        if not validate_redis_key(key):
+            self.log_error(f"Invalid cache key: {key}")
             return False
         
         try:
@@ -155,8 +174,12 @@ class RedisConnector(DatabaseComponent):
             
             if data:
                 entry_dict = json.loads(data)
-                # Update hit count and last accessed
-                entry_dict['hit_count'] += 1
+                # Validate entry structure and update hit count
+                if 'hit_count' in entry_dict:
+                    entry_dict['hit_count'] = entry_dict.get('hit_count', 0) + 1
+                else:
+                    entry_dict['hit_count'] = 1
+                    
                 entry_dict['last_accessed'] = datetime.utcnow().isoformat()
                 
                 # Update in Redis
@@ -307,6 +330,15 @@ class RedisConnector(DatabaseComponent):
         if not self.ensure_connected():
             return False
         
+        # Validate metric
+        metric_dict = asdict(metric)
+        if not validate_metric_event(metric_dict):
+            self.log_error(f"Invalid metric event: {metric.metric_name}")
+            return False
+        
+        # Sanitize metric name
+        metric.metric_name = sanitize_metric_name(metric.metric_name)
+        
         try:
             # Create metric key
             metric_key = self.get_prefixed_key(
@@ -334,30 +366,43 @@ class RedisConnector(DatabaseComponent):
         if not self.ensure_connected():
             return []
         
+        # Validate time range
+        if not validate_time_range(start_time, end_time):
+            self.log_error(f"Invalid time range: {start_time} to {end_time}")
+            return []
+        
+        # Sanitize metric name
+        metric_name = sanitize_metric_name(metric_name)
+        
         metrics = []
         
         try:
-            # Generate time-based keys
-            current = start_time
-            while current <= end_time:
-                metric_key = self.get_prefixed_key(
-                    f"{metric_name}:{current.strftime('%Y%m%d%H%M')}",
-                    'metric'
-                )
+            # Optimize by using hourly buckets instead of minute buckets
+            # This reduces the number of keys to scan
+            current_hour = start_time.replace(minute=0, second=0, microsecond=0)
+            end_hour = end_time.replace(minute=59, second=59, microsecond=999999)
+            
+            while current_hour <= end_hour:
+                # Check both minute and hour granularity keys
+                for time_format in ['%Y%m%d%H', '%Y%m%d%H%M']:
+                    metric_key = self.get_prefixed_key(
+                        f"{metric_name}:{current_hour.strftime(time_format)}",
+                        'metric'
+                    )
+                    
+                    # Get metrics from sorted set
+                    data = self.redis_client.zrangebyscore(
+                        metric_key,
+                        start_time.timestamp(),
+                        end_time.timestamp()
+                    )
+                    
+                    for item in data:
+                        metric_dict = json.loads(item)
+                        metric_dict['timestamp'] = datetime.fromisoformat(metric_dict['timestamp'])
+                        metrics.append(MetricEvent(**metric_dict))
                 
-                # Get metrics from sorted set
-                data = self.redis_client.zrangebyscore(
-                    metric_key,
-                    start_time.timestamp(),
-                    end_time.timestamp()
-                )
-                
-                for item in data:
-                    metric_dict = json.loads(item)
-                    metric_dict['timestamp'] = datetime.fromisoformat(metric_dict['timestamp'])
-                    metrics.append(MetricEvent(**metric_dict))
-                
-                current += timedelta(minutes=1)
+                current_hour += timedelta(hours=1)
             
             return metrics
             
@@ -423,8 +468,14 @@ class DuckDBAnalytics(DatabaseComponent):
             self.log_success(f"Connected to DuckDB at {db_path}")
             return True
             
+        except duckdb.DatabaseError as e:
+            self.log_error(f"DuckDB database error: {e}", e)
+            return False
+        except OSError as e:
+            self.log_error(f"Failed to create DuckDB directory: {e}", e)
+            return False
         except Exception as e:
-            self.log_error("Failed to connect to DuckDB", e)
+            self.log_error("Unexpected error connecting to DuckDB", e)
             return False
     
     def _initialize_tables(self):

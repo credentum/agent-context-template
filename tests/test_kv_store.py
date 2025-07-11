@@ -489,9 +489,11 @@ class TestKVStoreIntegration:
     """Integration tests for KV store (requires Redis and DuckDB)"""
     
     @pytest.mark.skipif(
-        not all([pytest.config.getoption("--redis-host"), 
-                pytest.config.getoption("--duckdb-path")]),
-        reason="Integration test requires --redis-host and --duckdb-path"
+        not all([
+            os.environ.get('REDIS_HOST'),
+            os.environ.get('DUCKDB_PATH')
+        ]),
+        reason="Integration test requires REDIS_HOST and DUCKDB_PATH environment variables"
     )
     def test_full_workflow(self):
         """Test complete KV store workflow"""

@@ -33,7 +33,7 @@ redis:
   host: "localhost"
   port: 6379
   database: 0
-  ssl: false  # Enable in production
+  ssl: false  # Enable for production (requires valid certificates)
   verify_ssl: true
   timeout: 30
   max_connections: 50
@@ -50,6 +50,7 @@ duckdb:
   database_path: "context/.duckdb/analytics.db"
   memory_limit: "2GB"
   threads: 4
+  # Note: DuckDB is a local file-based database and doesn't support SSL
   # Analytics tables
   tables:
     metrics: "context_metrics"

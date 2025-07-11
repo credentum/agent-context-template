@@ -85,56 +85,15 @@ jobs:
           echo "Processing context changes..."
           
           # Record deployment event
-          python -c "
-          from context_kv import ContextKV
-          from datetime import datetime
-          kv = ContextKV()
-          if kv.connect():
-              kv.record_event('deployment', data={
-                  'branch': '${{ github.ref_name }}',
-                  'commit': '${{ github.sha }}',
-                  'workflow': '${{ github.workflow }}'
-              })
-              kv.close()
-          "
+          python scripts/record_deployment_event.py
           
           # Process document metrics
-          for yaml_file in $(find context -name "*.yaml" -type f); do
-            echo "Processing: $yaml_file"
-            
-            # Extract document metadata and record metrics
-            python -c "
-          import yaml
-          from pathlib import Path
-          from datetime import datetime
-          from context_kv import ContextKV, MetricEvent
-          
-          file_path = '$yaml_file'
-          try:
-              with open(file_path, 'r') as f:
-                  data = yaml.safe_load(f)
-              
-              if data and isinstance(data, dict):
-                  doc_id = data.get('id', Path(file_path).stem)
-                  doc_type = data.get('document_type', 'unknown')
-                  
-                  kv = ContextKV()
-                  if kv.connect():
-                      # Record document access
-                      metric = MetricEvent(
-                          timestamp=datetime.utcnow(),
-                          metric_name='document.accessed',
-                          value=1.0,
-                          tags={'type': doc_type, 'source': 'workflow'},
-                          document_id=doc_id
-                      )
-                      kv.redis.record_metric(metric)
-                      kv.duckdb.insert_metrics([metric])
-                      kv.close()
-          except Exception as e:
-              print(f'Error processing {file_path}: {e}')
-            "
-          done
+          yaml_files=$(find context -name "*.yaml" -type f)
+          if [ -n "$yaml_files" ]; then
+            python scripts/process_document_metrics.py $yaml_files
+          else
+            echo "No YAML files found to process"
+          fi
       
       - name: Generate analytics reports
         if: github.event.inputs.generate_reports != 'false'
@@ -144,8 +103,13 @@ jobs:
           echo "**Generated:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> analytics_report.md
           echo "" >> analytics_report.md
           
-          # Generate all reports
-          python context_analytics.py analyze --days 30 --report-type all >> analytics_report.md 2>&1 || true
+          # Generate all reports with proper error handling
+          if python context_analytics.py analyze --days 30 --report-type all >> analytics_report.md 2>&1; then
+            echo "✓ Analytics reports generated successfully" >> analytics_report.md
+          else
+            echo "⚠️ Warning: Some analytics reports failed to generate" >> analytics_report.md
+            echo "Check the logs for details" >> analytics_report.md
+          fi
           
           # Show recent activity
           echo "" >> analytics_report.md

@@ -69,6 +69,12 @@ class ContextAnalytics(DuckDBAnalytics):
             
             # Calculate trends
             if results:
+                # Limit results to prevent memory issues
+                max_rows = 10000
+                if len(results) > max_rows:
+                    self.log_warning(f"Truncating results from {len(results)} to {max_rows} rows")
+                    results = results[:max_rows]
+                    
                 df = pd.DataFrame(results)
                 
                 metrics = {
