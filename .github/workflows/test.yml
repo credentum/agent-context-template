@@ -55,6 +55,7 @@ jobs:
           mkdir -p context/.vector_cache
           mkdir -p context/trace
           mkdir -p context/archive
+          mkdir -p context/mcp_contracts
           mkdir -p context/logs/cleanup
           mkdir -p context/logs/eval
           mkdir -p context/logs/kv
