@@ -1,0 +1,40 @@
+schema_version: 1.0.0
+document_type: sprint
+id: sprint-002
+title: Sprint 2
+status: planning
+created_date: '2025-07-11'
+sprint_number: 2
+start_date: '2025-07-11'
+end_date: '2025-07-25'
+last_modified: '2025-07-11'
+last_referenced: '2025-07-11'
+goals:
+- '[To be defined]'
+phases: []
+team:
+- role: lead
+  agent: pm_agent
+- role: implementation
+  agent: code_agent
+- role: documentation
+  agent: doc_agent
+- role: validation
+  agent: ci_agent
+success_metrics:
+- metric: schema_compliance
+  target: 100
+  unit: percent
+- metric: vector_recall
+  target: 0.85
+  unit: cosine_similarity
+- metric: graph_coverage
+  target: 95
+  unit: percent
+graph_metadata:
+  node_type: sprint_document
+  relationships:
+  - type: implements
+    target: system_architecture
+  - type: tracks
+    target: project_phases
