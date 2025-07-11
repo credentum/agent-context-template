@@ -1,0 +1,13 @@
+# Core dependencies for Agent-First Context System
+click>=8.1.0
+yamale>=4.0.0
+PyYAML>=6.0
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Future phases (commented out for now)
+# qdrant-client>=1.14.0
+# neo4j>=5.0.0
+# redis>=4.0.0
+# openai>=1.0.0
+# promptlayer>=0.5.0

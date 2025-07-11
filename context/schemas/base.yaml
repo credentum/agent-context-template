@@ -1,0 +1,27 @@
+# Base schema for all context documents
+# All document types must include these fields
+
+schema_version: str(required=True, regex='^[0-9]+\.[0-9]+\.[0-9]+$')
+document_type: str(required=True, enum=['design', 'decision', 'sprint', 'trace', 'log'])
+id: str(required=True, regex='^[a-zA-Z0-9-]+$')
+title: str(required=True, min=1, max=200)
+status: str(required=True, enum=['active', 'archived', 'deprecated', 'draft', 'planning', 'in_progress', 'completed'])
+created_date: str(required=True, regex='^\d{4}-\d{2}-\d{2}$')
+last_modified: str(required=True, regex='^\d{4}-\d{2}-\d{2}$')
+last_referenced: str(required=True, regex='^\d{4}-\d{2}-\d{2}$')
+expires: str(required=False, regex='^\d{4}-\d{2}-\d{2}$', none=True)
+authors: list(str(), required=False)
+tags: list(str(), required=False)
+
+# Optional graph metadata
+graph_metadata: include('graph_metadata', required=False)
+
+---
+graph_metadata:
+  node_type: str(required=True)
+  relationships: list(include('relationship'), required=False)
+
+---
+relationship:
+  type: str(required=True)
+  target: str(required=True)

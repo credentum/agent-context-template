@@ -19,7 +19,7 @@ phases:
   - phase: 0
     name: "Project Scaffolding"
     duration_days: 1
-    status: "in_progress"
+    status: "completed"
     tasks:
       - "Create repository structure"
       - "Setup context/ directories"
@@ -29,11 +29,14 @@ phases:
   - phase: 1
     name: "Metadata & Cleanup"
     duration_days: 2
-    status: "pending"
+    status: "in_progress"
     tasks:
       - "Define YAML schema with yamale"
       - "Implement context-lint CLI"
       - "Create cleanup_agent.py"
+      - "Add yamale schema validation tests"
+      - "Include config parsing validation"
+      - "Add smoke tests for directory structure"
   
   - phase: 2
     name: "Task Loop Integration"
