@@ -491,7 +491,7 @@ class DuckDBAnalytics(DatabaseComponent):
                 document_id VARCHAR,
                 agent_id VARCHAR,
                 tags JSON,
-                PRIMARY KEY (timestamp, metric_name, document_id, agent_id)
+                PRIMARY KEY (timestamp, metric_name)
             )
         """)
         

@@ -5,6 +5,8 @@ Used by GitHub Actions workflow
 """
 
 import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import yaml
 from pathlib import Path
 from datetime import datetime
