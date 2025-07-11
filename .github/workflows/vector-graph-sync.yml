@@ -1,0 +1,174 @@
+name: Vector and Graph Database Sync
+
+on:
+  push:
+    paths:
+      - 'context/**/*.yaml'
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild all embeddings and graph'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync-databases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.14.0
+        ports:
+          - 6333:6333
+        options: >-
+          --health-cmd "curl -f http://localhost:6333/health"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      neo4j:
+        image: neo4j:5
+        ports:
+          - 7687:7687
+          - 7474:7474
+        env:
+          NEO4J_AUTH: neo4j/testpassword
+          NEO4J_ACCEPT_LICENSE_AGREEMENT: 'yes'
+        options: >-
+          --health-cmd "curl -f http://localhost:7474 || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Wait for services
+        run: |
+          echo "Waiting for Qdrant..."
+          for i in {1..30}; do
+            if curl -f http://localhost:6333/health; then
+              echo "Qdrant is ready"
+              break
+            fi
+            sleep 2
+          done
+          
+          echo "Waiting for Neo4j..."
+          for i in {1..30}; do
+            if curl -f http://localhost:7474; then
+              echo "Neo4j is ready"
+              break
+            fi
+            sleep 2
+          done
+      
+      - name: Initialize Qdrant
+        run: |
+          python vector_db_init.py --skip-test
+        continue-on-error: true
+      
+      - name: Initialize Neo4j
+        run: |
+          python neo4j_init.py --username neo4j --password testpassword
+        continue-on-error: true
+      
+      - name: Sync vector embeddings
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then
+            echo "Force rebuilding all embeddings..."
+            python hash_diff_embedder.py context/ --force --verbose
+          else
+            echo "Syncing changed documents..."
+            python hash_diff_embedder.py context/ --cleanup --verbose
+          fi
+        if: env.OPENAI_API_KEY != ''
+      
+      - name: Build context graph
+        run: |
+          if [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then
+            echo "Force rebuilding entire graph..."
+            python graph_builder.py context/ --username neo4j --password testpassword --force --cleanup --verbose
+          else
+            echo "Updating graph with changes..."
+            python graph_builder.py context/ --username neo4j --password testpassword --cleanup --verbose
+          fi
+      
+      - name: Generate sync report
+        if: always()
+        run: |
+          echo "## Vector and Graph Sync Report" > sync_report.md
+          echo "" >> sync_report.md
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> sync_report.md
+          echo "" >> sync_report.md
+          
+          # Vector stats
+          if [ -f "context/.embeddings_cache/hash_cache.json" ]; then
+            echo "### Vector Embeddings" >> sync_report.md
+            echo "- Cache entries: $(jq 'length' context/.embeddings_cache/hash_cache.json)" >> sync_report.md
+            echo "" >> sync_report.md
+          fi
+          
+          # Graph stats
+          if [ -f "context/.graph_cache/processed.json" ]; then
+            echo "### Graph Nodes" >> sync_report.md
+            echo "- Processed documents: $(jq 'length' context/.graph_cache/processed.json)" >> sync_report.md
+            echo "" >> sync_report.md
+          fi
+          
+          # Show statistics
+          echo "### Database Statistics" >> sync_report.md
+          python sum_scores_api.py stats || echo "- Vector stats unavailable"
+          echo "" >> sync_report.md
+          python graph_builder.py context/ --stats --username neo4j --password testpassword || echo "- Graph stats unavailable"
+      
+      - name: Upload sync report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: vector-graph-sync-report
+          path: sync_report.md
+          retention-days: 7
+      
+      - name: Cache embedding hashes
+        uses: actions/cache@v3
+        with:
+          path: context/.embeddings_cache
+          key: ${{ runner.os }}-embeddings-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-embeddings-
+      
+      - name: Cache graph processed docs
+        uses: actions/cache@v3
+        with:
+          path: context/.graph_cache
+          key: ${{ runner.os }}-graph-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-graph-

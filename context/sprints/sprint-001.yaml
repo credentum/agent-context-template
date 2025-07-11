@@ -38,7 +38,7 @@ phases:
 - phase: 2
   name: Task Loop Integration
   duration_days: 3
-  status: in_progress
+  status: completed
   tasks:
   - Sprint YAML automation
   - update_sprint.py implementation
@@ -46,6 +46,27 @@ phases:
   - Schema caching for performance
   - Configurable thresholds
   - Improved exception handling
+- phase: 3a
+  name: Vector Database
+  duration_days: 2
+  status: completed
+  tasks:
+  - Deploy Qdrant v1.14.x configuration
+  - vector_db_init.py implementation
+  - hash_diff_embedder.py with change detection
+  - sum_scores_api.py with advanced ranking
+  - Vector database tests
+- phase: 3b
+  name: Graph Layer
+  duration_days: 2
+  status: completed
+  tasks:
+  - Deploy Neo4j configuration
+  - neo4j_init.py implementation
+  - graph_builder.py for YAML to graph conversion
+  - graphrag_integration.py for combined retrieval
+  - Graph database tests
+  - GitHub Actions workflow for sync
 team:
 - role: lead
   agent: pm_agent
