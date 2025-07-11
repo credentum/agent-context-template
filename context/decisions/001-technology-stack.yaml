@@ -3,6 +3,7 @@ document_type: "decision"
 id: "001-technology-stack"
 title: "Technology Stack Selection"
 status: "active"
+created_date: "2025-07-11"
 decision_date: "2025-07-11"
 last_modified: "2025-07-11"
 last_referenced: "2025-07-11"
@@ -53,17 +54,18 @@ decision: |
   - CI/CD friendly
 
 alternatives_considered:
-  vector_db:
-    - name: "Pinecone"
-      reason_rejected: "Vendor lock-in, no self-hosting option"
-    - name: "Weaviate"
-      reason_rejected: "More complex setup, overkill for our needs"
-  
-  graph_db:
-    - name: "ArangoDB"
-      reason_rejected: "Less mature GraphRAG ecosystem"
-    - name: "Amazon Neptune"
-      reason_rejected: "Cloud-only, vendor lock-in"
+  pinecone:
+    name: "Pinecone"
+    reason_rejected: "Vendor lock-in, no self-hosting option"
+  weaviate:
+    name: "Weaviate"
+    reason_rejected: "More complex setup, overkill for our needs"
+  arangodb:
+    name: "ArangoDB"
+    reason_rejected: "Less mature GraphRAG ecosystem"
+  amazon_neptune:
+    name: "Amazon Neptune"
+    reason_rejected: "Cloud-only, vendor lock-in"
 
 impacts:
   - "Requires Docker/Kubernetes for local development"

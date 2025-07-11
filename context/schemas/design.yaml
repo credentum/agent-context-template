@@ -1,0 +1,13 @@
+# Schema for design documents
+# Extends base schema with design-specific fields
+
+include('base.yaml')
+
+content: str(min=1, required=True)
+references: list(include('reference'), required=False)
+
+---
+reference:
+  type: enum('internal', 'external', 'config', required=True)
+  path: str(required=False)
+  url: str(required=False)

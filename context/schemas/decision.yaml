@@ -1,0 +1,14 @@
+# Schema for decision documents
+# Extends base schema with decision-specific fields
+
+include('base.yaml')
+
+decision: str(min=1, required=True)
+decision_date: regex('^\d{4}-\d{2}-\d{2}$', required=True)
+alternatives_considered: map(include('alternative'), required=False)
+impacts: list(str(), required=False)
+
+---
+alternative:
+  name: str(required=True)
+  reason_rejected: str(required=True)
