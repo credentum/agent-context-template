@@ -3,20 +3,20 @@
 
 include('base.yaml')
 
-sprint_number: int(required=True, min=1)
-start_date: str(required=True, regex='^\d{4}-\d{2}-\d{2}$')
-end_date: str(required=True, regex='^\d{4}-\d{2}-\d{2}$')
-goals: list(str(), required=True, min=1)
+sprint_number: int(min=1, required=True)
+start_date: regex('^\d{4}-\d{2}-\d{2}$', required=True)
+end_date: regex('^\d{4}-\d{2}-\d{2}$', required=True)
+goals: list(str(), min=1, required=True)
 phases: list(include('phase'), required=False)
 team: list(include('team_member'), required=False)
 success_metrics: list(include('metric'), required=False)
 
 ---
 phase:
-  phase: int(required=True, min=0)
+  phase: int(min=0, required=True)
   name: str(required=True)
-  duration_days: int(required=True, min=1)
-  status: str(required=True, enum=['pending', 'in_progress', 'completed', 'blocked'])
+  duration_days: int(min=1, required=True)
+  status: enum('pending', 'in_progress', 'completed', 'blocked', required=True)
   tasks: list(str(), required=False)
 
 ---

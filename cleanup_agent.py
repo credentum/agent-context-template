@@ -14,7 +14,7 @@ import shutil
 import yaml
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Tuple, Any
 import click
 
 
@@ -35,14 +35,21 @@ class CleanupAgent:
         try:
             with open(".ctxrc.yaml", 'r') as f:
                 return yaml.safe_load(f)
-        except Exception as e:
+        except FileNotFoundError:
             if self.verbose:
-                click.echo(f"Warning: Could not load .ctxrc.yaml: {e}")
-            # Return default config
-            return {
-                'storage': {'retention_days': 90},
-                'agents': {'cleanup': {'expire_after_days': 30}}
-            }
+                click.echo("Warning: .ctxrc.yaml not found, using defaults")
+        except yaml.YAMLError as e:
+            if self.verbose:
+                click.echo(f"Warning: Invalid YAML in .ctxrc.yaml: {e}")
+        except IOError as e:
+            if self.verbose:
+                click.echo(f"Warning: Could not read .ctxrc.yaml: {e}")
+        
+        # Return default config
+        return {
+            'storage': {'retention_days': 90},
+            'agents': {'cleanup': {'expire_after_days': 30}}
+        }
     
     def _log_action(self, action: str, file_path: Path, reason: str) -> None:
         """Log an action taken by the cleanup agent"""
@@ -56,7 +63,7 @@ class CleanupAgent:
         if self.verbose:
             click.echo(f"{action}: {file_path} - {reason}")
     
-    def _should_archive(self, file_path: Path, data: Dict[str, Any]) -> tuple[bool, str]:
+    def _should_archive(self, file_path: Path, data: Dict[str, Any]) -> Tuple[bool, str]:
         """Determine if a document should be archived"""
         # Check if expired
         expires = data.get('expires')
@@ -159,8 +166,15 @@ class CleanupAgent:
                 if should_archive:
                     self.archive_document(yaml_file)
                     
+            except yaml.YAMLError as e:
+                self._log_action("ERROR", yaml_file, f"Invalid YAML: {e}")
+            except IOError as e:
+                self._log_action("ERROR", yaml_file, f"File I/O error: {e}")
             except Exception as e:
-                self._log_action("ERROR", yaml_file, f"Failed to process: {e}")
+                self._log_action("ERROR", yaml_file, f"Unexpected error: {e}")
+                if self.verbose:
+                    import traceback
+                    traceback.print_exc()
     
     def write_cleanup_log(self) -> None:
         """Write cleanup actions to log file"""

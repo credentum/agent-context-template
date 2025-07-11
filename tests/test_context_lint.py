@@ -26,6 +26,14 @@ class TestContextLint:
         schema_dst = context_dir / "schemas"
         shutil.copytree(schema_src, schema_dst)
         
+        # Copy full schema files to project root schemas dir for tests
+        root_schema_dir = Path(temp_dir) / "context" / "schemas"
+        for schema_name in ['design_full.yaml', 'decision_full.yaml', 'sprint_full.yaml']:
+            src = Path(__file__).parent.parent / "context" / "schemas" / schema_name
+            if src.exists():
+                dst = root_schema_dir / schema_name
+                shutil.copy(src, dst)
+        
         yield context_dir
         
         # Cleanup

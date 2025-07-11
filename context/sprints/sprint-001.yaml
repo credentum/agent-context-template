@@ -3,6 +3,7 @@ document_type: "sprint"
 id: "sprint-001"
 title: "MVP Implementation Sprint"
 status: "planning"
+created_date: "2025-07-11"
 sprint_number: 1
 start_date: "2025-07-11"
 end_date: "2025-07-29"

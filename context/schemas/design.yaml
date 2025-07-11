@@ -3,11 +3,11 @@
 
 include('base.yaml')
 
-content: str(required=True, min=1)
+content: str(min=1, required=True)
 references: list(include('reference'), required=False)
 
 ---
 reference:
-  type: str(required=True, enum=['internal', 'external', 'config'])
+  type: enum('internal', 'external', 'config', required=True)
   path: str(required=False)
   url: str(required=False)

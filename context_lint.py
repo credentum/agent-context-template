@@ -25,6 +25,8 @@ import os
 import sys
 import yaml
 import json
+import fcntl
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
@@ -60,7 +62,11 @@ class ContextLinter:
                 self.errors.append(f"{file_path}: Missing document_type field")
                 return False
             
-            schema_file = self.schema_dir / f"{doc_type}.yaml"
+            # Try full schema first, then fall back to original
+            schema_file = self.schema_dir / f"{doc_type}_full.yaml"
+            if not schema_file.exists():
+                schema_file = self.schema_dir / f"{doc_type}.yaml"
+            
             if not schema_file.exists():
                 self.errors.append(f"{file_path}: Unknown document type '{doc_type}'")
                 return False
@@ -115,10 +121,21 @@ class ContextLinter:
             if self.verbose:
                 click.echo(f"  Fixed: Updated last_referenced to {today}")
         
-        # Save fixed file
+        # Save fixed file with atomic write
         if fixed:
-            with open(file_path, 'w') as f:
-                yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+            # Write to temporary file first
+            temp_fd, temp_path = tempfile.mkstemp(dir=file_path.parent, text=True)
+            try:
+                with os.fdopen(temp_fd, 'w') as f:
+                    yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+                
+                # Atomic rename
+                os.replace(temp_path, file_path)
+            except Exception:
+                # Clean up temp file on error
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                raise
         
         return fixed
     
