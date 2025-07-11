@@ -468,7 +468,7 @@ class DuckDBAnalytics(DatabaseComponent):
             self.log_success(f"Connected to DuckDB at {db_path}")
             return True
             
-        except duckdb.DatabaseError as e:
+        except Exception as e:
             self.log_error(f"DuckDB database error: {e}", e)
             return False
         except OSError as e:
@@ -503,11 +503,13 @@ class DuckDBAnalytics(DatabaseComponent):
                 event_type VARCHAR NOT NULL,
                 document_id VARCHAR,
                 agent_id VARCHAR,
-                event_data JSON,
-                INDEX idx_timestamp (timestamp),
-                INDEX idx_event_type (event_type)
+                event_data JSON
             )
         """)
+        
+        # Create indexes for events table
+        self.conn.execute(f"CREATE INDEX IF NOT EXISTS idx_timestamp ON {tables.get('events', 'context_events')} (timestamp)")
+        self.conn.execute(f"CREATE INDEX IF NOT EXISTS idx_event_type ON {tables.get('events', 'context_events')} (event_type)")
         
         # Summaries table
         self.conn.execute(f"""
