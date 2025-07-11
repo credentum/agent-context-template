@@ -51,7 +51,7 @@ class TestVectorDBInitializer:
         
         initializer = VectorDBInitializer(config_file)
         assert initializer.connect() is True
-        mock_client_class.assert_called_once_with(host='localhost', port=6333, timeout=5)
+        mock_client_class.assert_called_once_with(host='localhost', port=6333, timeout=30)
     
     @patch('vector_db_init.QdrantClient')
     def test_connect_failure(self, mock_client_class, config_file):
