@@ -203,8 +203,8 @@ class TestSprintUpdater:
             # (task, issue_title, should_match)
             ("Write tests", "[Sprint 1] Phase 2: Write tests", True),
             ("Write tests", "Write tests for feature A", True),
-            ("test", "Integration tests completed", False),  # Should not match
-            ("test", "Run test suite", False),  # Should not match
+            ("test", "Integration tests completed", False),  # "test" != "tests"
+            ("test", "Run test suite", True),  # "test" matches as a word
             ("test", "[Sprint 1] Phase 1: test", True),  # Exact word match
             ("implement feature A", "Task: Implement feature A and B", True),
             ("feature A", "Implement feature A", True),
