@@ -15,6 +15,9 @@ pytest tests/test_config_parser.py -v
 echo -e "\n=== Running Context Lint Tests ==="
 pytest tests/test_context_lint.py -v
 
+echo -e "\n=== Running Sprint Automation Tests ==="
+pytest tests/test_sprint_automation.py -v
+
 echo -e "\n=== Running Context Lint Validation ==="
 python context_lint.py check-config --verbose
 python context_lint.py validate context/ --verbose

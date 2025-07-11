@@ -4,6 +4,10 @@
 system:
   schema_version: "1.0.0"
   created_date: "2025-07-11"
+
+linter:
+  warning_days_old: 90          # Warn if document not modified for this many days
+  warning_days_until_expire: 7  # Warn if document expires within this many days
   
 qdrant:
   version: "1.14.x"
