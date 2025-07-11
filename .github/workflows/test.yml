@@ -53,6 +53,7 @@ jobs:
           mkdir -p context/.duckdb
           mkdir -p context/.graph_cache
           mkdir -p context/.vector_cache
+          mkdir -p context/trace
 
       - name: Run unit tests
         run: |
