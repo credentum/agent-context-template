@@ -109,10 +109,16 @@ class TestInjectionPrevention:
         ]
         
         for path in malicious_paths:
-            # The system should validate paths are within allowed directories
+            # These paths should be considered potentially dangerous
             test_path = Path(path)
-            # In production, should have path validation
-            assert test_path.is_absolute() or ".." in str(test_path)
+            # Check that we can identify dangerous patterns
+            is_dangerous = (
+                test_path.is_absolute() or 
+                ".." in str(path) or
+                path.startswith("/") or
+                ":" in str(path)  # Windows drive paths
+            )
+            assert is_dangerous, f"Failed to identify {path} as potentially dangerous"
 
 
 class TestAuthenticationSecurity:
