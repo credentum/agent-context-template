@@ -39,12 +39,19 @@ class ContextAnalytics(DuckDBAnalytics):
 
     def __init__(self, config_path: str = ".ctxrc.yaml", verbose: bool = False):
         super().__init__(config_path, verbose)
-        self.report_cache = {}
+        self.report_cache: Dict[str, AnalyticsReport] = {}
 
     def analyze_document_lifecycle(self, days: int = 30) -> AnalyticsReport:
         """Analyze document lifecycle patterns"""
         if not self.ensure_connected():
-            return None
+            return AnalyticsReport(
+                report_type="error",
+                period_start=datetime.utcnow(),
+                period_end=datetime.utcnow(),
+                metrics={},
+                insights=[],
+                recommendations=[]
+            )
 
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=days)
@@ -128,12 +135,26 @@ class ContextAnalytics(DuckDBAnalytics):
 
         except Exception as e:
             self.log_error("Failed to analyze document lifecycle", e)
-            return None
+            return AnalyticsReport(
+                report_type="error",
+                period_start=datetime.utcnow(),
+                period_end=datetime.utcnow(),
+                metrics={},
+                insights=[],
+                recommendations=[]
+            )
 
     def analyze_agent_performance(self, days: int = 7) -> AnalyticsReport:
         """Analyze agent performance metrics"""
         if not self.ensure_connected():
-            return None
+            return AnalyticsReport(
+                report_type="error",
+                period_start=datetime.utcnow(),
+                period_end=datetime.utcnow(),
+                metrics={},
+                insights=[],
+                recommendations=[]
+            )
 
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=days)
@@ -225,12 +246,26 @@ class ContextAnalytics(DuckDBAnalytics):
 
         except Exception as e:
             self.log_error("Failed to analyze agent performance", e)
-            return None
+            return AnalyticsReport(
+                report_type="error",
+                period_start=datetime.utcnow(),
+                period_end=datetime.utcnow(),
+                metrics={},
+                insights=[],
+                recommendations=[]
+            )
 
     def analyze_system_health(self) -> AnalyticsReport:
         """Analyze overall system health"""
         if not self.ensure_connected():
-            return None
+            return AnalyticsReport(
+                report_type="error",
+                period_start=datetime.utcnow(),
+                period_end=datetime.utcnow(),
+                metrics={},
+                insights=[],
+                recommendations=[]
+            )
 
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(hours=24)
@@ -329,7 +364,14 @@ class ContextAnalytics(DuckDBAnalytics):
 
         except Exception as e:
             self.log_error("Failed to analyze system health", e)
-            return None
+            return AnalyticsReport(
+                report_type="error",
+                period_start=datetime.utcnow(),
+                period_end=datetime.utcnow(),
+                metrics={},
+                insights=[],
+                recommendations=[]
+            )
 
     def generate_executive_summary(self, days: int = 30) -> Dict[str, Any]:
         """Generate executive summary of all analytics"""

@@ -49,7 +49,8 @@ class BaseComponent(ABC):
             import yaml
 
             with open(self.config_path, "r") as f:
-                return yaml.safe_load(f)
+                config = yaml.safe_load(f)
+                return config if config is not None else {}
         except FileNotFoundError:
             self.log_error(f"Configuration file {self.config_path} not found")
             return {}

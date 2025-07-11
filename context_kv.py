@@ -16,7 +16,7 @@ import redis
 import duckdb
 from datetime import datetime, timedelta, date
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple, Union
+from typing import Dict, Any, List, Optional, Tuple, Union, cast
 from dataclasses import dataclass, asdict
 import time
 import hashlib
@@ -61,8 +61,8 @@ class RedisConnector(DatabaseComponent):
 
     def __init__(self, config_path: str = ".ctxrc.yaml", verbose: bool = False):
         super().__init__(config_path, verbose)
-        self.redis_client = None
-        self.pipeline = None
+        self.redis_client: Optional[redis.Redis[bytes]] = None
+        self.pipeline: Optional[redis.client.Pipeline[bytes]] = None
         self.perf_config = self._load_performance_config()
 
     def _get_service_name(self) -> str:
@@ -74,12 +74,14 @@ class RedisConnector(DatabaseComponent):
         try:
             with open("performance.yaml", "r") as f:
                 perf = yaml.safe_load(f)
-                return perf.get("kv_store", {}).get("redis", {})
+                kv_config = perf.get("kv_store", {})
+                return kv_config.get("redis", {}) if kv_config else {}
         except FileNotFoundError:
             return {}
 
-    def connect(self, password: Optional[str] = None) -> bool:
+    def connect(self, **kwargs: Any) -> bool:
         """Connect to Redis"""
+        password = kwargs.get("password", None)
         redis_config = self.config.get("redis", {})
         host = redis_config.get("host", "localhost")
         port = redis_config.get("port", 6379)
@@ -113,11 +115,12 @@ class RedisConnector(DatabaseComponent):
             self.redis_client = redis.Redis(connection_pool=pool)
 
             # Test connection
-            self.redis_client.ping()
-
-            self.is_connected = True
-            self.log_success(f"Connected to Redis at {host}:{port}")
-            return True
+            if self.redis_client:
+                self.redis_client.ping()
+                self.is_connected = True
+                self.log_success(f"Connected to Redis at {host}:{port}")
+                return True
+            return False
 
         except Exception as e:
             # Sanitize error message to avoid exposing password
@@ -154,9 +157,10 @@ class RedisConnector(DatabaseComponent):
             )
 
             # Store as JSON
-            self.redis_client.setex(
-                prefixed_key, ttl_seconds, json.dumps(asdict(entry), default=str)
-            )
+            if self.redis_client:
+                self.redis_client.setex(
+                    prefixed_key, ttl_seconds, json.dumps(asdict(entry), default=str)
+                )
 
             return True
 
@@ -171,6 +175,10 @@ class RedisConnector(DatabaseComponent):
 
         try:
             prefixed_key = self.get_prefixed_key(key, "cache")
+            if not self.redis_client:
+                return None
+            if not self.redis_client:
+                return None
             data = self.redis_client.get(prefixed_key)
 
             if data:
@@ -184,9 +192,10 @@ class RedisConnector(DatabaseComponent):
                 entry_dict["last_accessed"] = datetime.utcnow().isoformat()
 
                 # Update in Redis
-                ttl = self.redis_client.ttl(prefixed_key)
-                if ttl > 0:
-                    self.redis_client.setex(prefixed_key, ttl, json.dumps(entry_dict, default=str))
+                if self.redis_client:
+                    ttl = self.redis_client.ttl(prefixed_key)
+                    if ttl > 0:
+                        self.redis_client.setex(prefixed_key, ttl, json.dumps(entry_dict, default=str))
 
                 return entry_dict.get("value")
 
@@ -206,6 +215,8 @@ class RedisConnector(DatabaseComponent):
             full_pattern = f"{prefix}{pattern}"
 
             # Find matching keys
+            if not self.redis_client:
+                return 0
             keys = list(self.redis_client.scan_iter(match=full_pattern))
 
             if keys:
@@ -232,7 +243,8 @@ class RedisConnector(DatabaseComponent):
                 "last_activity": datetime.utcnow().isoformat(),
             }
 
-            self.redis_client.setex(prefixed_key, ttl_seconds, json.dumps(session_data))
+            if self.redis_client:
+                self.redis_client.setex(prefixed_key, ttl_seconds, json.dumps(session_data))
 
             return True
 
@@ -247,6 +259,8 @@ class RedisConnector(DatabaseComponent):
 
         try:
             prefixed_key = self.get_prefixed_key(session_id, "session")
+            if not self.redis_client:
+                return None
             data = self.redis_client.get(prefixed_key)
 
             if data:
@@ -255,11 +269,13 @@ class RedisConnector(DatabaseComponent):
                 session_data["last_activity"] = datetime.utcnow().isoformat()
 
                 # Extend TTL
-                ttl = self.redis_client.ttl(prefixed_key)
-                if ttl > 0:
-                    self.redis_client.setex(prefixed_key, ttl, json.dumps(session_data))
+                if self.redis_client:
+                    ttl = self.redis_client.ttl(prefixed_key)
+                    if ttl > 0:
+                        self.redis_client.setex(prefixed_key, ttl, json.dumps(session_data))
 
-                return session_data.get("data")
+                data = session_data.get("data")
+                return data if data is not None else None
 
             return None
 
@@ -277,6 +293,8 @@ class RedisConnector(DatabaseComponent):
             lock_id = hashlib.sha256(f"{resource}{time.time()}".encode()).hexdigest()[:16]
 
             # Try to acquire lock
+            if not self.redis_client:
+                return None
             acquired = self.redis_client.set(
                 lock_key, lock_id, nx=True, ex=timeout  # Only set if not exists
             )
@@ -304,6 +322,8 @@ class RedisConnector(DatabaseComponent):
             end
             """
 
+            if not self.redis_client:
+                return False
             result = self.redis_client.eval(lua_script, 1, lock_key, lock_id)
             return bool(result)
 
@@ -332,12 +352,13 @@ class RedisConnector(DatabaseComponent):
             )
 
             # Store metric
-            self.redis_client.zadd(
-                metric_key, {json.dumps(asdict(metric), default=str): metric.timestamp.timestamp()}
-            )
+            if self.redis_client:
+                self.redis_client.zadd(
+                    metric_key, {json.dumps(asdict(metric), default=str): metric.timestamp.timestamp()}
+                )
 
-            # Set expiration (7 days)
-            self.redis_client.expire(metric_key, 7 * 24 * 3600)
+                # Set expiration (7 days)
+                self.redis_client.expire(metric_key, 7 * 24 * 3600)
 
             return True
 
@@ -376,6 +397,8 @@ class RedisConnector(DatabaseComponent):
                     )
 
                     # Get metrics from sorted set
+                    if not self.redis_client:
+                        continue
                     data = self.redis_client.zrangebyscore(
                         metric_key, start_time.timestamp(), end_time.timestamp()
                     )
@@ -410,7 +433,7 @@ class DuckDBAnalytics(DatabaseComponent):
 
     def __init__(self, config_path: str = ".ctxrc.yaml", verbose: bool = False):
         super().__init__(config_path, verbose)
-        self.conn = None
+        self.conn: Optional[duckdb.DuckDBPyConnection] = None
         self.perf_config = self._load_performance_config()
 
     def _get_service_name(self) -> str:
@@ -441,8 +464,9 @@ class DuckDBAnalytics(DatabaseComponent):
             self.conn = duckdb.connect(db_path)
 
             # Set configuration
-            self.conn.execute(f"SET memory_limit = '{memory_limit}'")
-            self.conn.execute(f"SET threads = {threads}")
+            if self.conn:
+                self.conn.execute(f"SET memory_limit = '{memory_limit}'")
+                self.conn.execute(f"SET threads = {threads}")
 
             # Initialize tables
             self._initialize_tables()
@@ -466,6 +490,8 @@ class DuckDBAnalytics(DatabaseComponent):
         tables = self.config.get("duckdb", {}).get("tables", {})
 
         # Metrics table
+        if not self.conn:
+            return False
         self.conn.execute(
             f"""
             CREATE TABLE IF NOT EXISTS {tables.get('metrics', 'context_metrics')} (
@@ -569,7 +595,7 @@ class DuckDBAnalytics(DatabaseComponent):
             return False
 
     def query_metrics(
-        self, query: str, params: Optional[Dict[str, Any]] = None
+        self, query: str, params: Optional[Union[Dict[str, Any], List[Any]]] = None
     ) -> List[Dict[str, Any]]:
         """Execute analytics query"""
         if not self.ensure_connected():
@@ -578,16 +604,22 @@ class DuckDBAnalytics(DatabaseComponent):
         try:
             # Set query timeout
             timeout = self.perf_config.get("query", {}).get("timeout_seconds", 60)
-            self.conn.execute(f"SET statement_timeout = '{timeout}s'")
+            if self.conn:
+                self.conn.execute(f"SET statement_timeout = '{timeout}s'")
 
-            # Execute query
-            if params:
-                result = self.conn.execute(query, params).fetchall()
+                # Execute query
+                if params:
+                    result = self.conn.execute(query, params).fetchall()
+                else:
+                    result = self.conn.execute(query).fetchall()
             else:
-                result = self.conn.execute(query).fetchall()
+                return []
 
             # Get column names
-            columns = [desc[0] for desc in self.conn.description]
+            if self.conn and self.conn.description:
+                columns = [desc[0] for desc in self.conn.description]
+            else:
+                return []
 
             # Convert to dictionaries
             return [dict(zip(columns, row)) for row in result]
@@ -631,6 +663,8 @@ class DuckDBAnalytics(DatabaseComponent):
                     AND timestamp <= ?
             """
 
+            if not self.conn:
+                return {}
             result = self.conn.execute(query, [metric_name, start_time, end_time]).fetchone()
 
             if result:
@@ -683,9 +717,11 @@ class DuckDBAnalytics(DatabaseComponent):
                 GROUP BY metric_name
             """
 
+            if not self.conn:
+                return {}
             results = self.conn.execute(query, [start_time, end_time]).fetchall()
 
-            summary = {
+            summary: Dict[str, Any] = {
                 "summary_date": summary_date.isoformat(),
                 "summary_type": summary_type,
                 "period": {"start": start_time.isoformat(), "end": end_time.isoformat()},
@@ -702,7 +738,8 @@ class DuckDBAnalytics(DatabaseComponent):
                 }
 
             # Store summary
-            self.conn.execute(
+            if self.conn:
+                self.conn.execute(
                 f"""
                 INSERT OR REPLACE INTO {summaries_table}
                 (summary_date, summary_type, metrics)
@@ -744,6 +781,8 @@ class DuckDBAnalytics(DatabaseComponent):
                 ORDER BY hour
             """
 
+            if not self.conn:
+                return []
             results = self.conn.execute(query, [metric_name, start_time, end_time]).fetchall()
 
             if len(results) < 2:
@@ -794,7 +833,7 @@ class ContextKV:
 
     def connect(self, redis_password: Optional[str] = None) -> bool:
         """Connect to both stores"""
-        redis_connected = self.redis.connect(redis_password)
+        redis_connected = self.redis.connect(password=redis_password)
         duckdb_connected = self.duckdb.connect()
 
         return redis_connected and duckdb_connected
