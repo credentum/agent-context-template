@@ -9,9 +9,10 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import pytest
 import yaml
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, Mock
 import sys
 import os
+import subprocess
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -310,8 +311,12 @@ class TestSprintIssueLinker:
         # But mock should have been called to check existing issues
         mock_run.assert_called()
     
-    def test_issue_title_generation(self, temp_sprint_dir):
+    @patch('subprocess.run')
+    def test_issue_title_generation(self, mock_run, temp_sprint_dir):
         """Test issue title generation"""
+        # Mock gh auth status to succeed
+        mock_run.return_value = Mock(returncode=0)
+        
         sprint_data = {
             'schema_version': '1.0.0',
             'document_type': 'sprint',
