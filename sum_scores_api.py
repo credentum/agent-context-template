@@ -39,17 +39,19 @@ class SearchResult:
 class SumScoresAPI:
     """Advanced vector search with sum-of-scores ranking"""
     
-    def __init__(self, config_path: str = ".ctxrc.yaml"):
+    def __init__(self, config_path: str = ".ctxrc.yaml", perf_config_path: str = "performance.yaml"):
         self.config = self._load_config(config_path)
+        self.perf_config = self._load_perf_config(perf_config_path)
         self.client = None
         self.collection_name = self.config.get('qdrant', {}).get('collection_name', 'project_context')
         
-        # Scoring configuration
-        self.decay_days = 30  # Start decay after 30 days
-        self.decay_rate = 0.01  # 1% per day after decay_days
+        # Load scoring configuration from performance config
+        ranking_config = self.perf_config.get('search', {}).get('ranking', {})
+        self.decay_days = ranking_config.get('temporal_decay_days', 30)
+        self.decay_rate = ranking_config.get('temporal_decay_rate', 0.01)
         
-        # Document type boost factors
-        self.type_boosts = {
+        # Document type boost factors from config
+        self.type_boosts = ranking_config.get('type_boosts', {
             'design': 1.2,
             'decision': 1.15,
             'sprint': 1.1,
@@ -57,7 +59,7 @@ class SumScoresAPI:
             'api': 1.0,
             'test': 0.9,
             'documentation': 0.85
-        }
+        })
     
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load configuration from .ctxrc.yaml"""
@@ -66,6 +68,22 @@ class SumScoresAPI:
                 return yaml.safe_load(f)
         except FileNotFoundError:
             return {}
+    
+    def _load_perf_config(self, perf_config_path: str) -> Dict[str, Any]:
+        """Load performance configuration"""
+        try:
+            with open(perf_config_path, 'r') as f:
+                return yaml.safe_load(f)
+        except FileNotFoundError:
+            # Return default config if file not found
+            return {
+                'search': {
+                    'ranking': {
+                        'temporal_decay_days': 30,
+                        'temporal_decay_rate': 0.01
+                    }
+                }
+            }
     
     def connect(self) -> bool:
         """Connect to Qdrant"""
@@ -248,25 +266,55 @@ class SumScoresAPI:
         try:
             collection_info = self.client.get_collection(self.collection_name)
             
-            # Get document type distribution
+            # Get document type distribution using sampling for large collections
+            total_points = collection_info.points_count
             type_counts = {}
-            offset = None
             
-            while True:
-                points, next_offset = self.client.scroll(
+            if total_points > 1000:
+                # Sample for large collections
+                sample_size = min(500, total_points)
+                sample_ids = []
+                
+                # Get a sample of point IDs
+                points, _ = self.client.scroll(
                     collection_name=self.collection_name,
-                    limit=100,
-                    offset=offset,
+                    limit=sample_size,
+                    with_payload=False
+                )
+                sample_ids = [p.id for p in points]
+                
+                # Retrieve payloads for sampled points
+                retrieved = self.client.retrieve(
+                    collection_name=self.collection_name,
+                    ids=sample_ids,
                     with_payload=True
                 )
                 
-                for point in points:
+                for point in retrieved:
                     doc_type = point.payload.get('document_type', 'unknown')
                     type_counts[doc_type] = type_counts.get(doc_type, 0) + 1
                 
-                if next_offset is None:
-                    break
-                offset = next_offset
+                # Extrapolate counts
+                factor = total_points / sample_size
+                type_counts = {k: int(v * factor) for k, v in type_counts.items()}
+            else:
+                # For small collections, get all points
+                offset = None
+                while True:
+                    points, next_offset = self.client.scroll(
+                        collection_name=self.collection_name,
+                        limit=100,
+                        offset=offset,
+                        with_payload=True
+                    )
+                    
+                    for point in points:
+                        doc_type = point.payload.get('document_type', 'unknown')
+                        type_counts[doc_type] = type_counts.get(doc_type, 0) + 1
+                    
+                    if next_offset is None:
+                        break
+                    offset = next_offset
             
             return {
                 'total_vectors': collection_info.points_count,

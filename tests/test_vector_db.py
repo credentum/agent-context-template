@@ -180,7 +180,13 @@ class TestHashDiffEmbedder:
         # Check Qdrant upsert was called
         mock_client.upsert.assert_called_once()
         call_args = mock_client.upsert.call_args
-        points = call_args.kwargs['points']
+        
+        # Handle both positional and keyword arguments
+        if call_args.args:
+            points = call_args.kwargs.get('points', call_args.args[1] if len(call_args.args) > 1 else [])
+        else:
+            points = call_args.kwargs.get('points', [])
+            
         assert len(points) == 1
         assert points[0].payload['document_id'] == 'test-doc'
 

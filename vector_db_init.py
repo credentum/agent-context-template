@@ -48,12 +48,27 @@ class VectorDBInitializer:
     
     def connect(self) -> bool:
         """Connect to Qdrant instance"""
-        qdrant_config = self.config.get('qdrant', {})
-        host = qdrant_config.get('host', 'localhost')
+        # Import locally
+        from utils import get_secure_connection_config
+        
+        qdrant_config = get_secure_connection_config(self.config, 'qdrant')
+        host = qdrant_config['host']
         port = qdrant_config.get('port', 6333)
+        use_ssl = qdrant_config.get('ssl', False)
+        timeout = qdrant_config.get('timeout', 5)
         
         try:
-            self.client = QdrantClient(host=host, port=port, timeout=5)
+            # Use appropriate protocol based on SSL setting
+            if use_ssl:
+                self.client = QdrantClient(
+                    host=host, 
+                    port=port, 
+                    https=True,
+                    verify=qdrant_config.get('verify_ssl', True),
+                    timeout=timeout
+                )
+            else:
+                self.client = QdrantClient(host=host, port=port, timeout=timeout)
             # Test connection
             self.client.get_collections()
             click.echo(f"✓ Connected to Qdrant at {host}:{port}")

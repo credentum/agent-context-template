@@ -59,7 +59,7 @@ class GraphRAGIntegration:
         except FileNotFoundError:
             return {}
     
-    def connect(self, neo4j_username: str = "neo4j", neo4j_password: str = "password") -> bool:
+    def connect(self, neo4j_username: str = "neo4j", neo4j_password: Optional[str] = None) -> bool:
         """Connect to Neo4j and Qdrant"""
         # Connect to Neo4j
         neo4j_config = self.config.get('neo4j', {})
@@ -67,12 +67,19 @@ class GraphRAGIntegration:
         neo4j_port = neo4j_config.get('port', 7687)
         neo4j_uri = f"bolt://{neo4j_host}:{neo4j_port}"
         
+        if not neo4j_password:
+            click.echo("Error: Neo4j password is required", err=True)
+            return False
+        
         try:
             self.neo4j_driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
             with self.neo4j_driver.session() as session:
                 session.run("RETURN 1")
         except Exception as e:
-            click.echo(f"Failed to connect to Neo4j: {e}", err=True)
+            # Import locally to avoid circular imports
+            from utils import sanitize_error_message
+            error_msg = sanitize_error_message(str(e), [neo4j_password, neo4j_username])
+            click.echo(f"Failed to connect to Neo4j: {error_msg}", err=True)
             return False
         
         # Connect to Qdrant
@@ -128,20 +135,43 @@ class GraphRAGIntegration:
             with self.neo4j_driver.session(database=self.database) as session:
                 # Get direct neighbors
                 for doc_id in document_ids:
-                    # Get node and its relationships up to max_hops
-                    query = """
-                    MATCH path = (d:Document {id: $doc_id})-[*1..%d]-(connected)
-                    WITH d, connected, path, relationships(path) as rels
-                    RETURN 
-                        d as source,
-                        connected as target,
-                        [r in rels | {type: type(r), properties: properties(r)}] as relationships,
-                        length(path) as distance
-                    ORDER BY distance
-                    LIMIT 50
-                    """ % max_hops
-                    
-                    result = session.run(query, doc_id=doc_id)
+                    # Get node and its relationships up to max_hops with early termination
+                    # Try APOC first for better performance, fallback to standard query
+                    try:
+                        query = """
+                        MATCH (d:Document {id: $doc_id})
+                        CALL apoc.path.expandConfig(d, {
+                            maxLevel: $max_hops,
+                            uniqueness: 'NODE_GLOBAL',
+                            limit: 50,
+                            relationshipFilter: 'REFERENCES|IMPLEMENTS|RELATES_TO|DEPENDS_ON'
+                        }) YIELD path
+                        WITH path, d, last(nodes(path)) as connected, relationships(path) as rels
+                        WHERE connected:Document
+                        RETURN 
+                            d as source,
+                            connected as target,
+                            [r in rels | {type: type(r), properties: properties(r)}] as relationships,
+                            length(path) as distance
+                        ORDER BY distance
+                        """
+                        result = session.run(query, doc_id=doc_id, max_hops=max_hops)
+                    except Exception:
+                        # Fallback to standard Cypher without APOC
+                        query = """
+                        MATCH path = (d:Document {id: $doc_id})-[r:REFERENCES|IMPLEMENTS|RELATES_TO|DEPENDS_ON*1..2]-(connected:Document)
+                        WITH d, connected, path, relationships(path) as rels,
+                             length(path) as distance
+                        WHERE distance <= $max_hops
+                        RETURN 
+                            d as source,
+                            connected as target,
+                            [r in rels | {type: type(r), properties: properties(r)}] as relationships,
+                            distance
+                        ORDER BY distance
+                        LIMIT 50
+                        """
+                        result = session.run(query, doc_id=doc_id, max_hops=max_hops)
                     
                     for record in result:
                         # Add source node
@@ -405,7 +435,7 @@ def cli():
 @click.option('--max-hops', default=2, help='Maximum graph traversal hops')
 @click.option('--top-k', default=5, help='Number of results')
 @click.option('--neo4j-user', default='neo4j', help='Neo4j username')
-@click.option('--neo4j-pass', default='password', help='Neo4j password')
+@click.option('--neo4j-pass', help='Neo4j password (required)', required=True)
 @click.option('--verbose', is_flag=True, help='Verbose output')
 def search(query: str, max_hops: int, top_k: int, neo4j_user: str, neo4j_pass: str, verbose: bool):
     """Perform GraphRAG search"""
@@ -448,7 +478,7 @@ def search(query: str, max_hops: int, top_k: int, neo4j_user: str, neo4j_pass: s
 @cli.command()
 @click.option('--document-id', required=True, help='Document ID to analyze')
 @click.option('--neo4j-user', default='neo4j', help='Neo4j username')
-@click.option('--neo4j-pass', default='password', help='Neo4j password')
+@click.option('--neo4j-pass', help='Neo4j password (required)', required=True)
 def analyze(document_id: str, neo4j_user: str, neo4j_pass: str):
     """Analyze document impact in the graph"""
     graphrag = GraphRAGIntegration()

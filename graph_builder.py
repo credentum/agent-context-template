@@ -68,13 +68,18 @@ class GraphBuilder:
         content = json.dumps(data, sort_keys=True)
         return hashlib.sha256(content.encode()).hexdigest()
     
-    def connect(self, username: str = "neo4j", password: str = "password") -> bool:
+    def connect(self, username: str = "neo4j", password: Optional[str] = None) -> bool:
         """Connect to Neo4j"""
         neo4j_config = self.config.get('neo4j', {})
         host = neo4j_config.get('host', 'localhost')
         port = neo4j_config.get('port', 7687)
         
         uri = f"bolt://{host}:{port}"
+        
+        if not password:
+            if self.verbose:
+                click.echo("Error: Neo4j password is required", err=True)
+            return False
         
         try:
             self.driver = GraphDatabase.driver(uri, auth=(username, password))
@@ -83,8 +88,11 @@ class GraphBuilder:
                 session.run("RETURN 1")
             return True
         except Exception as e:
+            # Import locally to avoid circular imports
+            from utils import sanitize_error_message
+            error_msg = sanitize_error_message(str(e), [password, username])
             if self.verbose:
-                click.echo(f"Failed to connect to Neo4j: {e}", err=True)
+                click.echo(f"Failed to connect to Neo4j: {error_msg}", err=True)
             return False
     
     def _create_document_node(self, session, data: Dict[str, Any], file_path: Path) -> str:
@@ -404,7 +412,7 @@ class GraphBuilder:
 @click.command()
 @click.argument('path', type=click.Path(exists=True), default='context')
 @click.option('--username', default='neo4j', help='Neo4j username')
-@click.option('--password', default='password', help='Neo4j password')
+@click.option('--password', help='Neo4j password (required)', required=True)
 @click.option('--force', is_flag=True, help='Force reprocessing of all documents')
 @click.option('--cleanup', is_flag=True, help='Remove orphaned nodes')
 @click.option('--stats', is_flag=True, help='Show graph statistics')

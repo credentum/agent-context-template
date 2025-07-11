@@ -37,11 +37,17 @@ class Neo4jInitializer:
             
     def connect(self, username: str = "neo4j", password: Optional[str] = None) -> bool:
         """Connect to Neo4j instance"""
-        neo4j_config = self.config.get('neo4j', {})
-        host = neo4j_config.get('host', 'localhost')
-        port = neo4j_config.get('port', 7687)
+        # Import locally
+        from utils import get_secure_connection_config
         
-        uri = f"bolt://{host}:{port}"
+        neo4j_config = get_secure_connection_config(self.config, 'neo4j')
+        host = neo4j_config['host']
+        port = neo4j_config.get('port', 7687)
+        use_ssl = neo4j_config.get('ssl', False)
+        
+        # Use appropriate protocol based on SSL setting
+        protocol = "bolt+s" if use_ssl else "bolt"
+        uri = f"{protocol}://{host}:{port}"
         
         try:
             if not password:
@@ -68,10 +74,10 @@ class Neo4jInitializer:
             click.echo("✗ Authentication failed", err=True)
             return False
         except Exception as e:
+            # Import locally to avoid circular imports
+            from utils import sanitize_error_message
             # Sanitize error message to remove potential passwords
-            error_msg = str(e)
-            if password and password in error_msg:
-                error_msg = error_msg.replace(password, "***")
+            error_msg = sanitize_error_message(str(e), [password, username])
             click.echo(f"✗ Failed to connect: {error_msg}", err=True)
             return False
     
