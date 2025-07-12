@@ -137,7 +137,7 @@ class TestDirectoryStructure:
             subdir = src_dir / subdir_name
             assert subdir.exists(), f"Missing src subdirectory: {subdir_name}"
             assert subdir.is_dir()
-            
+
             # Check for __init__.py
             init_file = subdir / "__init__.py"
             assert init_file.exists(), f"Missing __init__.py in src/{subdir_name}"
