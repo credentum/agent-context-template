@@ -236,45 +236,49 @@ class TestReproducibility:
 
         assert recalc_hash == graph_snapshot["metadata"]["snapshot_hash"]
 
-    def test_kv_store_state_backup_restore(self):
+    def test_kv_store_state_backup_restore(self, tmp_path):
         """Test KV store state backup and restoration"""
-        with patch("redis.Redis") as mock_redis:
-            mock_client = MagicMock()
-            mock_redis.return_value = mock_client
+        # Create config file
+        config = {"redis": {"host": "localhost", "port": 6379}}
+        config_path = tmp_path / ".ctxrc.yaml"
+        config_path.write_text(yaml.dump(config))
 
-            # Create KV store
-            connector = RedisConnector()
-            connector.client = mock_client
-            kv_store = ContextKV(connector)
+        with patch("redis.ConnectionPool"):
+            with patch("redis.Redis") as mock_redis_class:
+                mock_client = MagicMock()
+                mock_client.ping.return_value = True
+                mock_redis_class.return_value = mock_client
 
-            # Mock data
-            test_data = {
-                "session:123": {"user": "test", "data": "value1"},
-                "config:app": {"setting": "value2"},
-                "cache:result": {"result": "value3"},
-            }
+                # Create KV store
+                kv_store = ContextKV(config_path=str(config_path))
+                # Connect to ensure client is set up
+                kv_store.redis.connect()
 
-            # Create backup
-            backup = {}
-            for key, value in test_data.items():
-                mock_client.get.return_value = json.dumps(value)
-                mock_client.ttl.return_value = 3600
-
-                backup[key] = {
-                    "value": value,
-                    "ttl": 3600,
-                    "hash": hashlib.sha256(json.dumps(value).encode()).hexdigest(),
+                # Mock data
+                test_data = {
+                    "session:123": {"user": "test", "data": "value1"},
+                    "config:app": {"setting": "value2"},
+                    "cache:result": {"result": "value3"},
                 }
 
-            # Simulate data loss
-            mock_client.flushdb()
+                # Create backup
+                backup = {}
+                for key, value in test_data.items():
+                    backup[key] = {
+                        "value": value,
+                        "ttl": 3600,
+                        "hash": hashlib.sha256(json.dumps(value).encode()).hexdigest(),
+                    }
 
-            # Restore from backup
-            for key, data in backup.items():
-                kv_store.set(key, data["value"], ttl=data["ttl"])
+                # Simulate data loss
+                mock_client.flushdb()
 
-            # Verify restoration
-            assert mock_client.setex.call_count == len(test_data)
+                # Restore from backup  
+                for key, data in backup.items():
+                    kv_store.redis.set_cache(key, data["value"], ttl_seconds=data["ttl"])
+
+                # Verify restoration - setex should be called for each restore
+                assert mock_client.setex.call_count == len(test_data)
 
     def test_audit_checkpoint_creation(self, test_data_dir, tmp_path):
         """Test creating audit checkpoints with hashes"""
