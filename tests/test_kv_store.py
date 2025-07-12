@@ -12,7 +12,13 @@ import redis
 import duckdb
 import pandas as pd
 
-from src.storage.context_kv import RedisConnector, DuckDBAnalytics, ContextKV, MetricEvent, CacheEntry
+from src.storage.context_kv import (
+    RedisConnector,
+    DuckDBAnalytics,
+    ContextKV,
+    MetricEvent,
+    CacheEntry,
+)
 from src.analytics.context_analytics import ContextAnalytics, AnalyticsReport
 
 
