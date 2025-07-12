@@ -13,8 +13,8 @@ import sys
 import click
 import yaml
 from pathlib import Path
-from typing import Dict, Any, List, Optional
-from neo4j import GraphDatabase
+from typing import Dict, Any, List, Optional, Union, Tuple
+from neo4j import GraphDatabase, Driver
 from neo4j.exceptions import ServiceUnavailable, AuthError
 
 
@@ -23,14 +23,18 @@ class Neo4jInitializer:
 
     def __init__(self, config_path: str = ".ctxrc.yaml"):
         self.config = self._load_config(config_path)
-        self.driver = None
+        self.driver: Optional[Driver] = None
         self.database = self.config.get("neo4j", {}).get("database", "context_graph")
 
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load configuration from .ctxrc.yaml"""
         try:
             with open(config_path, "r") as f:
-                return yaml.safe_load(f)
+                config = yaml.safe_load(f)
+                if not isinstance(config, dict):
+                    click.echo(f"Error: {config_path} must contain a dictionary", err=True)
+                    sys.exit(1)
+                return config
         except FileNotFoundError:
             click.echo(f"Error: {config_path} not found", err=True)
             sys.exit(1)
@@ -59,9 +63,10 @@ class Neo4jInitializer:
             self.driver = GraphDatabase.driver(uri, auth=(username, password))
 
             # Test connection
-            with self.driver.session() as session:
-                result = session.run("RETURN 1 as test")
-                result.single()
+            if self.driver:
+                with self.driver.session() as session:
+                    result = session.run("RETURN 1 as test")
+                    result.single()
 
             click.echo(f"✓ Connected to Neo4j at {uri}")
             return True
@@ -81,7 +86,12 @@ class Neo4jInitializer:
             from src.core.utils import sanitize_error_message
 
             # Sanitize error message to remove potential passwords
-            error_msg = sanitize_error_message(str(e), [password, username])
+            sensitive_values = []
+            if password:
+                sensitive_values.append(password)
+            if username:
+                sensitive_values.append(username)
+            error_msg = sanitize_error_message(str(e), sensitive_values)
             click.echo(f"✗ Failed to connect: {error_msg}", err=True)
             return False
 
@@ -103,6 +113,10 @@ class Neo4jInitializer:
         ]
 
         try:
+            if not self.driver:
+                click.echo("✗ Not connected to Neo4j", err=True)
+                return False
+                
             with self.driver.session(database=self.database) as session:
                 for label, property in constraints:
                     query = f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{label}) REQUIRE n.{property} IS UNIQUE"
@@ -116,7 +130,7 @@ class Neo4jInitializer:
 
     def create_indexes(self) -> bool:
         """Create indexes for common queries"""
-        indexes = [
+        indexes: List[Union[Tuple[str, List[str]], Tuple[str, List[str], str]]] = [
             # Document indexes
             ("Document", ["document_type", "created_date"]),
             ("Document", ["last_modified"]),
@@ -130,6 +144,10 @@ class Neo4jInitializer:
         ]
 
         try:
+            if not self.driver:
+                click.echo("✗ Not connected to Neo4j", err=True)
+                return False
+                
             with self.driver.session(database=self.database) as session:
                 for index_spec in indexes:
                     if len(index_spec) == 2:
@@ -167,6 +185,10 @@ class Neo4jInitializer:
     def setup_graph_schema(self) -> bool:
         """Initialize the graph schema with example relationships"""
         try:
+            if not self.driver:
+                click.echo("✗ Not connected to Neo4j", err=True)
+                return False
+                
             with self.driver.session(database=self.database) as session:
                 # Create root System node
                 session.run(
@@ -250,6 +272,10 @@ class Neo4jInitializer:
 
     def verify_setup(self) -> bool:
         """Verify the Neo4j setup"""
+        if not self.driver:
+            click.echo("✗ Not connected to Neo4j", err=True)
+            return False
+            
         try:
             with self.driver.session(database=self.database) as session:
                 # Count nodes by label
@@ -285,14 +311,21 @@ class Neo4jInitializer:
         except Exception as e:
             # APOC might not be installed, try simpler query
             try:
+                if not self.driver:
+                    return False
+                    
                 with self.driver.session(database=self.database) as session:
                     result = session.run("MATCH (n) RETURN count(n) as total")
-                    total = result.single()["total"]
-                    click.echo(f"\nTotal nodes: {total}")
+                    node_record = result.single()
+                    if node_record:
+                        total = node_record["total"]
+                        click.echo(f"\nTotal nodes: {total}")
 
                     result = session.run("MATCH ()-[r]->() RETURN count(r) as total")
-                    total = result.single()["total"]
-                    click.echo(f"Total relationships: {total}")
+                    rel_record = result.single()
+                    if rel_record:
+                        total = rel_record["total"]
+                        click.echo(f"Total relationships: {total}")
 
                 return True
             except Exception as e2:
@@ -330,6 +363,10 @@ def main(
             sys.exit(1)
 
         # Create database if needed
+        if not initializer.driver:
+            click.echo("✗ Not connected to Neo4j", err=True)
+            sys.exit(1)
+            
         with initializer.driver.session(database="system") as session:
             db_name = initializer.database
             result = session.run("SHOW DATABASES WHERE name = $name", name=db_name)

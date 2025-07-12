@@ -6,6 +6,7 @@ Tests for configuration parsing and validation
 import os
 import tempfile
 from pathlib import Path
+from typing import Dict, Any
 import pytest
 import yaml
 
@@ -98,7 +99,7 @@ agents:
 
     def test_agent_configuration(self):
         """Test agent-specific configuration parsing"""
-        agent_config = {
+        agent_config: Dict[str, Any] = {
             "agents": {
                 "cleanup": {"schedule": "0 2 * * *", "expire_after_days": 30},
                 "doc_agent": {"auto_update_metadata": True},
@@ -107,16 +108,16 @@ agents:
         }
 
         # Validate cleanup agent config
-        cleanup = agent_config["agents"]["cleanup"]
+        cleanup: Dict[str, Any] = agent_config["agents"]["cleanup"]
         assert cleanup["schedule"] == "0 2 * * *"  # Cron format
         assert cleanup["expire_after_days"] == 30
 
         # Validate doc agent config
-        doc_agent = agent_config["agents"]["doc_agent"]
+        doc_agent: Dict[str, Any] = agent_config["agents"]["doc_agent"]
         assert doc_agent["auto_update_metadata"] is True
 
         # Validate PM agent config
-        pm_agent = agent_config["agents"]["pm_agent"]
+        pm_agent: Dict[str, Any] = agent_config["agents"]["pm_agent"]
         assert pm_agent["sprint_duration_days"] == 14
 
     def test_evaluation_thresholds(self):
@@ -139,7 +140,7 @@ agents:
 
     def test_mcp_configuration(self):
         """Test Model Context Protocol configuration"""
-        mcp_config = {"mcp": {"contracts_path": "context/mcp_contracts", "rpc_timeout_seconds": 30}}
+        mcp_config: Dict[str, Any] = {"mcp": {"contracts_path": "context/mcp_contracts", "rpc_timeout_seconds": 30}}
 
         assert mcp_config["mcp"]["contracts_path"] == "context/mcp_contracts"
         assert mcp_config["mcp"]["rpc_timeout_seconds"] == 30

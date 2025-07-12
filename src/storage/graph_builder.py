@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Any, Set
 import hashlib
 import json
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, Driver
 from neo4j.exceptions import ServiceUnavailable
 
 
@@ -25,7 +25,7 @@ class GraphBuilder:
 
     def __init__(self, config_path: str = ".ctxrc.yaml", verbose: bool = False):
         self.config = self._load_config(config_path)
-        self.driver = None
+        self.driver: Optional[Driver] = None
         self.database = self.config.get("neo4j", {}).get("database", "context_graph")
         self.verbose = verbose
         self.processed_cache_path = Path("context/.graph_cache/processed.json")
@@ -51,7 +51,10 @@ class GraphBuilder:
         """Load configuration from .ctxrc.yaml"""
         try:
             with open(config_path, "r") as f:
-                return yaml.safe_load(f)
+                config = yaml.safe_load(f)
+                if not isinstance(config, dict):
+                    return {}
+                return config
         except FileNotFoundError:
             return {}
 
@@ -60,7 +63,9 @@ class GraphBuilder:
         if self.processed_cache_path.exists():
             try:
                 with open(self.processed_cache_path, "r") as f:
-                    return json.load(f)
+                    cache = json.load(f)
+                    if isinstance(cache, dict):
+                        return cache
             except Exception:
                 pass
         return {}
@@ -92,14 +97,21 @@ class GraphBuilder:
         try:
             self.driver = GraphDatabase.driver(uri, auth=(username, password))
             # Test connection
-            with self.driver.session() as session:
-                session.run("RETURN 1")
-            return True
+            if self.driver:
+                with self.driver.session() as session:
+                    session.run("RETURN 1")
+                return True
+            return False
         except Exception as e:
             # Import locally to avoid circular imports
             from src.core.utils import sanitize_error_message
 
-            error_msg = sanitize_error_message(str(e), [password, username])
+            sensitive_values = []
+            if password:
+                sensitive_values.append(password)
+            if username:
+                sensitive_values.append(username)
+            error_msg = sanitize_error_message(str(e), sensitive_values)
             if self.verbose:
                 click.echo(f"Failed to connect to Neo4j: {error_msg}", err=True)
             return False
@@ -149,7 +161,8 @@ class GraphBuilder:
         """
 
         result = session.run(query, id=doc_id, props=props)
-        return doc_id
+        # Ensure we return a string
+        return str(doc_id)
 
     def _create_relationships(self, session, data: Dict[str, Any], doc_id: str):
         """Create relationships based on document content"""
@@ -299,6 +312,11 @@ class GraphBuilder:
                     return True
 
             # Process in transaction
+            if not self.driver:
+                if self.verbose:
+                    click.echo("Not connected to Neo4j", err=True)
+                return False
+                
             with self.driver.session(database=self.database) as session:
                 # Create/update document node
                 doc_id = self._create_document_node(session, data, file_path)
@@ -369,6 +387,11 @@ class GraphBuilder:
         """Remove nodes for documents that no longer exist"""
         removed = 0
 
+        if not self.driver:
+            if self.verbose:
+                click.echo("Not connected to Neo4j", err=True)
+            return 0
+            
         try:
             with self.driver.session(database=self.database) as session:
                 # Get all document nodes
@@ -411,8 +434,13 @@ class GraphBuilder:
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get graph statistics"""
-        stats = {}
+        stats: Dict[str, Any] = {}
 
+        if not self.driver:
+            if self.verbose:
+                click.echo("Not connected to Neo4j", err=True)
+            return stats
+            
         try:
             with self.driver.session(database=self.database) as session:
                 # Node counts by label

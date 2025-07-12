@@ -7,6 +7,7 @@ import tempfile
 import shutil
 from pathlib import Path
 from datetime import datetime, timedelta
+from typing import Dict, Any
 import pytest
 import yaml
 from unittest.mock import patch, MagicMock, Mock
@@ -115,7 +116,7 @@ class TestSprintUpdater:
         mock_run.return_value = mock_result
 
         # Create test sprint
-        sprint_data = {
+        sprint_data: Dict[str, Any] = {
             "schema_version": "1.0.0",
             "document_type": "sprint",
             "id": "sprint-001",
@@ -208,7 +209,7 @@ class TestSprintUpdater:
 
     def test_sprint_status_progression(self, temp_context_dir):
         """Test sprint status progression logic"""
-        sprint_data = {
+        sprint_data: Dict[str, Any] = {
             "status": "planning",
             "phases": [{"status": "pending"}, {"status": "pending"}, {"status": "pending"}],
         }

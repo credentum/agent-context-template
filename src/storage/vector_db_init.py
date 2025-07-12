@@ -32,13 +32,17 @@ class VectorDBInitializer:
 
     def __init__(self, config_path: str = ".ctxrc.yaml"):
         self.config = self._load_config(config_path)
-        self.client = None
+        self.client: Optional[QdrantClient] = None
 
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load configuration from .ctxrc.yaml"""
         try:
             with open(config_path, "r") as f:
-                return yaml.safe_load(f)
+                config = yaml.safe_load(f)
+                if not isinstance(config, dict):
+                    click.echo(f"Error: {config_path} must contain a dictionary", err=True)
+                    sys.exit(1)
+                return config
         except FileNotFoundError:
             click.echo(f"Error: {config_path} not found", err=True)
             sys.exit(1)
@@ -70,9 +74,11 @@ class VectorDBInitializer:
             else:
                 self.client = QdrantClient(host=host, port=port, timeout=timeout)
             # Test connection
-            self.client.get_collections()
-            click.echo(f"✓ Connected to Qdrant at {host}:{port}")
-            return True
+            if self.client:
+                self.client.get_collections()
+                click.echo(f"✓ Connected to Qdrant at {host}:{port}")
+                return True
+            return False
         except Exception as e:
             click.echo(f"✗ Failed to connect to Qdrant at {host}:{port}: {e}", err=True)
             return False
@@ -81,6 +87,10 @@ class VectorDBInitializer:
         """Create the project_context collection"""
         collection_name = self.config.get("qdrant", {}).get("collection_name", "project_context")
 
+        if not self.client:
+            click.echo("✗ Not connected to Qdrant", err=True)
+            return False
+            
         try:
             # Check if collection exists
             collections = self.client.get_collections().collections
@@ -131,14 +141,29 @@ class VectorDBInitializer:
         """Verify the Qdrant setup is correct"""
         collection_name = self.config.get("qdrant", {}).get("collection_name", "project_context")
 
+        if not self.client:
+            click.echo("✗ Not connected to Qdrant", err=True)
+            return False
+            
         try:
             # Get collection info
             info = self.client.get_collection(collection_name)
 
             click.echo("\nCollection Info:")
             click.echo(f"  Name: {collection_name}")
-            click.echo(f"  Vector size: {info.config.params.vectors.size}")
-            click.echo(f"  Distance metric: {info.config.params.vectors.distance}")
+            
+            # Handle different vector config formats
+            if info.config and info.config.params and info.config.params.vectors:
+                vectors_config = info.config.params.vectors
+                if isinstance(vectors_config, VectorParams):
+                    click.echo(f"  Vector size: {vectors_config.size}")
+                    click.echo(f"  Distance metric: {vectors_config.distance}")
+                elif isinstance(vectors_config, dict):
+                    # Handle named vectors
+                    for name, params in vectors_config.items():
+                        click.echo(f"  Vector '{name}' size: {params.size}")
+                        click.echo(f"  Vector '{name}' distance: {params.distance}")
+            
             click.echo(f"  Points count: {info.points_count}")
 
             # Check Qdrant version
@@ -155,6 +180,10 @@ class VectorDBInitializer:
         """Insert a test point to verify everything works"""
         collection_name = self.config.get("qdrant", {}).get("collection_name", "project_context")
 
+        if not self.client:
+            click.echo("✗ Not connected to Qdrant", err=True)
+            return False
+            
         try:
             # Create a test embedding (random for now)
             import random
