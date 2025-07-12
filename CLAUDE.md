@@ -113,3 +113,42 @@ Headless pipelines: wire claude -p into CI scripts for migrations or lint fixes.
 Anthropic "Best practices for agentic coding" (Apr 2025)
 Claude Code GitHub Actions docs & examples
 Model Context Protocol (MCP) specs
+
+# 🚨 CRITICAL: Git Workflow Rules
+
+**NEVER push directly to main branch!** Always follow this workflow:
+
+1. Start from updated main:
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+
+2. Create a feature branch:
+   ```bash
+   git checkout -b fix/description
+   # or
+   git checkout -b feature/description
+   ```
+
+3. Make changes and commit:
+   ```bash
+   git add -A
+   git commit -m "type: description"
+   ```
+
+4. Push to feature branch:
+   ```bash
+   git push -u origin fix/description
+   ```
+
+5. Create PR:
+   ```bash
+   gh pr create --title "type: description" --body "..."
+   ```
+
+**IMPORTANT**: 
+- NEVER use `git push origin main`
+- ALWAYS create a PR for code review
+- Include test results in PR descriptions
+- Wait for CI checks to pass before merging
