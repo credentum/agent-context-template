@@ -1,0 +1,107 @@
+name: Test Coverage
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        pip install pytest-cov coverage[toml] mutmut coverage-badge
+    
+    - name: Run tests with coverage
+      run: |
+        python -m pytest \
+          --cov=src \
+          --cov-branch \
+          --cov-report=term-missing:skip-covered \
+          --cov-report=html \
+          --cov-report=xml \
+          --cov-report=json \
+          -v
+      env:
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+    
+    - name: Check coverage thresholds
+      run: |
+        python scripts/coverage_summary.py
+    
+    - name: Run mutation testing (sample)
+      run: |
+        # Run mutation testing on a sample module to verify setup
+        mutmut run \
+          --paths-to-mutate="src/validators/kv_validators.py" \
+          --runner="python -m pytest -x -q tests/test_kv_store.py::TestKVValidators" \
+          || true
+        mutmut results
+      continue-on-error: true
+    
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-reports
+        path: |
+          htmlcov/
+          coverage.xml
+          coverage.json
+          coverage.svg
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+    
+    - name: Comment PR with coverage
+      uses: py-cov-action/python-coverage-comment-action@v3
+      if: github.event_name == 'pull_request'
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        MINIMUM_GREEN: 85
+        MINIMUM_ORANGE: 70
+    
+    - name: Generate coverage badge
+      run: |
+        coverage-badge -o coverage.svg -f
+        
+    - name: Verify test traceability
+      run: |
+        python -m pytest tests/test_traceability_matrix.py -v

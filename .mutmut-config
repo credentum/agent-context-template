@@ -1,0 +1,22 @@
+# Mutation testing configuration
+[mutmut]
+paths_to_mutate=src/
+backup=False
+runner=python -m pytest -x -q
+tests_dir=tests/
+dict_synonyms=Struct,NamedStruct
+
+# Skip mutation for these patterns
+skip_files=
+    */migrations/*
+    */__pycache__/*
+    */test_*
+    */conftest.py
+
+# Focus on critical modules
+included_files=
+    src/agents/*.py
+    src/storage/context_kv.py
+    src/storage/graph_builder.py
+    src/validators/*.py
+    src/analytics/context_analytics.py
