@@ -17,7 +17,7 @@ format-check:
 
 # Run linting
 lint:
-	python context_lint.py validate context/
+	python -m src.agents.context_lint validate context/
 
 # Run type checking with mypy
 type-check:

@@ -96,7 +96,7 @@ class AsyncHashDiffEmbedder:
     async def connect(self) -> bool:
         """Connect to services asynchronously"""
         # Connect to Qdrant
-        from utils import get_secure_connection_config
+        from src.core.utils import get_secure_connection_config
 
         qdrant_config = get_secure_connection_config(self.config, "qdrant")
 

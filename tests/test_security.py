@@ -9,9 +9,9 @@ from pathlib import Path
 import os
 
 # Import components to test
-from neo4j_init import Neo4jInitializer
-from graph_builder import GraphBuilder
-from utils import sanitize_error_message
+from src.storage.neo4j_init import Neo4jInitializer
+from src.storage.graph_builder import GraphBuilder
+from src.core.utils import sanitize_error_message
 
 
 class TestPasswordSanitization:
@@ -56,7 +56,7 @@ class TestPasswordSanitization:
 class TestInjectionPrevention:
     """Test prevention of injection attacks"""
 
-    @patch("neo4j_init.GraphDatabase.driver")
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
     def test_cypher_injection_prevention(self, mock_driver):
         """Test that Cypher injection is prevented"""
         # Setup mock
@@ -99,7 +99,7 @@ class TestInjectionPrevention:
 
     def test_path_traversal_prevention(self):
         """Test prevention of path traversal attacks"""
-        from graph_builder import GraphBuilder
+        from src.storage.graph_builder import GraphBuilder
 
         builder = GraphBuilder()
 
@@ -130,14 +130,14 @@ class TestAuthenticationSecurity:
     def test_no_default_passwords(self):
         """Test that no default passwords are present"""
         # Check that CLI tools require passwords
-        from graph_builder import main as gb_main
-        from graphrag_integration import search, analyze
+        from src.storage.graph_builder import main as gb_main
+        from src.integrations.graphrag_integration import search, analyze
 
         # These should all have required=True for password options
         # This is validated by the CLI framework
         pass
 
-    @patch("graph_builder.GraphDatabase.driver")
+    @patch("src.storage.graph_builder.GraphDatabase.driver")
     def test_password_not_logged(self, mock_driver):
         """Test that passwords are not logged in verbose mode"""
         # Setup mock to raise an error with password
@@ -167,7 +167,7 @@ class TestSSLConfiguration:
     @patch.dict(os.environ, {"ENVIRONMENT": "production"})
     def test_ssl_config_loading(self):
         """Test that SSL configuration is properly loaded"""
-        from utils import get_secure_connection_config
+        from src.core.utils import get_secure_connection_config
 
         # Test with production environment
         config = {"neo4j": {"host": "prod.example.com", "port": 7687}}
@@ -180,7 +180,7 @@ class TestSSLConfiguration:
 
     def test_ssl_certificate_paths(self):
         """Test SSL certificate path configuration"""
-        from utils import get_secure_connection_config
+        from src.core.utils import get_secure_connection_config
 
         config = {
             "neo4j": {

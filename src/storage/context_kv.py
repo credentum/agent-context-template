@@ -20,9 +20,9 @@ from typing import Dict, Any, List, Optional, Tuple, Union, cast
 from dataclasses import dataclass, asdict
 import time
 import hashlib
-from base_component import DatabaseComponent
-from utils import sanitize_error_message, get_environment
-from kv_validators import (
+from ..core.base_component import DatabaseComponent
+from ..core.utils import sanitize_error_message, get_environment
+from ..validators.kv_validators import (
     validate_cache_entry,
     validate_metric_event,
     sanitize_metric_name,

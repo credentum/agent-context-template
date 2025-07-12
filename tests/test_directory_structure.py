@@ -109,18 +109,38 @@ class TestDirectoryStructure:
         assert len(sprint_files) > 0, "No sprint documents found"
 
     def test_executable_scripts(self, project_root):
-        """Test that Python scripts exist and are executable"""
-        scripts = ["context_lint.py", "cleanup_agent.py"]
+        """Test that Python scripts exist in src/agents/ directory"""
+        scripts = [
+            ("src/agents/context_lint.py", "context_lint.py"),
+            ("src/agents/cleanup_agent.py", "cleanup_agent.py"),
+        ]
 
-        for script_name in scripts:
-            script_path = project_root / script_name
-            assert script_path.exists(), f"Missing script: {script_name}"
+        for script_path_str, script_name in scripts:
+            script_path = project_root / script_path_str
+            assert script_path.exists(), f"Missing script: {script_name} at {script_path_str}"
             assert script_path.is_file()
 
             # Check shebang
             with open(script_path, "r") as f:
                 first_line = f.readline()
                 assert first_line.startswith("#!/usr/bin/env python3")
+
+    def test_src_directory_structure(self, project_root):
+        """Test that src directory has proper structure"""
+        src_dir = project_root / "src"
+        assert src_dir.exists(), "Missing src directory"
+        assert src_dir.is_dir()
+
+        # Check for required subdirectories
+        required_subdirs = ["agents", "core", "storage", "analytics", "integrations", "validators"]
+        for subdir_name in required_subdirs:
+            subdir = src_dir / subdir_name
+            assert subdir.exists(), f"Missing src subdirectory: {subdir_name}"
+            assert subdir.is_dir()
+
+            # Check for __init__.py
+            init_file = subdir / "__init__.py"
+            assert init_file.exists(), f"Missing __init__.py in src/{subdir_name}"
 
     def test_github_workflows(self, project_root):
         """Test that GitHub Actions workflows exist"""

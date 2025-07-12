@@ -45,16 +45,16 @@ jobs:
       run: |
         set -e  # Exit on error
         if [ -n "${{ github.event.inputs.sprint_id }}" ]; then
-          python update_sprint.py update --sprint "${{ github.event.inputs.sprint_id }}" --verbose
+          python -m src.agents.update_sprint update --sprint "${{ github.event.inputs.sprint_id }}" --verbose
         else
-          python update_sprint.py update --verbose
+          python -m src.agents.update_sprint update --verbose
         fi
         echo "update_status=$?" >> $GITHUB_OUTPUT
     
     - name: Generate sprint report
       if: success()
       run: |
-        python update_sprint.py report --verbose > sprint_report.md
+        python -m src.agents.update_sprint report --verbose > sprint_report.md
         cat sprint_report.md
     
     - name: Commit changes

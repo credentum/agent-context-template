@@ -38,7 +38,7 @@ class Neo4jInitializer:
     def connect(self, username: str = "neo4j", password: Optional[str] = None) -> bool:
         """Connect to Neo4j instance"""
         # Import locally
-        from utils import get_secure_connection_config
+        from src.core.utils import get_secure_connection_config
 
         neo4j_config = get_secure_connection_config(self.config, "neo4j")
         host = neo4j_config["host"]
@@ -78,7 +78,7 @@ class Neo4jInitializer:
             return False
         except Exception as e:
             # Import locally to avoid circular imports
-            from utils import sanitize_error_message
+            from src.core.utils import sanitize_error_message
 
             # Sanitize error message to remove potential passwords
             error_msg = sanitize_error_message(str(e), [password, username])

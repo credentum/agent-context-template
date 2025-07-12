@@ -7,7 +7,7 @@ import logging
 import click
 from typing import Optional, Any, Dict
 from abc import ABC, abstractmethod
-from utils import sanitize_error_message, get_environment
+from src.core.utils import sanitize_error_message, get_environment
 
 
 class BaseComponent(ABC):

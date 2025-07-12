@@ -10,9 +10,9 @@ import tempfile
 import shutil
 
 # Import components to test
-from vector_db_init import VectorDBInitializer
-from hash_diff_embedder import HashDiffEmbedder, DocumentHash
-from sum_scores_api import SumScoresAPI, SearchResult
+from src.storage.vector_db_init import VectorDBInitializer
+from src.storage.hash_diff_embedder import HashDiffEmbedder, DocumentHash
+from src.analytics.sum_scores_api import SumScoresAPI, SearchResult
 
 
 class TestVectorDBInitializer:
@@ -43,7 +43,7 @@ class TestVectorDBInitializer:
         assert initializer.config["qdrant"]["host"] == "localhost"
         assert initializer.config["qdrant"]["port"] == 6333
 
-    @patch("vector_db_init.QdrantClient")
+    @patch("src.storage.vector_db_init.QdrantClient")
     def test_connect_success(self, mock_client_class, config_file):
         """Test successful connection"""
         mock_client = Mock()
@@ -54,7 +54,7 @@ class TestVectorDBInitializer:
         assert initializer.connect() is True
         mock_client_class.assert_called_once_with(host="localhost", port=6333, timeout=30)
 
-    @patch("vector_db_init.QdrantClient")
+    @patch("src.storage.vector_db_init.QdrantClient")
     def test_connect_failure(self, mock_client_class, config_file):
         """Test connection failure"""
         mock_client_class.side_effect = Exception("Connection failed")
@@ -62,7 +62,7 @@ class TestVectorDBInitializer:
         initializer = VectorDBInitializer(config_file)
         assert initializer.connect() is False
 
-    @patch("vector_db_init.QdrantClient")
+    @patch("src.storage.vector_db_init.QdrantClient")
     def test_create_collection(self, mock_client_class, config_file):
         """Test collection creation"""
         mock_client = Mock()
@@ -143,8 +143,8 @@ class TestHashDiffEmbedder:
         assert needs is True
         assert existing_id is None
 
-    @patch("hash_diff_embedder.openai.OpenAI")
-    @patch("hash_diff_embedder.QdrantClient")
+    @patch("src.storage.hash_diff_embedder.openai.OpenAI")
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
     def test_embed_document(self, mock_qdrant_class, mock_openai_class, embedder, test_dir):
         """Test document embedding"""
         # Setup mocks
@@ -228,7 +228,7 @@ class TestSumScoresAPI:
         assert api._get_type_boost("test") == 0.9
         assert api._get_type_boost("unknown") == 1.0
 
-    @patch("sum_scores_api.QdrantClient")
+    @patch("src.analytics.sum_scores_api.QdrantClient")
     def test_search_single(self, mock_client_class, api):
         """Test single vector search"""
         # Setup mock

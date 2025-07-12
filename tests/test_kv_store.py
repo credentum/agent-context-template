@@ -12,8 +12,14 @@ import redis
 import duckdb
 import pandas as pd
 
-from context_kv import RedisConnector, DuckDBAnalytics, ContextKV, MetricEvent, CacheEntry
-from context_analytics import ContextAnalytics, AnalyticsReport
+from src.storage.context_kv import (
+    RedisConnector,
+    DuckDBAnalytics,
+    ContextKV,
+    MetricEvent,
+    CacheEntry,
+)
+from src.analytics.context_analytics import ContextAnalytics, AnalyticsReport
 
 
 class TestRedisConnector:
@@ -22,7 +28,7 @@ class TestRedisConnector:
     @pytest.fixture
     def redis_connector(self):
         """Create Redis connector instance"""
-        with patch("context_kv.redis.ConnectionPool") as mock_pool:
+        with patch("src.storage.context_kv.redis.ConnectionPool") as mock_pool:
             connector = RedisConnector(verbose=True)
             connector.redis_client = MagicMock(spec=redis.Redis)
             connector.is_connected = True
@@ -30,8 +36,8 @@ class TestRedisConnector:
 
     def test_connect_success(self):
         """Test successful Redis connection"""
-        with patch("context_kv.redis.ConnectionPool") as mock_pool:
-            with patch("context_kv.redis.Redis") as mock_redis:
+        with patch("src.storage.context_kv.redis.ConnectionPool") as mock_pool:
+            with patch("src.storage.context_kv.redis.Redis") as mock_redis:
                 mock_client = MagicMock()
                 mock_client.ping.return_value = True
                 mock_redis.return_value = mock_client
@@ -43,8 +49,8 @@ class TestRedisConnector:
 
     def test_connect_failure(self):
         """Test Redis connection failure"""
-        with patch("context_kv.redis.ConnectionPool") as mock_pool:
-            with patch("context_kv.redis.Redis") as mock_redis:
+        with patch("src.storage.context_kv.redis.ConnectionPool") as mock_pool:
+            with patch("src.storage.context_kv.redis.Redis") as mock_redis:
                 mock_redis.side_effect = Exception("Connection failed")
 
                 connector = RedisConnector()
@@ -184,7 +190,7 @@ class TestDuckDBAnalytics:
     @pytest.fixture
     def duckdb_analytics(self):
         """Create DuckDB analytics instance"""
-        with patch("context_kv.duckdb.connect") as mock_connect:
+        with patch("src.storage.context_kv.duckdb.connect") as mock_connect:
             mock_conn = MagicMock()
             mock_connect.return_value = mock_conn
 
@@ -196,8 +202,8 @@ class TestDuckDBAnalytics:
 
     def test_connect_and_initialize(self):
         """Test DuckDB connection and table initialization"""
-        with patch("context_kv.duckdb.connect") as mock_connect:
-            with patch("context_kv.Path.mkdir") as mock_mkdir:
+        with patch("src.storage.context_kv.duckdb.connect") as mock_connect:
+            with patch("src.storage.context_kv.Path.mkdir") as mock_mkdir:
                 mock_conn = MagicMock()
                 mock_connect.return_value = mock_conn
 
@@ -316,7 +322,7 @@ class TestContextAnalytics:
     @pytest.fixture
     def context_analytics(self):
         """Create context analytics instance"""
-        with patch("context_kv.duckdb.connect") as mock_connect:
+        with patch("src.storage.context_kv.duckdb.connect") as mock_connect:
             mock_conn = MagicMock()
             mock_connect.return_value = mock_conn
 

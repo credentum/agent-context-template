@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 import pytest
 import yaml
-from context_lint import ContextLinter
+from src.agents.context_lint import ContextLinter
 
 
 class TestContextLint:
