@@ -76,14 +76,12 @@ class TestEndToEnd:
             "document_type": "design",
             "id": "e2e-design-001",
             "title": "E2E Test Architecture",
-            "description": "Architecture for end-to-end testing",
             "created_date": "2025-07-11",
             "last_modified": "2025-07-11",
             "last_referenced": "2025-07-11",
             "expires": "2025-12-31",
-            "status": "approved",
-            "components": ["vector-db", "graph-db", "agents"],
-            "rationale": "Testing the complete system integration",
+            "status": "active",
+            "content": "Architecture for end-to-end testing with vector-db, graph-db, and agents. Testing the complete system integration.",
         }
 
         with open(tmp_path / "context" / "design" / "e2e-design-001.yaml", "w") as f:
@@ -148,10 +146,10 @@ class TestEndToEnd:
 
         # Step 2: Run cleanup (dry run)
         cleanup = CleanupAgent(dry_run=True, verbose=True)
-        cleaned = cleanup.cleanup_old_documents(test_project / "context")
+        cleanup.run()
 
-        # Should not clean anything in dry run
-        assert cleaned == 0
+        # Should not clean anything in dry run (check actions list)
+        assert len(cleanup.actions) == 0
 
         # Verify files still exist
         assert (test_project / "context" / "design" / "e2e-design-001.yaml").exists()
@@ -247,11 +245,9 @@ class TestEndToEnd:
             mock_run.return_value.returncode = 0
             mock_run.return_value.stdout = yaml.dump(github_issues)
 
-            # Update sprint
+            # Update sprint (SprintUpdater works in current directory)
             updater = SprintUpdater()
-            updated = updater.update_sprint_status(
-                "sprint-001", test_project / "context" / "sprints"
-            )
+            updated = updater.update_sprint()
 
             assert updated is True
 
@@ -268,9 +264,11 @@ class TestEndToEnd:
         with open(test_project / ".ctxrc.yaml", "w") as f:
             f.write("invalid: yaml: content:")
 
-        # Components should handle gracefully
+        # Components should handle gracefully (use default config)
         linter = ContextLinter()
-        assert linter.config == {}  # Should use defaults
+        assert linter.config is not None  # Should have default config
+        assert "linter" in linter.config
+        assert "storage" in linter.config
 
         # Fix configuration
         with open(test_project / ".ctxrc.yaml", "w") as f:

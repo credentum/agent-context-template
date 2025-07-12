@@ -1,15 +1,15 @@
 # Full schema for design documents
 
 # Base fields
-schema_version: regex('^[0-9]+\.[0-9]+\.[0-9]+$', required=True)
+schema_version: regex('^[0-9]+\\.[0-9]+\\.[0-9]+$', required=True)
 document_type: enum('design', required=True)
 id: regex('^[a-zA-Z0-9-]+$', required=True)
 title: str(min=1, max=200, required=True)
 status: enum('active', 'archived', 'deprecated', 'draft', required=True)
-created_date: regex('^\d{4}-\d{2}-\d{2}$', required=True)
-last_modified: regex('^\d{4}-\d{2}-\d{2}$', required=True)
-last_referenced: regex('^\d{4}-\d{2}-\d{2}$', required=True)
-expires: regex('^\d{4}-\d{2}-\d{2}$', required=False)
+created_date: regex('^\\d{4}-\\d{2}-\\d{2}$', required=True)
+last_modified: regex('^\\d{4}-\\d{2}-\\d{2}$', required=True)
+last_referenced: regex('^\\d{4}-\\d{2}-\\d{2}$', required=True)
+expires: regex('^\\d{4}-\\d{2}-\\d{2}$', required=False)
 authors: list(str(), required=False)
 tags: list(str(), required=False)
 

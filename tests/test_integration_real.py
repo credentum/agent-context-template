@@ -159,6 +159,10 @@ class TestVectorDBIntegration:
 class TestGraphDBIntegration:
     """Test graph database with real Neo4j instance"""
 
+    @pytest.mark.skipif(
+        not (os.getenv("NEO4J_HOST") or os.getenv("NEO4J_PASSWORD")),
+        reason="Neo4j not available - set NEO4J_HOST and NEO4J_PASSWORD env vars",
+    )
     def test_graph_db_lifecycle(self, test_config, neo4j_creds, test_documents):
         """Test complete graph DB lifecycle"""
         # Initialize Neo4j
@@ -242,6 +246,10 @@ class TestPerformanceIntegration:
     """Test performance with larger datasets"""
 
     @pytest.mark.slow
+    @pytest.mark.skipif(
+        not (os.getenv("NEO4J_HOST") or os.getenv("NEO4J_PASSWORD")),
+        reason="Neo4j not available - set NEO4J_HOST and NEO4J_PASSWORD env vars",
+    )
     def test_bulk_processing(self, test_config, neo4j_creds):
         """Test processing many documents"""
         # Create many test documents

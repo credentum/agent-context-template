@@ -140,7 +140,9 @@ agents:
 
     def test_mcp_configuration(self):
         """Test Model Context Protocol configuration"""
-        mcp_config: Dict[str, Any] = {"mcp": {"contracts_path": "context/mcp_contracts", "rpc_timeout_seconds": 30}}
+        mcp_config: Dict[str, Any] = {
+            "mcp": {"contracts_path": "context/mcp_contracts", "rpc_timeout_seconds": 30}
+        }
 
         assert mcp_config["mcp"]["contracts_path"] == "context/mcp_contracts"
         assert mcp_config["mcp"]["rpc_timeout_seconds"] == 30
