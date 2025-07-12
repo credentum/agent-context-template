@@ -38,3 +38,10 @@ repos:
         language: system
         files: ^context/.*\.yaml$
         pass_filenames: true
+      
+      - id: test-imports
+        name: Check Test Module Imports
+        entry: python -m pytest --collect-only -q
+        language: system
+        files: ^tests/.*\.py$
+        pass_filenames: false
