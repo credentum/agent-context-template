@@ -26,8 +26,8 @@
     {"name": "storage/vector_db_init.py", "coverage": 36.14}
   ],
   "recent_improvements": [
-    {"module": "hash_diff_embedder_async.py", "before": 0, "after": 95.35},
-    {"module": "sum_scores_api.py", "before": 32.09, "after": 89.68},
-    {"module": "neo4j_init.py", "before": 31.27, "after": 86.49}
+    {"name": "storage/hash_diff_embedder_async.py", "before": 0, "after": 95.35},
+    {"name": "analytics/sum_scores_api.py", "before": 32.09, "after": 89.68},
+    {"name": "storage/neo4j_init.py", "before": 31.27, "after": 86.49}
   ]
 }

@@ -65,26 +65,41 @@ Current: 59.53% [████████████░░░░░░░░░
 ### Coverage Improvement Roadmap
 
 #### Phase 1: Critical Modules (Current Priority)
-Target: Bring critical modules from <40% to >70%
-- [ ] `validators/kv_validators.py` (33.64% → 70%)
-- [ ] `validators/config_validator.py` (34.66% → 70%)
-- [ ] `analytics/context_analytics.py` (35.62% → 70%)
-- [ ] `storage/vector_db_init.py` (36.14% → 70%)
+Target: Bring critical modules from <40% to >70% line coverage, >50% branch coverage
+- [ ] `validators/kv_validators.py` (Line: 33.64% → 70%, Branch: ~25% → 50%)
+- [ ] `validators/config_validator.py` (Line: 34.66% → 70%, Branch: ~30% → 50%)
+- [ ] `analytics/context_analytics.py` (Line: 35.62% → 70%, Branch: ~30% → 50%)
+- [ ] `storage/vector_db_init.py` (Line: 36.14% → 70%, Branch: ~25% → 50%)
 
 #### Phase 2: High Priority Modules
-Target: Bring modules from 45-55% to >75%
-- [ ] `agents/context_lint.py` (45.05% → 75%)
-- [ ] `storage/graph_builder.py` (48.59% → 75%)
-- [ ] `storage/hash_diff_embedder.py` (49.26% → 75%)
-- [ ] `integrations/graphrag_integration.py` (51.17% → 75%)
-- [ ] `storage/context_kv.py` (55.91% → 75%)
+Target: Bring modules from 45-55% to >75% line coverage, >60% branch coverage
+- [ ] `agents/context_lint.py` (Line: 45.05% → 75%, Branch: ~35% → 60%)
+- [ ] `storage/graph_builder.py` (Line: 48.59% → 75%, Branch: ~40% → 60%)
+- [ ] `storage/hash_diff_embedder.py` (Line: 49.26% → 75%, Branch: ~40% → 60%)
+- [ ] `integrations/graphrag_integration.py` (Line: 51.17% → 75%, Branch: ~45% → 60%)
+- [ ] `storage/context_kv.py` (Line: 55.91% → 75%, Branch: ~45% → 60%)
 
 #### Phase 3: Final Push to Target
-Target: Achieve overall 85% line coverage
+Target: Achieve overall 85% line coverage and 70% branch coverage
 - [ ] Complete remaining gaps in Phase 1 & 2 modules
-- [ ] Improve medium priority modules to >80%
+- [ ] Improve medium priority modules to >80% line, >65% branch
+- [ ] Focus on branch coverage improvements in all modules
 - [ ] Add integration tests for cross-module functionality
 - [ ] Implement mutation testing baseline
+- [ ] Ensure all critical paths have >90% coverage
+
+
+## Coverage Trends
+
+![Coverage Trends](assets/coverage-trends.png)
+
+The graph above shows the progression of line and branch coverage over time, with target lines indicated.
+
+## Module Coverage Distribution
+
+![Module Coverage](assets/module-coverage.png)
+
+This chart displays the current coverage levels for key modules, highlighting which ones need the most attention.
 
 ### Estimated Timeline
 - **Phase 1**: 2-3 weeks (4 modules × 3-5 days each)
@@ -297,6 +312,47 @@ open htmlcov/index.html
 - Coverage reports are uploaded as artifacts
 - Codecov integration provides trends
 - PR comments show coverage changes
+
+## Automation Scripts
+
+### Coverage Metrics Update
+```bash
+# Update coverage metrics and badges
+python scripts/update_coverage_metrics.py
+```
+This script:
+- Runs pytest with coverage
+- Updates coverage-summary.json
+- Updates README.md badges
+- Shows current metrics
+
+### Coverage Report Generation
+```bash
+# Generate coverage reports with graphs
+python scripts/generate_coverage_report.py
+```
+This script:
+- Generates coverage trend graphs
+- Creates module distribution charts
+- Updates documentation with visualizations
+
+### JSON Validation
+```bash
+# Validate coverage-summary.json
+python scripts/validate_coverage_json.py
+```
+This script:
+- Validates against schemas/coverage-summary.schema.json
+- Ensures consistent data structure
+- Catches format errors early
+
+### Automated Workflow
+```bash
+# Complete coverage update workflow
+python scripts/update_coverage_metrics.py && \
+python scripts/validate_coverage_json.py && \
+python scripts/generate_coverage_report.py
+```
 
 ## Troubleshooting
 

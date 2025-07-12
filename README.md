@@ -1,6 +1,7 @@
 # agent-context-template
 
 ![Coverage](https://img.shields.io/badge/coverage-59.53%25-yellow)
+![Branch Coverage](https://img.shields.io/badge/branch%20coverage-45%25-red)
 ![Target](https://img.shields.io/badge/target-85%25-blue)
 ![Tests](https://img.shields.io/badge/tests-262%20passed-green)
 
