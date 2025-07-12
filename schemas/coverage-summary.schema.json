@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Coverage Summary Schema",
+  "description": "Schema for test coverage summary data",
+  "type": "object",
+  "required": ["timestamp", "overall", "targets", "top_modules", "critical_modules"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "description": "ISO 8601 date or datetime when metrics were collected"
+    },
+    "overall": {
+      "type": "object",
+      "description": "Overall project coverage metrics",
+      "required": ["line_coverage", "branch_coverage", "statements", "missing", "tests_passed", "tests_skipped"],
+      "properties": {
+        "line_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Line coverage percentage"
+        },
+        "branch_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Branch coverage percentage"
+        },
+        "statements": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of statements"
+        },
+        "missing": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of uncovered statements"
+        },
+        "tests_passed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of tests that passed"
+        },
+        "tests_skipped": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of tests that were skipped"
+        }
+      }
+    },
+    "targets": {
+      "type": "object",
+      "description": "Coverage targets",
+      "required": ["line_coverage", "branch_coverage"],
+      "properties": {
+        "line_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Target line coverage percentage"
+        },
+        "branch_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Target branch coverage percentage"
+        },
+        "mutation_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Target mutation testing score"
+        }
+      }
+    },
+    "top_modules": {
+      "type": "array",
+      "description": "Modules with highest coverage",
+      "items": {
+        "$ref": "#/definitions/module_coverage"
+      }
+    },
+    "critical_modules": {
+      "type": "array",
+      "description": "Modules with lowest coverage needing attention",
+      "items": {
+        "$ref": "#/definitions/module_coverage"
+      }
+    },
+    "recent_improvements": {
+      "type": "array",
+      "description": "Recent coverage improvements",
+      "items": {
+        "$ref": "#/definitions/module_improvement"
+      }
+    }
+  },
+  "definitions": {
+    "module_coverage": {
+      "type": "object",
+      "required": ["name", "coverage"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_/]+\\.py$",
+          "description": "Module path relative to src/"
+        },
+        "coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Coverage percentage"
+        }
+      }
+    },
+    "module_improvement": {
+      "type": "object",
+      "required": ["name", "before", "after"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_/]+\\.py$",
+          "description": "Module path relative to src/"
+        },
+        "before": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Coverage percentage before improvement"
+        },
+        "after": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Coverage percentage after improvement"
+        }
+      }
+    }
+  }
+}

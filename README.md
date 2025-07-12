@@ -1,6 +1,17 @@
 # agent-context-template
 
+![Coverage](https://img.shields.io/badge/coverage-59.53%25-yellow)
+![Branch Coverage](https://img.shields.io/badge/branch%20coverage-45%25-red)
+![Target](https://img.shields.io/badge/target-85%25-blue)
+![Tests](https://img.shields.io/badge/tests-262%20passed-green)
+
 A GitHub Actions template repository that provides workflow templates for an Agent-First Project Context System.
+
+## Test Coverage Status
+- **Current Coverage**: 59.53% (🔴 Below 85% target)
+- **Recent Progress**: +29.53% improvement from baseline
+- **Next Goal**: Phase 1 - Critical modules to 70%
+- [Full Coverage Report](docs/test-coverage-guide.md#current-coverage-status)
 
 ## Features
 
@@ -10,7 +21,7 @@ A GitHub Actions template repository that provides workflow templates for an Age
 - **Graph Relationships**: Neo4j-powered GraphRAG for enhanced context understanding
 - **Automated Agents**: Specialized agents for documentation, project management, and CI
 - **Schema Validation**: YAML-based schemas with yamale validation
-- 
+-
 
 ## Project Structure
 
