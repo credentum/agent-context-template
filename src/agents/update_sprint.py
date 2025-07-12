@@ -229,7 +229,9 @@ class SprintUpdater:
             return None
 
         # Calculate dates
-        duration_days = self.config.get("agents", {}).get("pm_agent", {}).get("sprint_duration_days", 14)
+        duration_days = (
+            self.config.get("agents", {}).get("pm_agent", {}).get("sprint_duration_days", 14)
+        )
         start_date = datetime.now()
         end_date = start_date + timedelta(days=duration_days)
 

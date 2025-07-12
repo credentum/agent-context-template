@@ -129,13 +129,13 @@ class CleanupAgent:
     def clean_logs(self) -> None:
         """Clean up old log files"""
         logs_dir = self.context_dir / "logs"
-        
+
         # Skip if logs directory doesn't exist
         if not logs_dir.exists():
             if self.verbose:
                 click.echo("Logs directory not found, skipping log cleanup")
             return
-            
+
         cutoff_date = datetime.now() - timedelta(days=30)
 
         for log_subdir in logs_dir.iterdir():

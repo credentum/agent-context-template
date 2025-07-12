@@ -355,7 +355,7 @@ class TestUpdateSprintAgentCoverage:
                 # Configure subprocess mock to return empty JSON list
                 mock_run.return_value.returncode = 0
                 mock_run.return_value.stdout = "[]"
-                
+
                 with patch("click.echo"):
                     # Test with sprint ID
                     from click.testing import CliRunner
