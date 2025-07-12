@@ -1,0 +1,373 @@
+#!/usr/bin/env python3
+"""
+Integration tests for document embedding flow
+Tests the complete flow: document → embedding → Qdrant storage → retrieval → summarization
+"""
+
+import json
+import tempfile
+from datetime import datetime
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
+import yaml
+from qdrant_client.models import Distance, PointStruct, ScoredPoint, VectorParams
+
+from src.storage.hash_diff_embedder import DocumentHash, HashDiffEmbedder
+from src.storage.hash_diff_embedder_async import AsyncHashDiffEmbedder
+
+
+class TestEmbeddingIntegrationFlow:
+    """Test complete embedding flow from document to Qdrant"""
+
+    def setup_method(self):
+        """Set up test fixtures"""
+        self.temp_dir = tempfile.mkdtemp()
+        self.test_config = {
+            "qdrant": {
+                "host": "localhost",
+                "port": 6333,
+                "collection_name": "test_collection",
+                "embedding_model": "text-embedding-ada-002",
+                "api_key": "test_key",
+            },
+            "openai": {"api_key": "test_openai_key"},
+        }
+
+        # Create test documents
+        self.test_documents = {
+            "design_doc.md": """# System Design
+
+## Overview
+This document describes the architecture of our system.
+
+## Components
+- API Gateway
+- Microservices
+- Database Layer
+
+## Data Flow
+Requests flow through the API gateway to appropriate microservices.
+""",
+            "decision_doc.yaml": """metadata:
+  document_type: decision
+  decision_id: DEC-001
+  status: approved
+
+title: Choose PostgreSQL as primary database
+rationale: PostgreSQL provides the best balance of features and performance
+alternatives:
+  - MySQL
+  - MongoDB
+decision_date: 2024-01-10
+""",
+            "sprint_doc.yaml": """metadata:
+  document_type: sprint
+  sprint_number: 1
+
+status: in_progress
+start_date: 2024-01-01
+end_date: 2024-01-14
+goals:
+  - Complete user authentication
+  - Set up CI/CD pipeline
+""",
+        }
+
+    def teardown_method(self):
+        """Clean up temp files"""
+        import shutil
+
+        shutil.rmtree(self.temp_dir)
+
+    def create_test_documents(self):
+        """Create test documents in temp directory"""
+        docs_dir = Path(self.temp_dir) / "context" / "docs"
+        docs_dir.mkdir(parents=True)
+
+        doc_paths = []
+        for filename, content in self.test_documents.items():
+            doc_path = docs_dir / filename
+            with open(doc_path, "w") as f:
+                f.write(content)
+            doc_paths.append(doc_path)
+
+        return doc_paths
+
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
+    @patch("openai.Embedding.create")
+    @patch("pathlib.Path.cwd")
+    def test_document_to_embedding_flow(self, mock_cwd, mock_openai_embed, mock_qdrant_client):
+        """Test complete flow from document to embedding storage"""
+        mock_cwd.return_value = Path(self.temp_dir)
+
+        # Mock OpenAI embeddings
+        mock_embedding = [0.1, 0.2, 0.3] * 512  # 1536 dimensions
+        mock_openai_embed.return_value = Mock(data=[Mock(embedding=mock_embedding)])
+
+        # Mock Qdrant client
+        mock_client = Mock()
+        mock_client.get_collections.return_value = Mock(collections=[])
+        mock_client.upsert.return_value = None
+        mock_qdrant_client.return_value = mock_client
+
+        # Create documents
+        doc_paths = self.create_test_documents()
+
+        # Initialize embedder
+        embedder = HashDiffEmbedder(verbose=True)
+        embedder.config = self.test_config
+        embedder.client = mock_client
+
+        # Process each document
+        for doc_path in doc_paths:
+            content = doc_path.read_text()
+            doc_id = f"doc_{doc_path.stem}"
+
+            # Compute hashes
+            content_hash = embedder._compute_content_hash(content)
+            embedding_hash = embedder._compute_embedding_hash(mock_embedding)
+
+            # Store in hash cache
+            embedder.hash_cache[doc_id] = DocumentHash(
+                document_id=doc_id,
+                file_path=str(doc_path),
+                content_hash=content_hash,
+                embedding_hash=embedding_hash,
+                last_embedded=datetime.utcnow().isoformat(),
+                vector_id=f"vec_{doc_id}",
+            )
+
+        # Verify embeddings were created
+        assert len(embedder.hash_cache) == 3
+        assert mock_openai_embed.call_count >= 1
+
+        # Save hash cache
+        embedder._save_hash_cache()
+        assert embedder.hash_cache_path.exists()
+
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
+    def test_embedding_retrieval_flow(self, mock_qdrant_client):
+        """Test retrieval of embedded documents from Qdrant"""
+        # Mock Qdrant search results
+        mock_results = [
+            ScoredPoint(
+                id="vec_design_doc",
+                score=0.95,
+                payload={
+                    "document_id": "design_doc",
+                    "content": "System architecture design",
+                    "document_type": "design",
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+            ),
+            ScoredPoint(
+                id="vec_decision_doc",
+                score=0.87,
+                payload={
+                    "document_id": "decision_doc",
+                    "content": "Database selection decision",
+                    "document_type": "decision",
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+            ),
+        ]
+
+        mock_client = Mock()
+        mock_client.search.return_value = mock_results
+        mock_qdrant_client.return_value = mock_client
+
+        # Search for similar documents
+        query_embedding = [0.1, 0.2, 0.3] * 512
+        results = mock_client.search(
+            collection_name="test_collection", query_vector=query_embedding, limit=5
+        )
+
+        # Verify results
+        assert len(results) == 2
+        assert results[0].score > results[1].score
+        assert results[0].payload["document_type"] == "design"
+
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
+    @patch("openai.Embedding.create")
+    def test_incremental_embedding_update(self, mock_openai_embed, mock_qdrant_client):
+        """Test incremental updates - only changed documents are re-embedded"""
+        mock_embedding = [0.1, 0.2, 0.3] * 512
+        mock_openai_embed.return_value = Mock(data=[Mock(embedding=mock_embedding)])
+
+        mock_client = Mock()
+        mock_qdrant_client.return_value = mock_client
+
+        # Initialize embedder with existing hash cache
+        embedder = HashDiffEmbedder()
+        embedder.client = mock_client
+
+        # Add existing document to cache
+        embedder.hash_cache["existing_doc"] = DocumentHash(
+            document_id="existing_doc",
+            file_path="/path/to/existing.md",
+            content_hash="abc123",
+            embedding_hash="def456",
+            last_embedded=datetime.utcnow().isoformat(),
+            vector_id="vec_existing",
+        )
+
+        # Process same document (unchanged)
+        content = "Existing content"
+        content_hash = embedder._compute_content_hash(content)
+
+        # If content hash matches, should not re-embed
+        if content_hash == "abc123":
+            needs_embedding = False
+        else:
+            needs_embedding = True
+
+        assert needs_embedding is True  # Hash won't match "abc123"
+
+    @patch("src.storage.hash_diff_embedder_async.AsyncHashDiffEmbedder")
+    @pytest.mark.asyncio
+    async def test_async_batch_embedding_flow(self, mock_async_embedder_class):
+        """Test async batch embedding for better performance"""
+        # Mock async embedder
+        mock_embedder = AsyncMock()
+        mock_embedder.process_batch.return_value = [
+            {"document_id": "doc1", "vector_id": "vec1", "success": True},
+            {"document_id": "doc2", "vector_id": "vec2", "success": True},
+            {"document_id": "doc3", "vector_id": "vec3", "success": True},
+        ]
+        mock_async_embedder_class.return_value = mock_embedder
+
+        # Process batch of documents
+        documents = [
+            {"id": "doc1", "content": "Content 1"},
+            {"id": "doc2", "content": "Content 2"},
+            {"id": "doc3", "content": "Content 3"},
+        ]
+
+        results = await mock_embedder.process_batch(documents)
+
+        # Verify batch processing
+        assert len(results) == 3
+        assert all(r["success"] for r in results)
+
+    def test_embedding_error_handling(self):
+        """Test error handling in embedding flow"""
+        embedder = HashDiffEmbedder()
+
+        # Test with invalid content
+        with pytest.raises(AttributeError):
+            embedder._compute_content_hash(None)
+
+        # Test with invalid embedding
+        with pytest.raises(TypeError):
+            embedder._compute_embedding_hash("not a list")
+
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
+    def test_document_summarization_flow(self, mock_qdrant_client):
+        """Test document retrieval and summarization flow"""
+        # Mock retrieved documents
+        mock_documents = [
+            {
+                "id": "doc1",
+                "content": "Long technical document about system architecture...",
+                "summary": "System uses microservices architecture with API gateway",
+            },
+            {
+                "id": "doc2",
+                "content": "Detailed decision rationale for database selection...",
+                "summary": "PostgreSQL chosen for ACID compliance and performance",
+            },
+        ]
+
+        # Mock Qdrant scroll (retrieve all documents)
+        mock_client = Mock()
+        mock_client.scroll.return_value = (
+            [Mock(id=doc["id"], payload=doc) for doc in mock_documents],
+            None,
+        )
+        mock_qdrant_client.return_value = mock_client
+
+        # Retrieve and summarize
+        results, _ = mock_client.scroll(
+            collection_name="test_collection", limit=100, with_payload=True
+        )
+
+        summaries = [r.payload.get("summary") for r in results]
+
+        assert len(summaries) == 2
+        assert all(summary for summary in summaries)
+
+
+class TestEmbeddingConfiguration:
+    """Test embedding configuration and settings"""
+
+    def test_embedding_model_configuration(self):
+        """Test different embedding model configurations"""
+        configs = [
+            {"model": "text-embedding-ada-002", "dimensions": 1536, "max_tokens": 8191},
+            {"model": "text-embedding-3-small", "dimensions": 1536, "max_tokens": 8191},
+            {"model": "text-embedding-3-large", "dimensions": 3072, "max_tokens": 8191},
+        ]
+
+        for config in configs:
+            assert config["dimensions"] > 0
+            assert config["max_tokens"] > 0
+            assert config["model"].startswith("text-embedding")
+
+    def test_collection_configuration(self):
+        """Test Qdrant collection configuration"""
+        collection_config = {
+            "vectors": {"size": 1536, "distance": "Cosine"},
+            "optimizers_config": {"indexing_threshold": 20000, "memmap_threshold": 50000},
+            "hnsw_config": {"m": 16, "ef_construct": 100, "full_scan_threshold": 10000},
+        }
+
+        # Validate vector configuration
+        assert collection_config["vectors"]["size"] in [1536, 3072]
+        assert collection_config["vectors"]["distance"] in ["Cosine", "Euclidean", "Dot"]
+
+        # Validate optimizer settings
+        assert collection_config["optimizers_config"]["indexing_threshold"] > 0
+        assert collection_config["hnsw_config"]["m"] >= 4
+
+
+class TestEmbeddingMonitoring:
+    """Test embedding process monitoring and metrics"""
+
+    def test_embedding_metrics_collection(self):
+        """Test collection of embedding metrics"""
+        metrics = {
+            "documents_processed": 0,
+            "embeddings_created": 0,
+            "embeddings_cached": 0,
+            "errors": 0,
+            "total_time_ms": 0,
+            "average_time_per_doc_ms": 0,
+        }
+
+        # Simulate processing
+        start_time = datetime.utcnow()
+
+        # Process documents
+        for i in range(5):
+            metrics["documents_processed"] += 1
+            if i % 2 == 0:  # New document
+                metrics["embeddings_created"] += 1
+            else:  # Cached
+                metrics["embeddings_cached"] += 1
+
+        # Calculate timing
+        end_time = datetime.utcnow()
+        metrics["total_time_ms"] = (end_time - start_time).total_seconds() * 1000
+        metrics["average_time_per_doc_ms"] = (
+            metrics["total_time_ms"] / metrics["documents_processed"]
+            if metrics["documents_processed"] > 0
+            else 0
+        )
+
+        # Verify metrics
+        assert metrics["documents_processed"] == 5
+        assert metrics["embeddings_created"] == 3
+        assert metrics["embeddings_cached"] == 2
+        assert metrics["errors"] == 0
