@@ -9,15 +9,16 @@ This component:
 4. Generates contextual summaries from graph neighborhoods
 """
 
-import click
-import yaml
-from typing import Dict, List, Tuple, Optional, Any, Set
+import json
 from dataclasses import dataclass
 from pathlib import Path
-import json
-from neo4j import GraphDatabase
-from qdrant_client import QdrantClient
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
+
+import click
 import openai
+import yaml
+from neo4j import Driver, GraphDatabase
+from qdrant_client import QdrantClient
 
 
 @dataclass
@@ -38,8 +39,8 @@ class GraphRAGIntegration:
 
     def __init__(self, config_path: str = ".ctxrc.yaml", verbose: bool = False):
         self.config = self._load_config(config_path)
-        self.neo4j_driver = None
-        self.qdrant_client = None
+        self.neo4j_driver: Optional[Driver] = None
+        self.qdrant_client: Optional[QdrantClient] = None
         self.verbose = verbose
         self.database = self.config.get("neo4j", {}).get("database", "context_graph")
         self.collection_name = self.config.get("qdrant", {}).get(
@@ -66,7 +67,8 @@ class GraphRAGIntegration:
         """Load configuration from .ctxrc.yaml"""
         try:
             with open(config_path, "r") as f:
-                return yaml.safe_load(f)
+                result = yaml.safe_load(f)
+                return cast(Dict[str, Any], result) if result else {}
         except FileNotFoundError:
             return {}
 
@@ -86,8 +88,9 @@ class GraphRAGIntegration:
             self.neo4j_driver = GraphDatabase.driver(
                 neo4j_uri, auth=(neo4j_username, neo4j_password)
             )
-            with self.neo4j_driver.session() as session:
-                session.run("RETURN 1")
+            if self.neo4j_driver is not None:
+                with self.neo4j_driver.session() as session:
+                    session.run("RETURN 1")
         except Exception as e:
             # Import locally to avoid circular imports
             from src.core.utils import sanitize_error_message
@@ -103,7 +106,8 @@ class GraphRAGIntegration:
 
         try:
             self.qdrant_client = QdrantClient(host=qdrant_host, port=qdrant_port)
-            self.qdrant_client.get_collections()
+            if self.qdrant_client is not None:
+                self.qdrant_client.get_collections()
         except Exception as e:
             click.echo(f"Failed to connect to Qdrant: {e}", err=True)
             return False
@@ -113,6 +117,8 @@ class GraphRAGIntegration:
     def _vector_search(self, query_vector: List[float], limit: int = 5) -> List[Dict[str, Any]]:
         """Perform vector search in Qdrant"""
         try:
+            if self.qdrant_client is None:
+                return []
             results = self.qdrant_client.search(
                 collection_name=self.collection_name,
                 query_vector=query_vector,
@@ -124,11 +130,11 @@ class GraphRAGIntegration:
                 {
                     "id": r.id,
                     "score": r.score,
-                    "document_id": r.payload.get("document_id", ""),
-                    "document_type": r.payload.get("document_type", ""),
-                    "title": r.payload.get("title", ""),
-                    "file_path": r.payload.get("file_path", ""),
-                    "payload": r.payload,
+                    "document_id": r.payload.get("document_id", "") if r.payload else "",
+                    "document_type": r.payload.get("document_type", "") if r.payload else "",
+                    "title": r.payload.get("title", "") if r.payload else "",
+                    "file_path": r.payload.get("file_path", "") if r.payload else "",
+                    "payload": r.payload if r.payload else {},
                 }
                 for r in results
             ]
@@ -139,9 +145,11 @@ class GraphRAGIntegration:
 
     def _graph_neighborhood(self, document_ids: List[str], max_hops: int = 2) -> Dict[str, Any]:
         """Get graph neighborhood for documents"""
-        neighborhood = {"nodes": {}, "relationships": [], "paths": []}
+        neighborhood: Dict[str, Any] = {"nodes": {}, "relationships": [], "paths": []}
 
         try:
+            if self.neo4j_driver is None:
+                return neighborhood
             with self.neo4j_driver.session(database=self.database) as session:
                 # Get direct neighbors
                 for doc_id in document_ids:
@@ -158,7 +166,7 @@ class GraphRAGIntegration:
                         }) YIELD path
                         WITH path, d, last(nodes(path)) as connected, relationships(path) as rels
                         WHERE connected:Document
-                        RETURN 
+                        RETURN
                             d as source,
                             connected as target,
                             [r in rels | {type: type(r), properties: properties(r)}] as relationships,
@@ -173,7 +181,7 @@ class GraphRAGIntegration:
                         WITH d, connected, path, relationships(path) as rels,
                              length(path) as distance
                         WHERE distance <= $max_hops
-                        RETURN 
+                        RETURN
                             d as source,
                             connected as target,
                             [r in rels | {type: type(r), properties: properties(r)}] as relationships,
@@ -240,7 +248,7 @@ class GraphRAGIntegration:
         reasoning = []
 
         # Analyze node types
-        node_types = {}
+        node_types: Dict[str, int] = {}
         for node_id, node in neighborhood["nodes"].items():
             doc_type = node.get("document_type", "unknown")
             node_types[doc_type] = node_types.get(doc_type, 0) + 1
@@ -252,7 +260,7 @@ class GraphRAGIntegration:
             )
 
         # Analyze relationships
-        rel_types = {}
+        rel_types: Dict[str, int] = {}
         for rel in neighborhood["relationships"]:
             rel_type = rel["type"]
             rel_types[rel_type] = rel_types.get(rel_type, 0) + 1
@@ -335,7 +343,7 @@ class GraphRAGIntegration:
             vector_score = result["score"]
 
             # Simple graph centrality: count of connections
-            graph_score = 0
+            graph_score: float = 0.0
             for rel in neighborhood["relationships"]:
                 if rel["source"] == doc_id or rel["target"] == doc_id:
                     graph_score += 0.1
@@ -391,6 +399,8 @@ class GraphRAGIntegration:
         }
 
         try:
+            if self.neo4j_driver is None:
+                return impact
             with self.neo4j_driver.session(database=self.database) as session:
                 # Get direct connections
                 result = session.run(
@@ -425,10 +435,14 @@ class GraphRAGIntegration:
                     impact["total_reachable"] = record["total"]
 
                 # Calculate centrality score
-                if impact["total_reachable"] > 0:
-                    impact["central_score"] = (
-                        impact["direct_connections"] / impact["total_reachable"]
-                    )
+                total_reachable = impact.get("total_reachable", 0)
+                direct_connections = impact.get("direct_connections", 0)
+                if (
+                    isinstance(total_reachable, int)
+                    and isinstance(direct_connections, int)
+                    and total_reachable > 0
+                ):
+                    impact["central_score"] = direct_connections / total_reachable
 
                 # Get dependency chain (documents that depend on this one)
                 result = session.run(
@@ -441,9 +455,10 @@ class GraphRAGIntegration:
                 )
 
                 for record in result:
-                    impact["dependency_chain"].append(
-                        {"id": record["id"], "title": record["title"]}
-                    )
+                    dependency_chain = impact.get("dependency_chain", [])
+                    if isinstance(dependency_chain, list):
+                        dependency_chain.append({"id": record["id"], "title": record["title"]})
+                        impact["dependency_chain"] = dependency_chain
 
         except Exception as e:
             impact["error"] = str(e)

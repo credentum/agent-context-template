@@ -9,15 +9,16 @@ This component provides:
 4. Boost factors for document types
 """
 
-import click
-import yaml
+import json
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass
-import json
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
+
+import click
+import yaml
 from qdrant_client import QdrantClient
-from qdrant_client.models import Filter, FieldCondition, MatchValue, SearchRequest
+from qdrant_client.models import FieldCondition, Filter, MatchValue, SearchRequest
 
 
 @dataclass
@@ -45,7 +46,7 @@ class SumScoresAPI:
     ):
         self.config = self._load_config(config_path)
         self.perf_config = self._load_perf_config(perf_config_path)
-        self.client = None
+        self.client: Optional[QdrantClient] = None
         self.collection_name = self.config.get("qdrant", {}).get(
             "collection_name", "project_context"
         )
@@ -73,7 +74,8 @@ class SumScoresAPI:
         """Load configuration from .ctxrc.yaml"""
         try:
             with open(config_path, "r") as f:
-                return yaml.safe_load(f)
+                result = yaml.safe_load(f)
+                return cast(Dict[str, Any], result) if result else {}
         except FileNotFoundError:
             return {}
 
@@ -81,7 +83,8 @@ class SumScoresAPI:
         """Load performance configuration"""
         try:
             with open(perf_config_path, "r") as f:
-                return yaml.safe_load(f)
+                result = yaml.safe_load(f)
+                return cast(Dict[str, Any], result) if result else {}
         except FileNotFoundError:
             # Return default config if file not found
             return {"search": {"ranking": {"temporal_decay_days": 30, "temporal_decay_rate": 0.01}}}
@@ -94,7 +97,8 @@ class SumScoresAPI:
 
         try:
             self.client = QdrantClient(host=host, port=port)
-            self.client.get_collections()
+            if self.client is not None:
+                self.client.get_collections()
             return True
         except Exception as e:
             click.echo(f"Failed to connect to Qdrant: {e}", err=True)
@@ -114,14 +118,14 @@ class SumScoresAPI:
 
             # Exponential decay after threshold
             decay = 1.0 - (self.decay_rate * (age_days - self.decay_days))
-            return max(0.5, decay)  # Minimum 50% score
+            return float(max(0.5, decay))  # Minimum 50% score
 
         except Exception:
             return 1.0
 
     def _get_type_boost(self, document_type: str) -> float:
         """Get boost factor for document type"""
-        return self.type_boosts.get(document_type, 1.0)
+        return float(self.type_boosts.get(document_type, 1.0))
 
     def search_single(
         self,
@@ -142,30 +146,36 @@ class SumScoresAPI:
             conditions = []
             for field, value in filter_conditions.items():
                 conditions.append(FieldCondition(key=field, match=MatchValue(value=value)))
-            search_params["query_filter"] = Filter(must=conditions)
+            search_params["query_filter"] = Filter(must=cast(Any, conditions))
 
         # Search
+        if self.client is None:
+            return []
         results = self.client.search(**search_params)
 
         # Convert to SearchResult objects
         search_results = []
         for result in results:
-            payload = result.payload
+            payload = result.payload if result.payload else {}
 
             # Calculate factors
-            decay_factor = self._calculate_temporal_decay(payload.get("last_modified", ""))
-            boost_factor = self._get_type_boost(payload.get("document_type", "unknown"))
+            decay_factor = self._calculate_temporal_decay(
+                payload.get("last_modified", "") if payload else ""
+            )
+            boost_factor = self._get_type_boost(
+                payload.get("document_type", "unknown") if payload else "unknown"
+            )
 
             # Calculate final score
             final_score = result.score * decay_factor * boost_factor
 
             search_results.append(
                 SearchResult(
-                    vector_id=result.id,
-                    document_id=payload.get("document_id", ""),
-                    document_type=payload.get("document_type", ""),
-                    file_path=payload.get("file_path", ""),
-                    title=payload.get("title", ""),
+                    vector_id=str(result.id),
+                    document_id=payload.get("document_id", "") if payload else "",
+                    document_type=payload.get("document_type", "") if payload else "",
+                    file_path=payload.get("file_path", "") if payload else "",
+                    title=payload.get("title", "") if payload else "",
                     score=result.score,
                     raw_scores=[result.score],
                     decay_factor=decay_factor,
@@ -281,58 +291,83 @@ class SumScoresAPI:
     def get_statistics(self) -> Dict[str, Any]:
         """Get search index statistics"""
         try:
+            if self.client is None:
+                return {"error": "Not connected to Qdrant"}
             collection_info = self.client.get_collection(self.collection_name)
 
             # Get document type distribution using sampling for large collections
             total_points = collection_info.points_count
-            type_counts = {}
+            type_counts: Dict[str, int] = {}
 
-            if total_points > 1000:
+            if total_points and total_points > 1000:
                 # Sample for large collections
                 sample_size = min(500, total_points)
                 sample_ids = []
 
                 # Get a sample of point IDs
-                points, _ = self.client.scroll(
-                    collection_name=self.collection_name, limit=sample_size, with_payload=False
-                )
-                sample_ids = [p.id for p in points]
+                if self.client is not None:
+                    points, _ = self.client.scroll(
+                        collection_name=self.collection_name, limit=sample_size, with_payload=False
+                    )
+                    sample_ids = [p.id for p in points]
 
-                # Retrieve payloads for sampled points
-                retrieved = self.client.retrieve(
-                    collection_name=self.collection_name, ids=sample_ids, with_payload=True
-                )
-
-                for point in retrieved:
-                    doc_type = point.payload.get("document_type", "unknown")
-                    type_counts[doc_type] = type_counts.get(doc_type, 0) + 1
-
-                # Extrapolate counts
-                factor = total_points / sample_size
-                type_counts = {k: int(v * factor) for k, v in type_counts.items()}
-            else:
-                # For small collections, get all points
-                offset = None
-                while True:
-                    points, next_offset = self.client.scroll(
-                        collection_name=self.collection_name,
-                        limit=100,
-                        offset=offset,
-                        with_payload=True,
+                    # Retrieve payloads for sampled points
+                    retrieved = self.client.retrieve(
+                        collection_name=self.collection_name, ids=sample_ids, with_payload=True
                     )
 
-                    for point in points:
+                for point in retrieved:
+                    if point.payload:
                         doc_type = point.payload.get("document_type", "unknown")
                         type_counts[doc_type] = type_counts.get(doc_type, 0) + 1
 
-                    if next_offset is None:
-                        break
-                    offset = next_offset
+                # Extrapolate counts
+                if sample_size and sample_size > 0:
+                    factor = total_points / sample_size
+                    type_counts = {k: int(v * factor) for k, v in type_counts.items()}
+            else:
+                # For small collections, get all points
+                offset = None
+                if self.client is not None:
+                    while True:
+                        points, next_offset = self.client.scroll(
+                            collection_name=self.collection_name,
+                            limit=100,
+                            offset=offset,
+                            with_payload=True,
+                        )
+
+                        for point in points:
+                            if point.payload:
+                                doc_type = point.payload.get("document_type", "unknown")
+                                type_counts[doc_type] = type_counts.get(doc_type, 0) + 1
+
+                        if next_offset is None:
+                            break
+                        offset = next_offset
+
+            # Get vector parameters
+            vector_params = collection_info.config.params.vectors
+            if isinstance(vector_params, dict):
+                # Multiple vector configuration - take the first one
+                first_vector = next(iter(vector_params.values()))
+                vector_size = first_vector.size if hasattr(first_vector, "size") else 0
+                distance_metric = (
+                    str(first_vector.distance) if hasattr(first_vector, "distance") else "unknown"
+                )
+            elif vector_params:
+                vector_size = vector_params.size if hasattr(vector_params, "size") else 0
+                distance_metric = (
+                    str(vector_params.distance) if hasattr(vector_params, "distance") else "unknown"
+                )
+            else:
+                vector_size = 0
+                distance_metric = "unknown"
 
             return {
                 "total_vectors": collection_info.points_count,
-                "vector_size": collection_info.config.params.vectors.size,
-                "distance_metric": str(collection_info.config.params.vectors.distance),
+                "vector_size": vector_size,
+                "distance_metric": distance_metric,
                 "document_types": type_counts,
                 "type_boosts": self.type_boosts,
                 "decay_config": {"decay_days": self.decay_days, "decay_rate": self.decay_rate},

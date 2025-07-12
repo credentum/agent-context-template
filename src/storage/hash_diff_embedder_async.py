@@ -11,19 +11,20 @@ This component:
 import asyncio
 import hashlib
 import json
-import click
-import yaml
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass, asdict
+from typing import Any, Dict, List, Optional, Tuple, cast
+
+import aiofiles
+import click
+import yaml
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import PointStruct
-import aiofiles
-from concurrent.futures import ThreadPoolExecutor
 
 
 @dataclass
@@ -49,8 +50,8 @@ class AsyncHashDiffEmbedder:
         self.perf_config = self._load_perf_config(perf_config_path)
         self.hash_cache_path = Path("context/.embeddings_cache/hash_cache.json")
         self.hash_cache: Dict[str, Any] = self._load_hash_cache()
-        self.client = None
-        self.openai_client = None
+        self.client: Optional[AsyncQdrantClient] = None
+        self.openai_client: Optional[AsyncOpenAI] = None
         self.embedding_model = self.config.get("qdrant", {}).get(
             "embedding_model", "text-embedding-ada-002"
         )
@@ -71,7 +72,8 @@ class AsyncHashDiffEmbedder:
         """Load configuration"""
         try:
             with open(config_path, "r") as f:
-                return yaml.safe_load(f)
+                result = yaml.safe_load(f)
+                return cast(Dict[str, Any], result) if result else {}
         except FileNotFoundError:
             return {}
 
@@ -79,7 +81,8 @@ class AsyncHashDiffEmbedder:
         """Load performance configuration"""
         try:
             with open(perf_config_path, "r") as f:
-                return yaml.safe_load(f)
+                result = yaml.safe_load(f)
+                return cast(Dict[str, Any], result) if result else {"vector_db": {"embedding": {}}}
         except FileNotFoundError:
             return {"vector_db": {"embedding": {}}}
 
@@ -88,7 +91,8 @@ class AsyncHashDiffEmbedder:
         if self.hash_cache_path.exists():
             try:
                 with open(self.hash_cache_path, "r") as f:
-                    return json.load(f)
+                    result = json.load(f)
+                    return cast(Dict[str, Any], result) if result else {}
             except Exception:
                 pass
         return {}
@@ -109,7 +113,8 @@ class AsyncHashDiffEmbedder:
             )
 
             # Test connection
-            await self.client.get_collections()
+            if self.client is not None:
+                await self.client.get_collections()
 
             # Initialize OpenAI client
             api_key = os.getenv("OPENAI_API_KEY")
@@ -132,10 +137,12 @@ class AsyncHashDiffEmbedder:
         for attempt in range(self.max_retries):
             try:
                 async with self.semaphore:  # Rate limiting
+                    if self.openai_client is None:
+                        raise Exception("OpenAI client not initialized")
                     response = await self.openai_client.embeddings.create(
                         model=self.embedding_model, input=text, timeout=self.request_timeout
                     )
-                    return response.data[0].embedding
+                    return list(response.data[0].embedding)
 
             except Exception as e:
                 if "rate_limit" in str(e).lower() and attempt < self.max_retries - 1:
@@ -186,10 +193,11 @@ class AsyncHashDiffEmbedder:
             collection_name = self.config.get("qdrant", {}).get(
                 "collection_name", "project_context"
             )
-            await self.client.upsert(
-                collection_name=collection_name,
-                points=[PointStruct(id=vector_id, vector=embedding, payload=payload)],
-            )
+            if self.client is not None:
+                await self.client.upsert(
+                    collection_name=collection_name,
+                    points=[PointStruct(id=vector_id, vector=embedding, payload=payload)],
+                )
 
             # Update cache
             self.hash_cache[str(task.file_path)] = {
