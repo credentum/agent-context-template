@@ -405,4 +405,3 @@ class TestReproducibility:
         calculated_hash = hashlib.sha256(state_str.encode()).hexdigest()
 
         return calculated_hash == checkpoint["verification"]["total_hash"]
-

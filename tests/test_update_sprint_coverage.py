@@ -359,4 +359,3 @@ class TestUpdateSprintAgentCoverage:
                     assert result.exit_code == 0
         finally:
             os.chdir(original_cwd)
-

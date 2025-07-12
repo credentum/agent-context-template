@@ -355,4 +355,3 @@ class TestContextKVCoverage:
                 context_kv.close()
                 mock_redis_close.assert_called_once()
                 mock_duckdb_close.assert_called_once()
-

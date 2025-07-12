@@ -339,4 +339,3 @@ class TestCleanupAgentCoverage:
                         mock_process.assert_called_once()
                         mock_logs.assert_called_once()
                         mock_write_log.assert_called_once()
-

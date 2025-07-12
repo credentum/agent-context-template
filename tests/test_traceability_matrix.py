@@ -198,4 +198,3 @@ def generate_test_mapping_decorator(requirement: str):
 def test_example_with_requirement_mapping():
     """Example test with requirement mapping"""
     pass
-

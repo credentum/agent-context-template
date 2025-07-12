@@ -90,7 +90,7 @@ class VectorDBInitializer:
         if not self.client:
             click.echo("✗ Not connected to Qdrant", err=True)
             return False
-            
+
         try:
             # Check if collection exists
             collections = self.client.get_collections().collections
@@ -144,14 +144,14 @@ class VectorDBInitializer:
         if not self.client:
             click.echo("✗ Not connected to Qdrant", err=True)
             return False
-            
+
         try:
             # Get collection info
             info = self.client.get_collection(collection_name)
 
             click.echo("\nCollection Info:")
             click.echo(f"  Name: {collection_name}")
-            
+
             # Handle different vector config formats
             if info.config and info.config.params and info.config.params.vectors:
                 vectors_config = info.config.params.vectors
@@ -163,7 +163,7 @@ class VectorDBInitializer:
                     for name, params in vectors_config.items():
                         click.echo(f"  Vector '{name}' size: {params.size}")
                         click.echo(f"  Vector '{name}' distance: {params.distance}")
-            
+
             click.echo(f"  Points count: {info.points_count}")
 
             # Check Qdrant version
@@ -183,7 +183,7 @@ class VectorDBInitializer:
         if not self.client:
             click.echo("✗ Not connected to Qdrant", err=True)
             return False
-            
+
         try:
             # Create a test embedding (random for now)
             import random

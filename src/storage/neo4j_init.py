@@ -116,7 +116,7 @@ class Neo4jInitializer:
             if not self.driver:
                 click.echo("✗ Not connected to Neo4j", err=True)
                 return False
-                
+
             with self.driver.session(database=self.database) as session:
                 for label, property in constraints:
                     query = f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{label}) REQUIRE n.{property} IS UNIQUE"
@@ -147,7 +147,7 @@ class Neo4jInitializer:
             if not self.driver:
                 click.echo("✗ Not connected to Neo4j", err=True)
                 return False
-                
+
             with self.driver.session(database=self.database) as session:
                 for index_spec in indexes:
                     if len(index_spec) == 2:
@@ -188,7 +188,7 @@ class Neo4jInitializer:
             if not self.driver:
                 click.echo("✗ Not connected to Neo4j", err=True)
                 return False
-                
+
             with self.driver.session(database=self.database) as session:
                 # Create root System node
                 session.run(
@@ -275,7 +275,7 @@ class Neo4jInitializer:
         if not self.driver:
             click.echo("✗ Not connected to Neo4j", err=True)
             return False
-            
+
         try:
             with self.driver.session(database=self.database) as session:
                 # Count nodes by label
@@ -313,7 +313,7 @@ class Neo4jInitializer:
             try:
                 if not self.driver:
                     return False
-                    
+
                 with self.driver.session(database=self.database) as session:
                     result = session.run("MATCH (n) RETURN count(n) as total")
                     node_record = result.single()
@@ -366,7 +366,7 @@ def main(
         if not initializer.driver:
             click.echo("✗ Not connected to Neo4j", err=True)
             sys.exit(1)
-            
+
         with initializer.driver.session(database="system") as session:
             db_name = initializer.database
             result = session.run("SHOW DATABASES WHERE name = $name", name=db_name)

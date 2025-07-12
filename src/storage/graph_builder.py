@@ -316,7 +316,7 @@ class GraphBuilder:
                 if self.verbose:
                     click.echo("Not connected to Neo4j", err=True)
                 return False
-                
+
             with self.driver.session(database=self.database) as session:
                 # Create/update document node
                 doc_id = self._create_document_node(session, data, file_path)
@@ -391,7 +391,7 @@ class GraphBuilder:
             if self.verbose:
                 click.echo("Not connected to Neo4j", err=True)
             return 0
-            
+
         try:
             with self.driver.session(database=self.database) as session:
                 # Get all document nodes
@@ -440,7 +440,7 @@ class GraphBuilder:
             if self.verbose:
                 click.echo("Not connected to Neo4j", err=True)
             return stats
-            
+
         try:
             with self.driver.session(database=self.database) as session:
                 # Node counts by label
