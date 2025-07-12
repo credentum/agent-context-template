@@ -450,7 +450,7 @@ class ContextAnalytics(DuckDBAnalytics):
 
             if not self.conn:
                 return False
-                
+
             if format == "parquet":
                 self.conn.execute(
                     f"""

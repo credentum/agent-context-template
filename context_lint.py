@@ -255,7 +255,13 @@ class ContextLinter:
 
     def show_stats(self, path: Path) -> None:
         """Show statistics about context documents"""
-        stats: Dict[str, Any] = {"total_files": 0, "by_type": {}, "by_status": {}, "expired": 0, "expiring_soon": 0}
+        stats: Dict[str, Any] = {
+            "total_files": 0,
+            "by_type": {},
+            "by_status": {},
+            "expired": 0,
+            "expiring_soon": 0,
+        }
 
         for yaml_file in path.rglob("*.yaml"):
             if "schemas" in yaml_file.parts:
