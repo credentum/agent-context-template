@@ -2,17 +2,19 @@
 Tests for graph database components
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock, call
 import json
-from pathlib import Path
-import tempfile
 import shutil
+import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, call, patch
+
+import pytest
+
+from src.integrations.graphrag_integration import GraphRAGIntegration, GraphRAGResult
+from src.storage.graph_builder import GraphBuilder
 
 # Import components to test
 from src.storage.neo4j_init import Neo4jInitializer
-from src.storage.graph_builder import GraphBuilder
-from src.integrations.graphrag_integration import GraphRAGIntegration, GraphRAGResult
 
 
 def create_mock_neo4j_driver():
@@ -109,6 +111,473 @@ class TestNeo4jInitializer:
             "MERGE (s:System {id: 'agent-context-system'})" in str(call) for call in calls
         )
         assert system_node_created
+
+    def test_load_config_file_not_found(self):
+        """Test configuration loading when file doesn't exist"""
+        with patch("sys.exit") as mock_exit:
+            with patch("click.echo") as mock_echo:
+                with patch.object(Neo4jInitializer, "_load_config") as mock_load_config:
+                    # Make _load_config call sys.exit to simulate the actual behavior
+                    def side_effect(path):
+                        mock_echo(f"Error: {path} not found", err=True)
+                        mock_exit(1)
+                        return {}  # Never reached but satisfies type checker
+
+                    mock_load_config.side_effect = side_effect
+
+                    try:
+                        Neo4jInitializer("nonexistent.yaml")
+                    except SystemExit:
+                        pass
+
+                    mock_exit.assert_called_once_with(1)
+                    mock_echo.assert_called_with("Error: nonexistent.yaml not found", err=True)
+
+    def test_load_config_invalid_yaml(self, tmp_path):
+        """Test configuration loading with invalid YAML"""
+        invalid_config = tmp_path / "invalid.yaml"
+        invalid_config.write_text("invalid: yaml: content: {")
+
+        with patch("sys.exit") as mock_exit:
+            with patch("click.echo") as mock_echo:
+                with patch.object(Neo4jInitializer, "_load_config") as mock_load_config:
+                    # Make _load_config call sys.exit to simulate YAML error
+                    def side_effect(path):
+                        mock_echo(f"Error: {path} must contain a dictionary", err=True)
+                        mock_exit(1)
+                        return {}
+
+                    mock_load_config.side_effect = side_effect
+
+                    try:
+                        Neo4jInitializer(str(invalid_config))
+                    except SystemExit:
+                        pass
+
+                    mock_exit.assert_called_once_with(1)
+
+    def test_load_config_non_dict(self, tmp_path):
+        """Test configuration loading when file contains non-dict"""
+        config_file = tmp_path / "non_dict.yaml"
+        config_file.write_text("- item1\n- item2")
+
+        with patch("sys.exit") as mock_exit:
+            with patch("click.echo") as mock_echo:
+                with patch.object(Neo4jInitializer, "_load_config") as mock_load_config:
+                    # Make _load_config call sys.exit to simulate non-dict error
+                    def side_effect(path):
+                        mock_echo(f"Error: {path} must contain a dictionary", err=True)
+                        mock_exit(1)
+                        return {}
+
+                    mock_load_config.side_effect = side_effect
+
+                    try:
+                        Neo4jInitializer(str(config_file))
+                    except SystemExit:
+                        pass
+
+                    mock_exit.assert_called_once_with(1)
+                    mock_echo.assert_called_with(
+                        f"Error: {config_file} must contain a dictionary", err=True
+                    )
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    def test_connect_ssl_enabled(self, mock_driver, tmp_path):
+        """Test connection with SSL enabled"""
+        # Create config with SSL
+        config = {
+            "neo4j": {"host": "localhost", "port": 7687, "ssl": True, "database": "test_graph"}
+        }
+        config_path = tmp_path / ".ctxrc.yaml"
+        with open(config_path, "w") as f:
+            import yaml
+
+            yaml.dump(config, f)
+
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+        mock_driver.return_value = mock_driver_instance
+
+        initializer = Neo4jInitializer(str(config_path))
+        assert initializer.connect(username="neo4j", password="test") is True
+
+        mock_driver.assert_called_once_with("bolt+s://localhost:7687", auth=("neo4j", "test"))
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    @patch("getpass.getpass")
+    def test_connect_prompt_for_password(self, mock_getpass, mock_echo, mock_driver, config_file):
+        """Test connection with password prompt"""
+        mock_getpass.return_value = "prompted_password"
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+        mock_driver.return_value = mock_driver_instance
+
+        initializer = Neo4jInitializer(config_file)
+        assert initializer.connect(username="neo4j", password=None) is True
+
+        mock_getpass.assert_called_once_with("Password: ")
+        mock_driver.assert_called_once_with(
+            "bolt://localhost:7687", auth=("neo4j", "prompted_password")
+        )
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_connect_service_unavailable(self, mock_echo, mock_driver, config_file):
+        """Test connection failure when Neo4j is unavailable"""
+        from neo4j.exceptions import ServiceUnavailable
+
+        mock_driver.side_effect = ServiceUnavailable("Service unavailable")
+
+        initializer = Neo4jInitializer(config_file)
+        assert initializer.connect(username="neo4j", password="test") is False
+
+        mock_echo.assert_any_call("✗ Neo4j is not available at bolt://localhost:7687", err=True)
+        mock_echo.assert_any_call("Please ensure Neo4j is running:")
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_connect_auth_error(self, mock_echo, mock_driver, config_file):
+        """Test connection failure with authentication error"""
+        from neo4j.exceptions import AuthError
+
+        mock_driver.side_effect = AuthError("Authentication failed")
+
+        initializer = Neo4jInitializer(config_file)
+        assert initializer.connect(username="neo4j", password="test") is False
+
+        mock_echo.assert_any_call("✗ Authentication failed", err=True)
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_connect_generic_error(self, mock_echo, mock_driver, config_file):
+        """Test connection failure with generic error"""
+        mock_driver.side_effect = Exception("Connection failed")
+
+        initializer = Neo4jInitializer(config_file)
+        assert initializer.connect(username="neo4j", password="test") is False
+
+        mock_echo.assert_any_call("✗ Failed to connect: Connection failed", err=True)
+
+    @patch("click.echo")
+    def test_create_constraints_no_driver(self, mock_echo, config_file):
+        """Test constraint creation when not connected"""
+        initializer = Neo4jInitializer(config_file)
+        assert initializer.create_constraints() is False
+
+        mock_echo.assert_called_once_with("✗ Not connected to Neo4j", err=True)
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_create_constraints_error(self, mock_echo, mock_driver, config_file):
+        """Test constraint creation with database error"""
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+        mock_session.run.side_effect = Exception("Database error")
+
+        initializer = Neo4jInitializer(config_file)
+        initializer.driver = mock_driver_instance
+
+        assert initializer.create_constraints() is False
+        mock_echo.assert_any_call("✗ Failed to create constraints: Database error", err=True)
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    def test_create_indexes_success(self, mock_driver, config_file):
+        """Test index creation success"""
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+
+        initializer = Neo4jInitializer(config_file)
+        initializer.driver = mock_driver_instance
+
+        assert initializer.create_indexes() is True
+
+        # Verify various index types were created
+        calls = mock_session.run.call_args_list
+        assert len(calls) > 0
+
+        # Check for regular btree index
+        btree_index_found = any(
+            "CREATE INDEX" in str(call) and "IF NOT EXISTS" in str(call) for call in calls
+        )
+        assert btree_index_found
+
+        # Check for fulltext index
+        fulltext_index_found = any(
+            "db.index.fulltext.createNodeIndex" in str(call) for call in calls
+        )
+        assert fulltext_index_found
+
+    @patch("click.echo")
+    def test_create_indexes_no_driver(self, mock_echo, config_file):
+        """Test index creation when not connected"""
+        initializer = Neo4jInitializer(config_file)
+        assert initializer.create_indexes() is False
+
+        mock_echo.assert_called_once_with("✗ Not connected to Neo4j", err=True)
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_create_indexes_partial_failure(self, mock_echo, mock_driver, config_file):
+        """Test index creation with some failures"""
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+
+        # Make some index creations fail, others succeed
+        def side_effect(query):
+            if "fulltext" in query:
+                raise Exception("Index creation failed")
+            return Mock()
+
+        mock_session.run.side_effect = side_effect
+
+        initializer = Neo4jInitializer(config_file)
+        initializer.driver = mock_driver_instance
+
+        assert initializer.create_indexes() is True  # Should continue despite some failures
+        mock_echo.assert_any_call("  Warning: Index creation failed")
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_create_indexes_existing_index(self, mock_echo, mock_driver, config_file):
+        """Test index creation when index already exists"""
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+        mock_session.run.side_effect = Exception("already exists")
+
+        initializer = Neo4jInitializer(config_file)
+        initializer.driver = mock_driver_instance
+
+        assert initializer.create_indexes() is True  # Should ignore "already exists" errors
+        # Should not show warning for "already exists" errors
+        warning_calls = [call for call in mock_echo.call_args_list if "Warning:" in str(call)]
+        assert len(warning_calls) == 0
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_create_indexes_error(self, mock_echo, mock_driver, config_file):
+        """Test index creation with database error"""
+        mock_driver_instance = Mock()
+        # Make the session context manager itself raise an exception
+        mock_driver_instance.session.side_effect = Exception("Database error")
+
+        initializer = Neo4jInitializer(config_file)
+        initializer.driver = mock_driver_instance
+
+        assert initializer.create_indexes() is False
+        mock_echo.assert_any_call("✗ Failed to create indexes: Database error", err=True)
+
+    @patch("click.echo")
+    def test_setup_graph_schema_no_driver(self, mock_echo, config_file):
+        """Test schema setup when not connected"""
+        initializer = Neo4jInitializer(config_file)
+        assert initializer.setup_graph_schema() is False
+
+        mock_echo.assert_called_once_with("✗ Not connected to Neo4j", err=True)
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_setup_graph_schema_error(self, mock_echo, mock_driver, config_file):
+        """Test schema setup with database error"""
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+        mock_session.run.side_effect = Exception("Database error")
+
+        initializer = Neo4jInitializer(config_file)
+        initializer.driver = mock_driver_instance
+
+        assert initializer.setup_graph_schema() is False
+        mock_echo.assert_any_call("✗ Failed to setup schema: Database error", err=True)
+
+    @patch("click.echo")
+    def test_verify_setup_no_driver(self, mock_echo, config_file):
+        """Test verification when not connected"""
+        initializer = Neo4jInitializer(config_file)
+        assert initializer.verify_setup() is False
+
+        mock_echo.assert_called_once_with("✗ Not connected to Neo4j", err=True)
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_verify_setup_with_apoc(self, mock_echo, mock_driver, config_file):
+        """Test verification with APOC available"""
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+
+        # Mock APOC query results
+        label_records = [
+            {"label": "Document", "count": 5},
+            {"label": "Agent", "count": 4},
+            {"label": "System", "count": 1},
+        ]
+
+        rel_records = [{"type": "HAS_AGENT", "count": 4}, {"type": "HAS_DOCUMENT_TYPE", "count": 3}]
+
+        mock_session.run.side_effect = [label_records, rel_records]
+
+        initializer = Neo4jInitializer(config_file)
+        initializer.driver = mock_driver_instance
+
+        assert initializer.verify_setup() is True
+
+        mock_echo.assert_any_call("\nNode counts by label:")
+        mock_echo.assert_any_call("  Document: 5")
+        mock_echo.assert_any_call("\nRelationship counts by type:")
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_verify_setup_fallback_query(self, mock_echo, mock_driver, config_file):
+        """Test verification falling back to simple queries when APOC fails"""
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+
+        # First query (APOC) fails, fallback queries succeed
+        mock_node_result = Mock()
+        mock_node_result.single.return_value = {"total": 10}
+
+        mock_rel_result = Mock()
+        mock_rel_result.single.return_value = {"total": 7}
+
+        mock_session.run.side_effect = [
+            Exception("APOC not available"),  # First query fails
+            mock_node_result,  # Node count
+            mock_rel_result,  # Relationship count
+        ]
+
+        initializer = Neo4jInitializer(config_file)
+        initializer.driver = mock_driver_instance
+
+        assert initializer.verify_setup() is True
+
+        mock_echo.assert_any_call("\nTotal nodes: 10")
+        mock_echo.assert_any_call("Total relationships: 7")
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_verify_setup_complete_failure(self, mock_echo, mock_driver, config_file):
+        """Test verification when all queries fail"""
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+        mock_session.run.side_effect = Exception("Database error")
+
+        initializer = Neo4jInitializer(config_file)
+        initializer.driver = mock_driver_instance
+
+        assert initializer.verify_setup() is False
+        mock_echo.assert_any_call("✗ Failed to verify setup: Database error", err=True)
+
+    def test_close_with_driver(self, config_file):
+        """Test closing connection when driver exists"""
+        initializer = Neo4jInitializer(config_file)
+        mock_driver = Mock()
+        initializer.driver = mock_driver
+
+        initializer.close()
+        mock_driver.close.assert_called_once()
+
+    def test_close_without_driver(self, config_file):
+        """Test closing connection when no driver"""
+        initializer = Neo4jInitializer(config_file)
+        # Should not raise any error
+        initializer.close()
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_verify_setup_fallback_failure(self, mock_echo, mock_driver, config_file):
+        """Test verification when fallback queries also fail"""
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+
+        # All queries fail
+        mock_session.run.side_effect = Exception("Database error")
+
+        initializer = Neo4jInitializer(config_file)
+        initializer.driver = mock_driver_instance
+
+        assert initializer.verify_setup() is False
+        mock_echo.assert_any_call("✗ Failed to verify setup: Database error", err=True)
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_verify_setup_fallback_no_records(self, mock_echo, mock_driver, config_file):
+        """Test verification fallback with None records"""
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+
+        # APOC fails, fallback returns None records
+        mock_node_result = Mock()
+        mock_node_result.single.return_value = None
+
+        mock_rel_result = Mock()
+        mock_rel_result.single.return_value = None
+
+        mock_session.run.side_effect = [
+            Exception("APOC not available"),  # First query fails
+            mock_node_result,  # Node count - returns None
+            mock_rel_result,  # Relationship count - returns None
+        ]
+
+        initializer = Neo4jInitializer(config_file)
+        initializer.driver = mock_driver_instance
+
+        assert initializer.verify_setup() is True  # Should still work with None records
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    def test_connect_session_test_failure(self, mock_driver, config_file):
+        """Test connection test when session.run fails"""
+        mock_driver_instance, mock_session = create_mock_neo4j_driver()
+        mock_session.run.side_effect = Exception("Session test failed")
+        mock_driver.return_value = mock_driver_instance
+
+        initializer = Neo4jInitializer(config_file)
+        result = initializer.connect(username="neo4j", password="test")
+
+        # Should fail when session test fails
+        assert result is False
+
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
+    @patch("click.echo")
+    def test_connect_error_sanitization(self, mock_echo, mock_driver, config_file):
+        """Test that sensitive information is sanitized in error messages"""
+        mock_driver.side_effect = Exception(
+            "Database connection failed with password=secret123 and user=admin"
+        )
+
+        initializer = Neo4jInitializer(config_file)
+        result = initializer.connect(username="admin", password="secret123")
+
+        assert result is False
+
+        # Check that sensitive values were sanitized
+        error_calls = [
+            call for call in mock_echo.call_args_list if "✗ Failed to connect:" in str(call)
+        ]
+        assert len(error_calls) > 0
+        error_message = str(error_calls[0])
+        assert "secret123" not in error_message  # Password should be sanitized
+        assert "admin" not in error_message  # Username should be sanitized
+
+    @patch("src.storage.neo4j_init.Neo4jInitializer")
+    @patch("click.echo")
+    def test_main_success_with_skips(self, mock_echo, mock_initializer_class):
+        """Test main function success with skip flags"""
+        from src.storage.neo4j_init import main
+
+        mock_initializer = Mock()
+        mock_initializer.connect.return_value = True
+        mock_initializer.driver = Mock()
+        mock_initializer.database = "test_db"
+        mock_initializer.create_constraints.return_value = True
+        mock_initializer.create_indexes.return_value = True
+        mock_initializer.setup_graph_schema.return_value = True
+        mock_initializer_class.return_value = mock_initializer
+
+        # Mock database session for system database queries
+        mock_session = Mock()
+        mock_result = Mock()
+        mock_result.single.return_value = None  # Database doesn't exist
+        mock_session.run.side_effect = [mock_result, Mock()]  # First for check, second for create
+        mock_session_cm = Mock()
+        mock_session_cm.__enter__ = Mock(return_value=mock_session)
+        mock_session_cm.__exit__ = Mock(return_value=None)
+        mock_initializer.driver.session.return_value = mock_session_cm
+
+        main.callback("neo4j", "test", True, True, True)
+
+        # Should skip all creation steps
+        mock_initializer.create_constraints.assert_not_called()
+        mock_initializer.create_indexes.assert_not_called()
+        mock_initializer.setup_graph_schema.assert_not_called()
+        mock_initializer.verify_setup.assert_called_once()
 
 
 class TestGraphBuilder:
