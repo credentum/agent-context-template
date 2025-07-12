@@ -3,10 +3,11 @@
 config_validator.py: Configuration validation for the Agent-First Context System
 """
 
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
 import click
 import yaml
-from pathlib import Path
-from typing import Dict, Any, List, Tuple
 
 
 class ConfigValidator:
@@ -37,30 +38,32 @@ class ConfigValidator:
         # Validate Qdrant configuration
         if "qdrant" in config:
             qdrant = config["qdrant"]
-            if not isinstance(qdrant.get("port", 6333), int):
+            port = qdrant.get("port", 6333)
+            if not isinstance(port, int):
                 self.errors.append("qdrant.port must be an integer")
-            if qdrant.get("port", 6333) < 1 or qdrant.get("port", 6333) > 65535:
+            elif port < 1 or port > 65535:
                 self.errors.append("qdrant.port must be between 1 and 65535")
 
         # Validate Neo4j configuration
         if "neo4j" in config:
             neo4j = config["neo4j"]
-            if not isinstance(neo4j.get("port", 7687), int):
+            port = neo4j.get("port", 7687)
+            if not isinstance(port, int):
                 self.errors.append("neo4j.port must be an integer")
-            if neo4j.get("port", 7687) < 1 or neo4j.get("port", 7687) > 65535:
+            elif port < 1 or port > 65535:
                 self.errors.append("neo4j.port must be between 1 and 65535")
 
         # Validate Redis configuration
         if "redis" in config:
             redis_conf = config["redis"]
-            if not isinstance(redis_conf.get("port", 6379), int):
+            port = redis_conf.get("port", 6379)
+            if not isinstance(port, int):
                 self.errors.append("redis.port must be an integer")
-            if redis_conf.get("port", 6379) < 1 or redis_conf.get("port", 6379) > 65535:
+            elif port < 1 or port > 65535:
                 self.errors.append("redis.port must be between 1 and 65535")
-            if (
-                not isinstance(redis_conf.get("database", 0), int)
-                or redis_conf.get("database", 0) < 0
-            ):
+
+            db = redis_conf.get("database", 0)
+            if not isinstance(db, int) or db < 0:
                 self.errors.append("redis.database must be a non-negative integer")
 
         # Validate DuckDB configuration
