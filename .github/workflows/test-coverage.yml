@@ -44,6 +44,20 @@ jobs:
         pip install -r requirements-dev.txt
         pip install pytest-cov coverage[toml] mutmut coverage-badge
     
+    - name: Create directories
+      run: |
+        mkdir -p context/.duckdb
+        mkdir -p context/.graph_cache
+        mkdir -p context/.vector_cache
+        mkdir -p context/trace
+        mkdir -p context/archive
+        mkdir -p context/mcp_contracts
+        mkdir -p context/logs/cleanup
+        mkdir -p context/logs/eval
+        mkdir -p context/logs/kv
+        mkdir -p context/logs/prompts
+        mkdir -p context/logs/signatures
+    
     - name: Run tests with coverage
       run: |
         python -m pytest \
