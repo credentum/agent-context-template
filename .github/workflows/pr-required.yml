@@ -9,7 +9,7 @@ jobs:
   check-pr:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'dependabot[bot]'
-    
+
     steps:
     - name: Check if push was from PR merge
       run: |

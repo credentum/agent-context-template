@@ -7,14 +7,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a **GitHub Actions template repository** that provides workflow templates for integrating Claude AI into GitHub workflows using the `anthropics/claude-code-action@beta` action.
 
 ## 1 ⚠️ Security & Secrets (first things first)
-* **Never hard‑code API keys or tokens.**  
-  
+* **Never hard‑code API keys or tokens.**
+
   **For OAuth authentication (recommended):**
   Add `CLAUDE_CODE_OAUTH_TOKEN` in GitHub Secrets:
   ```yaml
   claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
   ```
-  
+
   **For API key authentication:**
   Add `ANTHROPIC_API_KEY` in GitHub Secrets:
   ```yaml
@@ -76,7 +76,7 @@ Use /clear between distinct threads to avoid context bleed.
 
 **.github/workflows/claude.yml** — Interactive assistant that triggers on:
 - Issue comments containing `@claude`
-- Pull request review comments containing `@claude`  
+- Pull request review comments containing `@claude`
 - Issues opened/assigned with `@claude` in title/body
 - Pull request reviews containing `@claude`
 
@@ -147,7 +147,7 @@ Model Context Protocol (MCP) specs
    gh pr create --title "type: description" --body "..."
    ```
 
-**IMPORTANT**: 
+**IMPORTANT**:
 - NEVER use `git push origin main`
 - ALWAYS create a PR for code review
 - Include test results in PR descriptions

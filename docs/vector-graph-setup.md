@@ -138,7 +138,7 @@ qdrant:
   port: 6333
   collection_name: "project_context"
   embedding_model: "text-embedding-ada-002"
-  
+
 neo4j:
   version: "5.x"
   host: "localhost"

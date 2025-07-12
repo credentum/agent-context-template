@@ -11,20 +11,21 @@ This script:
 
 import sys
 import time
+from pathlib import Path
+from typing import Any, Dict, Optional
+
 import click
 import yaml
-from pathlib import Path
-from typing import Dict, Any, Optional
 from qdrant_client import QdrantClient
-from qdrant_client.models import (
-    Distance,
-    VectorParams,
-    PointStruct,
-    CollectionInfo,
-    OptimizersConfig,
-    HnswConfig,
-)
 from qdrant_client.http.exceptions import UnexpectedResponse
+from qdrant_client.models import (
+    CollectionInfo,
+    Distance,
+    HnswConfig,
+    OptimizersConfig,
+    PointStruct,
+    VectorParams,
+)
 
 
 class VectorDBInitializer:

@@ -4,11 +4,13 @@ Tests for context-lint validation system
 """
 
 import os
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
+
 import pytest
 import yaml
+
 from src.agents.context_lint import ContextLinter
 
 

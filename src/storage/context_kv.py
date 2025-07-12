@@ -9,26 +9,28 @@ This component provides:
 4. Performance metrics collection
 """
 
-import click
-import yaml
-import json
-import redis
-import duckdb
-from datetime import datetime, timedelta, date
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple, Union, cast
-from dataclasses import dataclass, asdict
-import time
 import hashlib
+import json
+import time
+from dataclasses import asdict, dataclass
+from datetime import date, datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
+
+import click
+import duckdb
+import redis
+import yaml
+
 from ..core.base_component import DatabaseComponent
-from ..core.utils import sanitize_error_message, get_environment
+from ..core.utils import get_environment, sanitize_error_message
 from ..validators.kv_validators import (
+    sanitize_metric_name,
     validate_cache_entry,
     validate_metric_event,
-    sanitize_metric_name,
-    validate_time_range,
     validate_redis_key,
     validate_session_data,
+    validate_time_range,
 )
 
 
@@ -581,7 +583,7 @@ class DuckDBAnalytics(DatabaseComponent):
             if self.conn:
                 self.conn.executemany(
                     f"""
-                    INSERT INTO {metrics_table} 
+                    INSERT INTO {metrics_table}
                     (timestamp, metric_name, value, document_id, agent_id, tags)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """,
@@ -652,7 +654,7 @@ class DuckDBAnalytics(DatabaseComponent):
             agg_expr = agg_funcs.get(aggregation, "AVG(value)")
 
             query = f"""
-                SELECT 
+                SELECT
                     {agg_expr} as result,
                     COUNT(*) as count,
                     MIN(timestamp) as start_time,
@@ -705,7 +707,7 @@ class DuckDBAnalytics(DatabaseComponent):
 
             # Generate summary
             query = f"""
-                SELECT 
+                SELECT
                     metric_name,
                     COUNT(*) as count,
                     AVG(value) as avg_value,
@@ -769,7 +771,7 @@ class DuckDBAnalytics(DatabaseComponent):
 
             # Get time series data
             query = f"""
-                SELECT 
+                SELECT
                     DATE_TRUNC('hour', timestamp) as hour,
                     AVG(value) as avg_value,
                     COUNT(*) as count
@@ -873,7 +875,7 @@ class ContextKV:
 
         # Get metrics from DuckDB
         query = """
-            SELECT 
+            SELECT
                 metric_name,
                 COUNT(*) as count,
                 AVG(value) as avg_value

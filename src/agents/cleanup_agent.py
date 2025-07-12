@@ -11,11 +11,12 @@ the health of the context system by:
 
 import os
 import shutil
-import yaml
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Any, Dict, List, Tuple
+
 import click
+import yaml
 
 
 class CleanupAgent:

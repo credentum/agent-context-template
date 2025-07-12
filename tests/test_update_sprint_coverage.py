@@ -1,14 +1,15 @@
 """Comprehensive tests for UpdateSprintAgent to improve coverage"""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock, mock_open
-from pathlib import Path
-from datetime import datetime, timedelta
-import yaml
 import json
-from typing import Dict, Any, List
-import subprocess
 import shutil
+import subprocess
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List
+from unittest.mock import MagicMock, Mock, mock_open, patch
+
+import pytest
+import yaml
 
 from src.agents.update_sprint import SprintUpdater
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# 
+#
 # Test Coverage Runner
 # Cross-platform script for running comprehensive test coverage analysis
 # Script to run comprehensive test coverage
@@ -61,22 +61,22 @@ import sys
 with open('coverage.json') as f:
     data = json.load(f)
     total = data['totals']
-    
+
     line_coverage = total['percent_covered']
     branch_coverage = total.get('percent_branch_covered', 0)
-    
+
     targets = {
         'Line Coverage': (line_coverage, 85),
         'Branch Coverage': (branch_coverage, 70)
     }
-    
+
     all_passed = True
     for metric, (actual, target) in targets.items():
         status = '✅' if actual >= target else '❌'
         print(f'{status} {metric}: {actual:.2f}% (target: ≥{target}%)')
         if actual < target:
             all_passed = False
-    
+
     if not all_passed:
         print('\n⚠️  Coverage targets not met!')
         sys.exit(1)

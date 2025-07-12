@@ -1,14 +1,15 @@
 """Comprehensive tests for ContextKV storage to improve coverage"""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import redis
-import yaml
 import json
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from typing import Any, Dict
+from unittest.mock import MagicMock, Mock, patch
 
-from src.storage.context_kv import RedisConnector, ContextKV, MetricEvent
+import pytest
+import redis
+import yaml
+
+from src.storage.context_kv import ContextKV, MetricEvent, RedisConnector
 
 
 @pytest.fixture

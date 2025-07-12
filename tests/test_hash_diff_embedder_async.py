@@ -3,15 +3,16 @@
 Comprehensive tests for AsyncHashDiffEmbedder to achieve full coverage
 """
 
-import pytest
 import asyncio
-import json
-import yaml
-import tempfile
 import hashlib
+import json
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from typing import Dict, Any
+from typing import Any, Dict
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
+import yaml
 
 from src.storage.hash_diff_embedder_async import AsyncHashDiffEmbedder, EmbeddingTask
 

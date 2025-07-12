@@ -21,17 +21,18 @@ Options:
     --help     Show this help message
 """
 
+import fcntl
+import json
 import os
 import sys
-import yaml
-import json
-import fcntl
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Any, Dict, List, Tuple
+
 import click
 import yamale
+import yaml
 from yamale import YamaleError
 
 

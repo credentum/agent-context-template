@@ -5,8 +5,9 @@ This extracts the inline Python from sprint-start.yml
 """
 
 import sys
-import yaml
 from pathlib import Path
+
+import yaml
 
 
 def update_sprint_status(sprint_id: str) -> int:

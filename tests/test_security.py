@@ -2,16 +2,18 @@
 Security tests for the Agent-First Context System
 """
 
-import pytest
-from unittest.mock import Mock, patch
+import os
 import tempfile
 from pathlib import Path
-import os
+from unittest.mock import Mock, patch
+
+import pytest
+
+from src.core.utils import sanitize_error_message
+from src.storage.graph_builder import GraphBuilder
 
 # Import components to test
 from src.storage.neo4j_init import Neo4jInitializer
-from src.storage.graph_builder import GraphBuilder
-from src.core.utils import sanitize_error_message
 
 
 class TestPasswordSanitization:
@@ -130,8 +132,8 @@ class TestAuthenticationSecurity:
     def test_no_default_passwords(self):
         """Test that no default passwords are present"""
         # Check that CLI tools require passwords
+        from src.integrations.graphrag_integration import analyze, search
         from src.storage.graph_builder import main as gb_main
-        from src.integrations.graphrag_integration import search, analyze
 
         # These should all have required=True for password options
         # This is validated by the CLI framework

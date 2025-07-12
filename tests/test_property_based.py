@@ -8,8 +8,71 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
 import pytest
-from hypothesis import assume, given
-from hypothesis import strategies as st
+
+try:
+    from hypothesis import assume, given
+    from hypothesis import strategies as st
+
+    HAS_HYPOTHESIS = True
+except ImportError:
+    HAS_HYPOTHESIS = False
+
+    # Create dummy decorators
+    def given(*args, **kwargs):
+        def decorator(func):
+            return pytest.mark.skip(reason="hypothesis not installed")(func)
+
+        return decorator
+
+    class st:
+        @staticmethod
+        def text(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def integers(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def floats(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def booleans(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def none(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def dictionaries(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def lists(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def one_of(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def datetimes(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def timedeltas(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def sampled_from(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def recursive(*args, **kwargs):
+            pass
+
 
 from src.storage.hash_diff_embedder import HashDiffEmbedder
 from src.validators.kv_validators import (

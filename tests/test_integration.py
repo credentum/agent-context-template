@@ -2,17 +2,19 @@
 Integration tests for vector and graph database components
 """
 
-import pytest
-from unittest.mock import Mock, patch
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pytest
 import yaml
+
+from src.integrations.graphrag_integration import GraphRAGIntegration
+from src.storage.graph_builder import GraphBuilder
 
 # Components to test
 from src.storage.hash_diff_embedder import HashDiffEmbedder
-from src.storage.graph_builder import GraphBuilder
-from src.integrations.graphrag_integration import GraphRAGIntegration
 
 
 class TestIntegration:

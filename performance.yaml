@@ -9,19 +9,19 @@ vector_db:
     initial_retry_delay: 1.0  # seconds
     retry_backoff_factor: 2.0
     request_timeout: 30  # seconds
-    
+
   # Search optimization
   search:
     default_limit: 10
     max_limit: 100
     ef_search: 128  # HNSW search parameter
-    
+
   # Indexing parameters
   indexing:
     flush_interval_sec: 5
     max_segment_size: 200_000
     memmap_threshold: 100_000
-    
+
   # Cache settings
   cache:
     enabled: true
@@ -34,19 +34,19 @@ graph_db:
     min_size: 1
     max_size: 10
     acquisition_timeout: 60  # seconds
-    
+
   # Query optimization
   query:
     max_path_length: 5  # Maximum hops in graph traversal
     default_limit: 50
     query_timeout: 30  # seconds
     use_query_cache: true
-    
+
   # Batch processing
   batch:
     size: 1000  # Number of nodes/relationships per batch
     parallel_transactions: 4
-    
+
   # Graph algorithms
   algorithms:
     pagerank_iterations: 20
@@ -57,7 +57,7 @@ search:
   ranking:
     temporal_decay_days: 30  # Start decay after this many days
     temporal_decay_rate: 0.01  # Decay rate per day
-    
+
     # Document type boost factors
     type_boosts:
       architecture: 1.25
@@ -67,7 +67,7 @@ search:
       api: 1.00
       test: 0.90
       documentation: 0.85
-    
+
   # GraphRAG settings
   graphrag:
     max_graph_hops: 2
@@ -79,7 +79,7 @@ resources:
   max_memory_gb: 4
   max_cpu_percent: 80
   disk_cache_size_gb: 10
-  
+
 # Key-Value store performance
 kv_store:
   redis:
@@ -93,7 +93,7 @@ kv_store:
     pipeline:
       batch_size: 100
       flush_interval_ms: 50
-  
+
   duckdb:
     batch_insert:
       size: 1000
@@ -104,7 +104,7 @@ kv_store:
     analytics:
       aggregation_interval: "5 minutes"
       retention_days: 90
-  
+
 # Monitoring
 monitoring:
   metrics_enabled: true

@@ -20,7 +20,7 @@ jobs:
   sync-databases:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     services:
       qdrant:
         image: qdrant/qdrant:v1.14.0
@@ -31,7 +31,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      
+
       neo4j:
         image: neo4j:5
         ports:
@@ -45,16 +45,16 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      
+
       - name: Cache Python dependencies
         uses: actions/cache@v3
         with:
@@ -62,12 +62,12 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      
+
       - name: Wait for services
         run: |
           echo "Waiting for Qdrant..."
@@ -78,7 +78,7 @@ jobs:
             fi
             sleep 2
           done
-          
+
           echo "Waiting for Neo4j..."
           for i in {1..30}; do
             if curl -f http://localhost:7474; then
@@ -87,7 +87,7 @@ jobs:
             fi
             sleep 2
           done
-      
+
       - name: Initialize Qdrant
         id: init-qdrant
         run: |
@@ -96,7 +96,7 @@ jobs:
             sleep 5
             python -m src.storage.vector_db_init --skip-test
           }
-      
+
       - name: Initialize Neo4j
         id: init-neo4j
         env:
@@ -107,7 +107,7 @@ jobs:
             sleep 5
             python -m src.storage.neo4j_init --username neo4j --password "$NEO4J_TEST_PASSWORD"
           }
-      
+
       - name: Sync vector embeddings
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -116,7 +116,7 @@ jobs:
             echo "Warning: OPENAI_API_KEY not set, skipping vector embeddings"
             exit 0
           fi
-          
+
           if [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then
             echo "Force rebuilding all embeddings..."
             python -m src.storage.hash_diff_embedder context/ --force --verbose
@@ -124,7 +124,7 @@ jobs:
             echo "Syncing changed documents..."
             python -m src.storage.hash_diff_embedder context/ --cleanup --verbose
           fi
-      
+
       - name: Build context graph
         env:
           NEO4J_TEST_PASSWORD: ${{ secrets.NEO4J_TEST_PASSWORD || 'testpassword' }}
@@ -136,7 +136,7 @@ jobs:
             echo "Updating graph with changes..."
             python -m src.storage.graph_builder context/ --username neo4j --password "$NEO4J_TEST_PASSWORD" --cleanup --verbose
           fi
-      
+
       - name: Generate sync report
         if: always()
         run: |
@@ -144,27 +144,27 @@ jobs:
           echo "" >> sync_report.md
           echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> sync_report.md
           echo "" >> sync_report.md
-          
+
           # Vector stats
           if [ -f "context/.embeddings_cache/hash_cache.json" ]; then
             echo "### Vector Embeddings" >> sync_report.md
             echo "- Cache entries: $(jq 'length' context/.embeddings_cache/hash_cache.json)" >> sync_report.md
             echo "" >> sync_report.md
           fi
-          
+
           # Graph stats
           if [ -f "context/.graph_cache/processed.json" ]; then
             echo "### Graph Nodes" >> sync_report.md
             echo "- Processed documents: $(jq 'length' context/.graph_cache/processed.json)" >> sync_report.md
             echo "" >> sync_report.md
           fi
-          
+
           # Show statistics
           echo "### Database Statistics" >> sync_report.md
           python -m src.analytics.sum_scores_api stats || echo "- Vector stats unavailable"
           echo "" >> sync_report.md
           python -m src.storage.graph_builder context/ --stats --username neo4j --password "${NEO4J_TEST_PASSWORD:-testpassword}" || echo "- Graph stats unavailable"
-      
+
       - name: Upload sync report
         if: always()
         uses: actions/upload-artifact@v4
@@ -172,7 +172,7 @@ jobs:
           name: vector-graph-sync-report
           path: sync_report.md
           retention-days: 7
-      
+
       - name: Cache embedding hashes
         uses: actions/cache@v3
         with:
@@ -180,7 +180,7 @@ jobs:
           key: ${{ runner.os }}-embeddings-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-embeddings-
-      
+
       - name: Cache graph processed docs
         uses: actions/cache@v3
         with:
