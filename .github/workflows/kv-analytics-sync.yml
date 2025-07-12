@@ -76,7 +76,7 @@ jobs:
       
       - name: Test KV Store connections
         run: |
-          python context_kv.py test-connection --verbose
+          python -m src.storage.context_kv test-connection --verbose
       
       - name: Process context metrics
         id: process-metrics
@@ -103,7 +103,7 @@ jobs:
           echo "" >> analytics_report.md
           
           # Generate all reports with proper error handling
-          if python context_analytics.py analyze --days 30 --report-type all >> analytics_report.md 2>&1; then
+          if python -m src.analytics.context_analytics analyze --days 30 --report-type all >> analytics_report.md 2>&1; then
             echo "✓ Analytics reports generated successfully" >> analytics_report.md
           else
             echo "⚠️ Warning: Some analytics reports failed to generate" >> analytics_report.md
@@ -113,14 +113,14 @@ jobs:
           # Show recent activity
           echo "" >> analytics_report.md
           echo "### Recent Activity (24h)" >> analytics_report.md
-          python context_kv.py activity-summary --hours 24 >> analytics_report.md 2>&1 || true
+          python -m src.storage.context_kv activity-summary --hours 24 >> analytics_report.md 2>&1 || true
       
       - name: Export analytics data
         if: github.event.inputs.export_data == 'true'
         run: |
           mkdir -p analytics_export
-          python context_analytics.py export --output-dir analytics_export --format parquet || \
-          python context_analytics.py export --output-dir analytics_export --format csv
+          python -m src.analytics.context_analytics export --output-dir analytics_export --format parquet || \
+          python -m src.analytics.context_analytics export --output-dir analytics_export --format csv
       
       - name: Upload analytics report
         if: always() && github.event.inputs.generate_reports != 'false'
@@ -143,7 +143,7 @@ jobs:
         run: |
           # Generate metrics summary for caching
           python -c "
-          from context_kv import ContextKV
+          from src.storage.context_kv import ContextKV
           import json
           
           kv = ContextKV()
@@ -165,7 +165,7 @@ jobs:
         run: |
           # Record workflow performance metrics
           python -c "
-          from context_kv import ContextKV, MetricEvent
+          from src.storage.context_kv import ContextKV, MetricEvent
           from datetime import datetime
           
           kv = ContextKV()

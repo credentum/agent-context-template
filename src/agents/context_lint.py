@@ -43,7 +43,7 @@ class ContextLinter:
 
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
-        self.schema_dir = Path(__file__).parent / "context" / "schemas"
+        self.schema_dir = Path(__file__).parent.parent.parent / "context" / "schemas"
         self.errors: List[str] = []
         self.warnings: List[str] = []
         self.fixed_count = 0

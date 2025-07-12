@@ -91,10 +91,10 @@ jobs:
       - name: Initialize Qdrant
         id: init-qdrant
         run: |
-          python vector_db_init.py --skip-test || {
+          python -m src.storage.vector_db_init --skip-test || {
             echo "::warning::Failed to initialize Qdrant, will retry"
             sleep 5
-            python vector_db_init.py --skip-test
+            python -m src.storage.vector_db_init --skip-test
           }
       
       - name: Initialize Neo4j
@@ -102,10 +102,10 @@ jobs:
         env:
           NEO4J_TEST_PASSWORD: ${{ secrets.NEO4J_TEST_PASSWORD || 'testpassword' }}
         run: |
-          python neo4j_init.py --username neo4j --password "$NEO4J_TEST_PASSWORD" || {
+          python -m src.storage.neo4j_init --username neo4j --password "$NEO4J_TEST_PASSWORD" || {
             echo "::warning::Failed to initialize Neo4j, will retry"
             sleep 5
-            python neo4j_init.py --username neo4j --password "$NEO4J_TEST_PASSWORD"
+            python -m src.storage.neo4j_init --username neo4j --password "$NEO4J_TEST_PASSWORD"
           }
       
       - name: Sync vector embeddings
@@ -119,10 +119,10 @@ jobs:
           
           if [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then
             echo "Force rebuilding all embeddings..."
-            python hash_diff_embedder.py context/ --force --verbose
+            python -m src.storage.hash_diff_embedder context/ --force --verbose
           else
             echo "Syncing changed documents..."
-            python hash_diff_embedder.py context/ --cleanup --verbose
+            python -m src.storage.hash_diff_embedder context/ --cleanup --verbose
           fi
       
       - name: Build context graph
@@ -131,10 +131,10 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then
             echo "Force rebuilding entire graph..."
-            python graph_builder.py context/ --username neo4j --password "$NEO4J_TEST_PASSWORD" --force --cleanup --verbose
+            python -m src.storage.graph_builder context/ --username neo4j --password "$NEO4J_TEST_PASSWORD" --force --cleanup --verbose
           else
             echo "Updating graph with changes..."
-            python graph_builder.py context/ --username neo4j --password "$NEO4J_TEST_PASSWORD" --cleanup --verbose
+            python -m src.storage.graph_builder context/ --username neo4j --password "$NEO4J_TEST_PASSWORD" --cleanup --verbose
           fi
       
       - name: Generate sync report
@@ -161,9 +161,9 @@ jobs:
           
           # Show statistics
           echo "### Database Statistics" >> sync_report.md
-          python sum_scores_api.py stats || echo "- Vector stats unavailable"
+          python -m src.analytics.sum_scores_api stats || echo "- Vector stats unavailable"
           echo "" >> sync_report.md
-          python graph_builder.py context/ --stats --username neo4j --password "${NEO4J_TEST_PASSWORD:-testpassword}" || echo "- Graph stats unavailable"
+          python -m src.storage.graph_builder context/ --stats --username neo4j --password "${NEO4J_TEST_PASSWORD:-testpassword}" || echo "- Graph stats unavailable"
       
       - name: Upload sync report
         if: always()

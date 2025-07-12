@@ -37,13 +37,13 @@ jobs:
         pip install -r requirements.txt
     
     - name: Check configuration
-      run: python context_lint.py check-config --verbose
+      run: python -m src.agents.context_lint check-config --verbose
     
     - name: Validate context files
-      run: python context_lint.py validate context/ --verbose
+      run: python -m src.agents.context_lint validate context/ --verbose
     
     - name: Show context statistics
-      run: python context_lint.py stats context/
+      run: python -m src.agents.context_lint stats context/
       
     - name: Check Python formatting with Black
       run: |
@@ -54,4 +54,4 @@ jobs:
         mypy . --config-file mypy.ini || true  # Allow failures initially
     
     - name: Run cleanup agent (dry run)
-      run: python cleanup_agent.py --dry-run --verbose
+      run: python -m src.agents.cleanup_agent --dry-run --verbose

@@ -82,13 +82,13 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         SPRINT_ID="sprint-$(printf '%03d' ${{ steps.sprint.outputs.number }})"
-        python sprint_issue_linker.py create --sprint "$SPRINT_ID" --verbose
+        python -m src.agents.sprint_issue_linker create --sprint "$SPRINT_ID" --verbose
     
     - name: Update existing labels
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        python sprint_issue_linker.py update-labels --verbose
+        python -m src.agents.sprint_issue_linker update-labels --verbose
     
     - name: Commit sprint changes
       run: |
