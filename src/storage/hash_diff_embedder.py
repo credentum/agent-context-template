@@ -11,17 +11,18 @@ This component:
 
 import hashlib
 import json
-import click
-import yaml
 import os
 import time
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass, asdict
+from typing import Any, Dict, List, Optional, Tuple, cast
+
+import click
 import openai
+import yaml
 from qdrant_client import QdrantClient
-from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue
+from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
 
 
 @dataclass
@@ -43,7 +44,7 @@ class HashDiffEmbedder:
         self.config = self._load_config(config_path)
         self.hash_cache_path = Path("context/.embeddings_cache/hash_cache.json")
         self.hash_cache: Dict[str, DocumentHash] = self._load_hash_cache()
-        self.client = None
+        self.client: Optional[QdrantClient] = None
         self.embedding_model = self.config.get("qdrant", {}).get(
             "embedding_model", "text-embedding-ada-002"
         )
@@ -53,7 +54,8 @@ class HashDiffEmbedder:
         """Load configuration from .ctxrc.yaml"""
         try:
             with open(config_path, "r") as f:
-                return yaml.safe_load(f)
+                result = yaml.safe_load(f)
+                return cast(Dict[str, Any], result) if result else {}
         except FileNotFoundError:
             click.echo(f"Error: {config_path} not found", err=True)
             return {}
@@ -97,7 +99,8 @@ class HashDiffEmbedder:
 
         try:
             self.client = QdrantClient(host=host, port=port, timeout=5)
-            self.client.get_collections()
+            if self.client is not None:
+                self.client.get_collections()
 
             # Check OpenAI API key
             api_key = os.getenv("OPENAI_API_KEY")
@@ -224,10 +227,11 @@ class HashDiffEmbedder:
             collection_name = self.config.get("qdrant", {}).get(
                 "collection_name", "project_context"
             )
-            self.client.upsert(
-                collection_name=collection_name,
-                points=[PointStruct(id=vector_id, vector=embedding, payload=payload)],
-            )
+            if self.client is not None:
+                self.client.upsert(
+                    collection_name=collection_name,
+                    points=[PointStruct(id=vector_id, vector=embedding, payload=payload)],
+                )
 
             # Update cache
             self.hash_cache[str(file_path)] = DocumentHash(
@@ -240,7 +244,7 @@ class HashDiffEmbedder:
             )
 
             # Delete old version if exists
-            if existing_id and existing_id != vector_id:
+            if existing_id and existing_id != vector_id and self.client is not None:
                 self.client.delete(collection_name=collection_name, points_selector=[existing_id])
 
             return vector_id
@@ -277,25 +281,30 @@ class HashDiffEmbedder:
         # Get all vectors from Qdrant
         try:
             # Scroll through all points
+            if self.client is None:
+                return 0
             points, _ = self.client.scroll(
                 collection_name=collection_name, limit=1000, with_payload=True
             )
 
             for point in points:
-                file_path = Path(point.payload.get("file_path", ""))
-
                 # Check if file still exists
-                if not file_path.exists():
-                    if self.verbose:
-                        click.echo(f"  Removing orphaned vector: {point.id}")
+                if point.payload:
+                    file_path = Path(point.payload.get("file_path", ""))
+                    if not file_path.exists():
+                        if self.verbose:
+                            click.echo(f"  Removing orphaned vector: {point.id}")
 
-                    self.client.delete(collection_name=collection_name, points_selector=[point.id])
-                    removed_count += 1
+                        if self.client is not None:
+                            self.client.delete(
+                                collection_name=collection_name, points_selector=[point.id]
+                            )
+                        removed_count += 1
 
-                    # Remove from cache
-                    cache_key = str(file_path)
-                    if cache_key in self.hash_cache:
-                        del self.hash_cache[cache_key]
+                        # Remove from cache
+                        cache_key = str(file_path)
+                        if cache_key in self.hash_cache:
+                            del self.hash_cache[cache_key]
 
             if removed_count > 0:
                 self._save_hash_cache()
