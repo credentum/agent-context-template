@@ -21,16 +21,6 @@ class TestHashDiffEmbedder:
 
     def setup_method(self):
         """Set up test fixtures"""
-        self.test_config = {
-            "qdrant": {
-                "host": "localhost",
-                "port": 6333,
-                "collection_name": "test_collection",
-                "embedding_model": "text-embedding-ada-002",
-                "api_key": "test_key",
-            },
-            "openai": {"api_key": "test_openai_key"},
-        }
         self.temp_dir = tempfile.mkdtemp()
 
     def teardown_method(self):
@@ -48,13 +38,13 @@ class TestHashDiffEmbedder:
 
     @patch("builtins.open", new_callable=mock_open)
     @patch("yaml.safe_load")
-    def test_load_config_success(self, mock_yaml_load, mock_file):
+    def test_load_config_success(self, mock_yaml_load, mock_file, test_config):
         """Test successful config loading"""
-        mock_yaml_load.return_value = self.test_config
+        mock_yaml_load.return_value = test_config
 
         embedder = HashDiffEmbedder()
 
-        assert embedder.config == self.test_config
+        assert embedder.config == test_config
         assert embedder.embedding_model == "text-embedding-ada-002"
 
     @patch("builtins.open", side_effect=FileNotFoundError)
@@ -85,12 +75,16 @@ class TestHashDiffEmbedder:
         hash2 = embedder._compute_content_hash(content2)
 
         # Same content should produce same hash
-        assert hash1 == embedder._compute_content_hash(content1)
+        assert hash1 == embedder._compute_content_hash(
+            content1
+        ), "Same content should produce identical hash"
         # Different content should produce different hash
-        assert hash1 != hash2
+        assert hash1 != hash2, "Different content should produce different hashes"
         # Hash should be SHA-256 (64 hex chars)
-        assert len(hash1) == 64
-        assert all(c in "0123456789abcdef" for c in hash1)
+        assert len(hash1) == 64, f"Hash should be 64 characters long, got {len(hash1)}"
+        assert all(
+            c in "0123456789abcdef" for c in hash1
+        ), "Hash should only contain hex characters"
 
     def test_compute_embedding_hash(self):
         """Test embedding hash computation"""
@@ -103,11 +97,13 @@ class TestHashDiffEmbedder:
         hash2 = embedder._compute_embedding_hash(embedding2)
 
         # Same embedding should produce same hash
-        assert hash1 == embedder._compute_embedding_hash(embedding1)
+        assert hash1 == embedder._compute_embedding_hash(
+            embedding1
+        ), "Same embedding should produce identical hash"
         # Different embedding should produce different hash
-        assert hash1 != hash2
+        assert hash1 != hash2, "Different embeddings should produce different hashes"
         # Hash should be SHA-256 (64 hex chars)
-        assert len(hash1) == 64
+        assert len(hash1) == 64, f"Embedding hash should be 64 characters long, got {len(hash1)}"
 
     @patch("pathlib.Path.exists", return_value=True)
     @patch("builtins.open", new_callable=mock_open)
@@ -128,10 +124,14 @@ class TestHashDiffEmbedder:
 
         embedder = HashDiffEmbedder()
 
-        assert len(embedder.hash_cache) == 1
-        assert "doc1" in embedder.hash_cache
-        assert isinstance(embedder.hash_cache["doc1"], DocumentHash)
-        assert embedder.hash_cache["doc1"].document_id == "doc1"
+        assert (
+            len(embedder.hash_cache) == 1
+        ), f"Expected 1 item in cache, found {len(embedder.hash_cache)}"
+        assert "doc1" in embedder.hash_cache, "Document 'doc1' should be in hash cache"
+        assert isinstance(
+            embedder.hash_cache["doc1"], DocumentHash
+        ), "Cache entry should be DocumentHash instance"
+        assert embedder.hash_cache["doc1"].document_id == "doc1", "Document ID should match"
 
     @patch("pathlib.Path.exists", return_value=False)
     def test_load_hash_cache_no_file(self, mock_exists):
@@ -177,20 +177,22 @@ class TestHashDiffEmbedder:
         assert saved_data["doc1"]["document_id"] == "doc1"
 
     @patch("src.storage.hash_diff_embedder.QdrantClient")
-    @patch("openai.api_key", "test_key")
-    def test_connect_success(self, mock_qdrant_client):
+    def test_connect_success(self, mock_qdrant_client, test_config, monkeypatch):
         """Test successful connection"""
+        # Set OpenAI API key from test config
+        monkeypatch.setenv("OPENAI_API_KEY", test_config["openai"]["api_key"])
+
         mock_client = Mock()
         mock_client.get_collections.return_value = Mock(collections=[])
         mock_qdrant_client.return_value = mock_client
 
         embedder = HashDiffEmbedder()
-        embedder.config = self.test_config
+        embedder.config = test_config
 
         result = embedder.connect()
 
-        assert result is True
-        assert embedder.client == mock_client
+        assert result is True, "Connection should succeed and return True"
+        assert embedder.client == mock_client, "Client should be set after successful connection"
         mock_qdrant_client.assert_called_once_with(host="localhost", port=6333, timeout=30)
 
     def test_document_hash_dataclass(self):
@@ -247,3 +249,145 @@ class TestYAMLParsing:
         result = yaml.safe_load(empty_yaml)
 
         assert result is None
+
+
+class TestErrorHandling:
+    """Test error handling and edge cases"""
+
+    def test_compute_content_hash_with_none(self):
+        """Test content hash computation with None input"""
+        embedder = HashDiffEmbedder()
+
+        with pytest.raises(AttributeError, match="'NoneType' object has no attribute"):
+            embedder._compute_content_hash(None)
+
+    def test_compute_content_hash_with_empty_string(self):
+        """Test content hash computation with empty string"""
+        embedder = HashDiffEmbedder()
+
+        # Empty string should still produce a valid hash
+        hash_value = embedder._compute_content_hash("")
+        assert len(hash_value) == 64
+        assert all(c in "0123456789abcdef" for c in hash_value)
+
+    def test_compute_content_hash_with_unicode(self):
+        """Test content hash computation with Unicode content"""
+        embedder = HashDiffEmbedder()
+
+        unicode_content = "Hello 世界 🌍 Здравствуй"
+        hash_value = embedder._compute_content_hash(unicode_content)
+        assert len(hash_value) == 64
+
+        # Same Unicode content should produce same hash
+        hash_value2 = embedder._compute_content_hash(unicode_content)
+        assert hash_value == hash_value2
+
+    def test_compute_embedding_hash_with_invalid_types(self):
+        """Test embedding hash computation with invalid input types"""
+        embedder = HashDiffEmbedder()
+
+        # Test with string instead of list
+        with pytest.raises(TypeError, match="embedding must be a list"):
+            embedder._compute_embedding_hash("not a list")
+
+        # Test with None
+        with pytest.raises(TypeError, match="embedding must be a list"):
+            embedder._compute_embedding_hash(None)
+
+        # Test with dict
+        with pytest.raises(TypeError, match="embedding must be a list"):
+            embedder._compute_embedding_hash({"key": "value"})
+
+    def test_compute_embedding_hash_with_empty_list(self):
+        """Test embedding hash computation with empty list"""
+        embedder = HashDiffEmbedder()
+
+        # Empty embedding should still produce a valid hash
+        hash_value = embedder._compute_embedding_hash([])
+        assert len(hash_value) == 64
+
+    def test_load_config_with_malformed_yaml(self):
+        """Test config loading with malformed YAML file"""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write("key: value\n  bad: indentation:")
+            config_path = f.name
+
+        try:
+            with patch("click.echo") as mock_echo:
+                embedder = HashDiffEmbedder(config_path)
+                assert embedder.config == {}
+                mock_echo.assert_called_with(f"Error loading {config_path}: ", err=True)
+        finally:
+            os.unlink(config_path)
+
+    def test_load_hash_cache_with_corrupted_file(self):
+        """Test hash cache loading with corrupted JSON file"""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write("{invalid json content")
+            cache_path = f.name
+
+        with patch("pathlib.Path.exists", return_value=True):
+            with patch.object(HashDiffEmbedder, "hash_cache_path", Path(cache_path)):
+                with patch("click.echo") as mock_echo:
+                    embedder = HashDiffEmbedder()
+                    assert embedder.hash_cache == {}
+                    # Check that error was logged
+                    assert any(
+                        "Failed to load hash cache" in str(call)
+                        for call in mock_echo.call_args_list
+                    )
+
+        os.unlink(cache_path)
+
+    def test_save_hash_cache_with_permission_error(self):
+        """Test saving hash cache when permission is denied"""
+        embedder = HashDiffEmbedder()
+        embedder.hash_cache = {
+            "doc1": DocumentHash(
+                document_id="doc1",
+                file_path="/path/to/doc1.md",
+                content_hash="abc123",
+                embedding_hash="def456",
+                last_embedded="2024-01-01T00:00:00",
+                vector_id="vec1",
+            )
+        }
+
+        with patch("builtins.open", side_effect=PermissionError("Permission denied")):
+            with patch("click.echo") as mock_echo:
+                embedder._save_hash_cache()
+                # Should handle the error gracefully
+                mock_echo.assert_called()
+
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
+    def test_connect_with_timeout(self, mock_qdrant_client):
+        """Test connection with timeout error"""
+        from qdrant_client.http.exceptions import ResponseHandlingException
+
+        mock_qdrant_client.side_effect = ResponseHandlingException("Connection timeout")
+
+        embedder = HashDiffEmbedder()
+        embedder.config = {"qdrant": {"host": "localhost", "port": 6333}}
+
+        with patch("click.echo") as mock_echo:
+            result = embedder.connect()
+            assert result is False
+            mock_echo.assert_called_with(
+                "Failed to connect to Qdrant: Connection timeout", err=True
+            )
+
+    def test_document_hash_with_invalid_data(self):
+        """Test DocumentHash dataclass with invalid data types"""
+        # This should work - dataclass doesn't validate types at runtime
+        doc_hash = DocumentHash(
+            document_id=123,  # Should be string
+            file_path=None,  # Should be string
+            content_hash=[],  # Should be string
+            embedding_hash={},  # Should be string
+            last_embedded=datetime.now(),  # Should be string
+            vector_id=True,  # Should be string
+        )
+
+        # Dataclass creation succeeds but values are wrong types
+        assert doc_hash.document_id == 123
+        assert doc_hash.file_path is None

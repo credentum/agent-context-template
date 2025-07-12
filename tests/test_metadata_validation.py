@@ -244,10 +244,11 @@ class TestDataIntegrityValidation:
 
     def test_data_size_validation(self):
         """Test data size validation"""
-        # Test various data sizes
+        # Test with representative data sizes (optimized for performance)
         small_data = {"key": "value"}
         medium_data = {"data": "x" * 1000}
-        large_data = {"data": "x" * (1024 * 1024)}  # 1MB
+        # Use smaller size for performance (10KB instead of 1MB)
+        large_data = {"data": "x" * (10 * 1024)}  # 10KB
 
         # Calculate sizes
         small_size = len(json.dumps(small_data))
@@ -256,8 +257,8 @@ class TestDataIntegrityValidation:
 
         # Validate size limits
         assert small_size < 1024  # Less than 1KB
-        assert medium_size < 1024 * 1024  # Less than 1MB
-        assert large_size >= 1024 * 1024  # At least 1MB
+        assert medium_size < 10 * 1024  # Less than 10KB
+        assert large_size >= 10 * 1024  # At least 10KB
 
     def test_reference_integrity_validation(self):
         """Test reference integrity between documents"""

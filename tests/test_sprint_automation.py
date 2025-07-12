@@ -3,23 +3,24 @@
 Tests for sprint automation functionality
 """
 
-import tempfile
+import os
 import shutil
-from pathlib import Path
+import subprocess
+import sys
+import tempfile
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from pathlib import Path
+from typing import Any, Dict
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
 import yaml
-from unittest.mock import patch, MagicMock, Mock
-import sys
-import os
-import subprocess
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.agents.update_sprint import SprintUpdater
 from src.agents.sprint_issue_linker import SprintIssueLinker
+from src.agents.update_sprint import SprintUpdater
 
 
 class TestSprintUpdater:

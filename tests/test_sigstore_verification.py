@@ -16,67 +16,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 import yaml
 
-
-class MockSigstoreClient:
-    """Mock Sigstore client for testing"""
-
-    def __init__(self):
-        self.signed_artifacts = {}
-        self.transparency_log = []
-
-    def sign(self, artifact_path: str, identity: str) -> Dict[str, Any]:
-        """Mock signing an artifact"""
-        with open(artifact_path, "rb") as f:
-            content = f.read()
-
-        # Calculate hash
-        content_hash = hashlib.sha256(content).hexdigest()
-
-        # Create mock signature
-        signature = {
-            "artifact_hash": content_hash,
-            "signature": base64.b64encode(f"mock_sig_{content_hash[:8]}".encode()).decode(),
-            "certificate": base64.b64encode(f"mock_cert_{identity}".encode()).decode(),
-            "timestamp": datetime.utcnow().isoformat(),
-            "identity": identity,
-            "transparency_log_entry": len(self.transparency_log),
-        }
-
-        # Store in transparency log
-        self.transparency_log.append(
-            {
-                "index": len(self.transparency_log),
-                "artifact_hash": content_hash,
-                "identity": identity,
-                "timestamp": signature["timestamp"],
-            }
-        )
-
-        self.signed_artifacts[artifact_path] = signature
-
-        return signature
-
-    def verify(self, artifact_path: str, signature: Dict[str, Any]) -> bool:
-        """Mock verifying an artifact signature"""
-        with open(artifact_path, "rb") as f:
-            content = f.read()
-
-        current_hash = hashlib.sha256(content).hexdigest()
-
-        # Verify hash matches
-        if current_hash != signature["artifact_hash"]:
-            return False
-
-        # Verify signature exists in transparency log
-        log_entry = signature.get("transparency_log_entry", -1)
-        if log_entry < 0 or log_entry >= len(self.transparency_log):
-            return False
-
-        log_record = self.transparency_log[log_entry]
-        if log_record["artifact_hash"] != current_hash:
-            return False
-
-        return True
+from tests.mocks import MockSigstoreClient
 
 
 class TestSigstoreIntegration:

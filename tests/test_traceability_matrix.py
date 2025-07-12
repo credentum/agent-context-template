@@ -4,12 +4,12 @@ This module provides a mapping between critical functions and their test cases,
 ensuring 100% test case traceability for critical functionality.
 """
 
-import pytest
-from typing import Dict, List, Set, Tuple
 import inspect
 import json
 from pathlib import Path
+from typing import Dict, List, Set, Tuple
 
+import pytest
 
 # Critical function registry
 CRITICAL_FUNCTIONS = {

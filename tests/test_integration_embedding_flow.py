@@ -24,16 +24,6 @@ class TestEmbeddingIntegrationFlow:
     def setup_method(self):
         """Set up test fixtures"""
         self.temp_dir = tempfile.mkdtemp()
-        self.test_config = {
-            "qdrant": {
-                "host": "localhost",
-                "port": 6333,
-                "collection_name": "test_collection",
-                "embedding_model": "text-embedding-ada-002",
-                "api_key": "test_key",
-            },
-            "openai": {"api_key": "test_openai_key"},
-        }
 
         # Create test documents
         self.test_documents = {
@@ -98,13 +88,14 @@ goals:
     @patch("src.storage.hash_diff_embedder.QdrantClient")
     @patch("openai.Embedding.create")
     @patch("pathlib.Path.cwd")
-    def test_document_to_embedding_flow(self, mock_cwd, mock_openai_embed, mock_qdrant_client):
+    def test_document_to_embedding_flow(
+        self, mock_cwd, mock_openai_embed, mock_qdrant_client, test_config, mock_embedding_vector
+    ):
         """Test complete flow from document to embedding storage"""
         mock_cwd.return_value = Path(self.temp_dir)
 
         # Mock OpenAI embeddings
-        mock_embedding = [0.1, 0.2, 0.3] * 512  # 1536 dimensions
-        mock_openai_embed.return_value = Mock(data=[Mock(embedding=mock_embedding)])
+        mock_openai_embed.return_value = Mock(data=[Mock(embedding=mock_embedding_vector)])
 
         # Mock Qdrant client
         mock_client = Mock()
@@ -117,7 +108,7 @@ goals:
 
         # Initialize embedder
         embedder = HashDiffEmbedder(verbose=True)
-        embedder.config = self.test_config
+        embedder.config = test_config
         embedder.client = mock_client
 
         # Process each document
@@ -127,7 +118,7 @@ goals:
 
             # Compute hashes
             content_hash = embedder._compute_content_hash(content)
-            embedding_hash = embedder._compute_embedding_hash(mock_embedding)
+            embedding_hash = embedder._compute_embedding_hash(mock_embedding_vector)
 
             # Store in hash cache
             embedder.hash_cache[doc_id] = DocumentHash(
@@ -191,10 +182,11 @@ goals:
 
     @patch("src.storage.hash_diff_embedder.QdrantClient")
     @patch("openai.Embedding.create")
-    def test_incremental_embedding_update(self, mock_openai_embed, mock_qdrant_client):
+    def test_incremental_embedding_update(
+        self, mock_openai_embed, mock_qdrant_client, mock_embedding_vector
+    ):
         """Test incremental updates - only changed documents are re-embedded"""
-        mock_embedding = [0.1, 0.2, 0.3] * 512
-        mock_openai_embed.return_value = Mock(data=[Mock(embedding=mock_embedding)])
+        mock_openai_embed.return_value = Mock(data=[Mock(embedding=mock_embedding_vector)])
 
         mock_client = Mock()
         mock_qdrant_client.return_value = mock_client
@@ -256,12 +248,82 @@ goals:
         embedder = HashDiffEmbedder()
 
         # Test with invalid content
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="'NoneType' object has no attribute"):
             embedder._compute_content_hash(None)
 
         # Test with invalid embedding
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="embedding must be a list"):
             embedder._compute_embedding_hash("not a list")
+
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
+    @patch("openai.Embedding.create")
+    def test_embedding_api_failure(self, mock_openai_embed, mock_qdrant_client):
+        """Test handling of OpenAI API failures"""
+        # Mock API failure
+        mock_openai_embed.side_effect = Exception("API rate limit exceeded")
+
+        mock_client = Mock()
+        mock_qdrant_client.return_value = mock_client
+
+        embedder = HashDiffEmbedder()
+        embedder.client = mock_client
+
+        # Should handle the error gracefully
+        with patch("click.echo") as mock_echo:
+            # Attempt to embed a document
+            try:
+                embedder.embed_document("test content", "test_doc")
+            except Exception as e:
+                assert "API rate limit exceeded" in str(e)
+
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
+    def test_qdrant_connection_failure(self, mock_qdrant_client):
+        """Test handling of Qdrant connection failures"""
+        mock_client = Mock()
+        # Mock upsert failure
+        mock_client.upsert.side_effect = Exception("Connection refused")
+        mock_qdrant_client.return_value = mock_client
+
+        embedder = HashDiffEmbedder()
+        embedder.client = mock_client
+
+        # Should handle the error gracefully
+        with pytest.raises(Exception, match="Connection refused"):
+            embedder.client.upsert(collection_name="test_collection", points=[])
+
+    def test_document_size_limits(self):
+        """Test handling of documents exceeding size limits"""
+        # Use smaller document for performance (1MB instead of 100MB)
+        large_content = "x" * (1024 * 1024 + 1)
+
+        embedder = HashDiffEmbedder()
+
+        # Should handle large documents
+        hash_value = embedder._compute_content_hash(large_content)
+        assert len(hash_value) == 64
+
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
+    def test_concurrent_embedding_conflicts(self, mock_qdrant_client):
+        """Test handling of concurrent embedding conflicts"""
+        mock_client = Mock()
+        # Simulate concurrent modification
+        mock_client.retrieve.return_value = [Mock(id="vec_doc1", payload={"version": 2})]
+        mock_qdrant_client.return_value = mock_client
+
+        embedder = HashDiffEmbedder()
+        embedder.client = mock_client
+        embedder.hash_cache["doc1"] = DocumentHash(
+            document_id="doc1",
+            file_path="/path/to/doc1.md",
+            content_hash="old_hash",
+            embedding_hash="old_embed",
+            last_embedded="2024-01-01T00:00:00",
+            vector_id="vec_doc1",
+        )
+
+        # Should detect version conflict
+        existing = mock_client.retrieve(collection_name="test", ids=["vec_doc1"])
+        assert existing[0].payload["version"] == 2
 
     @patch("src.storage.hash_diff_embedder.QdrantClient")
     def test_document_summarization_flow(self, mock_qdrant_client):

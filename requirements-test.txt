@@ -1,0 +1,35 @@
+# Test framework
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-timeout>=2.1.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.11.0
+
+# Mutation testing
+mutmut>=2.4.0
+
+# Mocking and testing utilities
+responses>=0.23.0
+freezegun>=1.2.0
+
+# Property-based testing (optional, for future use)
+hypothesis>=6.82.0
+
+# Test data generation
+faker>=19.2.0
+
+# Coverage reporting
+coverage[toml]>=7.2.0
+
+# Type checking for tests
+mypy>=1.4.0
+types-PyYAML
+types-requests
+
+# Code quality
+black>=23.7.0
+isort>=5.12.0
+flake8>=6.1.0
+
+# Documentation testing
+pytest-doctest-modules>=0.1.0

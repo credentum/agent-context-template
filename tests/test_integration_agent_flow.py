@@ -16,15 +16,7 @@ import yaml
 
 from src.agents.cleanup_agent import CleanupAgent
 from src.agents.update_sprint import SprintUpdater
-
-
-# Mock ContextLintAgent since it doesn't exist in the codebase
-class ContextLintAgent:
-    """Mock Context Lint Agent for testing"""
-
-    def __init__(self, verbose: bool = False):
-        self.verbose = verbose
-        self.context_dir = None
+from tests.mocks import MockContextLintAgent as ContextLintAgent
 
 
 class TestAgentExecutionFlow:
