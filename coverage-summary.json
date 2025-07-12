@@ -1,0 +1,33 @@
+{
+  "timestamp": "2025-07-12",
+  "overall": {
+    "line_coverage": 59.53,
+    "branch_coverage": 45,
+    "statements": 3446,
+    "missing": 1206,
+    "tests_passed": 262,
+    "tests_skipped": 7
+  },
+  "targets": {
+    "line_coverage": 85,
+    "branch_coverage": 70,
+    "mutation_score": 80
+  },
+  "top_modules": [
+    {"name": "storage/hash_diff_embedder_async.py", "coverage": 95.35},
+    {"name": "analytics/sum_scores_api.py", "coverage": 89.68},
+    {"name": "core/utils.py", "coverage": 88.89},
+    {"name": "storage/neo4j_init.py", "coverage": 86.49}
+  ],
+  "critical_modules": [
+    {"name": "validators/kv_validators.py", "coverage": 33.64},
+    {"name": "validators/config_validator.py", "coverage": 34.66},
+    {"name": "analytics/context_analytics.py", "coverage": 35.62},
+    {"name": "storage/vector_db_init.py", "coverage": 36.14}
+  ],
+  "recent_improvements": [
+    {"name": "storage/hash_diff_embedder_async.py", "before": 0, "after": 95.35},
+    {"name": "analytics/sum_scores_api.py", "before": 32.09, "after": 89.68},
+    {"name": "storage/neo4j_init.py", "before": 31.27, "after": 86.49}
+  ]
+}
