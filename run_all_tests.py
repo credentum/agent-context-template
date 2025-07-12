@@ -42,7 +42,7 @@ class TestRunner:
         if self.verbose:
             cmd.append("-s")
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
         return {
             "suite": "unit_tests",
@@ -63,7 +63,7 @@ class TestRunner:
 
         cmd = ["python", "-m", "pytest", "-v", "--tb=short"] + test_files
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
         return {
             "suite": "integration_tests",
@@ -79,7 +79,7 @@ class TestRunner:
         # Run mutation test setup
         cmd = ["python", "tests/mutation_testing_setup.py"]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
         return {
             "suite": "mutation_tests",
@@ -102,7 +102,7 @@ class TestRunner:
             "tests/test_sigstore_verification.py",
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
         return {
             "suite": "e2e_tests",
@@ -125,7 +125,7 @@ class TestRunner:
             "--cov-branch",
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
         # Parse coverage percentage from output
         coverage_percent = 0

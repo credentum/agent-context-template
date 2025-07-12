@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def test_config():
     """Provide test configuration with environment-based credentials"""
     return {
@@ -25,7 +25,7 @@ def test_config():
     }
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mock_credentials():
     """Provide mock credentials for testing without real API calls"""
     return {
@@ -109,14 +109,14 @@ def github_api_responses():
     }
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mock_embedding_vector():
     """Provide a mock embedding vector for testing"""
-    # 1536 dimensions for ada-002
+    # 1536 dimensions for ada-002 - cached at session level for performance
     return [0.1, 0.2, 0.3] * 512
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def sigstore_mock_data():
     """Provide mock data for Sigstore testing"""
     return {
@@ -128,6 +128,23 @@ def sigstore_mock_data():
             "subject": "user@example.com",
         },
     }
+
+
+# Performance optimization fixtures
+@pytest.fixture(scope="session")
+def shared_embedder():
+    """Shared embedder instance for performance"""
+    from src.storage.hash_diff_embedder import HashDiffEmbedder
+
+    return HashDiffEmbedder()
+
+
+@pytest.fixture(scope="session")
+def shared_validator():
+    """Shared validator instance for performance"""
+    from src.validators.config_validator import ConfigValidator
+
+    return ConfigValidator(".ctxrc.yaml")
 
 
 # Add pytest markers for different test types

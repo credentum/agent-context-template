@@ -19,6 +19,8 @@ import pytest
 import yaml
 
 
+@pytest.mark.e2e
+@pytest.mark.slow
 class TestProjectLifecycle:
     """Test complete project lifecycle from clone to verification"""
 
@@ -73,10 +75,25 @@ class TestProjectLifecycle:
         # Create replay script
         self.create_replay_script()
 
-        # Initialize git repo
-        subprocess.run(["git", "init"], cwd=self.project_dir, check=True)
-        subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
-        subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=self.project_dir, check=True)
+        # Initialize git repo with proper config
+        subprocess.run(["git", "init"], cwd=self.project_dir, check=True, timeout=30)
+        # Set git config for CI environment
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=self.project_dir,
+            check=True,
+            timeout=30,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=self.project_dir,
+            check=True,
+            timeout=30,
+        )
+        subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True, timeout=30)
+        subprocess.run(
+            ["git", "commit", "-m", "Initial commit"], cwd=self.project_dir, check=True, timeout=30
+        )
 
         return self.project_dir
 
@@ -237,6 +254,7 @@ echo "Snapshot saved to: $SNAPSHOT_DIR"
 
     def test_full_project_lifecycle(self):
         """Test complete project lifecycle"""
+        # This test may take up to 10 minutes in CI
         # Step 1: Create project
         project_dir = self.create_test_project()
         assert project_dir.exists()
@@ -247,7 +265,7 @@ echo "Snapshot saved to: $SNAPSHOT_DIR"
         # Step 3: Run replay_trace.sh
         os.chdir(project_dir)
 
-        result = subprocess.run(["./replay_trace.sh"], capture_output=True, text=True)
+        result = subprocess.run(["./replay_trace.sh"], capture_output=True, text=True, timeout=300)
 
         assert result.returncode == 0
         assert "Trace replay completed!" in result.stdout

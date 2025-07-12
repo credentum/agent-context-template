@@ -14,8 +14,8 @@ class MockContextLintAgent:
 
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
-        self.context_dir = None
-        self.issues_found = []
+        self.context_dir: Optional[Path] = None
+        self.issues_found: list[Dict[str, Any]] = []
         self.documents_checked = 0
 
     def lint_document(self, doc_path: Path) -> list:
@@ -50,8 +50,8 @@ class MockSigstoreClient:
 
     def __init__(self, rekor_url: str = "https://rekor.sigstore.dev"):
         self.rekor_url = rekor_url
-        self.signed_documents = {}
-        self.verification_log = []
+        self.signed_documents: Dict[str, Dict[str, Any]] = {}
+        self.verification_log: list[Dict[str, Any]] = []
 
     def sign(self, file_path: str, identity: str) -> Dict[str, str]:
         """Mock document signing"""
@@ -71,7 +71,7 @@ class MockSigstoreClient:
         return {
             "signature": signature,
             "certificate": f"-----BEGIN CERTIFICATE-----\\nMOCK_CERT_{content_hash[:8]}\\n-----END CERTIFICATE-----",
-            "transparency_log_index": len(self.signed_documents),
+            "transparency_log_index": str(len(self.signed_documents)),
         }
 
     def verify(self, file_path: str, signature_data: Dict[str, str]) -> bool:
@@ -97,7 +97,7 @@ class MockSigstoreClient:
                 }
             )
 
-            return is_valid
+            return bool(is_valid)
         except Exception:
             return False
 

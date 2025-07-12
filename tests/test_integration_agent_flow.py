@@ -147,18 +147,24 @@ content:
             yaml.dump(trace_data, f, default_flow_style=False)
 
         # Verify execution results
-        assert old_doc.name not in [f.name for f in self.docs_dir.iterdir()]
-        assert (self.archive_dir / old_doc.name).exists()
-        assert recent_doc.exists()
-        assert trace_path.exists()
+        assert old_doc.name not in [
+            f.name for f in self.docs_dir.iterdir()
+        ], "Old document should be moved from docs directory"
+        assert (
+            self.archive_dir / old_doc.name
+        ).exists(), "Old document should exist in archive directory"
+        assert recent_doc.exists(), "Recent document should remain in docs directory"
+        assert trace_path.exists(), "Trace file should be created after agent execution"
 
         # Verify trace content
         with open(trace_path) as f:
             saved_trace = yaml.safe_load(f)
 
-        assert saved_trace["execution"]["status"] == "success"
-        assert saved_trace["actions"]["files_archived"] == 1
-        assert len(saved_trace["reflection"]["observations"]) > 0
+        assert saved_trace["execution"]["status"] == "success", "Agent execution should succeed"
+        assert saved_trace["actions"]["files_archived"] == 1, "Exactly one file should be archived"
+        assert (
+            len(saved_trace["reflection"]["observations"]) > 0
+        ), "Agent should provide observations in reflection"
 
     @patch("subprocess.run")
     @patch("pathlib.Path.cwd")
@@ -254,13 +260,15 @@ content:
             yaml.dump(trace_data, f)
 
         # Verify results
-        assert sprint_path.exists()
-        assert trace_path.exists()
+        assert sprint_path.exists(), "Sprint file should exist after update"
+        assert trace_path.exists(), "Trace file should be created for sprint update"
 
         with open(sprint_path) as f:
             updated_sprint = yaml.safe_load(f)
 
-        assert updated_sprint["phases"][0]["tasks"][0]["status"] == "completed"
+        assert (
+            updated_sprint["phases"][0]["tasks"][0]["status"] == "completed"
+        ), "Task status should be updated to completed based on GitHub issue"
 
     @patch("pathlib.Path.cwd")
     def test_context_lint_agent_flow(self, mock_cwd):
@@ -375,14 +383,18 @@ content:
             yaml.dump(trace_data, f)
 
         # Verify results
-        assert trace_path.exists()
-        assert len(issues) == 2  # missing document_type and author
+        assert trace_path.exists(), "Lint trace file should be created"
+        assert len(issues) == 2, "Should find exactly 2 issues: missing document_type and author"
 
         with open(trace_path) as f:
             saved_trace = yaml.safe_load(f)
 
-        assert saved_trace["execution"]["documents_checked"] == 2
-        assert saved_trace["reflection"]["quality_score"] == 50.0
+        assert (
+            saved_trace["execution"]["documents_checked"] == 2
+        ), "Should check exactly 2 documents"
+        assert (
+            saved_trace["reflection"]["quality_score"] == 50.0
+        ), "Quality score should be 50% (1 valid, 1 invalid document)"
 
 
 class TestAgentReflectionPatterns:

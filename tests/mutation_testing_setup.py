@@ -53,7 +53,9 @@ class MutationTestRunner:
 
         click.echo("Installing mutmut...")
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "mutmut"], check=True)
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "mutmut"], check=True, timeout=300
+            )
             return True
         except subprocess.CalledProcessError:
             click.echo("Failed to install mutmut", err=True)
