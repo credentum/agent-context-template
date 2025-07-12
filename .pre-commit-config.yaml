@@ -29,3 +29,12 @@ repos:
     hooks:
       - id: isort
         args: ["--profile", "black"]
+
+  - repo: local
+    hooks:
+      - id: context-lint
+        name: Context YAML Lint
+        entry: python -m src.agents.context_lint validate
+        language: system
+        files: ^context/.*\.yaml$
+        pass_filenames: true
