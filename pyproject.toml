@@ -29,6 +29,7 @@ ensure_newline_before_comments = true
 source = ["src"]
 branch = true
 parallel = true
+relative_files = true
 omit = [
     "*/tests/*",
     "*/test_*",
