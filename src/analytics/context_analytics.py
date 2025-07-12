@@ -19,7 +19,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 import pandas as pd
 import numpy as np
-from context_kv import DuckDBAnalytics, MetricEvent
+from ..storage.context_kv import DuckDBAnalytics, MetricEvent
 
 
 @dataclass

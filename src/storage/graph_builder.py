@@ -97,7 +97,7 @@ class GraphBuilder:
             return True
         except Exception as e:
             # Import locally to avoid circular imports
-            from utils import sanitize_error_message
+            from src.core.utils import sanitize_error_message
 
             error_msg = sanitize_error_message(str(e), [password, username])
             if self.verbose:

@@ -12,8 +12,8 @@ import redis
 import duckdb
 import pandas as pd
 
-from context_kv import RedisConnector, DuckDBAnalytics, ContextKV, MetricEvent, CacheEntry
-from context_analytics import ContextAnalytics, AnalyticsReport
+from src.storage.context_kv import RedisConnector, DuckDBAnalytics, ContextKV, MetricEvent, CacheEntry
+from src.analytics.context_analytics import ContextAnalytics, AnalyticsReport
 
 
 class TestRedisConnector:

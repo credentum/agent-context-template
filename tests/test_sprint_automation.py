@@ -17,8 +17,8 @@ import subprocess
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from update_sprint import SprintUpdater
-from sprint_issue_linker import SprintIssueLinker
+from src.agents.update_sprint import SprintUpdater
+from src.agents.sprint_issue_linker import SprintIssueLinker
 
 
 class TestSprintUpdater:

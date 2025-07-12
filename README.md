@@ -12,9 +12,17 @@ A GitHub Actions template repository that provides workflow templates for an Age
 - **Schema Validation**: YAML-based schemas with yamale validation
 - 
 
-## Context System Structure
+## Project Structure
 
 ```
+src/
+├── agents/          # CLI tools and automation agents
+├── core/            # Base classes and utilities
+├── storage/         # Database and storage components
+├── analytics/       # Analytics and reporting
+├── integrations/    # External service integrations
+└── validators/      # Input validation and sanitization
+
 context/
 ├── design/          # System design documents
 ├── decisions/       # Architectural decision records

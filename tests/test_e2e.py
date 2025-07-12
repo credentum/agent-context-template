@@ -13,15 +13,15 @@ from unittest.mock import patch
 import subprocess
 
 # Import components
-from context_lint import ContextLinter
-from cleanup_agent import CleanupAgent
-from update_sprint import SprintUpdater
-from vector_db_init import VectorDBInitializer
-from hash_diff_embedder import HashDiffEmbedder
-from neo4j_init import Neo4jInitializer
-from graph_builder import GraphBuilder
-from graphrag_integration import GraphRAGIntegration
-from config_validator import ConfigValidator
+from src.agents.context_lint import ContextLinter
+from src.agents.cleanup_agent import CleanupAgent
+from src.agents.update_sprint import SprintUpdater
+from src.storage.vector_db_init import VectorDBInitializer
+from src.storage.hash_diff_embedder import HashDiffEmbedder
+from src.storage.neo4j_init import Neo4jInitializer
+from src.storage.graph_builder import GraphBuilder
+from src.integrations.graphrag_integration import GraphRAGIntegration
+from src.validators.config_validator import ConfigValidator
 
 
 @pytest.mark.e2e

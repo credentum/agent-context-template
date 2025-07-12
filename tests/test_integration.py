@@ -10,9 +10,9 @@ from pathlib import Path
 import yaml
 
 # Components to test
-from hash_diff_embedder import HashDiffEmbedder
-from graph_builder import GraphBuilder
-from graphrag_integration import GraphRAGIntegration
+from src.storage.hash_diff_embedder import HashDiffEmbedder
+from src.storage.graph_builder import GraphBuilder
+from src.integrations.graphrag_integration import GraphRAGIntegration
 
 
 class TestIntegration:
@@ -56,9 +56,9 @@ class TestIntegration:
         yield test_path
         shutil.rmtree(temp_dir)
 
-    @patch("hash_diff_embedder.openai.OpenAI")
-    @patch("hash_diff_embedder.QdrantClient")
-    @patch("graph_builder.GraphDatabase.driver")
+    @patch("src.storage.hash_diff_embedder.openai.OpenAI")
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
+    @patch("src.storage.graph_builder.GraphDatabase.driver")
     def test_vector_graph_sync(self, mock_neo4j, mock_qdrant, mock_openai_class, test_dir):
         """Test synchronization between vector and graph databases"""
         # Setup mocks
@@ -109,8 +109,8 @@ class TestIntegration:
         ]
         assert len(create_calls) > 0
 
-    @patch("graphrag_integration.QdrantClient")
-    @patch("graphrag_integration.GraphDatabase.driver")
+    @patch("src.integrations.graphrag_integration.QdrantClient")
+    @patch("src.integrations.graphrag_integration.GraphDatabase.driver")
     def test_graphrag_search_integration(self, mock_neo4j, mock_qdrant):
         """Test GraphRAG search combining vector and graph results"""
         # Setup mocks
@@ -178,7 +178,7 @@ class TestIntegration:
         mock_driver.close.assert_called_once()
 
     @pytest.mark.skip(reason="Test takes too long due to rate limit simulation")
-    @patch("hash_diff_embedder.openai.OpenAI")
+    @patch("src.storage.hash_diff_embedder.openai.OpenAI")
     def test_rate_limiting_retry(self, mock_openai_class):
         """Test rate limiting retry logic"""
         import openai as openai_module

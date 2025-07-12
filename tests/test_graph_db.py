@@ -10,9 +10,9 @@ import tempfile
 import shutil
 
 # Import components to test
-from neo4j_init import Neo4jInitializer
-from graph_builder import GraphBuilder
-from graphrag_integration import GraphRAGIntegration, GraphRAGResult
+from src.storage.neo4j_init import Neo4jInitializer
+from src.storage.graph_builder import GraphBuilder
+from src.integrations.graphrag_integration import GraphRAGIntegration, GraphRAGResult
 
 
 def create_mock_neo4j_driver():
@@ -55,7 +55,7 @@ class TestNeo4jInitializer:
         assert initializer.config["neo4j"]["port"] == 7687
         assert initializer.database == "test_graph"
 
-    @patch("neo4j_init.GraphDatabase.driver")
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
     def test_connect_success(self, mock_driver, config_file):
         """Test successful connection"""
         # Setup mock with proper context manager
@@ -68,7 +68,7 @@ class TestNeo4jInitializer:
         mock_driver.assert_called_once_with("bolt://localhost:7687", auth=("neo4j", "test"))
         mock_session.run.assert_called_once_with("RETURN 1 as test")
 
-    @patch("neo4j_init.GraphDatabase.driver")
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
     def test_create_constraints(self, mock_driver, config_file):
         """Test constraint creation"""
         # Setup mock with proper context manager
@@ -92,7 +92,7 @@ class TestNeo4jInitializer:
         for expected in expected_constraints:
             assert any(expected in str(call) for call in calls)
 
-    @patch("neo4j_init.GraphDatabase.driver")
+    @patch("src.storage.neo4j_init.GraphDatabase.driver")
     def test_setup_graph_schema(self, mock_driver, config_file):
         """Test graph schema setup"""
         # Setup mock
@@ -141,7 +141,7 @@ class TestGraphBuilder:
         assert hash1 == hash2  # Same content
         assert hash1 != hash3  # Different content
 
-    @patch("graph_builder.GraphDatabase.driver")
+    @patch("src.storage.graph_builder.GraphDatabase.driver")
     def test_create_document_node(self, mock_driver, builder, test_dir):
         """Test document node creation"""
         # Setup mock
@@ -185,7 +185,7 @@ class TestGraphBuilder:
         assert "api-spec" in references
         assert len(references) == 4
 
-    @patch("graph_builder.GraphDatabase.driver")
+    @patch("src.storage.graph_builder.GraphDatabase.driver")
     def test_process_document(self, mock_driver, builder, test_dir):
         """Test document processing"""
         # Setup mock
@@ -256,8 +256,8 @@ class TestGraphRAGIntegration:
         assert any("2 IMPLEMENTS" in r for r in reasoning)
         assert any("Average connection distance" in r for r in reasoning)
 
-    @patch("graphrag_integration.QdrantClient")
-    @patch("graphrag_integration.GraphDatabase.driver")
+    @patch("src.integrations.graphrag_integration.QdrantClient")
+    @patch("src.integrations.graphrag_integration.GraphDatabase.driver")
     def test_search(self, mock_neo4j, mock_qdrant, graphrag):
         """Test GraphRAG search"""
         # Setup mocks

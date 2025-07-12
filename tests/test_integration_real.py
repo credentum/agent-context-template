@@ -12,11 +12,11 @@ import yaml
 import time
 
 # Import components
-from vector_db_init import VectorDBInitializer
-from hash_diff_embedder import HashDiffEmbedder
-from neo4j_init import Neo4jInitializer
-from graph_builder import GraphBuilder
-from graphrag_integration import GraphRAGIntegration
+from src.storage.vector_db_init import VectorDBInitializer
+from src.storage.hash_diff_embedder import HashDiffEmbedder
+from src.storage.neo4j_init import Neo4jInitializer
+from src.storage.graph_builder import GraphBuilder
+from src.integrations.graphrag_integration import GraphRAGIntegration
 
 
 # Mark all tests as integration tests

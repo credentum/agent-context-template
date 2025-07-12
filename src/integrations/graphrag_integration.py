@@ -90,7 +90,7 @@ class GraphRAGIntegration:
                 session.run("RETURN 1")
         except Exception as e:
             # Import locally to avoid circular imports
-            from utils import sanitize_error_message
+            from src.core.utils import sanitize_error_message
 
             error_msg = sanitize_error_message(str(e), [neo4j_password, neo4j_username])
             click.echo(f"Failed to connect to Neo4j: {error_msg}", err=True)
