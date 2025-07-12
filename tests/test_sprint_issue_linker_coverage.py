@@ -68,12 +68,14 @@ def issue_linker(tmp_path, mock_config):
     os.chdir(tmp_path)
 
     try:
-        # Create linker (it uses gh CLI, not config for GitHub)
-        linker = SprintIssueLinker(verbose=True)
-        # Override paths to use temp directory
-        linker.context_dir = tmp_path / "context"
-        linker.sprints_dir = tmp_path / "context" / "sprints"
-        yield linker
+        # Mock GitHub CLI check to prevent sys.exit() in CI
+        with patch("src.agents.sprint_issue_linker.SprintIssueLinker._check_gh_cli"):
+            # Create linker (it uses gh CLI, not config for GitHub)
+            linker = SprintIssueLinker(verbose=True)
+            # Override paths to use temp directory
+            linker.context_dir = tmp_path / "context"
+            linker.sprints_dir = tmp_path / "context" / "sprints"
+            yield linker
     finally:
         os.chdir(original_cwd)
 
