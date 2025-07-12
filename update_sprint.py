@@ -28,7 +28,7 @@ class SprintUpdater:
         self.context_dir = Path("context")
         self.sprints_dir = self.context_dir / "sprints"
         self.sprint_id = sprint_id
-        self.updates_made = []
+        self.updates_made: list[str] = []
         self.config = self._load_config()
         self._check_gh_cli()
 
@@ -36,7 +36,8 @@ class SprintUpdater:
         """Load configuration from .ctxrc.yaml"""
         try:
             with open(".ctxrc.yaml", "r") as f:
-                return yaml.safe_load(f)
+                config = yaml.safe_load(f)
+                return config if isinstance(config, dict) else {}
         except Exception as e:
             if self.verbose:
                 click.echo(f"Warning: Could not load .ctxrc.yaml: {e}")
@@ -96,7 +97,8 @@ class SprintUpdater:
                 cmd.extend(["--label", label])
 
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return json.loads(result.stdout)
+            issues = json.loads(result.stdout)
+            return issues if isinstance(issues, list) else []
         except subprocess.CalledProcessError as e:
             if self.verbose:
                 click.echo(f"Error fetching GitHub issues: {e}")

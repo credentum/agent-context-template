@@ -80,7 +80,8 @@ class SprintIssueLinker:
                 "100",
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return json.loads(result.stdout)
+            issues = json.loads(result.stdout)
+            return issues if isinstance(issues, list) else []
         except Exception as e:
             if self.verbose:
                 click.echo(f"Error fetching issues: {e}")

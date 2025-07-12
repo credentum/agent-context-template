@@ -298,7 +298,7 @@ class ContextAnalytics(DuckDBAnalytics):
 
             error_results = self.query_metrics(error_query, [start_date, end_date])
 
-            metrics = {
+            metrics: Dict[str, Any] = {
                 "period_hours": 24,
                 "system_metrics": {r["metric_name"]: r for r in results},
                 "error_count": error_results[0]["error_count"] if error_results else 0,
@@ -334,7 +334,7 @@ class ContextAnalytics(DuckDBAnalytics):
                     recommendations.append("Investigate slow operations and optimize queries")
 
             # Overall health score (0-100)
-            health_score = 100
+            health_score: float = 100
             health_score -= min(metrics["error_count"] / 10, 30)  # Max 30 point penalty for errors
             health_score -= min(
                 metrics["warning_count"] / 50, 20
@@ -381,7 +381,7 @@ class ContextAnalytics(DuckDBAnalytics):
             "system_health": self.analyze_system_health(),
         }
 
-        summary = {
+        summary: Dict[str, Any] = {
             "generated_at": datetime.utcnow().isoformat(),
             "period_days": days,
             "key_metrics": {},
@@ -448,6 +448,9 @@ class ContextAnalytics(DuckDBAnalytics):
                 ORDER BY timestamp
             """
 
+            if not self.conn:
+                return False
+                
             if format == "parquet":
                 self.conn.execute(
                     f"""
