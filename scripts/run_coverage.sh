@@ -1,4 +1,7 @@
 #!/bin/bash
+# 
+# Test Coverage Runner
+# Cross-platform script for running comprehensive test coverage analysis
 # Script to run comprehensive test coverage
 
 echo "🔍 Running comprehensive test coverage analysis..."

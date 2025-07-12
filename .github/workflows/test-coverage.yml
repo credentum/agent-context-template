@@ -63,12 +63,21 @@ jobs:
         python scripts/coverage_summary.py
     
     - name: Run mutation testing (sample)
+      env:
+        MUTMUT_PATHS: "src/validators/kv_validators.py src/storage/context_kv.py"
       run: |
-        # Run mutation testing on a sample module to verify setup
-        mutmut run \
-          --paths-to-mutate="src/validators/kv_validators.py" \
-          --runner="python -m pytest -x -q tests/test_kv_store.py::TestKVValidators" \
-          || true
+        # Run mutation testing on configurable modules
+        for path in $MUTMUT_PATHS; do
+          if [ -f "$path" ]; then
+            echo "Running mutation testing on $path"
+            mutmut run \
+              --paths-to-mutate="$path" \
+              --runner="python -m pytest -x -q" \
+              || true
+          else
+            echo "Path $path not found, skipping"
+          fi
+        done
         mutmut results
       continue-on-error: true
     
