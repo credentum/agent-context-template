@@ -53,7 +53,8 @@ class ContextLinter:
         """Load configuration from .ctxrc.yaml"""
         try:
             with open(".ctxrc.yaml", "r") as f:
-                return yaml.safe_load(f)
+                config = yaml.safe_load(f)
+                return config if isinstance(config, dict) else {}
         except FileNotFoundError:
             if self.verbose:
                 click.echo("Warning: .ctxrc.yaml not found, using defaults")
@@ -254,7 +255,13 @@ class ContextLinter:
 
     def show_stats(self, path: Path) -> None:
         """Show statistics about context documents"""
-        stats = {"total_files": 0, "by_type": {}, "by_status": {}, "expired": 0, "expiring_soon": 0}
+        stats: Dict[str, Any] = {
+            "total_files": 0,
+            "by_type": {},
+            "by_status": {},
+            "expired": 0,
+            "expiring_soon": 0,
+        }
 
         for yaml_file in path.rglob("*.yaml"):
             if "schemas" in yaml_file.parts:

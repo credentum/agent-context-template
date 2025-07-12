@@ -109,7 +109,7 @@ def validate_redis_key(key: str) -> bool:
     return True
 
 
-def validate_session_data(data: Dict[str, Any]) -> bool:
+def validate_session_data(data: Any) -> bool:
     """Validate session data structure"""
     if not isinstance(data, dict):
         return False

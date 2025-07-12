@@ -34,7 +34,8 @@ class CleanupAgent:
         """Load configuration from .ctxrc.yaml"""
         try:
             with open(".ctxrc.yaml", "r") as f:
-                return yaml.safe_load(f)
+                config = yaml.safe_load(f)
+                return config if isinstance(config, dict) else {}
         except FileNotFoundError:
             if self.verbose:
                 click.echo("Warning: .ctxrc.yaml not found, using defaults")
@@ -185,7 +186,7 @@ class CleanupAgent:
             return
 
         # Load existing log or create new
-        log_data = {"cleanup_runs": []}
+        log_data: Dict[str, Any] = {"cleanup_runs": []}
         if self.cleanup_log_path.exists() and not self.dry_run:
             try:
                 with open(self.cleanup_log_path, "r") as f:
@@ -232,7 +233,7 @@ class CleanupAgent:
         click.echo(f"\nCleanup complete:")
         click.echo(f"  Total actions: {len(self.actions)}")
 
-        action_counts = {}
+        action_counts: Dict[str, int] = {}
         for action in self.actions:
             action_type = action["action"]
             action_counts[action_type] = action_counts.get(action_type, 0) + 1
