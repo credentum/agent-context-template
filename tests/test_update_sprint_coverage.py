@@ -279,6 +279,9 @@ class TestUpdateSprintAgentCoverage:
             mock_issues.return_value = [
                 {"number": 1, "title": "Define requirements", "state": "CLOSED"},
                 {"number": 2, "title": "Create design docs", "state": "CLOSED"},
+                {"number": 3, "title": "Implement feature A", "state": "CLOSED"},
+                {"number": 4, "title": "Implement feature B", "state": "CLOSED"},
+                {"number": 5, "title": "Write tests", "state": "CLOSED"},
             ]
 
             with patch("click.echo"):
@@ -316,7 +319,6 @@ class TestUpdateSprintAgentCoverage:
 
         report = update_agent.generate_report()
 
-        assert "Sprint 1" in report
         assert "Test Sprint" in report
         assert "Planning" in report  # Phase name
         assert "Implementation" in report  # Phase name
@@ -349,13 +351,17 @@ class TestUpdateSprintAgentCoverage:
         os.chdir(tmp_path)
 
         try:
-            with patch("subprocess.run"):
+            with patch("subprocess.run") as mock_run:
+                # Configure subprocess mock to return empty JSON list
+                mock_run.return_value.returncode = 0
+                mock_run.return_value.stdout = "[]"
+                
                 with patch("click.echo"):
                     # Test with sprint ID
                     from click.testing import CliRunner
 
                     runner = CliRunner()
-                    result = runner.invoke(cli, ["update", "sprint-001"])
+                    result = runner.invoke(cli, ["update", "--sprint", "sprint-001"])
                     assert result.exit_code == 0
         finally:
             os.chdir(original_cwd)

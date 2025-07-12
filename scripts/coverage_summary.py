@@ -26,9 +26,14 @@ class CoverageSummary:
             with open("coverage.json") as f:
                 data = json.load(f)
                 totals = data["totals"]
+                # Calculate branch coverage percentage
+                branch_coverage = 0
+                if totals.get("num_branches", 0) > 0:
+                    branch_coverage = (totals["covered_branches"] / totals["num_branches"]) * 100
+                
                 return {
                     "line_coverage": totals["percent_covered"],
-                    "branch_coverage": totals.get("percent_branch_covered", 0),
+                    "branch_coverage": branch_coverage,
                     "missing_lines": totals["missing_lines"],
                     "missing_branches": totals.get("missing_branches", 0),
                 }
@@ -57,6 +62,12 @@ class CoverageSummary:
         """Check coverage of critical functions"""
         # Import the critical functions registry
         try:
+            # Add current directory to path for test imports
+            import sys
+            import os
+            if os.getcwd() not in sys.path:
+                sys.path.insert(0, os.getcwd())
+            
             from tests.test_traceability_matrix import CRITICAL_FUNCTIONS
 
             total = len(CRITICAL_FUNCTIONS)

@@ -76,7 +76,7 @@ class SprintUpdater:
                 with open(sprint_file, "r") as f:
                     data = yaml.safe_load(f)
 
-                if data and data.get("status") in ["planning", "in_progress"]:
+                if data and data.get("status") in ["planning", "in_progress", "active"]:
                     active_sprints.append((sprint_file, data))
             except Exception:
                 continue
@@ -106,6 +106,10 @@ class SprintUpdater:
         except json.JSONDecodeError as e:
             if self.verbose:
                 click.echo(f"Error parsing GitHub issues JSON: {e}")
+            return []
+        except FileNotFoundError as e:
+            if self.verbose:
+                click.echo(f"GitHub CLI not found: {e}")
             return []
 
     def _match_task_to_issue(self, task: str, issue_title: str) -> bool:
@@ -225,7 +229,7 @@ class SprintUpdater:
             return None
 
         # Calculate dates
-        duration_days = self.config["agents"]["pm_agent"]["sprint_duration_days"]
+        duration_days = self.config.get("agents", {}).get("pm_agent", {}).get("sprint_duration_days", 14)
         start_date = datetime.now()
         end_date = start_date + timedelta(days=duration_days)
 
