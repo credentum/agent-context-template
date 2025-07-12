@@ -273,7 +273,7 @@ class TestReproducibility:
                 # Simulate data loss
                 mock_client.flushdb()
 
-                # Restore from backup  
+                # Restore from backup
                 for key, data in backup.items():
                     kv_store.redis.set_cache(key, data["value"], ttl_seconds=data["ttl"])
 
