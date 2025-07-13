@@ -50,14 +50,29 @@ class TestHashDiffEmbedder:
         assert embedder.config == test_config
         assert embedder.embedding_model == "text-embedding-ada-002"
 
-    @patch("builtins.open", side_effect=FileNotFoundError)
     @patch("click.echo")
-    def test_load_config_file_not_found(self, mock_echo, mock_file):
+    def test_load_config_file_not_found(self, mock_echo):
         """Test config loading when file doesn't exist"""
-        embedder = HashDiffEmbedder("nonexistent.yaml")
 
-        assert embedder.config == {}
-        mock_echo.assert_called_with("Error: nonexistent.yaml not found", err=True)
+        # Only patch the specific file we're testing
+        def side_effect(path, *args, **kwargs):
+            if "nonexistent.yaml" in str(path):
+                raise FileNotFoundError()
+            return mock_open()(path, *args, **kwargs)
+
+        with patch("builtins.open", side_effect=side_effect):
+            embedder = HashDiffEmbedder("nonexistent.yaml")
+
+            assert embedder.config == {}
+            # Check that the error message was printed
+            error_calls = [
+                call
+                for call in mock_echo.call_args_list
+                if "Error: nonexistent.yaml not found" in str(call)
+            ]
+            assert (
+                len(error_calls) > 0
+            ), f"Expected error message not found. Actual calls: {mock_echo.call_args_list}"
 
     @patch("builtins.open", new_callable=mock_open)
     @patch("yaml.safe_load", return_value=None)

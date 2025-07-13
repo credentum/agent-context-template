@@ -64,3 +64,4 @@ Thumbs.db
 secrets/
 .secrets/
 .venv_ci_test/
+.hypothesis/

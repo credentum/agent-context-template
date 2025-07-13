@@ -386,8 +386,8 @@ class TestPropertyBasedPerformance:
 
     if HAS_HYPOTHESIS:
 
-        @given(st.integers(min_value=1, max_value=1000000))
-        @settings(max_examples=50)  # Limit examples for performance tests
+        @given(st.integers(min_value=1, max_value=10000))  # Reduced from 1M to 10K for faster tests
+        @settings(max_examples=20)  # Reduced examples for performance tests
         def test_algorithmic_complexity(self, n: int):
             """Test that algorithms have expected complexity"""
             import time

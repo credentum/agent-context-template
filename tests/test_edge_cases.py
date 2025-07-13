@@ -15,6 +15,31 @@ from unittest.mock import Mock, patch
 import pytest  # type: ignore
 import yaml
 
+try:
+    from hypothesis import assume, given, settings
+    from hypothesis import strategies as st
+
+    HAS_HYPOTHESIS = True
+except ImportError:
+    HAS_HYPOTHESIS = False
+
+    # Mock for when hypothesis is not installed
+    def given(*args, **kwargs):
+        def decorator(func):
+            return pytest.mark.skip(reason="hypothesis not installed")(func)
+
+        return decorator
+
+    class st:
+        @staticmethod
+        def text(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def datetimes(*args, **kwargs):
+            pass
+
+
 from src.storage.hash_diff_embedder import HashDiffEmbedder
 from src.validators.config_validator import ConfigValidator
 from src.validators.kv_validators import (
@@ -230,6 +255,71 @@ class TestValidationEdgeCases:
                 assert result == expected
             except (TypeError, AttributeError):
                 assert not expected  # Should fail for None values
+
+    if HAS_HYPOTHESIS:
+
+        @given(st.text())
+        def test_redis_key_property(self, key):
+            """Property: validation should be deterministic and handle all strings"""
+            # Should not raise exceptions
+            try:
+                result = validate_redis_key(key)
+                # If valid, key should not contain control characters
+                if result:
+                    assert all(
+                        ord(c) >= 32 for c in key
+                    ), "Valid keys should not have control chars"
+                    assert len(key) <= 1024, "Valid keys should not exceed 1024 chars"
+                    assert key != "", "Valid keys should not be empty"
+            except Exception as e:
+                pytest.fail(f"validate_redis_key raised unexpected exception: {e}")
+
+        @given(st.text())
+        @settings(max_examples=200)
+        def test_metric_name_sanitization_property(self, name):
+            """Property: sanitization should always produce valid metric names"""
+            sanitized = sanitize_metric_name(name)
+
+            # Properties that should always hold
+            assert isinstance(sanitized, str), "Should always return a string"
+            assert len(sanitized) == len(name), "Should preserve length"
+
+            # Check each character transformation
+            for i, char in enumerate(sanitized):
+                original = name[i]
+                # Characters that are replaced with underscore:
+                # - Non-ASCII (ord > 127)
+                # - Spaces
+                # - Any character not in [a-zA-Z0-9_.-]
+                if (
+                    ord(original) > 127
+                    or original == " "
+                    or not (original.isalnum() or original in "_.-")
+                ):
+                    assert char == "_", f"Invalid char '{original}' at {i} should be underscore"
+                else:
+                    assert char == original, f"Valid char '{original}' at {i} should be preserved"
+
+        @given(
+            st.datetimes(min_value=datetime(2020, 1, 1), max_value=datetime(2030, 1, 1)),
+            st.datetimes(min_value=datetime(2020, 1, 1), max_value=datetime(2030, 1, 1)),
+        )
+        def test_time_range_validation_property(self, start, end):
+            """Property: validation should handle all datetime pairs consistently"""
+            try:
+                result = validate_time_range(start, end)
+
+                if result:
+                    # Valid ranges must have end > start
+                    assert end > start, "Valid ranges must have end after start"
+                    # Valid ranges must be within limits (90 days by default)
+                    assert (end - start).days <= 90, "Valid ranges must be within 90 days"
+                else:
+                    # Invalid ranges: end <= start or exceeds limit
+                    assert end <= start or (end - start).days > 90
+
+            except Exception as e:
+                pytest.fail(f"validate_time_range raised unexpected exception: {e}")
 
 
 class TestConcurrencyAndRaceConditions:

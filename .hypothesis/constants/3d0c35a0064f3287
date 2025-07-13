@@ -1,0 +1,4 @@
+# file: /workspaces/agent-context-template/src/validators/config_validator.py
+# hypothesis_version: 6.135.29
+
+[0.01, 0.5, 100, 1000, 3600, 6333, 6379, 7687, 65535, '\nErrors:', '\nWarnings:', '--config', '--perf-config', '--strict', '.ctxrc.yaml', '__main__', 'agents', 'analytics', 'batch_insert', 'batch_size', 'cache', 'connection_pool', 'database', 'database_path', 'default_limit', 'duckdb', 'embedding', 'graph_db', 'kv_store', 'max_cpu_percent', 'max_limit', 'max_memory_gb', 'max_path_length', 'max_retries', 'max_size', 'min_size', 'neo4j', 'performance.yaml', 'port', 'qdrant', 'query', 'r', 'ranking', 'redis', 'request_timeout', 'resources', 'retention_days', 'search', 'size', 'ssl', 'storage', 'system', 'temporal_decay_rate', 'threads', 'ttl_seconds', 'type_boosts', 'vector_db']
