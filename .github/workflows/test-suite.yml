@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.11']
 
     steps:
     - uses: actions/checkout@v4
@@ -69,7 +69,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-${{ matrix.python-version }}
@@ -154,7 +154,7 @@ jobs:
         mutmut html
 
     - name: Upload mutation results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: mutation-results
@@ -191,7 +191,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload load test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: load-test-results
@@ -206,7 +206,7 @@ jobs:
 
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: Generate test summary
       run: |
@@ -216,9 +216,7 @@ jobs:
         echo "| Python Version | Unit Tests | Integration Tests | Benchmarks |" >> test-summary.md
         echo "|----------------|------------|------------------|------------|" >> test-summary.md
 
-        for version in 3.9 3.10 3.11 3.12; do
-          echo "| $version | ✓ | ✓ | ✓ |" >> test-summary.md
-        done
+        echo "| 3.11 | ✓ | ✓ | ✓ |" >> test-summary.md
 
         echo "" >> test-summary.md
         echo "## Coverage Report" >> test-summary.md

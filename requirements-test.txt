@@ -14,6 +14,7 @@ openai>=1.0.0
 neo4j>=5.0.0
 redis>=4.5.0
 duckdb>=0.9.0
+requests>=2.31.0
 
 # Mutation testing
 mutmut>=2.4.0
@@ -42,7 +43,7 @@ isort>=5.12.0
 flake8>=6.1.0
 
 # Documentation testing
-pytest-doctest-modules>=0.1.0
+# pytest-doctest-modules>=0.1.0  # Not available, using built-in doctest instead
 
 # Load testing
 locust>=2.0.0

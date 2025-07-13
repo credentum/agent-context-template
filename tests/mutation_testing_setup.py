@@ -250,31 +250,32 @@ __pycache__/
         if result["mutation_score"] < 80:
             click.echo("  ⚠️  Low mutation score - consider improving tests")
 
-    def create_mutation_report(self, results: List[Dict[str, Any]]):
+    def create_mutation_report(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Create detailed mutation testing report"""
+        recommendations: List[str] = []
         report = {
             "timestamp": str(Path.cwd()),
             "summary": {
                 "total_files_tested": len(results),
-                "average_mutation_score": sum(r["mutation_score"] for r in results) / len(results)
-                if results
-                else 0,
+                "average_mutation_score": (
+                    sum(r["mutation_score"] for r in results) / len(results) if results else 0
+                ),
                 "total_mutants": sum(r["total_mutants"] for r in results),
                 "total_killed": sum(r["killed"] for r in results),
                 "total_survived": sum(r["survived"] for r in results),
             },
             "details": results,
-            "recommendations": [],
+            "recommendations": recommendations,
         }
 
         # Add recommendations
         for result in results:
             if result["mutation_score"] < 60:
-                report["recommendations"].append(
+                recommendations.append(
                     f"Critical: {result['target']} has very low mutation coverage ({result['mutation_score']:.1f}%)"
                 )
             elif result["mutation_score"] < 80:
-                report["recommendations"].append(
+                recommendations.append(
                     f"Warning: {result['target']} could use better test coverage ({result['mutation_score']:.1f}%)"
                 )
 

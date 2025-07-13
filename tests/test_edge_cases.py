@@ -7,12 +7,12 @@ Tests for boundary conditions, error handling, and unusual scenarios
 import json
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import Mock, patch
 
-import pytest
+import pytest  # type: ignore
 import yaml
 
 from src.storage.hash_diff_embedder import HashDiffEmbedder
@@ -56,7 +56,7 @@ class TestBoundaryConditions:
         """Test handling of binary files"""
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".bin") as f:
             # Write binary data
-            f.write(b"\x00\x01\x02\x03\xFF\xFE\xFD")
+            f.write(b"\x00\x01\x02\x03\xff\xfe\xfd")
             f.flush()
 
             # Test reading binary as text (should fail gracefully)
@@ -341,7 +341,7 @@ class TestSecurityEdgeCases:
             "`rm -rf /`",  # Command injection
         ]
 
-        validator = ConfigValidator("dummy_path")
+        validator = ConfigValidator()
 
         for dangerous in dangerous_inputs:
             # Should safely handle dangerous inputs
