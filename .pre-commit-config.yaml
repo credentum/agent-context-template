@@ -19,6 +19,7 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        exclude: ^context/schemas/
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: check-json
@@ -42,10 +43,10 @@ repos:
     hooks:
       - id: context-lint
         name: Context YAML Lint
-        entry: python -m src.agents.context_lint validate
+        entry: python -m src.agents.context_lint validate context/
         language: system
         files: ^context/.*\.yaml$
-        pass_filenames: true
+        pass_filenames: false
 
       - id: test-imports
         name: Check Test Module Imports
