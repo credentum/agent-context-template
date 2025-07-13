@@ -380,14 +380,14 @@ class TestDataCorruption:
                 "data": {"items": list(range(100))},
             }
 
-            # Simulate partial write - cut in middle of a line to ensure corruption
+            # Simulate partial write - ensure it's definitely corrupted
             yaml_content = yaml.dump(complete_doc)
-            # Find a good cut point that will corrupt the YAML
-            cut_point = yaml_content.find("- 50")  # Cut in middle of list
-            if cut_point > 0:
-                partial_content = yaml_content[:cut_point] + "- "  # Incomplete list item
+            # Create definitely corrupted YAML by cutting in the middle and adding invalid syntax
+            if len(yaml_content) > 20:
+                # Cut in middle and add unclosed quote to ensure parse error
+                partial_content = yaml_content[: len(yaml_content) // 2] + '\n  invalid: "'
             else:
-                partial_content = yaml_content[: len(yaml_content) // 3]  # Fallback
+                partial_content = "invalid:\n  - incomplete"
 
             test_file.write_text(partial_content)
 

@@ -71,11 +71,12 @@ class TestAdvancedPropertyValidation:
         @given(
             st.dictionaries(
                 # Config keys should be valid identifiers (ASCII alphanumeric + underscore/dot)
+                # First character must be letter or underscore, then alphanumeric/underscore/dot
                 st.text(
                     min_size=1,
                     max_size=50,
                     alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.",
-                ),
+                ).filter(lambda s: s[0] in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"),
                 # Config values can be more permissive but exclude control chars
                 st.text(
                     min_size=0,

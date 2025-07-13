@@ -9,6 +9,34 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture
+def test_config():
+    """Test configuration fixture"""
+    return {
+        "qdrant": {
+            "host": "localhost",
+            "port": 6333,
+            "api_key": "test_key",
+            "collection_name": "test_collection",
+            "embedding_model": "text-embedding-ada-002",
+        },
+        "openai": {
+            "api_key": "test_openai_key",
+        },
+        "neo4j": {
+            "uri": "bolt://localhost:7687",
+            "username": "neo4j",
+            "password": "test_password",
+        },
+    }
+
+
+@pytest.fixture
+def mock_embedding_vector():
+    """Mock embedding vector fixture"""
+    return [0.1, 0.2, 0.3] * 512  # 1536 dimensions for ada-002
+
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_directories():
     """Create required directories for tests"""
