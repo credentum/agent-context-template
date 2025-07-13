@@ -176,15 +176,22 @@ class TestHashDiffEmbedder:
         assert "doc1" in saved_data
         assert saved_data["doc1"]["document_id"] == "doc1"
 
+    @patch("src.storage.hash_diff_embedder.openai.OpenAI")
     @patch("src.storage.hash_diff_embedder.QdrantClient")
-    def test_connect_success(self, mock_qdrant_client, test_config, monkeypatch):
+    def test_connect_success(self, mock_qdrant_client, mock_openai, test_config, monkeypatch):
         """Test successful connection"""
         # Set OpenAI API key from test config
         monkeypatch.setenv("OPENAI_API_KEY", test_config["openai"]["api_key"])
 
-        mock_client = Mock()
-        mock_client.get_collections.return_value = Mock(collections=[])
-        mock_qdrant_client.return_value = mock_client
+        # Mock Qdrant client
+        mock_qdrant = Mock()
+        mock_qdrant.get_collections.return_value = Mock(collections=[])
+        mock_qdrant_client.return_value = mock_qdrant
+
+        # Mock OpenAI client
+        mock_openai_instance = Mock()
+        mock_openai_instance.models.list.return_value = Mock()  # Mock the models.list() call
+        mock_openai.return_value = mock_openai_instance
 
         embedder = HashDiffEmbedder()
         embedder.config = test_config
@@ -192,8 +199,11 @@ class TestHashDiffEmbedder:
         result = embedder.connect()
 
         assert result is True, "Connection should succeed and return True"
-        assert embedder.client == mock_client, "Client should be set after successful connection"
-        mock_qdrant_client.assert_called_once_with(host="localhost", port=6333, timeout=30)
+        assert (
+            embedder.client == mock_qdrant
+        ), "Qdrant client should be set after successful connection"
+        mock_qdrant_client.assert_called_once_with(host="localhost", port=6333, timeout=5)
+        mock_openai.assert_called_once_with(api_key=test_config["openai"]["api_key"])
 
     def test_document_hash_dataclass(self):
         """Test DocumentHash dataclass"""

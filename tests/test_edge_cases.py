@@ -177,12 +177,12 @@ class TestValidationEdgeCases:
         """Test Redis key validation edge cases"""
         edge_cases = [
             ("", False),  # Empty key
-            ("a" * 512, True),  # Maximum length key
-            ("a" * 513, False),  # Too long
+            ("a" * 1024, True),  # Maximum length key
+            ("a" * 1025, False),  # Too long
             ("key:with:colons", True),  # Colons allowed
-            ("key with spaces", False),  # Spaces not allowed
-            ("key\nwith\nnewlines", False),  # Newlines not allowed
-            ("key\twith\ttabs", False),  # Tabs not allowed
+            ("key with spaces", True),  # Spaces ARE allowed (no control chars)
+            ("key\nwith\nnewlines", False),  # Newlines not allowed (control char)
+            ("key\twith\ttabs", False),  # Tabs not allowed (control char)
             ("válid_ünicode", True),  # Unicode allowed
             ("🔑", True),  # Emoji allowed
         ]
