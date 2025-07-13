@@ -619,9 +619,11 @@ class TestGraphBuilderCoverage:
         from src.storage.graph_builder import main
 
         runner = CliRunner()
-        with patch("src.storage.graph_builder.GraphBuilder.connect", return_value=True), patch(
-            "src.storage.graph_builder.GraphBuilder.cleanup_orphaned_nodes", return_value=5
-        ), patch("src.storage.graph_builder.GraphBuilder.close"):
+        with (
+            patch("src.storage.graph_builder.GraphBuilder.connect", return_value=True),
+            patch("src.storage.graph_builder.GraphBuilder.cleanup_orphaned_nodes", return_value=5),
+            patch("src.storage.graph_builder.GraphBuilder.close"),
+        ):
             result = runner.invoke(main, ["--password", "test", "--cleanup"])
             assert result.exit_code == 0
             assert any("Removed 5 orphaned nodes" in str(call) for call in mock_echo.call_args_list)
@@ -640,9 +642,11 @@ class TestGraphBuilderCoverage:
         }
 
         runner = CliRunner()
-        with patch("src.storage.graph_builder.GraphBuilder.connect", return_value=True), patch(
-            "src.storage.graph_builder.GraphBuilder.get_statistics", return_value=stats_data
-        ), patch("src.storage.graph_builder.GraphBuilder.close"):
+        with (
+            patch("src.storage.graph_builder.GraphBuilder.connect", return_value=True),
+            patch("src.storage.graph_builder.GraphBuilder.get_statistics", return_value=stats_data),
+            patch("src.storage.graph_builder.GraphBuilder.close"),
+        ):
             result = runner.invoke(main, ["--password", "test", "--stats"])
             assert result.exit_code == 0
             assert any("Graph Statistics" in str(call) for call in mock_echo.call_args_list)
@@ -659,9 +663,11 @@ class TestGraphBuilderCoverage:
             yaml.dump({"id": "test"}, f)
 
         runner = CliRunner()
-        with patch("src.storage.graph_builder.GraphBuilder.connect", return_value=True), patch(
-            "src.storage.graph_builder.GraphBuilder.process_document", return_value=True
-        ), patch("src.storage.graph_builder.GraphBuilder.close"):
+        with (
+            patch("src.storage.graph_builder.GraphBuilder.connect", return_value=True),
+            patch("src.storage.graph_builder.GraphBuilder.process_document", return_value=True),
+            patch("src.storage.graph_builder.GraphBuilder.close"),
+        ):
             result = runner.invoke(main, [str(doc_path), "--password", "test"])
             assert result.exit_code == 0
             assert any("✓ Processed:" in str(call) for call in mock_echo.call_args_list)
@@ -674,9 +680,11 @@ class TestGraphBuilderCoverage:
         from src.storage.graph_builder import main
 
         runner = CliRunner()
-        with patch("src.storage.graph_builder.GraphBuilder.connect", return_value=True), patch(
-            "src.storage.graph_builder.GraphBuilder.process_directory", return_value=(8, 10)
-        ), patch("src.storage.graph_builder.GraphBuilder.close"):
+        with (
+            patch("src.storage.graph_builder.GraphBuilder.connect", return_value=True),
+            patch("src.storage.graph_builder.GraphBuilder.process_directory", return_value=(8, 10)),
+            patch("src.storage.graph_builder.GraphBuilder.close"),
+        ):
             result = runner.invoke(main, [str(temp_dir), "--password", "test"])
             assert result.exit_code == 0
             assert any("Processed: 8/10" in str(call) for call in mock_echo.call_args_list)
@@ -689,9 +697,13 @@ class TestGraphBuilderCoverage:
         from src.storage.graph_builder import main
 
         runner = CliRunner()
-        with patch("src.storage.graph_builder.GraphBuilder.connect", return_value=True), patch(
-            "src.storage.graph_builder.GraphBuilder.process_directory", return_value=(10, 10)
-        ), patch("src.storage.graph_builder.GraphBuilder.close"):
+        with (
+            patch("src.storage.graph_builder.GraphBuilder.connect", return_value=True),
+            patch(
+                "src.storage.graph_builder.GraphBuilder.process_directory", return_value=(10, 10)
+            ),
+            patch("src.storage.graph_builder.GraphBuilder.close"),
+        ):
             result = runner.invoke(
                 main, [str(temp_dir), "--password", "test", "--force", "--verbose"]
             )

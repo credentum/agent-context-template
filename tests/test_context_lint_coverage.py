@@ -375,9 +375,9 @@ class TestContextLintCoverage:
         with patch.object(
             Path,
             "__new__",
-            lambda cls, *args: context_dir_with_schemas / "schemas"
-            if "schemas" in str(args[0])
-            else Path(*args),
+            lambda cls, *args: (
+                context_dir_with_schemas / "schemas" if "schemas" in str(args[0]) else Path(*args)
+            ),
         ):
             result = runner.invoke(cli, ["validate", str(doc_path)])
 
