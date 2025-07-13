@@ -238,6 +238,8 @@ class TestConcurrencyAndRaceConditions:
     def test_concurrent_hash_cache_access(self):
         """Test concurrent access to hash cache"""
         embedder = HashDiffEmbedder()
+        # Clear any existing cache to ensure test isolation
+        embedder.hash_cache = {}
 
         # Simulate concurrent reads and writes
         with patch.object(embedder, "_save_hash_cache") as mock_save:
@@ -246,7 +248,9 @@ class TestConcurrencyAndRaceConditions:
                 embedder.hash_cache[f"doc_{i}"] = Mock()
 
             # Should handle concurrent modifications
-            assert len(embedder.hash_cache) == 10
+            assert (
+                len(embedder.hash_cache) == 10
+            ), f"Expected exactly 10 cache entries, but found {len(embedder.hash_cache)}: {list(embedder.hash_cache.keys())}"
 
     def test_file_lock_contention(self):
         """Test file lock contention scenarios"""
