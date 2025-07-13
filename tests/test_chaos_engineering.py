@@ -380,9 +380,14 @@ class TestDataCorruption:
                 "data": {"items": list(range(100))},
             }
 
-            # Simulate partial write
+            # Simulate partial write - cut in middle of a line to ensure corruption
             yaml_content = yaml.dump(complete_doc)
-            partial_content = yaml_content[: len(yaml_content) // 2]  # Cut in half
+            # Find a good cut point that will corrupt the YAML
+            cut_point = yaml_content.find("- 50")  # Cut in middle of list
+            if cut_point > 0:
+                partial_content = yaml_content[:cut_point] + "- "  # Incomplete list item
+            else:
+                partial_content = yaml_content[: len(yaml_content) // 3]  # Fallback
 
             test_file.write_text(partial_content)
 
@@ -471,7 +476,9 @@ class TestSystemResilience:
                     content = yaml.dump(doc)
                     # This might fail due to chaos monkey
                     temp_file = Path(f"/tmp/doc_{doc['id']}.yaml")
-                    temp_file.write_text(content)
+                    # Use open() so chaos monkey can intercept
+                    with open(temp_file, "w") as f:
+                        f.write(content)
                     temp_file.unlink()  # Cleanup
                     processed += 1
                 except Exception:
