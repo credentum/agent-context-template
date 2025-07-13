@@ -13,6 +13,29 @@ A GitHub Actions template repository that provides workflow templates for an Age
 - **Next Goal**: Phase 1 - Critical modules to 70%
 - [Full Coverage Report](docs/test-coverage-guide.md#current-coverage-status)
 
+### Coverage Summary by Module
+
+| Module | Coverage | Status |
+|--------|----------|--------|
+| **✅ Exceeding Target (>85%)** |||
+| `storage/hash_diff_embedder_async.py` | 95.35% | ✅ |
+| `analytics/sum_scores_api.py` | 89.68% | ✅ |
+| `core/utils.py` | 88.89% | ✅ |
+| `storage/neo4j_init.py` | 86.49% | ✅ |
+| **🔴 Critical Priority (<40%)** |||
+| `validators/kv_validators.py` | 33.64% | 🔴 |
+| `validators/config_validator.py` | 34.66% | 🔴 |
+| `analytics/context_analytics.py` | 35.62% | 🔴 |
+| `storage/vector_db_init.py` | 36.14% | 🔴 |
+
+### How Coverage Updates Work
+
+Coverage is automatically tracked using `pytest-cov` and updated via:
+1. **Local Updates**: Run `scripts/update_coverage_metrics.py` to update metrics
+2. **CI Integration**: Coverage runs on every PR via `.github/workflows/test-coverage.yml`
+3. **Badge Updates**: README badges auto-update from `coverage-summary.json`
+4. **Report Generation**: `scripts/generate_coverage_report.py` creates visual charts
+
 ## Features
 
 ### Agent-First Context System
@@ -61,7 +84,7 @@ Configuration is managed via `.ctxrc.yaml` with settings for:
 ## Documentation
 
 - [GitHub Actions Guide](https://docs.github.com/en/actions)
-
+- [Sprint Automation Guide](docs/sprint-automation.md)
 - Check `context/README.md` for context system details
 
 ## License

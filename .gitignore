@@ -65,3 +65,10 @@ secrets/
 .secrets/
 .venv_ci_test/
 .hypothesis/
+
+# Coverage matrix (HTML version)
+coverage-matrix.html
+
+# Coverage files
+coverage.json
+.coverage

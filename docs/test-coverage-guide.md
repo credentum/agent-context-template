@@ -88,6 +88,34 @@ Target: Achieve overall 85% line coverage and 70% branch coverage
 - [ ] Implement mutation testing baseline
 - [ ] Ensure all critical paths have >90% coverage
 
+### Incremental Targets
+
+| Milestone | Line Coverage | Branch Coverage | Timeline |
+|-----------|---------------|-----------------|----------|
+| Current   | 59.53%        | 45%             | ✅ Done  |
+| Phase 1   | 70%           | 50%             | Week 1   |
+| Phase 2   | 80%           | 60%             | Week 2   |
+| Phase 3   | 85%           | 70%             | Week 4   |
+
+### Test Quality Standards
+
+All new tests must include:
+- Happy path scenarios
+- Error conditions
+- Edge cases
+- Mock external dependencies
+- Clear assertions
+
+Branch coverage requirements:
+- Test both if/else branches
+- Test exception handling
+- Test different configuration paths
+
+Mutation testing improvements:
+- Strong assertions that catch value changes
+- Test boundary conditions
+- Avoid trivial assertions
+
 
 ## Coverage Trends
 
@@ -293,6 +321,46 @@ To improve mutation score:
 - Test return values
 - Verify side effects
 - Check boundary conditions
+
+## Coverage Matrix Generation
+
+The `scripts/generate_coverage_matrix.py` script provides detailed test-to-module mapping:
+
+### Features
+- Shows which tests cover which modules
+- Generates both HTML and Markdown reports
+- Configurable thresholds and limits
+- Automatic validation of coverage data
+
+### Usage
+```bash
+# Basic usage
+python scripts/generate_coverage_matrix.py
+
+# With custom options
+python scripts/generate_coverage_matrix.py \
+    --max-tests-shown 10 \
+    --high-threshold 90 \
+    --output-dir reports \
+    --debug
+
+# Run via pre-commit hook
+pre-commit run generate-coverage-matrix --hook-stage manual
+```
+
+### Command Line Options
+- `--max-tests-shown`: Maximum tests to display in HTML (default: 5)
+- `--max-test-names`: Maximum test names in Markdown (default: 3)
+- `--high-threshold`: High coverage threshold (default: 85%)
+- `--medium-threshold`: Medium coverage threshold (default: 70%)
+- `--timeout`: Test execution timeout in seconds (default: 120)
+- `--output-dir`: Directory for HTML output (default: current)
+- `--docs-dir`: Directory for Markdown output (default: docs)
+- `--debug`: Enable debug logging
+
+### Output Files
+- `coverage-matrix.html`: Interactive HTML report
+- `docs/coverage-matrix.md`: Markdown report for documentation
 
 ## Monitoring Coverage
 

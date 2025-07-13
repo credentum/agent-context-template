@@ -19,6 +19,7 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        exclude: ^context/schemas/
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: check-json
@@ -31,14 +32,21 @@ repos:
       - id: isort
         args: ["--profile", "black"]
 
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: [--max-line-length=100, --extend-ignore=E203]
+        exclude: ^(tests/|.venv_ci_test/)
+
   - repo: local
     hooks:
       - id: context-lint
         name: Context YAML Lint
-        entry: python -m src.agents.context_lint validate
+        entry: python -m src.agents.context_lint validate context/
         language: system
         files: ^context/.*\.yaml$
-        pass_filenames: true
+        pass_filenames: false
 
       - id: test-imports
         name: Check Test Module Imports
@@ -46,3 +54,11 @@ repos:
         language: system
         files: ^tests/.*\.py$
         pass_filenames: false
+
+      - id: generate-coverage-matrix
+        name: Generate Coverage Matrix
+        entry: python scripts/generate_coverage_matrix.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [manual]
