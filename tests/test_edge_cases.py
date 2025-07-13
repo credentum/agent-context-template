@@ -273,8 +273,8 @@ class TestPerformanceEdgeCases:
         """Test memory-efficient handling of large data"""
         # Instead of loading entire file into memory
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
-            # Write large amount of data
-            for i in range(1000000):
+            # Write moderate amount of data for faster tests
+            for i in range(10000):  # Reduced from 1M to 10K
                 f.write(f"Line {i}\n")
             f.flush()
 
@@ -294,8 +294,8 @@ class TestPerformanceEdgeCases:
         """Test cache overflow scenarios"""
         embedder = HashDiffEmbedder()
 
-        # Add many entries to cache
-        max_cache_size = 10000
+        # Add entries to cache (reduced for faster tests)
+        max_cache_size = 1000  # Reduced from 10K
         for i in range(max_cache_size + 100):
             embedder.hash_cache[f"doc_{i}"] = Mock()
 

@@ -4,9 +4,11 @@ Unit tests for hash_diff_embedder module
 Tests file transforms, YAML parsing, and document embedding logic
 """
 
+import concurrent.futures
 import json
 import os
 import tempfile
+import threading
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, mock_open, patch
@@ -78,14 +80,18 @@ class TestHashDiffEmbedder:
         # Same content should produce same hash
         assert hash1 == embedder._compute_content_hash(
             content1
-        ), "Same content should produce identical hash"
+        ), f"Expected identical hash for same content, but got different hashes: {hash1} != {embedder._compute_content_hash(content1)}"
         # Different content should produce different hash
-        assert hash1 != hash2, "Different content should produce different hashes"
+        assert (
+            hash1 != hash2
+        ), f"Expected different hashes for different content, but got identical: {hash1}"
         # Hash should be SHA-256 (64 hex chars)
-        assert len(hash1) == 64, f"Hash should be 64 characters long, got {len(hash1)}"
+        assert (
+            len(hash1) == 64
+        ), f"Expected SHA-256 hash length of 64 characters, but got {len(hash1)}: {hash1}"
         assert all(
             c in "0123456789abcdef" for c in hash1
-        ), "Hash should only contain hex characters"
+        ), f"Hash should only contain hex characters (0-9, a-f), but found invalid characters in: {hash1}"
 
     def test_compute_embedding_hash(self):
         """Test embedding hash computation"""
@@ -100,11 +106,15 @@ class TestHashDiffEmbedder:
         # Same embedding should produce same hash
         assert hash1 == embedder._compute_embedding_hash(
             embedding1
-        ), "Same embedding should produce identical hash"
+        ), f"Expected identical hash for same embedding, but got different hashes: {hash1} != {embedder._compute_embedding_hash(embedding1)}"
         # Different embedding should produce different hash
-        assert hash1 != hash2, "Different embeddings should produce different hashes"
+        assert (
+            hash1 != hash2
+        ), f"Expected different hashes for different embeddings, but both produced: {hash1}"
         # Hash should be SHA-256 (64 hex chars)
-        assert len(hash1) == 64, f"Embedding hash should be 64 characters long, got {len(hash1)}"
+        assert (
+            len(hash1) == 64
+        ), f"Expected SHA-256 hash length of 64 characters for embedding hash, but got {len(hash1)}: {hash1}"
 
     @patch("pathlib.Path.exists", return_value=True)
     @patch("builtins.open", new_callable=mock_open)
@@ -411,3 +421,148 @@ class TestErrorHandling:
         # Dataclass creation succeeds but values are wrong types
         assert doc_hash.document_id == 123
         assert doc_hash.file_path is None
+
+
+class TestEmbeddingErrorScenarios:
+    """Test error scenarios in embedding operations"""
+
+    @patch("src.storage.hash_diff_embedder.openai.OpenAI")
+    def test_openai_rate_limit_handling(self, mock_openai_class):
+        """Test handling of OpenAI rate limit errors"""
+        import openai
+
+        # Mock rate limit error
+        mock_openai_instance = Mock()
+        mock_embeddings = Mock()
+        mock_embeddings.create.side_effect = openai.RateLimitError(
+            "Rate limit exceeded", response=Mock(status_code=429), body={}
+        )
+        mock_openai_instance.embeddings = mock_embeddings
+        mock_openai_class.return_value = mock_openai_instance
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create test document
+            doc_path = Path(temp_dir) / "test.yaml"
+            doc_path.write_text(yaml.dump({"title": "Test", "content": "Test content"}))
+
+            # Create embedder
+            embedder = HashDiffEmbedder()
+            embedder.config = {"qdrant": {"collection_name": "test"}}
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"}):
+                # Should fail after retries
+                result = embedder.embed_document(doc_path)
+                assert result is None
+
+                # Verify retries were attempted (3 attempts)
+                assert mock_embeddings.create.call_count == 3
+
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
+    def test_qdrant_connection_failure(self, mock_qdrant_client):
+        """Test handling of Qdrant connection failures"""
+        # Mock connection failure
+        mock_qdrant_client.side_effect = Exception("Connection refused")
+
+        embedder = HashDiffEmbedder()
+        embedder.config = {"qdrant": {"host": "localhost", "port": 6333}}
+
+        result = embedder.connect()
+        assert result is False
+
+    def test_corrupted_document_handling(self):
+        """Test handling of corrupted YAML documents"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create corrupted YAML
+            doc_path = Path(temp_dir) / "corrupted.yaml"
+            doc_path.write_text("key: value\n  bad: indentation:")
+
+            embedder = HashDiffEmbedder()
+            result = embedder.embed_document(doc_path)
+
+            # Should handle gracefully
+            assert result is None
+
+    def test_empty_document_handling(self):
+        """Test handling of empty documents"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create empty file
+            doc_path = Path(temp_dir) / "empty.yaml"
+            doc_path.write_text("")
+
+            embedder = HashDiffEmbedder()
+            result = embedder.embed_document(doc_path)
+
+            # Should handle gracefully
+            assert result is None
+
+    def test_file_permission_error(self):
+        """Test handling of file permission errors"""
+        embedder = HashDiffEmbedder()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create a file with no read permissions
+            test_file = Path(temp_dir) / "no_access.yaml"
+            test_file.write_text("test: data")
+            os.chmod(test_file, 0o000)  # No permissions
+
+            try:
+                needs_embed, vector_id = embedder.needs_embedding(test_file)
+
+                # Should handle permission error gracefully
+                assert needs_embed is False
+                assert vector_id is None
+            finally:
+                # Restore permissions for cleanup
+                os.chmod(test_file, 0o644)
+
+    def test_large_document_handling(self):
+        """Test handling of very large documents"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create moderately sized document for faster tests (100KB instead of 1MB)
+            large_content = "x" * (100 * 1024)  # 100KB
+            doc_path = Path(temp_dir) / "large.yaml"
+            doc_path.write_text(yaml.dump({"content": large_content}))
+
+            embedder = HashDiffEmbedder()
+            # Should handle large documents
+            content_hash = embedder._compute_content_hash(doc_path.read_text())
+            assert len(content_hash) == 64  # SHA-256 hash
+
+            # Verify hash is consistent
+            hash2 = embedder._compute_content_hash(doc_path.read_text())
+            assert content_hash == hash2
+
+    @patch("src.storage.hash_diff_embedder.QdrantClient")
+    def test_concurrent_embedding_safety(self, mock_qdrant_client):
+        """Test thread safety of embedding operations"""
+        import concurrent.futures
+        import threading
+
+        embedder = HashDiffEmbedder()
+        embedder.client = Mock()
+
+        # Track concurrent access
+        access_count = 0
+        lock = threading.Lock()
+
+        def increment_access():
+            nonlocal access_count
+            with lock:
+                access_count += 1
+                return access_count
+
+        # Simulate concurrent hash cache access
+        original_save = embedder._save_hash_cache
+        embedder._save_hash_cache = lambda: increment_access()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = []
+            for i in range(10):
+                future = executor.submit(embedder._save_hash_cache)
+                futures.append(future)
+
+            results = [f.result() for f in futures]
+
+        # All operations should complete
+        assert len(results) == 10
+        assert access_count == 10

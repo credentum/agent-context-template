@@ -5,6 +5,7 @@ Tests the complete flow: document → embedding → Qdrant storage → retrieval
 """
 
 import json
+import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -27,18 +28,26 @@ class TestEmbeddingIntegrationFlow:
 
         # Create test documents
         self.test_documents = {
-            "design_doc.md": """# System Design
+            "design_doc.yaml": """metadata:
+  document_type: design
+  title: System Design
+  created_date: 2024-01-01
 
-## Overview
-This document describes the architecture of our system.
+title: System Architecture Design
+description: Core system architecture documentation
+content: |
+  # System Design
 
-## Components
-- API Gateway
-- Microservices
-- Database Layer
+  ## Overview
+  This document describes the architecture of our system.
 
-## Data Flow
-Requests flow through the API gateway to appropriate microservices.
+  ## Components
+  - API Gateway
+  - Microservices
+  - Database Layer
+
+  ## Data Flow
+  Requests flow through the API gateway to appropriate microservices.
 """,
             "decision_doc.yaml": """metadata:
   document_type: decision
@@ -86,16 +95,20 @@ goals:
         return doc_paths
 
     @patch("src.storage.hash_diff_embedder.QdrantClient")
-    @patch("openai.Embedding.create")
+    @patch("src.storage.hash_diff_embedder.openai.OpenAI")
     @patch("pathlib.Path.cwd")
     def test_document_to_embedding_flow(
-        self, mock_cwd, mock_openai_embed, mock_qdrant_client, test_config, mock_embedding_vector
+        self, mock_cwd, mock_openai_class, mock_qdrant_client, test_config, mock_embedding_vector
     ):
         """Test complete flow from document to embedding storage"""
         mock_cwd.return_value = Path(self.temp_dir)
 
-        # Mock OpenAI embeddings
-        mock_openai_embed.return_value = Mock(data=[Mock(embedding=mock_embedding_vector)])
+        # Mock OpenAI client and embeddings
+        mock_openai_instance = Mock()
+        mock_embeddings = Mock()
+        mock_embeddings.create.return_value = Mock(data=[Mock(embedding=mock_embedding_vector)])
+        mock_openai_instance.embeddings = mock_embeddings
+        mock_openai_class.return_value = mock_openai_instance
 
         # Mock Qdrant client
         mock_client = Mock()
@@ -106,33 +119,38 @@ goals:
         # Create documents
         doc_paths = self.create_test_documents()
 
-        # Initialize embedder
-        embedder = HashDiffEmbedder(verbose=True)
-        embedder.config = test_config
+        # Initialize embedder with proper config path
+        config_path = Path(self.temp_dir) / ".ctxrc.yaml"
+        with open(config_path, "w") as f:
+            yaml.dump(test_config, f)
+
+        embedder = HashDiffEmbedder(str(config_path), verbose=True)
         embedder.client = mock_client
+        # Clear any existing hash cache to ensure test isolation
+        embedder.hash_cache = {}
+        # Use a temporary cache path for this test
+        embedder.hash_cache_path = Path(self.temp_dir) / "test_hash_cache.json"
 
-        # Process each document
-        for doc_path in doc_paths:
-            content = doc_path.read_text()
-            doc_id = f"doc_{doc_path.stem}"
-
-            # Compute hashes
-            content_hash = embedder._compute_content_hash(content)
-            embedding_hash = embedder._compute_embedding_hash(mock_embedding_vector)
-
-            # Store in hash cache
-            embedder.hash_cache[doc_id] = DocumentHash(
-                document_id=doc_id,
-                file_path=str(doc_path),
-                content_hash=content_hash,
-                embedding_hash=embedding_hash,
-                last_embedded=datetime.utcnow().isoformat(),
-                vector_id=f"vec_{doc_id}",
-            )
+        # Set OpenAI API key for the test
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"}):
+            # Process each document by actually embedding them
+            embedded_count = 0
+            for doc_path in doc_paths:
+                # All documents are now YAML files
+                vector_id = embedder.embed_document(doc_path, force=True)
+                if vector_id:
+                    embedded_count += 1
 
         # Verify embeddings were created
-        assert len(embedder.hash_cache) == 3
-        assert mock_openai_embed.call_count >= 1
+        assert (
+            embedded_count == 3
+        ), f"Expected 3 documents to be embedded, but only {embedded_count} were processed"
+        assert (
+            len(embedder.hash_cache) == 3
+        ), f"Expected 3 entries in hash cache, but found {len(embedder.hash_cache)}: {list(embedder.hash_cache.keys())}"
+        assert (
+            mock_embeddings.create.call_count >= 3
+        ), f"Expected OpenAI embeddings.create to be called at least 3 times, but was called {mock_embeddings.create.call_count} times"
 
         # Save hash cache
         embedder._save_hash_cache()

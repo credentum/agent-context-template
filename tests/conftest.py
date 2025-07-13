@@ -14,19 +14,19 @@ def test_config():
     """Test configuration fixture"""
     return {
         "qdrant": {
-            "host": "localhost",
-            "port": 6333,
-            "api_key": "test_key",
-            "collection_name": "test_collection",
-            "embedding_model": "text-embedding-ada-002",
+            "host": os.getenv("QDRANT_HOST", "localhost"),
+            "port": int(os.getenv("QDRANT_PORT", "6333")),
+            "api_key": os.getenv("QDRANT_API_KEY", "test_key"),
+            "collection_name": os.getenv("QDRANT_COLLECTION", "test_collection"),
+            "embedding_model": os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002"),
         },
         "openai": {
-            "api_key": "test_openai_key",
+            "api_key": os.getenv("OPENAI_API_KEY", "test_openai_key"),
         },
         "neo4j": {
-            "uri": "bolt://localhost:7687",
-            "username": "neo4j",
-            "password": "test_password",
+            "uri": os.getenv("NEO4J_URI", "bolt://localhost:7687"),
+            "username": os.getenv("NEO4J_USERNAME", "neo4j"),
+            "password": os.getenv("NEO4J_PASSWORD", "test_password"),
         },
     }
 

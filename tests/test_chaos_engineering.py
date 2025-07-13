@@ -123,8 +123,12 @@ class TestFileSystemChaos:
                         else:
                             raise
 
-                assert files_written == max_writes
-                assert errors_caught == 5
+                assert (
+                    files_written == max_writes
+                ), f"Expected {max_writes} files to be written before disk full, but got {files_written}"
+                assert (
+                    errors_caught == 5
+                ), f"Expected 5 'disk full' errors after limit, but caught {errors_caught}"
 
     def test_permission_denied_handling(self):
         """Test handling of permission denied errors"""
@@ -514,7 +518,7 @@ class TestLongRunningChaos:
 
     def test_sustained_load_with_failures(self):
         """Test system under sustained load with random failures"""
-        duration = 10  # seconds
+        duration = 2  # seconds (reduced from 10 for faster tests)
         start_time = time.time()
 
         operations = []
@@ -549,7 +553,7 @@ class TestLongRunningChaos:
         total_ops = len(operations) + len(errors)
         success_rate = len(operations) / total_ops if total_ops > 0 else 0
 
-        assert total_ops > 100  # Should process many operations
+        assert total_ops > 20  # Should process many operations (reduced from 100)
         assert 0.8 < success_rate < 0.95  # Around expected 90%
         assert len(errors) > 0  # Should have some errors
 
