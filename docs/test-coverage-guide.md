@@ -88,6 +88,34 @@ Target: Achieve overall 85% line coverage and 70% branch coverage
 - [ ] Implement mutation testing baseline
 - [ ] Ensure all critical paths have >90% coverage
 
+### Incremental Targets
+
+| Milestone | Line Coverage | Branch Coverage | Timeline |
+|-----------|---------------|-----------------|----------|
+| Current   | 59.53%        | 45%             | ✅ Done  |
+| Phase 1   | 70%           | 50%             | Week 1   |
+| Phase 2   | 80%           | 60%             | Week 2   |
+| Phase 3   | 85%           | 70%             | Week 4   |
+
+### Test Quality Standards
+
+All new tests must include:
+- Happy path scenarios
+- Error conditions
+- Edge cases
+- Mock external dependencies
+- Clear assertions
+
+Branch coverage requirements:
+- Test both if/else branches
+- Test exception handling
+- Test different configuration paths
+
+Mutation testing improvements:
+- Strong assertions that catch value changes
+- Test boundary conditions
+- Avoid trivial assertions
+
 
 ## Coverage Trends
 
