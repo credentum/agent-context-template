@@ -85,10 +85,10 @@ class TestCoverageAnalyzer:
 
         file_data = {
             "contexts": {
-                "10": ["tests/test_module.py::test_function|run"],
+                "10": ["tests/test_module.py|run"],
                 "20": [
-                    "tests/test_module.py::test_another|run",
-                    "tests/test_other.py::test_it|run",
+                    "tests/test_module.py|run",
+                    "tests/test_other.py|run",
                 ],
             }
         }
