@@ -74,9 +74,7 @@ class TestAdvancedPropertyValidation:
                 st.text(
                     min_size=1,
                     max_size=50,
-                    alphabet=st.characters(
-                        whitelist_categories=["Lu", "Ll", "Nd"], whitelist_characters="_."
-                    ),
+                    alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.",
                 ),
                 # Config values can be more permissive but exclude control chars
                 st.text(

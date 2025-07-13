@@ -52,6 +52,7 @@ class MockSigstoreClient:
         self.rekor_url = rekor_url
         self.signed_documents: Dict[str, Dict[str, Any]] = {}
         self.verification_log: list[Dict[str, Any]] = []
+        self.transparency_log: list[Dict[str, Any]] = []
 
     def sign(self, file_path: str, identity: str) -> Dict[str, str]:
         """Mock document signing"""
@@ -61,19 +62,29 @@ class MockSigstoreClient:
         signature = base64.b64encode(signature_data.encode()).decode()
 
         # Store for verification
-        self.signed_documents[file_path] = {
+        doc_data = {
             "signature": signature,
             "hash": content_hash,
             "identity": identity,
             "timestamp": datetime.utcnow().isoformat(),
         }
+        self.signed_documents[file_path] = doc_data
+
+        # Add to transparency log
+        log_entry = {
+            "index": len(self.transparency_log),
+            "artifact_hash": content_hash,
+            "identity": identity,
+            "timestamp": doc_data["timestamp"],
+        }
+        self.transparency_log.append(log_entry)
 
         return {
             "artifact_hash": content_hash,
             "signature": signature,
             "certificate": f"-----BEGIN CERTIFICATE-----\\nMOCK_CERT_{content_hash[:8]}\\n-----END CERTIFICATE-----",
             "transparency_log_index": str(len(self.signed_documents)),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": doc_data["timestamp"],
             "identity": identity,
         }
 
