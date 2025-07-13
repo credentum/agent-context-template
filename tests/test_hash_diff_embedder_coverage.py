@@ -239,24 +239,18 @@ class TestHashDiffEmbedderCoverage:
             embedder.client = mock_qdrant
             embedder.config = {"qdrant": {"collection_name": "test_collection"}}
 
-            # Add existing entry to cache
-            embedder.hash_cache[str(test_file)] = DocumentHash(
-                document_id="update_doc",
-                file_path=str(test_file),
-                content_hash="old_hash",
-                embedding_hash="old_embed",
-                last_embedded="2024-01-01T00:00:00",
-                vector_id="old_vector_id",
-            )
-
-            with patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"}):
-                result = embedder.embed_document(test_file, force=True)
+            # Mock the needs_embedding to return the old vector ID
+            # This simulates the case where we force re-embed the same content
+            with patch.object(embedder, "needs_embedding", return_value=(True, "old_vector_id")):
+                with patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"}):
+                    result = embedder.embed_document(test_file, force=True)
 
             # Verify old vector was deleted
             mock_qdrant.delete.assert_called_once()
             call_args = mock_qdrant.delete.call_args
+            # Check positional and keyword arguments
             assert call_args[1]["collection_name"] == "test_collection"
-            assert "old_vector_id" in call_args[1]["points_selector"]
+            assert call_args[1]["points_selector"] == ["old_vector_id"]
 
     def test_embed_directory_with_nested_files(self):
         """Test embed_directory with nested YAML files"""

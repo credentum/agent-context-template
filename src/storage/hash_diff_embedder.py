@@ -22,7 +22,7 @@ import click
 import openai
 import yaml
 from qdrant_client import QdrantClient
-from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
+from qdrant_client.models import PointStruct
 
 
 @dataclass
@@ -347,7 +347,7 @@ def main(path: str, force: bool, cleanup: bool, verbose: bool):
             click.echo(f"✗ Failed to embed: {path_obj}")
     else:
         embedded, total = embedder.embed_directory(path_obj, force=force)
-        click.echo(f"\nEmbedding Results:")
+        click.echo("\nEmbedding Results:")
         click.echo(f"  Embedded: {embedded}/{total}")
         click.echo(f"  Skipped: {total - embedded} (no changes)")
 
