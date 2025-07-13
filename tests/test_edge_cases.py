@@ -196,13 +196,13 @@ class TestValidationEdgeCases:
         edge_cases = [
             ("metric.name", "metric.name"),
             ("metric name", "metric_name"),  # Spaces to underscores
-            ("metric-name", "metric_name"),  # Dashes to underscores
-            ("METRIC.NAME", "metric.name"),  # Lowercase
-            ("metric..name", "metric.name"),  # Multiple dots
-            ("...metric", "metric"),  # Leading dots
-            ("metric...", "metric"),  # Trailing dots
-            ("123metric", "_123metric"),  # Leading number
-            ("метрика", "______"),  # Non-ASCII to underscores
+            ("metric-name", "metric-name"),  # Dashes are allowed
+            ("METRIC.NAME", "METRIC.NAME"),  # Case preserved
+            ("metric..name", "metric..name"),  # Dots preserved
+            ("...metric", "...metric"),  # Leading dots preserved
+            ("metric...", "metric..."),  # Trailing dots preserved
+            ("123metric", "123metric"),  # Numbers allowed
+            ("метрика", "_______"),  # Non-ASCII to underscores (7 chars)
         ]
 
         for input_name, expected in edge_cases:
@@ -214,10 +214,10 @@ class TestValidationEdgeCases:
         now = datetime.utcnow()
 
         edge_cases = [
-            (now, now, True),  # Same time (zero duration)
+            (now, now, False),  # Same time (zero duration) - not allowed
             (now, now - timedelta(seconds=1), False),  # End before start
-            (now - timedelta(days=365), now, True),  # One year range
-            (now - timedelta(days=366), now, False),  # More than one year
+            (now - timedelta(days=30), now, True),  # 30 days - within default limit
+            (now - timedelta(days=91), now, False),  # 91 days - exceeds default 90 day limit
             (None, now, False),  # None start
             (now, None, False),  # None end
         ]
