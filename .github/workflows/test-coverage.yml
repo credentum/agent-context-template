@@ -1,4 +1,4 @@
-name: Test Coverage
+name: Coverage Analysis
 
 on:
   push:
@@ -42,7 +42,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
-        pip install pytest-cov coverage[toml] mutmut coverage-badge
+        pip install -r requirements-test.txt
+        pip install coverage-badge
 
     - name: Create directories
       run: |
