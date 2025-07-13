@@ -46,3 +46,11 @@ repos:
         language: system
         files: ^tests/.*\.py$
         pass_filenames: false
+
+      - id: generate-coverage-matrix
+        name: Generate Coverage Matrix
+        entry: python scripts/generate_coverage_matrix.py
+        language: system
+        pass_filenames: false
+        always_run: false
+        stages: [manual]
