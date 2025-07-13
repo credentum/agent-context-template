@@ -1,13 +1,14 @@
 """Comprehensive tests for SprintIssueLinker to improve coverage"""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
-import yaml
 import json
-from typing import Dict, Any, List
 import shutil
 import subprocess
+from pathlib import Path
+from typing import Any, Dict, List
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+import yaml
 
 from src.agents.sprint_issue_linker import SprintIssueLinker
 

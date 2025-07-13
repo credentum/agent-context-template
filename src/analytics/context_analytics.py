@@ -9,16 +9,18 @@ This component provides:
 4. System health monitoring
 """
 
-import click
-import yaml
 import json
-import duckdb
-from datetime import datetime, timedelta, date
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-import pandas as pd
+from datetime import date, datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import click
+import duckdb
 import numpy as np
+import pandas as pd
+import yaml
+
 from ..storage.context_kv import DuckDBAnalytics, MetricEvent
 
 
@@ -59,7 +61,7 @@ class ContextAnalytics(DuckDBAnalytics):
         try:
             # Get document metrics
             query = """
-                SELECT 
+                SELECT
                     DATE_TRUNC('day', timestamp) as day,
                     COUNT(DISTINCT document_id) as active_documents,
                     COUNT(CASE WHEN metric_name = 'document.created' THEN 1 END) as created,
@@ -162,7 +164,7 @@ class ContextAnalytics(DuckDBAnalytics):
         try:
             # Get agent metrics
             query = """
-                SELECT 
+                SELECT
                     agent_id,
                     COUNT(*) as total_actions,
                     COUNT(CASE WHEN metric_name LIKE 'agent.%.success' THEN 1 END) as successes,
@@ -273,7 +275,7 @@ class ContextAnalytics(DuckDBAnalytics):
         try:
             # Get system metrics
             metrics_query = """
-                SELECT 
+                SELECT
                     metric_name,
                     AVG(value) as avg_value,
                     MIN(value) as min_value,
@@ -289,7 +291,7 @@ class ContextAnalytics(DuckDBAnalytics):
 
             # Get error counts
             error_query = """
-                SELECT 
+                SELECT
                     COUNT(CASE WHEN metric_name LIKE '%.error' THEN 1 END) as error_count,
                     COUNT(CASE WHEN metric_name LIKE '%.warning' THEN 1 END) as warning_count
                 FROM context_metrics

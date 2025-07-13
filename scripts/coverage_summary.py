@@ -4,9 +4,9 @@
 import json
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, List, Tuple
-import xml.etree.ElementTree as ET
 
 
 class CoverageSummary:
@@ -63,8 +63,8 @@ class CoverageSummary:
         # Import the critical functions registry
         try:
             # Add current directory to path for test imports
-            import sys
             import os
+            import sys
 
             if os.getcwd() not in sys.path:
                 sys.path.insert(0, os.getcwd())

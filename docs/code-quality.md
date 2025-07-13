@@ -60,7 +60,7 @@ Type checking is set to allow gradual adoption:
 
 ### Ignoring Checks
 When necessary, you can ignore specific checks:
-- Black: `# fmt: off` and `# fmt: on` 
+- Black: `# fmt: off` and `# fmt: on`
 - Mypy: `# type: ignore[error-code]`
 
 Use sparingly and document why the ignore is necessary.

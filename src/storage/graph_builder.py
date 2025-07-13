@@ -9,14 +9,15 @@ This component:
 4. Provides graph update operations
 """
 
-import click
-import yaml
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any, Set
 import hashlib
 import json
-from neo4j import GraphDatabase, Driver
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+import click
+import yaml
+from neo4j import Driver, GraphDatabase
 from neo4j.exceptions import ServiceUnavailable
 
 

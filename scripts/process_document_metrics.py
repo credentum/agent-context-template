@@ -4,13 +4,15 @@ Process document metrics for KV store
 Used by GitHub Actions workflow
 """
 
-import sys
 import os
+import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import yaml
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import yaml
+
 from src.storage.context_kv import ContextKV, MetricEvent
 
 

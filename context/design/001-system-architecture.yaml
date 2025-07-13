@@ -16,34 +16,34 @@ tags:
 
 content: |
   # System Architecture Overview
-  
+
   The Agent-First Project Context System provides intelligent context management
   for AI agents working on software projects. It combines vector search, graph
   relationships, and structured metadata to enable agents to maintain project
   understanding across sessions.
-  
+
   ## Core Components
-  
+
   1. **Context Store** (`context/`)
      - Hierarchical YAML-based document storage
      - Semantic versioning for schema evolution
      - Automatic cleanup and archival
-  
+
   2. **Vector Database** (Qdrant v1.14.x)
      - Semantic search across all context documents
      - Hash-based change detection for efficient re-embedding
      - Configurable similarity thresholds
-  
+
   3. **Graph Layer** (Neo4j)
      - Relationship mapping between documents
      - GraphRAG for enhanced retrieval
      - Cypher query support
-  
+
   4. **Agent Framework**
      - GitHub Copilot Agent for code generation
      - Specialized agents for documentation, PM, and CI
      - Model Context Protocol (MCP) for inter-agent communication
-  
+
   5. **Evaluation & Security**
      - PromptLayer integration for quality metrics
      - Sigstore signing for artifact integrity

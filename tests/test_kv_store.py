@@ -3,23 +3,24 @@
 test_kv_store.py: Tests for the Key-Value store components
 """
 
-import pytest
 import json
 import os
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch, call
-import redis
+from unittest.mock import MagicMock, call, patch
+
 import duckdb
 import pandas as pd
+import pytest
+import redis
 
+from src.analytics.context_analytics import AnalyticsReport, ContextAnalytics
 from src.storage.context_kv import (
-    RedisConnector,
-    DuckDBAnalytics,
-    ContextKV,
-    MetricEvent,
     CacheEntry,
+    ContextKV,
+    DuckDBAnalytics,
+    MetricEvent,
+    RedisConnector,
 )
-from src.analytics.context_analytics import ContextAnalytics, AnalyticsReport
 
 
 class TestRedisConnector:

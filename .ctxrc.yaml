@@ -8,7 +8,7 @@ system:
 linter:
   warning_days_old: 90          # Warn if document not modified for this many days
   warning_days_until_expire: 7  # Warn if document expires within this many days
-  
+
 qdrant:
   version: "1.14.x"
   host: "localhost"
@@ -18,7 +18,7 @@ qdrant:
   ssl: false  # Enable in production
   verify_ssl: true
   timeout: 30
-  
+
 neo4j:
   version: "5.x"
   host: "localhost"
@@ -57,30 +57,30 @@ duckdb:
     events: "context_events"
     summaries: "context_summaries"
     trends: "context_trends"
-  
+
 storage:
   retention_days: 90
   archive_path: "context/archive"
-  
+
 agents:
   cleanup:
     schedule: "0 2 * * *"  # Daily at 2 AM
     expire_after_days: 30
-  
+
   doc_agent:
     auto_update_metadata: true
-    
+
   pm_agent:
     sprint_duration_days: 14
-    
+
 evaluation:
   cosine_threshold: 0.85
   schema_compliance_threshold: 1.0
-  
+
 security:
   sigstore_enabled: true
   ipfs_pinning: false
-  
+
 mcp:
   contracts_path: "context/mcp_contracts"
   rpc_timeout_seconds: 30

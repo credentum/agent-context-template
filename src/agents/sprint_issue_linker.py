@@ -6,14 +6,15 @@ This script helps create GitHub issues that are properly linked
 to sprint tasks for automated tracking.
 """
 
-import os
-import sys
-import yaml
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
 import click
+import yaml
 
 
 class SprintIssueLinker:

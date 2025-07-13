@@ -4,7 +4,7 @@ utils.py: Common utility functions for the Agent-First Context System
 """
 
 import re
-from typing import Optional, List
+from typing import List, Optional
 
 
 def sanitize_error_message(error_msg: str, sensitive_values: Optional[List[str]] = None) -> str:

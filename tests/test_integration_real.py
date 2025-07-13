@@ -3,21 +3,22 @@ Integration tests with real database instances
 Run these tests with: pytest tests/test_integration_real.py -v --integration
 """
 
-import pytest
 import os
-import tempfile
 import shutil
-from pathlib import Path
-import yaml
+import tempfile
 import time
+from pathlib import Path
+
+import pytest
+import yaml
+
+from src.integrations.graphrag_integration import GraphRAGIntegration
+from src.storage.graph_builder import GraphBuilder
+from src.storage.hash_diff_embedder import HashDiffEmbedder
+from src.storage.neo4j_init import Neo4jInitializer
 
 # Import components
 from src.storage.vector_db_init import VectorDBInitializer
-from src.storage.hash_diff_embedder import HashDiffEmbedder
-from src.storage.neo4j_init import Neo4jInitializer
-from src.storage.graph_builder import GraphBuilder
-from src.integrations.graphrag_integration import GraphRAGIntegration
-
 
 # Mark all tests as integration tests
 pytestmark = pytest.mark.integration

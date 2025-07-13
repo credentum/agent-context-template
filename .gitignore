@@ -63,3 +63,5 @@ Thumbs.db
 *.crt
 secrets/
 .secrets/
+.venv_ci_test/
+.hypothesis/

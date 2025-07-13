@@ -1,0 +1,52 @@
+# Test framework
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-timeout>=2.1.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.11.0
+pytest-xdist>=3.3.0  # For parallel test execution
+
+# Core dependencies needed by tests
+click>=8.1.0
+PyYAML>=6.0
+qdrant-client>=1.7.0
+openai>=1.0.0
+neo4j>=5.0.0
+redis>=4.5.0
+duckdb>=0.9.0
+requests>=2.31.0
+
+# Mutation testing
+mutmut>=2.4.0
+
+# Mocking and testing utilities
+responses>=0.23.0
+freezegun>=1.2.0
+
+# Property-based testing (optional, for future use)
+hypothesis>=6.82.0
+
+# Test data generation
+faker>=19.2.0
+
+# Coverage reporting
+coverage[toml]>=7.2.0
+
+# Type checking for tests
+mypy>=1.4.0
+types-PyYAML
+types-requests
+
+# Code quality
+black>=23.7.0
+isort>=5.12.0
+flake8>=6.1.0
+
+# Documentation testing
+# pytest-doctest-modules>=0.1.0  # Not available, using built-in doctest instead
+
+# Load testing
+locust>=2.0.0
+
+# Performance benchmarking
+pytest-benchmark>=4.0.0

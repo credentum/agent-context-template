@@ -31,10 +31,10 @@ for module in "${CRITICAL_MODULES[@]}"; do
     echo ""
     echo "📝 Mutating: $module"
     echo "------------------------"
-    
+
     # Run mutation testing
     mutmut run --paths-to-mutate="$module" --runner="python -m pytest -x -q tests/" || true
-    
+
     # Show results
     echo "Results for $module:"
     mutmut show
@@ -68,14 +68,14 @@ if total_match and killed_match:
     total = int(total_match.group(1))
     killed = int(killed_match.group(1))
     survived = int(survived_match.group(1)) if survived_match else 0
-    
+
     if total > 0:
         mutation_score = (killed / total) * 100
         print(f'')
         print(f'Mutation Score: {mutation_score:.2f}%')
         print(f'Killed: {killed}/{total}')
         print(f'Survived: {survived}')
-        
+
         if mutation_score >= 80:
             print(f'✅ Mutation score target met (≥80%)')
         else:

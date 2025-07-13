@@ -6,7 +6,8 @@ Tests for configuration parsing and validation
 import os
 import tempfile
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
+
 import pytest
 import yaml
 
@@ -20,32 +21,32 @@ class TestConfigParser:
 system:
   schema_version: "1.0.0"
   created_date: "2025-07-11"
-  
+
 qdrant:
   version: "1.14.x"
   host: "localhost"
   port: 6333
   collection_name: "project_context"
   embedding_model: "text-embedding-ada-002"
-  
+
 neo4j:
   version: "5.x"
   host: "localhost"
   port: 7687
   database: "context_graph"
-  
+
 storage:
   retention_days: 90
   archive_path: "context/archive"
-  
+
 agents:
   cleanup:
     schedule: "0 2 * * *"
     expire_after_days: 30
-  
+
   doc_agent:
     auto_update_metadata: true
-    
+
   pm_agent:
     sprint_duration_days: 14
 """

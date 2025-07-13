@@ -17,35 +17,35 @@ tags:
 
 decision: |
   # Technology Stack Decisions
-  
+
   ## Vector Database: Qdrant v1.14.x
-  **Rationale**: 
+  **Rationale**:
   - Native support for hybrid search (vector + metadata filtering)
   - Excellent performance at scale
   - REST and gRPC APIs
   - Built-in persistence and snapshots
-  
+
   ## Graph Database: Neo4j 5.x
   **Rationale**:
   - Industry standard for graph operations
   - Mature GraphRAG capabilities
   - Strong Python client support
   - ACID compliance
-  
+
   ## Key-Value Store: Redis
   **Rationale**:
   - Low latency for ephemeral state
   - Pub/sub capabilities for agent coordination
   - Widespread adoption and tooling
   - Optional persistence with AOF
-  
+
   ## Embedding Model: OpenAI text-embedding-ada-002
   **Rationale**:
   - Excellent quality/cost ratio
   - Fast inference
   - 1536 dimensions suitable for our use case
   - Stable API
-  
+
   ## Schema Validation: Yamale
   **Rationale**:
   - Python-native YAML validation

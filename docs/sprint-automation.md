@@ -118,7 +118,7 @@ Actions:
    ```bash
    # Via GitHub UI
    Actions → Sprint Start → Run workflow → Enter sprint number
-   
+
    # Via label
    Create label "start-sprint-2" on any issue
    ```
@@ -137,7 +137,7 @@ Actions:
    ```bash
    # Local report
    python update_sprint.py report --verbose
-   
+
    # GitHub UI
    Issues → Labels → sprint-N
    ```
@@ -261,7 +261,7 @@ gh auth login
 
 ## Example Sprint Lifecycle
 
-1. **Sprint Created**: 
+1. **Sprint Created**:
    - Status: `planning`
    - Define phases and tasks
 

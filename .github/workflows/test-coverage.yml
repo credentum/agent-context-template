@@ -1,4 +1,4 @@
-name: Test Coverage
+name: Coverage Analysis
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   coverage:
     runs-on: ubuntu-latest
-    
+
     services:
       redis:
         image: redis:7-alpine
@@ -23,12 +23,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
     - name: Cache dependencies
       uses: actions/cache@v3
       with:
@@ -36,14 +36,15 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
-        pip install pytest-cov coverage[toml] mutmut coverage-badge
-    
+        pip install -r requirements-test.txt
+        pip install coverage-badge
+
     - name: Create directories
       run: |
         mkdir -p context/.duckdb
@@ -57,7 +58,7 @@ jobs:
         mkdir -p context/logs/kv
         mkdir -p context/logs/prompts
         mkdir -p context/logs/signatures
-    
+
     - name: Run tests with coverage
       run: |
         python -m pytest \
@@ -71,11 +72,11 @@ jobs:
       env:
         REDIS_HOST: localhost
         REDIS_PORT: 6379
-    
+
     - name: Check coverage thresholds
       run: |
         python scripts/coverage_summary.py
-    
+
     - name: Run mutation testing (sample)
       env:
         MUTMUT_PATHS: "src/validators/kv_validators.py src/storage/context_kv.py"
@@ -94,7 +95,7 @@ jobs:
         done
         mutmut results
       continue-on-error: true
-    
+
     - name: Upload coverage reports
       uses: actions/upload-artifact@v4
       with:
@@ -104,7 +105,7 @@ jobs:
           coverage.xml
           coverage.json
           coverage.svg
-    
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
@@ -112,7 +113,7 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
-    
+
     - name: Comment PR with coverage
       uses: py-cov-action/python-coverage-comment-action@v3
       if: github.event_name == 'pull_request'
@@ -120,11 +121,11 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         MINIMUM_GREEN: 85
         MINIMUM_ORANGE: 70
-    
+
     - name: Generate coverage badge
       run: |
         coverage-badge -o coverage.svg -f
-        
+
     - name: Verify test traceability
       run: |
         python -m pytest tests/test_traceability_matrix.py -v

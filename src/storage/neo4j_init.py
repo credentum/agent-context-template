@@ -10,12 +10,13 @@ This script:
 """
 
 import sys
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import click
 import yaml
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Union, Tuple
-from neo4j import GraphDatabase, Driver
-from neo4j.exceptions import ServiceUnavailable, AuthError
+from neo4j import Driver, GraphDatabase
+from neo4j.exceptions import AuthError, ServiceUnavailable
 
 
 class Neo4jInitializer:

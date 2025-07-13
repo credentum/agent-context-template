@@ -4,10 +4,12 @@ base_component.py: Base class for consistent error handling and logging
 """
 
 import logging
-import click
-from typing import Optional, Any, Dict
 from abc import ABC, abstractmethod
-from src.core.utils import sanitize_error_message, get_environment
+from typing import Any, Dict, Optional
+
+import click
+
+from src.core.utils import get_environment, sanitize_error_message
 
 
 class BaseComponent(ABC):

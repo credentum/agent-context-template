@@ -2,25 +2,27 @@
 End-to-end tests for the Agent-First Context System
 """
 
-import pytest
 import os
-import tempfile
 import shutil
-from pathlib import Path
-import yaml
-import time
-from unittest.mock import patch
 import subprocess
+import tempfile
+import time
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+import yaml
+
+from src.agents.cleanup_agent import CleanupAgent
 
 # Import components
 from src.agents.context_lint import ContextLinter
-from src.agents.cleanup_agent import CleanupAgent
 from src.agents.update_sprint import SprintUpdater
-from src.storage.vector_db_init import VectorDBInitializer
+from src.integrations.graphrag_integration import GraphRAGIntegration
+from src.storage.graph_builder import GraphBuilder
 from src.storage.hash_diff_embedder import HashDiffEmbedder
 from src.storage.neo4j_init import Neo4jInitializer
-from src.storage.graph_builder import GraphBuilder
-from src.integrations.graphrag_integration import GraphRAGIntegration
+from src.storage.vector_db_init import VectorDBInitializer
 from src.validators.config_validator import ConfigValidator
 
 

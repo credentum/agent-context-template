@@ -1,0 +1,4 @@
+# file: /workspaces/agent-context-template/src/validators/kv_validators.py
+# hypothesis_version: 6.135.29
+
+[100, 1024, '[^a-zA-Z0-9._-]', '_', 'created_at', 'key', 'metric_name', 'tags', 'timestamp', 'ttl_seconds', 'value']

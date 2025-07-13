@@ -1,0 +1,4 @@
+# file: /workspaces/agent-context-template/src/storage/hash_diff_embedder.py
+# hypothesis_version: 6.135.29
+
+[1.0, 1000, 6333, '*.yaml', '--cleanup', '--force', '--verbose', '.ctxrc.yaml', '.embeddings_cache', 'OPENAI_API_KEY', 'Show detailed output', '__main__', 'archive', 'collection_name', 'content', 'content_hash', 'context', 'created_date', 'description', 'document_id', 'document_type', 'embedded_at', 'embedding_hash', 'embedding_model', 'file_path', 'goals', 'host', 'id', 'last_modified', 'localhost', 'path', 'port', 'project_context', 'qdrant', 'r', 'schemas', 'title', 'unknown', 'w']
