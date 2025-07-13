@@ -15,7 +15,7 @@ import time
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Union
 
 import click
 import duckdb
@@ -23,13 +23,10 @@ import redis
 import yaml
 
 from ..core.base_component import DatabaseComponent
-from ..core.utils import get_environment, sanitize_error_message
 from ..validators.kv_validators import (
     sanitize_metric_name,
-    validate_cache_entry,
     validate_metric_event,
     validate_redis_key,
-    validate_session_data,
     validate_time_range,
 )
 
@@ -77,7 +74,8 @@ class RedisConnector(DatabaseComponent):
             with open("performance.yaml", "r") as f:
                 perf = yaml.safe_load(f)
                 kv_config = perf.get("kv_store", {})
-                return kv_config.get("redis", {}) if kv_config else {}
+                result = kv_config.get("redis", {}) if kv_config else {}
+                return result if isinstance(result, dict) else {}
         except FileNotFoundError:
             return {}
 
@@ -277,7 +275,7 @@ class RedisConnector(DatabaseComponent):
                         self.redis_client.setex(prefixed_key, ttl, json.dumps(session_data))
 
                 data = session_data.get("data")
-                return data if data is not None else None
+                return data if isinstance(data, dict) else None
 
             return None
 
@@ -449,7 +447,8 @@ class DuckDBAnalytics(DatabaseComponent):
             with open("performance.yaml", "r") as f:
                 perf = yaml.safe_load(f)
                 kv_config = perf.get("kv_store", {})
-                return kv_config.get("duckdb", {}) if kv_config else {}
+                result = kv_config.get("duckdb", {}) if kv_config else {}
+                return result if isinstance(result, dict) else {}
         except FileNotFoundError:
             return {}
 
@@ -522,11 +521,10 @@ class DuckDBAnalytics(DatabaseComponent):
         )
 
         # Create indexes for events table
+        events_table = tables.get("events", "context_events")
+        self.conn.execute(f"CREATE INDEX IF NOT EXISTS idx_timestamp ON {events_table} (timestamp)")
         self.conn.execute(
-            f"CREATE INDEX IF NOT EXISTS idx_timestamp ON {tables.get('events', 'context_events')} (timestamp)"
-        )
-        self.conn.execute(
-            f"CREATE INDEX IF NOT EXISTS idx_event_type ON {tables.get('events', 'context_events')} (event_type)"
+            f"CREATE INDEX IF NOT EXISTS idx_event_type ON {events_table} (event_type)"
         )
 
         # Summaries table
@@ -1004,9 +1002,10 @@ def activity_summary(hours: int, redis_pass: str):
         if summary["metrics"]:
             click.echo("\nMetrics:")
             for metric in summary["metrics"]:
-                click.echo(
-                    f"  {metric['metric_name']}: {metric['count']} events, avg value: {metric['avg_value']:.2f}"
-                )
+                name = metric["metric_name"]
+                count = metric["count"]
+                avg = metric["avg_value"]
+                click.echo(f"  {name}: {count} events, avg value: {avg:.2f}")
         else:
             click.echo("\nNo activity recorded in this period")
 
