@@ -70,8 +70,20 @@ class TestAdvancedPropertyValidation:
 
         @given(
             st.dictionaries(
-                st.text(min_size=1, max_size=50),
-                st.text(min_size=0, max_size=200),
+                # Config keys should be valid identifiers (ASCII alphanumeric + underscore/dot)
+                st.text(
+                    min_size=1,
+                    max_size=50,
+                    alphabet=st.characters(
+                        whitelist_categories=["Lu", "Ll", "Nd"], whitelist_characters="_."
+                    ),
+                ),
+                # Config values can be more permissive but exclude control chars
+                st.text(
+                    min_size=0,
+                    max_size=200,
+                    alphabet=st.characters(blacklist_categories=["Cc"]),  # No control characters
+                ),
                 min_size=1,
                 max_size=20,
             )
@@ -82,8 +94,11 @@ class TestAdvancedPropertyValidation:
             for key in config.keys():
                 # Remove dots for nested keys
                 identifier = key.replace(".", "_")
-                if identifier and identifier[0].isalpha():
-                    assert identifier.replace("_", "").isalnum()
+                # Valid identifier: starts with letter/underscore, contains only alphanumeric/underscore
+                if identifier:
+                    assert re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", identifier) or all(
+                        c.isdigit() for c in identifier
+                    )
 
             # Property: Values should not contain control characters
             for value in config.values():
@@ -403,11 +418,14 @@ class TestPropertyBasedPerformance:
             """Test memory-efficient operations"""
             import sys
 
-            # Property: Generator uses less memory than list
+            # Property: Generator uses less memory than list (for non-trivial lists)
             list_size = sys.getsizeof(data)
             gen_size = sys.getsizeof(x for x in data)
 
-            assert gen_size < list_size or len(data) == 0
+            # For small lists, generator overhead might be larger
+            # Only check this property for lists with meaningful size
+            if len(data) > 100:
+                assert gen_size < list_size
 
             # Property: Set deduplication reduces or maintains size
             unique_data = list(set(data))

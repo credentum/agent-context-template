@@ -199,8 +199,12 @@ class TestPerformanceBenchmarks:
 
         # Test multi-field search
         with timing_assert(0.1, "Multi-field search in 10k items"):
-            results = [item for item in items if "tag_2" in item["tags"] and item["id"] % 100 == 0]
-            assert len(results) > 0
+            # Search for items with tag_2 and specific id pattern
+            # Note: items where id % 5 >= 3 will have tag_2
+            # Use id % 50 == 3 to ensure we get items with tag_2
+            results = [item for item in items if "tag_2" in item["tags"] and item["id"] % 50 == 3]
+            # Items like 3, 53, 103, etc. will match (they have id%5=3, so tag_2 is present)
+            assert len(results) > 0, f"Expected some results but found {len(results)}"
 
     @pytest.mark.benchmark
     def test_cache_operations_performance(self):
@@ -233,8 +237,8 @@ class TestPerformanceBenchmarks:
                 entry = {
                     "key": key,
                     "value": value.get("data"),
-                    "timestamp": value.get("timestamp"),
-                    "ttl": value.get("ttl"),
+                    "created_at": value.get("timestamp"),  # validator expects created_at
+                    "ttl_seconds": value.get("ttl"),  # validator expects ttl_seconds
                 }
                 if validate_cache_entry(entry):
                     valid_count += 1

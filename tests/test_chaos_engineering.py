@@ -408,7 +408,8 @@ class TestDataCorruption:
                 else:
                     data = None
 
-            assert recovery_attempted
+            # The partial content should cause a YAML error
+            assert recovery_attempted, "Expected YAML error from partial write"
             assert data is None  # No backup exists
 
 

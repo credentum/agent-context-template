@@ -69,9 +69,12 @@ class MockSigstoreClient:
         }
 
         return {
+            "artifact_hash": content_hash,
             "signature": signature,
             "certificate": f"-----BEGIN CERTIFICATE-----\\nMOCK_CERT_{content_hash[:8]}\\n-----END CERTIFICATE-----",
             "transparency_log_index": str(len(self.signed_documents)),
+            "timestamp": datetime.utcnow().isoformat(),
+            "identity": identity,
         }
 
     def verify(self, file_path: str, signature_data: Dict[str, str]) -> bool:
@@ -105,9 +108,12 @@ class MockSigstoreClient:
         """Mock transparency log retrieval"""
         if 0 <= index < len(self.signed_documents):
             entries = list(self.signed_documents.values())
+            entry = entries[index]
             return {
                 "index": index,
-                "entry": entries[index],
-                "timestamp": entries[index]["timestamp"],
+                "artifact_hash": entry["hash"],
+                "identity": entry["identity"],
+                "timestamp": entry["timestamp"],
+                "entry": entry,
             }
         return None

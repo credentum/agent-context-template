@@ -385,7 +385,7 @@ class TestCISprintMetrics:
 
         assert analysis["burn_rate"] == 1.6
         assert analysis["days_to_complete"] == 8.125
-        assert analysis["on_track"] is False  # Need 8.125 days but only 9 days left
+        assert analysis["on_track"] is True  # Need 8.125 days and have 9 days left
 
 
 class TestGitHubActionsIntegration:
