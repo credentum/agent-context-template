@@ -198,7 +198,9 @@ class TestConfigurationMetadataValidation:
         assert int(connection_metadata["port"]) <= 65535
         assert isinstance(connection_metadata["ssl"], bool)
         assert int(connection_metadata["connection_timeout"]) > 0
-        assert int(connection_metadata["read_timeout"]) >= int(connection_metadata["connection_timeout"])
+        assert int(connection_metadata["read_timeout"]) >= int(
+            connection_metadata["connection_timeout"]
+        )
 
 
 class TestDataIntegrityValidation:
