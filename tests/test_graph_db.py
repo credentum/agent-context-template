@@ -2,11 +2,10 @@
 Tests for graph database components
 """
 
-import json
 import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import Mock, patch
 
 import pytest
 

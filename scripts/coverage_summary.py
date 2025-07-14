@@ -4,9 +4,7 @@
 import json
 import subprocess
 import sys
-import xml.etree.ElementTree as ET
-from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 
 class CoverageSummary:
@@ -44,7 +42,7 @@ class CoverageSummary:
     def get_mutation_score(self) -> float:
         """Get mutation testing score"""
         try:
-            result = subprocess.run(["mutmut", "results"], capture_output=True, text=True)
+            subprocess.run(["mutmut", "results"], capture_output=True, text=True)
             # Parse mutation results
             # This is a simplified version - actual parsing would be more robust
             return 75.0  # Placeholder
@@ -118,7 +116,7 @@ class CoverageSummary:
                 all_passed = False
 
         # Additional metrics
-        print(f"\n📈 Additional Metrics:")
+        print("\n📈 Additional Metrics:")
         print(f"   Missing Lines: {coverage_metrics.get('missing_lines', 'N/A')}")
         print(f"   Missing Branches: {coverage_metrics.get('missing_branches', 'N/A')}")
         print(f"   Critical Functions: {critical_covered}/{critical_total}")

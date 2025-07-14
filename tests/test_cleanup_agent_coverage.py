@@ -1,10 +1,8 @@
 """Comprehensive tests for CleanupAgent to improve coverage"""
 
-import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict
-from unittest.mock import MagicMock, Mock, mock_open, patch
+from unittest.mock import patch
 
 import pytest
 import yaml

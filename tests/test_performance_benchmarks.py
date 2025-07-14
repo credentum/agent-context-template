@@ -8,7 +8,7 @@ import time
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Generator, List
+from typing import Any, Dict, Generator
 
 import pytest
 import yaml
@@ -18,7 +18,6 @@ from src.validators.kv_validators import (
     sanitize_metric_name,
     validate_cache_entry,
     validate_redis_key,
-    validate_session_data,
 )
 
 
@@ -49,14 +48,14 @@ class TestPerformanceBenchmarks:
 
         with timing_assert(0.01, "Hash computation for 5KB document"):
             for _ in range(100):
-                hash_value = self.embedder._compute_content_hash(content)
+                self.embedder._compute_content_hash(content)
 
         # Test larger document (100KB)
         large_content = content * 20
 
         with timing_assert(0.1, "Hash computation for 100KB document"):
             for _ in range(10):
-                hash_value = self.embedder._compute_content_hash(large_content)
+                self.embedder._compute_content_hash(large_content)
 
     @pytest.mark.benchmark
     def test_yaml_parsing_performance(self):
@@ -89,7 +88,7 @@ class TestPerformanceBenchmarks:
 
         with timing_assert(5.0, "YAML parsing for typical document"):
             for _ in range(100):
-                parsed = yaml.safe_load(yaml_content)
+                yaml.safe_load(yaml_content)
 
     @pytest.mark.benchmark
     def test_validation_performance(self):
@@ -277,7 +276,7 @@ class TestCriticalPathPerformance:
 
                     # 3. Compute hash
                     content = yaml.dump(doc)
-                    hash_value = HashDiffEmbedder()._compute_content_hash(content)
+                    HashDiffEmbedder()._compute_content_hash(content)
 
                     # 4. Save to disk
                     file_path = temp_path / f"doc_{i}.yaml"

@@ -303,9 +303,7 @@ class ReportGenerator:
         coverage_class = (
             "coverage-high"
             if coverage >= thresholds["high"]
-            else "coverage-medium"
-            if coverage >= thresholds["medium"]
-            else "coverage-low"
+            else "coverage-medium" if coverage >= thresholds["medium"] else "coverage-low"
         )
 
         test_list = ""
@@ -417,9 +415,7 @@ class ReportGenerator:
             status = (
                 "✅"
                 if coverage >= thresholds["high"]
-                else "🟡"
-                if coverage >= thresholds["medium"]
-                else "🔴"
+                else "🟡" if coverage >= thresholds["medium"] else "🔴"
             )
 
             if tests:

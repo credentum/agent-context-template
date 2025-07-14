@@ -4,19 +4,17 @@ Integration tests for document embedding flow
 Tests the complete flow: document → embedding → Qdrant storage → retrieval → summarization
 """
 
-import json
 import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 import yaml
-from qdrant_client.models import Distance, PointStruct, ScoredPoint, VectorParams
+from qdrant_client.models import ScoredPoint
 
 from src.storage.hash_diff_embedder import DocumentHash, HashDiffEmbedder
-from src.storage.hash_diff_embedder_async import AsyncHashDiffEmbedder
 
 
 class TestEmbeddingIntegrationFlow:
@@ -145,12 +143,14 @@ goals:
         assert (
             embedded_count == 3
         ), f"Expected 3 documents to be embedded, but only {embedded_count} were processed"
-        assert (
-            len(embedder.hash_cache) == 3
-        ), f"Expected 3 entries in hash cache, but found {len(embedder.hash_cache)}: {list(embedder.hash_cache.keys())}"
-        assert (
-            mock_embeddings.create.call_count >= 3
-        ), f"Expected OpenAI embeddings.create to be called at least 3 times, but was called {mock_embeddings.create.call_count} times"
+        assert len(embedder.hash_cache) == 3, (
+            f"Expected 3 entries in hash cache, but found {len(embedder.hash_cache)}: "
+            f"{list(embedder.hash_cache.keys())}"
+        )
+        assert mock_embeddings.create.call_count >= 3, (
+            f"Expected OpenAI embeddings.create to be called at least 3 times, "
+            f"but was called {mock_embeddings.create.call_count} times"
+        )
 
         # Save hash cache
         embedder._save_hash_cache()
@@ -291,7 +291,7 @@ goals:
         embedder.client = mock_client
 
         # Should handle the error gracefully
-        with patch("click.echo") as mock_echo:
+        with patch("click.echo"):
             # Attempt to embed a document
             try:
                 embedder.embed_document("test content", "test_doc")

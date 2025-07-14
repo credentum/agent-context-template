@@ -1,12 +1,10 @@
 """Comprehensive tests for UpdateSprintAgent to improve coverage"""
 
 import json
-import shutil
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List
-from unittest.mock import MagicMock, Mock, mock_open, patch
+from unittest.mock import Mock, patch
 
 import pytest
 import yaml

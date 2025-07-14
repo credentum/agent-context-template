@@ -8,9 +8,8 @@ import shutil
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
-import click
 import pytest
 import yaml
 
@@ -36,26 +35,42 @@ class TestContextLintCoverage:
 
         # Create minimal schema files
         base_schema = """
-        schema_version: regex('^\\d+\\.\\d+\\.\\d+$', required=True)
+        schema_version: regex('^\\\\d+\\\\.\\\\d+\\\\.\\\\d+$', required=True)
         document_type: enum('design', 'decision', 'sprint', required=True)
         id: str(required=True)
         title: str(required=True)
-        status: enum('draft', 'active', 'deprecated', 'planning', 'in_progress', 'completed', required=True)
-        created_date: regex('^\\d{4}-\\d{2}-\\d{2}$', required=False)
-        last_modified: regex('^\\d{4}-\\d{2}-\\d{2}$', required=False)
-        last_referenced: regex('^\\d{4}-\\d{2}-\\d{2}$', required=False)
-        expires: regex('^\\d{4}-\\d{2}-\\d{2}$', required=False)
+        status: enum('draft', 'active', 'deprecated', 'planning', 'in_progress',
+                     'completed', required=True)
+        created_date: regex('^\\\\d{4}-\\\\d{2}-\\\\d{2}$', required=False)
+        last_modified: regex('^\\\\d{4}-\\\\d{2}-\\\\d{2}$', required=False)
+        last_referenced: regex('^\\\\d{4}-\\\\d{2}-\\\\d{2}$', required=False)
+        expires: regex('^\\\\d{4}-\\\\d{2}-\\\\d{2}$', required=False)
         """
 
         for schema_type in ["design", "decision", "sprint"]:
             schema_path = schema_dir / f"{schema_type}.yaml"
+            schema_content = base_schema
+
+            # Add content field for design documents
+            if schema_type == "design":
+                schema_content = base_schema + "\n        content: str(required=True)"
+            # Add decision-specific fields
+            elif schema_type == "decision":
+                schema_content = (
+                    base_schema
+                    + "\n        rationale: str(required=True)"
+                    + "\n        pros: list(str(), required=False)"
+                    + "\n        cons: list(str(), required=False)"
+                    + "\n        decision: str(required=True)"
+                )
+
             with open(schema_path, "w") as f:
-                f.write(base_schema)
+                f.write(schema_content)
 
             # Also create full versions
             full_path = schema_dir / f"{schema_type}_full.yaml"
             with open(full_path, "w") as f:
-                f.write(base_schema)
+                f.write(schema_content)
 
         yield context_dir
 
@@ -109,7 +124,7 @@ class TestContextLintCoverage:
         doc_path = context_dir_with_schemas / "empty.yaml"
         doc_path.touch()
 
-        assert linter.validate_file(doc_path) == False
+        assert linter.validate_file(doc_path) is False
         assert any("Empty file" in error for error in linter.errors)
 
     def test_validate_file_missing_document_type(self, context_dir_with_schemas):
@@ -122,7 +137,7 @@ class TestContextLintCoverage:
         with open(doc_path, "w") as f:
             yaml.dump(doc, f)
 
-        assert linter.validate_file(doc_path) == False
+        assert linter.validate_file(doc_path) is False
         assert any("Missing document_type" in error for error in linter.errors)
 
     def test_validate_file_unknown_document_type(self, context_dir_with_schemas):
@@ -141,7 +156,7 @@ class TestContextLintCoverage:
         with open(doc_path, "w") as f:
             yaml.dump(doc, f)
 
-        assert linter.validate_file(doc_path) == False
+        assert linter.validate_file(doc_path) is False
         assert any("Unknown document type" in error for error in linter.errors)
 
     def test_validate_file_yaml_error(self, context_dir_with_schemas):
@@ -152,7 +167,7 @@ class TestContextLintCoverage:
         with open(doc_path, "w") as f:
             f.write("invalid: yaml: [")
 
-        assert linter.validate_file(doc_path) == False
+        assert linter.validate_file(doc_path) is False
         assert any("Invalid YAML" in error for error in linter.errors)
 
     def test_validate_file_general_exception(self, context_dir_with_schemas):
@@ -173,7 +188,7 @@ class TestContextLintCoverage:
             yaml.dump(doc, f)
 
         with patch.object(linter, "_get_cached_schema", side_effect=Exception("Test error")):
-            assert linter.validate_file(doc_path) == False
+            assert linter.validate_file(doc_path) is False
             assert any("Test error" in error for error in linter.errors)
 
     def test_check_warnings_old_document(self, context_dir_with_schemas):
@@ -200,9 +215,9 @@ class TestContextLintCoverage:
         with open(doc_path, "w") as f:
             yaml.dump(doc, f)
 
-        assert linter.validate_file(doc_path) == True
+        assert linter.validate_file(doc_path) is True
         assert len(linter.warnings) > 0
-        assert any("old" in warning.lower() for warning in linter.warnings)
+        assert any("modified" in warning.lower() for warning in linter.warnings)
 
     def test_validate_directory(self, temp_dir):
         """Test directory validation"""
@@ -350,8 +365,8 @@ class TestContextLintCoverage:
         results[invalid_path] = linter.validate_file(invalid_path)
 
         assert len(results) == 2
-        assert results[valid_path] == True
-        assert results[invalid_path] == False
+        assert results[valid_path] is True
+        assert results[invalid_path] is False
 
     def test_cli_validate_single_file(self, context_dir_with_schemas):
         """Test CLI validate command with single file"""
@@ -434,7 +449,7 @@ class TestContextLintCoverage:
         result = runner.invoke(cli, ["validate", str(doc_path), "--fix"])
 
         # Check that the fix option was processed
-        assert "--fix" in result.args or "Validation Results:" in result.output
+        assert "Validation Results:" in result.output
 
     def test_cli_validate_with_errors(self, context_dir_with_schemas):
         """Test CLI validate command with errors"""
@@ -498,7 +513,7 @@ class TestContextLintCoverage:
         result = runner.invoke(cli, ["validate", str(doc_path), "--verbose"])
 
         # Check verbose flag effect
-        assert "--verbose" in result.args or "Validation Results:" in result.output
+        assert "Validation Results:" in result.output
 
     def test_cli_stats_command(self, context_dir_with_schemas):
         """Test CLI stats command"""

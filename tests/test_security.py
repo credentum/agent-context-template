@@ -7,8 +7,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
-
 from src.core.utils import sanitize_error_message
 from src.storage.graph_builder import GraphBuilder
 
@@ -103,7 +101,9 @@ class TestInjectionPrevention:
         """Test prevention of path traversal attacks"""
         from src.storage.graph_builder import GraphBuilder
 
-        builder = GraphBuilder()
+        # Just test that GraphBuilder can be instantiated
+        # The actual path traversal prevention would be tested in integration
+        GraphBuilder()
 
         # Test malicious file paths
         malicious_paths = [
@@ -132,8 +132,7 @@ class TestAuthenticationSecurity:
     def test_no_default_passwords(self):
         """Test that no default passwords are present"""
         # Check that CLI tools require passwords
-        from src.integrations.graphrag_integration import analyze, search
-        from src.storage.graph_builder import main as gb_main
+        # Import statements removed - F401 errors
 
         # These should all have required=True for password options
         # This is validated by the CLI framework
@@ -244,9 +243,10 @@ class TestInputValidation:
             # Should be within context directory
             try:
                 p.resolve().relative_to(context_dir.resolve())
-                valid = True
+                # Path is within context directory
             except ValueError:
-                valid = False
+                # Path is outside context directory
+                pass
 
             # These should be valid
             assert "context" in str(p)

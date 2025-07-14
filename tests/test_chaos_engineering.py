@@ -7,14 +7,13 @@ Tests system behavior under adverse conditions
 import concurrent.futures
 import os
 import random
-import signal
 import tempfile
 import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from unittest.mock import Mock, patch
 
 import pytest
@@ -137,9 +136,10 @@ class TestFileSystemChaos:
                         else:
                             raise
 
-                assert (
-                    files_written == max_writes
-                ), f"Expected {max_writes} files to be written before disk full, but got {files_written}"
+                assert files_written == max_writes, (
+                    f"Expected {max_writes} files to be written before disk full, "
+                    f"but got {files_written}"
+                )
                 assert (
                     errors_caught == 5
                 ), f"Expected 5 'disk full' errors after limit, but caught {errors_caught}"
@@ -207,7 +207,8 @@ class TestFileSystemChaos:
 
             # Check results
             total_successes = sum(r[0] for r in results)
-            total_conflicts = sum(r[1] for r in results)
+            # Track conflicts for debugging if needed
+            _ = sum(r[1] for r in results)
 
             # Some updates should succeed
             assert total_successes > 0
@@ -319,7 +320,6 @@ class TestResourceExhaustion:
     def test_memory_leak_detection(self):
         """Test detection of memory leaks"""
         import gc
-        import sys
 
         # Track object counts
         initial_objects = len(gc.get_objects())

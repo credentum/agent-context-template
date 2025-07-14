@@ -3,10 +3,9 @@
 Extended property-based tests for comprehensive validation coverage
 """
 
-import json
 import re
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, List
 
 import pytest
 
@@ -26,7 +25,7 @@ except ImportError:
 
         return decorator
 
-    class RuleBasedStateMachine:
+    class RuleBasedStateMachine:  # type: ignore[no-redef]
         pass
 
 
@@ -93,7 +92,8 @@ class TestAdvancedPropertyValidation:
             for key in config.keys():
                 # Remove dots for nested keys
                 identifier = key.replace(".", "_")
-                # Valid identifier: starts with letter/underscore, contains only alphanumeric/underscore
+                # Valid identifier: starts with letter/underscore,
+                # contains only alphanumeric/underscore
                 if identifier:
                     assert re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", identifier) or all(
                         c.isdigit() for c in identifier
@@ -118,7 +118,7 @@ class TestAdvancedPropertyValidation:
 
             # Property: Only valid transitions allowed
             for next_status in ["pending", "in_progress", "completed", "blocked"]:
-                can_transition = next_status in allowed_next
+                can_transition = next_status in allowed_next  # type: ignore[operator]
                 if next_status == current_status:
                     can_transition = True  # Can stay in same state
 
@@ -273,7 +273,8 @@ if HAS_HYPOTHESIS:
             )
 
             # Property: Archived docs are immutable
-            history_before = len(document["history"])
+            # Track history length for potential future validation
+            _ = len(document["history"])
             # Future operations should not modify archived docs
 
         def invariants(self):
@@ -394,13 +395,13 @@ class TestPropertyBasedPerformance:
 
             # Test linear time operation
             start = time.perf_counter()
-            result = sum(range(n))  # O(n)
+            sum(range(n))  # O(n)
             linear_time = time.perf_counter() - start
 
             # Test quadratic time operation (with smaller n)
             if n <= 1000:  # Limit to avoid too long execution
                 start = time.perf_counter()
-                result = sum(i * j for i in range(n) for j in range(n))  # O(n²)
+                sum(i * j for i in range(n) for j in range(n))  # O(n²)
                 quadratic_time = time.perf_counter() - start
 
                 # Property: Quadratic should take significantly more time

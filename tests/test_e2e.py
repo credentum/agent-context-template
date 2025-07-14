@@ -5,7 +5,6 @@ End-to-end tests for the Agent-First Context System
 import os
 import shutil
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -83,7 +82,10 @@ class TestEndToEnd:
             "last_referenced": "2025-07-11",
             "expires": "2025-12-31",
             "status": "active",
-            "content": "Architecture for end-to-end testing with vector-db, graph-db, and agents. Testing the complete system integration.",
+            "content": (
+                "Architecture for end-to-end testing with vector-db, graph-db, "
+                "and agents. Testing the complete system integration."
+            ),
         }
 
         with open(tmp_path / "context" / "design" / "e2e-design-001.yaml", "w") as f:

@@ -9,14 +9,13 @@ import os
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict
 from unittest.mock import Mock, patch
 
 import pytest  # type: ignore
 import yaml
 
 try:
-    from hypothesis import assume, given, settings
+    from hypothesis import given, settings
     from hypothesis import strategies as st
 
     HAS_HYPOTHESIS = True
@@ -41,13 +40,9 @@ except ImportError:
 
 
 from src.storage.hash_diff_embedder import HashDiffEmbedder
-from src.validators.config_validator import ConfigValidator
 from src.validators.kv_validators import (
     sanitize_metric_name,
-    validate_cache_entry,
-    validate_metric_event,
     validate_redis_key,
-    validate_session_data,
     validate_time_range,
 )
 
@@ -87,7 +82,7 @@ class TestBoundaryConditions:
             # Test reading binary as text (should fail gracefully)
             try:
                 with open(f.name, "r") as file:
-                    content = file.read()
+                    file.read()
                 assert False, "Should not reach here"
             except UnicodeDecodeError:
                 pass  # Expected
@@ -332,15 +327,16 @@ class TestConcurrencyAndRaceConditions:
         embedder.hash_cache = {}
 
         # Simulate concurrent reads and writes
-        with patch.object(embedder, "_save_hash_cache") as mock_save:
+        with patch.object(embedder, "_save_hash_cache"):
             # Add entries from multiple "threads"
             for i in range(10):
                 embedder.hash_cache[f"doc_{i}"] = Mock()
 
             # Should handle concurrent modifications
-            assert (
-                len(embedder.hash_cache) == 10
-            ), f"Expected exactly 10 cache entries, but found {len(embedder.hash_cache)}: {list(embedder.hash_cache.keys())}"
+            assert len(embedder.hash_cache) == 10, (
+                f"Expected exactly 10 cache entries, but found {len(embedder.hash_cache)}: "
+                f"{list(embedder.hash_cache.keys())}"
+            )
 
     def test_file_lock_contention(self):
         """Test file lock contention scenarios"""
@@ -377,7 +373,10 @@ class TestPerformanceEdgeCases:
             chunks_read = 0
 
             with open(f.name, "r") as file:
-                while chunk := file.read(chunk_size):
+                while True:
+                    _ = file.read(chunk_size)
+                    if not _:
+                        break
                     chunks_read += 1
                     if chunks_read > 100:  # Safety limit
                         break
@@ -437,8 +436,7 @@ class TestSecurityEdgeCases:
             "`rm -rf /`",  # Command injection
         ]
 
-        validator = ConfigValidator()
-
+        # Just validate that dangerous inputs are strings
         for dangerous in dangerous_inputs:
             # Should safely handle dangerous inputs
             # In real implementation, these should be escaped/sanitized

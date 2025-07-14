@@ -1,7 +1,7 @@
-# Updated pre-commit configuration that matches CI but is practical
+# .pre-commit-config-ci.yaml - Pre-commit config that matches CI behavior exactly
 repos:
   - repo: https://github.com/psf/black
-    rev: 25.1.0
+    rev: 23.12.1
     hooks:
       - id: black
         language_version: python3.11
@@ -11,9 +11,8 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-PyYAML, types-redis, types-requests]
-        args: [--config-file=mypy.ini, --ignore-missing-imports]
-        files: ^src/
-        # Only check src/ files for now, tests need more work
+        args: [--config-file=mypy.ini]
+        # Run on all Python files like CI does
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
@@ -29,7 +28,7 @@ repos:
       - id: mixed-line-ending
 
   - repo: https://github.com/pycqa/isort
-    rev: 6.0.1
+    rev: 5.13.2
     hooks:
       - id: isort
         args: ["--profile", "black"]

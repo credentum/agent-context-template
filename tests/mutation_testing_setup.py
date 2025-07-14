@@ -241,7 +241,8 @@ __pycache__/
         click.echo(f"\n{result['target']}:")
         click.echo(f"  Total mutants: {result['total_mutants']}")
         click.echo(
-            f"  Killed: {result['killed']} ({result['killed']/max(1, result['total_mutants'])*100:.1f}%)"
+            f"  Killed: {result['killed']} "
+            f"({result['killed']/max(1, result['total_mutants'])*100:.1f}%)"
         )
         click.echo(f"  Survived: {result['survived']}")
         click.echo(f"  Timeout: {result['timeout']}")
@@ -272,11 +273,13 @@ __pycache__/
         for result in results:
             if result["mutation_score"] < 60:
                 recommendations.append(
-                    f"Critical: {result['target']} has very low mutation coverage ({result['mutation_score']:.1f}%)"
+                    f"Critical: {result['target']} has very low mutation coverage "
+                    f"({result['mutation_score']:.1f}%)"
                 )
             elif result["mutation_score"] < 80:
                 recommendations.append(
-                    f"Warning: {result['target']} could use better test coverage ({result['mutation_score']:.1f}%)"
+                    f"Warning: {result['target']} could use better test coverage "
+                    f"({result['mutation_score']:.1f}%)"
                 )
 
         # Save report

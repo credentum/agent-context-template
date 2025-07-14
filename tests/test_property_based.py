@@ -104,7 +104,8 @@ class TestPropertyBasedValidation:
             assert result is False, f"Keys with whitespace should be invalid: {repr(key)}"
 
         # Property: Empty keys should be invalid
-        # Note: The validator only checks for control chars < 32, so non-breaking space (\xa0) is valid
+        # Note: The validator only checks for control chars < 32,
+        # so non-breaking space (\xa0) is valid
         if not key:
             assert result is False, "Empty keys should be invalid"
 

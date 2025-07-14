@@ -5,10 +5,8 @@ Tests for sprint automation functionality
 
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
-from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import MagicMock, Mock, patch
@@ -19,8 +17,8 @@ import yaml
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.agents.sprint_issue_linker import SprintIssueLinker
-from src.agents.update_sprint import SprintUpdater
+from src.agents.sprint_issue_linker import SprintIssueLinker  # noqa: E402
+from src.agents.update_sprint import SprintUpdater  # noqa: E402
 
 
 class TestSprintUpdater:
@@ -147,7 +145,7 @@ class TestSprintUpdater:
         # Test phase update
         updated = updater._update_phase_status(sprint_data["phases"], mock_issues)
 
-        assert updated == True
+        assert updated is True
         assert sprint_data["phases"][0]["status"] == "completed"
 
     def test_create_next_sprint(self, temp_context_dir):
@@ -220,7 +218,7 @@ class TestSprintUpdater:
         # Test planning -> in_progress
         sprint_data["phases"][0]["status"] = "in_progress"
         updated = updater._update_sprint_status(sprint_data)
-        assert updated == True
+        assert updated is True
         assert sprint_data["status"] == "in_progress"
 
         # Test in_progress -> completed
@@ -228,7 +226,7 @@ class TestSprintUpdater:
         sprint_data["phases"][1]["status"] = "completed"
         sprint_data["phases"][2]["status"] = "completed"
         updated = updater._update_sprint_status(sprint_data)
-        assert updated == True
+        assert updated is True
         assert sprint_data["status"] == "completed"
 
 
@@ -330,8 +328,8 @@ class TestSprintIssueLinker:
 
         linker = SprintIssueLinker(sprint_id="sprint-003")
 
-        # Expected title format
-        expected_title = "[Sprint 3] Phase 2: Write integration tests"
+        # Expected title format (for documentation)
+        _ = "[Sprint 3] Phase 2: Write integration tests"
 
         # We can't easily test the exact title without mocking more,
         # but we can verify the sprint file is loaded correctly

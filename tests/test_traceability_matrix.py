@@ -4,12 +4,8 @@ This module provides a mapping between critical functions and their test cases,
 ensuring 100% test case traceability for critical functionality.
 """
 
-import inspect
 import json
-from pathlib import Path
-from typing import Dict, List, Set, Tuple
-
-import pytest
+from typing import Any, Dict
 
 # Critical function registry
 CRITICAL_FUNCTIONS = {
@@ -35,15 +31,18 @@ CRITICAL_FUNCTIONS = {
     "src.agents.update_sprint.SprintUpdater._calculate_phase_progress": {
         "description": "Calculates sprint phase completion percentage",
         "test_cases": [
-            "test_update_sprint_coverage.py::TestUpdateSprintAgentCoverage::test_calculate_phase_progress"
+            "test_update_sprint_coverage.py::TestUpdateSprintAgentCoverage::"
+            "test_calculate_phase_progress"
         ],
         "requirements": ["REQ-SPRINT-001"],
     },
     "src.agents.update_sprint.SprintUpdater._should_transition_phase": {
         "description": "Determines when to transition sprint phases",
         "test_cases": [
-            "test_update_sprint_coverage.py::TestUpdateSprintAgentCoverage::test_should_transition_phase",
-            "test_update_sprint_coverage.py::TestUpdateSprintAgentCoverage::test_transition_phase_states",
+            "test_update_sprint_coverage.py::TestUpdateSprintAgentCoverage::"
+            "test_should_transition_phase",
+            "test_update_sprint_coverage.py::TestUpdateSprintAgentCoverage::"
+            "test_transition_phase_states",
         ],
         "requirements": ["REQ-SPRINT-002"],
     },
@@ -118,7 +117,7 @@ class TestTraceabilityMatrix:
 
     def test_generate_traceability_report(self, tmp_path):
         """Generate a traceability report for documentation"""
-        report = {
+        report: dict[str, Any] = {
             "summary": {
                 "total_critical_functions": len(CRITICAL_FUNCTIONS),
                 "functions_with_tests": sum(

@@ -9,9 +9,8 @@ import os
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, mock_open, patch
+from unittest.mock import Mock, patch
 
-import pytest
 import yaml
 
 from src.agents.cleanup_agent import CleanupAgent

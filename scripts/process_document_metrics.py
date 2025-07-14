@@ -6,14 +6,13 @@ Used by GitHub Actions workflow
 
 import os
 import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime
 from pathlib import Path
 
 import yaml
 
-from src.storage.context_kv import ContextKV, MetricEvent
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.storage.context_kv import ContextKV, MetricEvent  # noqa: E402
 
 
 def process_file(file_path: str, kv: ContextKV) -> bool:

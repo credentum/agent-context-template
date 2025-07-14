@@ -4,14 +4,12 @@ Unit tests for hash_diff_embedder module
 Tests file transforms, YAML parsing, and document embedding logic
 """
 
-import concurrent.futures
 import json
 import os
 import tempfile
-import threading
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, mock_open, patch
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
 import yaml
@@ -93,9 +91,10 @@ class TestHashDiffEmbedder:
         hash2 = embedder._compute_content_hash(content2)
 
         # Same content should produce same hash
-        assert hash1 == embedder._compute_content_hash(
-            content1
-        ), f"Expected identical hash for same content, but got different hashes: {hash1} != {embedder._compute_content_hash(content1)}"
+        assert hash1 == embedder._compute_content_hash(content1), (
+            f"Expected identical hash for same content, but got different hashes: "
+            f"{hash1} != {embedder._compute_content_hash(content1)}"
+        )
         # Different content should produce different hash
         assert (
             hash1 != hash2
@@ -104,9 +103,10 @@ class TestHashDiffEmbedder:
         assert (
             len(hash1) == 64
         ), f"Expected SHA-256 hash length of 64 characters, but got {len(hash1)}: {hash1}"
-        assert all(
-            c in "0123456789abcdef" for c in hash1
-        ), f"Hash should only contain hex characters (0-9, a-f), but found invalid characters in: {hash1}"
+        assert all(c in "0123456789abcdef" for c in hash1), (
+            f"Hash should only contain hex characters (0-9, a-f), "
+            f"but found invalid characters in: {hash1}"
+        )
 
     def test_compute_embedding_hash(self):
         """Test embedding hash computation"""
@@ -119,17 +119,19 @@ class TestHashDiffEmbedder:
         hash2 = embedder._compute_embedding_hash(embedding2)
 
         # Same embedding should produce same hash
-        assert hash1 == embedder._compute_embedding_hash(
-            embedding1
-        ), f"Expected identical hash for same embedding, but got different hashes: {hash1} != {embedder._compute_embedding_hash(embedding1)}"
+        assert hash1 == embedder._compute_embedding_hash(embedding1), (
+            f"Expected identical hash for same embedding, but got different hashes: "
+            f"{hash1} != {embedder._compute_embedding_hash(embedding1)}"
+        )
         # Different embedding should produce different hash
         assert (
             hash1 != hash2
         ), f"Expected different hashes for different embeddings, but both produced: {hash1}"
         # Hash should be SHA-256 (64 hex chars)
-        assert (
-            len(hash1) == 64
-        ), f"Expected SHA-256 hash length of 64 characters for embedding hash, but got {len(hash1)}: {hash1}"
+        assert len(hash1) == 64, (
+            f"Expected SHA-256 hash length of 64 characters for embedding hash, "
+            f"but got {len(hash1)}: {hash1}"
+        )
 
     @patch("pathlib.Path.exists", return_value=True)
     @patch("builtins.open", new_callable=mock_open)
@@ -356,7 +358,7 @@ class TestErrorHandling:
         try:
             # The implementation doesn't catch YAML errors, so they propagate
             with pytest.raises(yaml.YAMLError):
-                embedder = HashDiffEmbedder(config_path)
+                HashDiffEmbedder(config_path)
         finally:
             os.unlink(config_path)
 
@@ -567,7 +569,6 @@ class TestEmbeddingErrorScenarios:
                 return access_count
 
         # Simulate concurrent hash cache access
-        original_save = embedder._save_hash_cache
         embedder._save_hash_cache = lambda: increment_access()
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:

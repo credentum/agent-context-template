@@ -3,13 +3,11 @@
 Comprehensive tests for AsyncHashDiffEmbedder to achieve full coverage
 """
 
-import asyncio
 import hashlib
 import json
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import yaml

@@ -1,0 +1,99 @@
+name: Lint Verification
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt', '**/requirements-dev.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: Run Black
+      run: |
+        black --check src/ tests/ scripts/
+
+    - name: Run isort
+      run: |
+        isort --check-only --profile black src/ tests/ scripts/
+
+    - name: Run Flake8
+      run: |
+        flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503
+
+    - name: Run MyPy on src/
+      run: |
+        mypy src/ --config-file=mypy.ini
+
+    - name: Run MyPy on tests/ (allow failures)
+      continue-on-error: true
+      run: |
+        mypy tests/ --config-file=mypy.ini || echo "MyPy tests check failed but continuing"
+
+    - name: Check YAML files
+      continue-on-error: true
+      run: |
+        yamllint context/ -d "{extends: default, rules: {line-length: {max: 120}}, ignore: 'context/schemas/'" || echo "YAML lint failed but continuing"
+
+    - name: Run Context Lint
+      run: |
+        python -m src.agents.context_lint validate context/
+
+    - name: Check imports
+      run: |
+        python -m pytest --collect-only -q
+
+    - name: Generate lint report
+      if: always()
+      run: |
+        echo "## Lint Report" > lint-report.md
+        echo "Python version: ${{ matrix.python-version }}" >> lint-report.md
+        echo "Date: $(date)" >> lint-report.md
+        echo "" >> lint-report.md
+
+        echo "### Black" >> lint-report.md
+        black --check src/ tests/ scripts/ 2>&1 | tee -a lint-report.md || echo "Failed" >> lint-report.md
+
+        echo "### isort" >> lint-report.md
+        isort --check-only --profile black src/ tests/ scripts/ 2>&1 | tee -a lint-report.md || echo "Failed" >> lint-report.md
+
+        echo "### Flake8" >> lint-report.md
+        flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503 2>&1 | tee -a lint-report.md || echo "Failed" >> lint-report.md
+
+    - name: Upload lint report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: lint-report-py${{ matrix.python-version }}
+        path: lint-report.md

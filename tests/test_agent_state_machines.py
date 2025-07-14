@@ -5,12 +5,10 @@ Tests state transitions, phase status updates, and task completion tracking
 """
 
 import json
-import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, mock_open, patch
+from unittest.mock import Mock, patch
 
-import pytest
 import yaml
 
 from src.agents.update_sprint import SprintUpdater
@@ -285,8 +283,8 @@ class TestAgentStateValidation:
         # Task states
         task_states = ["pending", "in_progress", "completed", "blocked"]
 
-        # Phase states
-        phase_states = ["pending", "in_progress", "completed", "skipped"]
+        # Phase states (defined for documentation purposes)
+        _ = ["pending", "in_progress", "completed", "skipped"]
 
         # Validate state sets don't overlap incorrectly
         assert "planning" in sprint_states
