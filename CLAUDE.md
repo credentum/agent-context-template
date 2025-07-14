@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is an **Agent-First Project Context System** that provides structured context management with vector search (Qdrant) and graph relationships (Neo4j) for enhanced AI agent interactions. It includes GitHub Actions templates for integrating Claude AI into workflows using the `anthropics/claude-code-action@beta` action.
 
 **Current Project Status:**
-- Coverage: 59.53% (Current baseline)
+- Coverage: 71.82% (Current baseline)
 - Target: 85% for all modules, 90% for validators
 - Critical modules need attention (validators <40% coverage)
 - Python 3.11 codebase with async support
@@ -302,24 +302,37 @@ For example, creating a file `.claude/commands/fix-issue.md` would make it avail
 ### Database Operations:
 ```python
 # Vector DB example
-from src.storage.vector_db_init import initialize_qdrant
-client = initialize_qdrant()
+from src.storage.vector_db_init import VectorDBInitializer
+
+# Initialize and connect to Qdrant
+vector_db = VectorDBInitializer()
+if vector_db.connect():
+    client = vector_db.client
+    # Now you can use the client for operations
 
 # Graph DB example
-from src.storage.neo4j_init import get_neo4j_driver
-driver = get_neo4j_driver()
+from src.storage.neo4j_init import Neo4jInitializer
+
+# Initialize and connect to Neo4j
+graph_db = Neo4jInitializer()
+if graph_db.connect(username="neo4j", password="your_password"):
+    driver = graph_db.driver
+    # Now you can use the driver for operations
 ```
 
 ### Common Tasks:
 ```bash
-# Validate YAML schemas
-python -m src.validators.config_validator config.yaml
+# Validate configuration files
+python -m src.validators.config_validator --config .ctxrc.yaml
 
 # Run analytics
-python -m src.analytics.context_analytics
+python -m src.analytics.context_analytics analyze
 
 # Update embeddings
-python -m src.storage.hash_diff_embedder_async
+python -m src.storage.hash_diff_embedder_async update
+
+# Run context linting
+python -m src.agents.context_lint validate context/
 ```
 
 # 🚨 CRITICAL: Git Workflow Rules
@@ -378,7 +391,7 @@ python -m src.storage.hash_diff_embedder_async
 - ALWAYS create a PR for code review
 - Include test results and coverage report in PR descriptions
 - Wait for CI checks to pass before merging
-- Ensure coverage stays above 59.53% (current baseline)
+- Ensure coverage stays above 71.82% (current baseline)
 - If pre-commit makes changes, amend your commit before pushing
 
 ## 🎯 Current Focus Areas
@@ -388,7 +401,7 @@ python -m src.storage.hash_diff_embedder_async
    - `validators/config_validator.py` (34.66% → 90%)
 
 2. **Phase 1 Goals**:
-   - Overall coverage: 59.53% → 70%
+   - Overall coverage: 71.82% → 85%
    - Critical modules: All above 85%
    - Complete async error handling
 

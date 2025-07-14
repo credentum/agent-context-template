@@ -65,5 +65,4 @@ repos:
         entry: python scripts/generate_coverage_matrix.py
         language: system
         pass_filenames: false
-        always_run: true
         stages: [manual]
