@@ -6,13 +6,13 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize]
-    paths:
-      - "src/**"
-      - "context/**"
-      - "tests/**"
-      - "*.md"
-      - "*.yaml"
-      - "*.yml"
+    #paths:
+    #  - "src/**"
+    #  - "context/**"
+    #  - "tests/**"
+    #  - "*.md"
+    #  - "*.yaml"
+    #  - "*.yml"
 
 jobs:
   claude-pr-review:
