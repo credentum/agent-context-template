@@ -44,7 +44,6 @@ Need to create a reproducible Docker Compose stack with:
 - `curl localhost:6333/collections` returns `{"result":{"collections":[]},"status":"ok"}`
 - `docker exec neo4j cypher-shell "RETURN 1"` returns `1`
 - Both services start within 30 seconds and pass health checks
-
 ## Issue Resolution (2025-07-14)
 **Problem Found**: Health checks were failing even though services were functional
 - Neo4j health check used username/password authentication despite `NEO4J_AUTH=none`
