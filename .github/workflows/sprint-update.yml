@@ -20,7 +20,7 @@ jobs:
 
     permissions:
       contents: write
-      issues: read
+      issues: write
       pull-requests: write
 
     steps:
@@ -103,6 +103,7 @@ jobs:
 
     - name: Create issue comment with report
       if: github.event_name == 'issues' && success()
+      continue-on-error: true
       uses: actions/github-script@v7
       with:
         script: |
