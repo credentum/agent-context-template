@@ -125,24 +125,6 @@ Mutation testing improvements:
 - Avoid trivial assertions
 
 
-## Coverage Trends
-
-![Coverage Trends](assets/coverage-trends.png)
-
-The graph above shows the progression of line and branch coverage over time, with target lines indicated.
-
-## Module Coverage Distribution
-
-![Module Coverage](assets/module-coverage.png)
-
-This chart displays the current coverage levels for key modules, highlighting which ones need the most attention.
-
-### Estimated Timeline
-- **Phase 1**: 2-3 weeks (4 modules × 3-5 days each)
-- **Phase 2**: 3-4 weeks (5 modules × 3-4 days each)
-- **Phase 3**: 2 weeks (cleanup and integration)
-- **Total**: 7-9 weeks to reach 85% coverage target
-
 ## Configuration
 
 ### Coverage Configuration

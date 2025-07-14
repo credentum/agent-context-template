@@ -297,7 +297,8 @@ For example, creating a file `.claude/commands/fix-issue.md` would make it avail
 ### Key Documentation:
 - `context/README.md` - Context system architecture
 - `docs/test-coverage-guide.md` - Coverage improvement guide
-- `docs/sprint-automation.md` - Sprint workflow automation
+- `docs/sprint-workflow-guide.md` - Complete sprint workflow with GitHub integration
+- `docs/design-to-sprint-workflow.md` - Design → Decisions → Sprints agent workflow
 
 ### Database Operations:
 ```python
@@ -334,6 +335,89 @@ python -m src.storage.hash_diff_embedder_async update
 # Run context linting
 python -m src.agents.context_lint validate context/
 ```
+
+## 🤖 Agent Workflow System
+
+This project implements a structured **Design → Decisions → Sprints** workflow that agents should understand and follow:
+
+### Document Hierarchy & Flow:
+
+```
+Design Documents → Architectural Decisions → Sprint Planning → GitHub Issues
+   (context/design/)     (context/decisions/)    (context/sprints/)     (GitHub)
+        ↓                       ↓                      ↓               ↓
+   High-level arch         Technology choices    Detailed tasks    Work tracking
+   System components       Constraints/impacts   Team assignments  Progress updates
+```
+
+### Agent Workflow Commands:
+
+#### **Design Phase**:
+```bash
+# Create system design
+cp context/schemas/design.yaml context/design/003-new-feature.yaml
+# Edit with architecture details, then:
+python -m src.agents.context_lint validate context/design/ --verbose
+```
+
+#### **Decision Phase**:
+```bash
+# Document technology choices
+cp context/schemas/decision.yaml context/decisions/004-tech-choice.yaml
+# Document alternatives, rationale, impacts, then:
+python -m src.agents.context_lint validate context/decisions/ --verbose
+```
+
+#### **Sprint Phase**:
+```bash
+# Create implementation plan
+cp context/sprints/sprint-template.yaml context/sprints/sprint-X.Y.yaml
+# Map decisions to actionable tasks, then:
+python -m src.agents.context_lint validate context/sprints/ --verbose
+
+# Auto-generate GitHub issues
+python -m src.agents.sprint_issue_linker create --sprint sprint-X.Y --verbose
+
+# Sync sprint changes to GitHub
+python -m src.agents.sprint_issue_linker sync --sprint sprint-X.Y --verbose
+```
+
+#### **Tracking Phase**:
+```bash
+# Update sprint status from GitHub issues
+python -m src.agents.update_sprint update --verbose
+
+# Generate progress report
+python -m src.agents.update_sprint report --verbose
+```
+
+### Graph Relationships:
+
+All documents include `graph_metadata` defining relationships:
+- **Design** documents `define` system components and `require` decisions
+- **Decision** documents `implement` design requirements and `constrain` sprints
+- **Sprint** documents `follow` decisions and `implement` designs
+- **Tasks** `reference` specific design/decision documents
+
+### Automation Features:
+
+1. **Auto-Issue Generation**: Pushing sprint YAML files automatically creates GitHub issues
+2. **Bidirectional Sync**: Changes in sprint YAML ↔ GitHub issues stay synchronized
+3. **Progress Tracking**: Closing GitHub issues automatically updates sprint status
+4. **Validation**: All documents validated against schemas with cross-reference checking
+
+### Key Agent Behaviors:
+
+- **Always validate** documents after creation/editing
+- **Link documents** via `graph_metadata.relationships`
+- **Reference source docs** in sprint tasks (trace decisions back to designs)
+- **Use automation** rather than manual GitHub issue creation
+- **Follow git workflow** (never push directly to main, always create PRs)
+
+### Quick Reference Files:
+- `docs/sprint-workflow-guide.md` - Complete sprint workflow with examples
+- `docs/design-to-sprint-workflow.md` - Full design → decision → sprint process
+- `context/schemas/` - All document schemas for validation
 
 # 🚨 CRITICAL: Git Workflow Rules
 

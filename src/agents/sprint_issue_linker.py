@@ -152,18 +152,62 @@ class SprintIssueLinker:
 
             tasks = phase.get("tasks", [])
             for task in tasks:
-                # Create issue title
-                issue_title = f"[Sprint {sprint_number}] Phase {phase_num}: {task}"
+                # Handle both old format (string) and new format (dict)
+                if isinstance(task, str):
+                    # Old format - just a string
+                    task_title = f"[Sprint {sprint_number}] Phase {phase_num}: {task}"
+                    task_description = task
+                    task_labels = [sprint_label, f"phase-{phase_num}"]
+                    task_dependencies = []
+                else:
+                    # New format - detailed task object
+                    task_title = task.get(
+                        "title", f"[Sprint {sprint_number}] Phase {phase_num}: Untitled Task"
+                    )
+                    task_description = task.get("description", "No description provided")
+                    task_labels = task.get("labels", [sprint_label, f"phase-{phase_num}"])
+                    task_dependencies = task.get("dependencies", [])
 
-                # Check if issue already exists
-                if issue_title.lower() in existing_titles:
+                    # Skip if already has a GitHub issue assigned
+                    if task.get("github_issue"):
+                        if self.verbose:
+                            click.echo(
+                                f"⏭️  Skipping (has issue #{task['github_issue']}): {task_title}"
+                            )
+                        continue
+
+                # Check if issue already exists by title
+                if task_title.lower() in existing_titles:
                     if self.verbose:
-                        click.echo(f"⏭️  Skipping (exists): {issue_title}")
+                        click.echo(f"⏭️  Skipping (exists): {task_title}")
                     continue
 
-                # Create issue body
-                issue_body = f"""## Task Description
-{task}
+                # Create enhanced issue body
+                if isinstance(task, dict):
+                    # Use the description from the task if it's in new format
+                    deps_text = (
+                        chr(10).join(f"- {dep}" for dep in task_dependencies)
+                        if task_dependencies
+                        else "- None"
+                    )
+                    issue_body = f"""{task_description}
+
+## Sprint Information
+- **Sprint**: {sprint_title}
+- **Sprint ID**: `{sprint_data.get('id', sprint_label)}`
+- **Phase**: {phase_num} - {phase_name}
+- **Phase Status**: {phase_status}
+
+## Dependencies
+{deps_text}
+
+---
+_This issue was automatically created from the sprint YAML file and is tracked by the automated sprint system._
+"""
+                else:
+                    # Old format fallback
+                    issue_body = f"""## Task Description
+{task_description}
 
 ## Sprint Information
 - **Sprint**: {sprint_title}
@@ -184,20 +228,32 @@ class SprintIssueLinker:
 <!-- Add any technical details or considerations here -->
 
 ---
-_This issue was automatically created from the sprint YAML file. \
-It will be tracked by the sprint automation system._
+_This issue was automatically created from the sprint YAML file and is tracked by the automated sprint system._
 """
 
-                # Determine labels
-                labels = [sprint_label, f"phase-{phase_num}"]
+                # Add phase status to labels
                 if phase_status == "in_progress":
-                    labels.append("in-progress")
+                    task_labels.append("in-progress")
                 elif phase_status == "blocked":
-                    labels.append("blocked")
+                    task_labels.append("blocked")
 
                 # Create the issue
-                if self._create_issue(issue_title, issue_body, labels):
+                issue_number = self._create_issue(task_title, issue_body, task_labels)
+                if issue_number:
                     created_count += 1
+
+                    # Update sprint file with issue number if in new format
+                    if isinstance(task, dict) and not self.dry_run:
+                        task["github_issue"] = issue_number
+
+        # Save updated sprint file with issue numbers
+        if created_count > 0 and not self.dry_run:
+            try:
+                with open(sprint_file, "w") as f:
+                    yaml.dump(sprint_data, f, default_flow_style=False, sort_keys=False)
+                click.echo(f"✓ Updated {sprint_file.name} with issue numbers")
+            except Exception as e:
+                click.echo(f"⚠️  Warning: Could not update sprint file: {e}")
 
         click.echo(f"\nSummary: Created {created_count} new issues")
         return created_count
@@ -270,6 +326,154 @@ It will be tracked by the sprint automation system._
             click.echo(f"Error updating labels: {e}")
             return 0
 
+    def sync_sprint_with_issues(self) -> int:
+        """Sync sprint YAML with GitHub issues bidirectionally"""
+        sprint_file = self._get_sprint_file()
+        if not sprint_file:
+            click.echo("No active sprint found")
+            return 0
+
+        # Load sprint data
+        try:
+            with open(sprint_file, "r") as f:
+                sprint_data = yaml.safe_load(f)
+        except Exception as e:
+            click.echo(f"Error loading sprint file: {e}")
+            return 0
+
+        sprint_number = sprint_data.get("sprint_number", 1)
+        sprint_label = f"sprint-{sprint_number}"
+        sprint_title = sprint_data.get("title", f"Sprint {sprint_number}")
+
+        click.echo(f"Syncing {sprint_title} from {sprint_file.name}")
+
+        # Get existing issues
+        existing_issues = self._get_existing_issues(sprint_label)
+        existing_by_number = {issue["number"]: issue for issue in existing_issues}
+        existing_by_title = {issue["title"].lower(): issue for issue in existing_issues}
+
+        sync_count = 0
+        changes_made = False
+
+        # Process each phase
+        phases = sprint_data.get("phases", [])
+        for phase in phases:
+            tasks = phase.get("tasks", [])
+            for task in tasks:
+                if not isinstance(task, dict):
+                    continue  # Skip old format tasks
+
+                task_title = task.get("title", "")
+                existing_issue_num = task.get("github_issue")
+
+                # Find corresponding GitHub issue
+                github_issue = None
+                if existing_issue_num and existing_issue_num in existing_by_number:
+                    github_issue = existing_by_number[existing_issue_num]
+                elif task_title.lower() in existing_by_title:
+                    github_issue = existing_by_title[task_title.lower()]
+                    # Update sprint with found issue number
+                    if not existing_issue_num:
+                        task["github_issue"] = github_issue["number"]
+                        changes_made = True
+
+                if github_issue:
+                    # Check if we need to update the issue
+                    need_update = False
+                    update_fields = {}
+
+                    # Check title
+                    if github_issue["title"] != task_title:
+                        update_fields["title"] = task_title
+                        need_update = True
+
+                    # Check description (body)
+                    task_description = task.get("description", "")
+                    if task_description and github_issue.get("body", "") != task_description:
+                        # Create enhanced issue body
+                        deps_list = task.get("dependencies", [])
+                        deps_text = (
+                            chr(10).join(f"- {dep}" for dep in deps_list)
+                            if deps_list
+                            else "- None"
+                        )
+                        issue_body = f"""{task_description}
+
+## Sprint Information
+- **Sprint**: {sprint_title}
+- **Sprint ID**: `{sprint_data.get('id', sprint_label)}`
+- **Phase**: {phase.get('phase', '')} - {phase.get('name', '')}
+- **Phase Status**: {phase.get('status', 'pending')}
+
+## Dependencies
+{deps_text}
+
+---
+_This issue was automatically created from the sprint YAML file and is tracked by the automated sprint system._
+"""
+                        update_fields["body"] = issue_body
+                        need_update = True
+
+                    # Update issue if needed
+                    if need_update and not self.dry_run:
+                        try:
+                            cmd = ["gh", "issue", "edit", str(github_issue["number"])]
+                            for field, value in update_fields.items():
+                                cmd.extend([f"--{field}", value])
+
+                            subprocess.run(cmd, capture_output=True, text=True, check=True)
+                            sync_count += 1
+                            if self.verbose:
+                                click.echo(
+                                    f"✓ Updated issue #{github_issue['number']}: {task_title}"
+                                )
+                        except Exception as e:
+                            click.echo(f"✗ Failed to update issue #{github_issue['number']}: {e}")
+                    elif need_update and self.dry_run:
+                        click.echo(
+                            f"[DRY RUN] Would update issue #{github_issue['number']}: {task_title}"
+                        )
+                        sync_count += 1
+
+                else:
+                    # Create new issue for task without GitHub issue
+                    if not task.get("github_issue"):
+                        task_description = task.get("description", "No description provided")
+                        task_labels = task.get("labels", [sprint_label])
+
+                        issue_body = f"""{task_description}
+
+## Sprint Information
+- **Sprint**: {sprint_title}
+- **Sprint ID**: `{sprint_data.get('id', sprint_label)}`
+- **Phase**: {phase.get('phase', '')} - {phase.get('name', '')}
+- **Phase Status**: {phase.get('status', 'pending')}
+
+## Dependencies
+{chr(10).join(f'- {dep}' for dep in task.get('dependencies', [])) if task.get('dependencies') else '- None'}
+
+---
+_This issue was automatically created from the sprint YAML file and is tracked by the automated sprint system._
+"""
+
+                        issue_number = self._create_issue(task_title, issue_body, task_labels)
+                        if issue_number:
+                            task["github_issue"] = issue_number
+                            changes_made = True
+                            sync_count += 1
+
+        # Save updated sprint file if changes were made
+        if changes_made and not self.dry_run:
+            try:
+                with open(sprint_file, "w") as f:
+                    yaml.dump(sprint_data, f, default_flow_style=False, sort_keys=False)
+                click.echo(f"✓ Updated {sprint_file.name} with sync changes")
+            except Exception as e:
+                click.echo(f"⚠️  Warning: Could not update sprint file: {e}")
+
+        click.echo(f"\nSync Summary: {sync_count} items processed")
+        return sync_count
+
 
 @click.group()
 def cli():
@@ -296,6 +500,17 @@ def update_labels(sprint, dry_run, verbose):
     """Update sprint labels on existing issues"""
     linker = SprintIssueLinker(sprint_id=sprint, dry_run=dry_run, verbose=verbose)
     count = linker.update_sprint_labels()
+    sys.exit(0 if count >= 0 else 1)
+
+
+@cli.command()
+@click.option("--sprint", help="Specific sprint ID")
+@click.option("--dry-run", is_flag=True, help="Show what would be done without syncing")
+@click.option("--verbose", is_flag=True, help="Show detailed output")
+def sync(sprint, dry_run, verbose):
+    """Sync sprint YAML with GitHub issues bidirectionally"""
+    linker = SprintIssueLinker(sprint_id=sprint, dry_run=dry_run, verbose=verbose)
+    count = linker.sync_sprint_with_issues()
     sys.exit(0 if count >= 0 else 1)
 
 
