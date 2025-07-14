@@ -4,7 +4,7 @@ kv_validators.py: Input validation for KV store operations
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 
 def validate_cache_entry(data: Dict[str, Any]) -> bool:

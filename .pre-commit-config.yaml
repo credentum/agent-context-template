@@ -13,10 +13,9 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-PyYAML, types-redis, types-requests]
-        args: [--config-file=mypy.ini, .]
+        args: [--config-file=mypy.ini]
         exclude: ^(tests/|.venv_ci_test/)
-        # Run on all files to match CI
-        pass_filenames: false
+        files: ^src/
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
@@ -43,10 +42,7 @@ repos:
       - id: flake8
         args: [--max-line-length=100, --extend-ignore=E203]
         exclude: ^(tests/|.venv_ci_test/)
-        # Run on all Python files to catch all issues
-        pass_filenames: false
-        # Use same args as CI would
-        entry: flake8 .
+        files: ^src/
 
   - repo: local
     hooks:

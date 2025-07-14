@@ -52,7 +52,7 @@ class BaseComponent(ABC):
 
             with open(self.config_path, "r") as f:
                 config = yaml.safe_load(f)
-                return config if config is not None else {}
+                return dict(config) if config is not None else {}
         except FileNotFoundError:
             self.log_error(f"Configuration file {self.config_path} not found")
             return {}

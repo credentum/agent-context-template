@@ -9,7 +9,6 @@ the health of the context system by:
 - Updating cleanup.yaml with actions taken
 """
 
-import os
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -92,7 +91,8 @@ class CleanupAgent:
             if days_since_ref > retention_days:
                 return (
                     True,
-                    f"Document not referenced for {days_since_ref} days (retention: {retention_days})",
+                    f"Document not referenced for {days_since_ref} days "
+                    f"(retention: {retention_days})",
                 )
 
         return False, ""
@@ -152,7 +152,7 @@ class CleanupAgent:
                             if dir_date < cutoff_date:
                                 if not self.dry_run:
                                     shutil.rmtree(date_dir)
-                                self._log_action("CLEANED", date_dir, f"Old prompts directory")
+                                self._log_action("CLEANED", date_dir, "Old prompts directory")
                         except ValueError:
                             continue
 
@@ -238,7 +238,7 @@ class CleanupAgent:
         self.write_cleanup_log()
 
         # Summary
-        click.echo(f"\nCleanup complete:")
+        click.echo("\nCleanup complete:")
         click.echo(f"  Total actions: {len(self.actions)}")
 
         action_counts: Dict[str, int] = {}

@@ -10,7 +10,6 @@ This script:
 """
 
 import sys
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import click
@@ -120,7 +119,10 @@ class Neo4jInitializer:
 
             with self.driver.session(database=self.database) as session:
                 for label, property in constraints:
-                    query = f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{label}) REQUIRE n.{property} IS UNIQUE"
+                    query = (
+                        f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{label}) "
+                        f"REQUIRE n.{property} IS UNIQUE"
+                    )
                     session.run(query)
                     click.echo(f"  Created constraint: {label}.{property}")
 
@@ -169,7 +171,10 @@ class Neo4jInitializer:
                         )
                         """
                     else:
-                        query = f"CREATE INDEX {index_name} IF NOT EXISTS FOR (n:{label}) ON ({props_str})"
+                        query = (
+                            f"CREATE INDEX {index_name} IF NOT EXISTS "
+                            f"FOR (n:{label}) ON ({props_str})"
+                        )
 
                     try:
                         session.run(query)
@@ -309,7 +314,7 @@ class Neo4jInitializer:
 
                 return True
 
-        except Exception as e:
+        except Exception:
             # APOC might not be installed, try simpler query
             try:
                 if not self.driver:

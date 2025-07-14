@@ -21,8 +21,6 @@ Options:
     --help     Show this help message
 """
 
-import fcntl
-import json
 import os
 import sys
 import tempfile
@@ -339,7 +337,7 @@ def validate(path, fix, verbose):
         valid_count, total_count = linter.validate_directory(path_obj, fix=fix)
 
     # Show results
-    click.echo(f"\nValidation Results:")
+    click.echo("\nValidation Results:")
     click.echo(f"  Valid: {valid_count}/{total_count}")
 
     if fix and linter.fixed_count > 0:

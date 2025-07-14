@@ -7,7 +7,6 @@ to sprint tasks for automated tracking.
 """
 
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -36,9 +35,7 @@ class SprintIssueLinker:
             return  # Skip check in dry-run mode
 
         try:
-            result = subprocess.run(
-                ["gh", "auth", "status"], capture_output=True, text=True, check=True
-            )
+            subprocess.run(["gh", "auth", "status"], capture_output=True, text=True, check=True)
             if self.verbose:
                 click.echo("✓ GitHub CLI authenticated")
         except FileNotFoundError:
@@ -187,7 +184,8 @@ class SprintIssueLinker:
 <!-- Add any technical details or considerations here -->
 
 ---
-_This issue was automatically created from the sprint YAML file. It will be tracked by the sprint automation system._
+_This issue was automatically created from the sprint YAML file. \
+It will be tracked by the sprint automation system._
 """
 
                 # Determine labels
@@ -220,7 +218,7 @@ _This issue was automatically created from the sprint YAML file. It will be trac
             return 0
 
         sprint_number = sprint_data.get("sprint_number", 1)
-        old_label = f"sprint-current"
+        old_label = "sprint-current"
         new_label = f"sprint-{sprint_number}"
 
         if self.dry_run:

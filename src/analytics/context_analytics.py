@@ -9,19 +9,15 @@ This component provides:
 4. System health monitoring
 """
 
-import json
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 import click
-import duckdb
-import numpy as np
 import pandas as pd
-import yaml
 
-from ..storage.context_kv import DuckDBAnalytics, MetricEvent
+from ..storage.context_kv import DuckDBAnalytics
 
 
 @dataclass
@@ -104,7 +100,8 @@ class ContextAnalytics(DuckDBAnalytics):
                 insights = []
                 if metrics["churn_rate"] > 0.2:
                     insights.append(
-                        f"High document churn rate ({metrics['churn_rate']:.1%}) indicates frequent archiving"
+                        f"High document churn rate ({metrics['churn_rate']:.1%}) "
+                        "indicates frequent archiving"
                     )
 
                 if metrics["update_frequency"] < 0.1:
@@ -167,9 +164,11 @@ class ContextAnalytics(DuckDBAnalytics):
                 SELECT
                     agent_id,
                     COUNT(*) as total_actions,
-                    COUNT(CASE WHEN metric_name LIKE 'agent.%.success' THEN 1 END) as successes,
+                    COUNT(CASE WHEN metric_name LIKE 'agent.%.success'
+                          THEN 1 END) as successes,
                     COUNT(CASE WHEN metric_name LIKE 'agent.%.failure' THEN 1 END) as failures,
-                    AVG(CASE WHEN metric_name LIKE 'agent.%.duration' THEN value END) as avg_duration,
+                    AVG(CASE WHEN metric_name LIKE 'agent.%.duration'
+                        THEN value END) as avg_duration,
                     MAX(timestamp) as last_active
                 FROM context_metrics
                 WHERE timestamp >= ? AND timestamp <= ?
@@ -211,7 +210,8 @@ class ContextAnalytics(DuckDBAnalytics):
 
                     if agent["avg_duration"] and agent["avg_duration"] > 30:
                         insights.append(
-                            f"Agent {agent['agent_id']} has high average duration ({agent['avg_duration']:.1f}s)"
+                            f"Agent {agent['agent_id']} has high average duration "
+                            f"({agent['avg_duration']:.1f}s)"
                         )
 
                 # Overall metrics
@@ -230,7 +230,8 @@ class ContextAnalytics(DuckDBAnalytics):
                     last_active = datetime.fromisoformat(agent_data["last_active"])
                     if (now - last_active).days > 1:
                         insights.append(
-                            f"Agent {agent_id} has been inactive for {(now - last_active).days} days"
+                            f"Agent {agent_id} has been inactive for "
+                            f"{(now - last_active).days} days"
                         )
 
             else:

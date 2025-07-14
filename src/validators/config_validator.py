@@ -3,8 +3,7 @@
 config_validator.py: Configuration validation for the Agent-First Context System
 """
 
-from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import List, Tuple
 
 import click
 import yaml
@@ -173,7 +172,8 @@ class ConfigValidator:
                     for doc_type, boost in ranking["type_boosts"].items():
                         if not isinstance(boost, (int, float)) or boost < 0:
                             self.errors.append(
-                                f"search.ranking.type_boosts.{doc_type} must be a non-negative number"
+                                f"search.ranking.type_boosts.{doc_type} must be a "
+                                "non-negative number"
                             )
 
         # Validate resources
@@ -263,11 +263,11 @@ def main(config: str, perf_config: str, strict: bool):
 
     # Validate main config
     click.echo(f"Validating {config}...")
-    main_valid = validator.validate_main_config(config)
+    validator.validate_main_config(config)
 
     # Validate performance config
     click.echo(f"Validating {perf_config}...")
-    perf_valid = validator.validate_performance_config(perf_config)
+    validator.validate_performance_config(perf_config)
 
     # Show results
     if validator.errors:

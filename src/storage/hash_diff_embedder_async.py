@@ -13,8 +13,7 @@ import hashlib
 import json
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, cast
@@ -265,7 +264,8 @@ class AsyncHashDiffEmbedder:
             batch = tasks[i : i + self.batch_size]
             if self.verbose:
                 click.echo(
-                    f"\nProcessing batch {i//self.batch_size + 1}/{(len(tasks) + self.batch_size - 1)//self.batch_size}"
+                    f"\nProcessing batch {i//self.batch_size + 1}/"
+                    f"{(len(tasks) + self.batch_size - 1)//self.batch_size}"
                 )
 
             # Process batch concurrently
@@ -310,7 +310,7 @@ async def main():
     embedded, total = await embedder.embed_directory(args.path)
     elapsed = time.time() - start_time
 
-    click.echo(f"\nResults:")
+    click.echo("\nResults:")
     click.echo(f"  Embedded: {embedded}/{total}")
     click.echo(f"  Time: {elapsed:.2f}s")
     click.echo(f"  Rate: {embedded/elapsed:.2f} docs/sec" if elapsed > 0 else "")

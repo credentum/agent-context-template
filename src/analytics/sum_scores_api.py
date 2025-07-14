@@ -11,14 +11,13 @@ This component provides:
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
+from datetime import datetime
+from typing import Any, Dict, List, Optional, cast
 
 import click
 import yaml
 from qdrant_client import QdrantClient
-from qdrant_client.models import FieldCondition, Filter, MatchValue, SearchRequest
+from qdrant_client.models import FieldCondition, Filter, MatchValue
 
 
 @dataclass
@@ -431,7 +430,8 @@ def search(query: str, limit: int, doc_type: Optional[str], format: str):
             click.echo(f"\n{i}. {r.title}")
             click.echo(f"   ID: {r.document_id} | Type: {r.document_type}")
             click.echo(
-                f"   Score: {r.final_score:.3f} (base: {r.score:.3f}, decay: {r.decay_factor:.2f}, boost: {r.boost_factor:.2f})"
+                f"   Score: {r.final_score:.3f} (base: {r.score:.3f}, "
+                f"decay: {r.decay_factor:.2f}, boost: {r.boost_factor:.2f})"
             )
             click.echo(f"   Path: {r.file_path}")
 
