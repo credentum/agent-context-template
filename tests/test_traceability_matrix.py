@@ -140,10 +140,11 @@ class TestTraceabilityMatrix:
             json.dump(report, f, indent=2)
 
         # Verify report completeness
-        assert (
-            report["summary"]["functions_with_tests"]
-            == report["summary"]["total_critical_functions"]
-        )
+        summary: dict[str, Any] = report["summary"]
+        assert isinstance(summary, dict)
+        functions_with_tests: int = summary["functions_with_tests"]
+        total_critical_functions: int = summary["total_critical_functions"]
+        assert functions_with_tests == total_critical_functions
         print(f"Traceability report generated: {report_path}")
 
     def _calculate_module_coverage(self) -> Dict[str, Dict]:

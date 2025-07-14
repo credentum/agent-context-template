@@ -7,6 +7,7 @@ Tests state transitions, phase status updates, and task completion tracking
 import json
 import tempfile
 from pathlib import Path
+from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
 import yaml
@@ -82,7 +83,7 @@ class TestSprintUpdaterStateMachine:
         mock_run.return_value = Mock(returncode=0)
 
         # Create sprint with pending task
-        sprint = self.test_sprint.copy()
+        sprint: Dict[str, Any] = self.test_sprint.copy()
         sprint["phases"][1]["tasks"][1]["status"] = "pending"
 
         # Create GitHub issue marking task as in progress
@@ -105,7 +106,7 @@ class TestSprintUpdaterStateMachine:
         updater.sprints_dir = self.sprints_dir
 
         # Simulate task update logic
-        phases = sprint["phases"]
+        phases: List[Dict[str, Any]] = sprint["phases"]
         updated = False
 
         for phase in phases:
@@ -119,11 +120,11 @@ class TestSprintUpdaterStateMachine:
 
     def test_state_transitions_in_progress_to_completed(self):
         """Test state transition from in_progress to completed"""
-        sprint = self.test_sprint.copy()
+        sprint: Dict[str, Any] = self.test_sprint.copy()
         sprint["phases"][1]["tasks"][0]["status"] = "in_progress"
 
         # Simulate completion
-        phases = sprint["phases"]
+        phases: List[Dict[str, Any]] = sprint["phases"]
         for phase in phases:
             for task in phase.get("tasks", []):
                 if task["name"] == "Implement feature A" and task["status"] == "in_progress":
@@ -133,14 +134,14 @@ class TestSprintUpdaterStateMachine:
 
     def test_phase_status_auto_update(self):
         """Test automatic phase status update based on task completion"""
-        sprint = self.test_sprint.copy()
+        sprint: Dict[str, Any] = self.test_sprint.copy()
 
         # Complete all tasks in Development phase
         for task in sprint["phases"][1]["tasks"]:
             task["status"] = "completed"
 
         # Simulate phase update logic
-        phase = sprint["phases"][1]
+        phase: Dict[str, Any] = sprint["phases"][1]
         all_tasks_completed = all(
             task.get("status") == "completed" for task in phase.get("tasks", [])
         )
@@ -152,7 +153,7 @@ class TestSprintUpdaterStateMachine:
 
     def test_sprint_status_progression(self):
         """Test overall sprint status progression"""
-        sprint = self.test_sprint.copy()
+        sprint: Dict[str, Any] = self.test_sprint.copy()
 
         # Test planning -> in_progress
         sprint["status"] = "planning"
@@ -166,6 +167,7 @@ class TestSprintUpdaterStateMachine:
             phase["status"] = "completed"
 
         all_phases_completed = all(phase.get("status") == "completed" for phase in sprint["phases"])
+        assert isinstance(sprint["phases"], list)
 
         if all_phases_completed:
             sprint["status"] = "completed"
@@ -216,7 +218,7 @@ class TestSprintUpdaterStateMachine:
 
     def test_concurrent_phase_management(self):
         """Test handling of concurrent phases"""
-        sprint = {
+        sprint: Dict[str, Any] = {
             "phases": [
                 {
                     "name": "Backend Development",
@@ -239,14 +241,18 @@ class TestSprintUpdaterStateMachine:
         }
 
         # Both phases can be in_progress simultaneously
-        active_phases = [phase for phase in sprint["phases"] if phase["status"] == "in_progress"]
+        phases_list: List[Dict[str, Any]] = sprint["phases"]
+        active_phases = [phase for phase in phases_list if phase["status"] == "in_progress"]
 
         assert len(active_phases) == 2
         assert all(phase.get("concurrent", True) for phase in active_phases[1:])
+        # Ensure all phases are dict types
+        for phase in active_phases:
+            assert isinstance(phase, dict)
 
     def test_blocked_task_handling(self):
         """Test handling of blocked tasks"""
-        task = {
+        task: Dict[str, Any] = {
             "name": "Deploy to production",
             "status": "blocked",
             "blocked_by": "Waiting for security review",
@@ -254,7 +260,7 @@ class TestSprintUpdaterStateMachine:
         }
 
         # Blocked tasks should not prevent phase completion
-        phase = {
+        phase: Dict[str, Any] = {
             "name": "Deployment",
             "status": "in_progress",
             "tasks": [
@@ -265,7 +271,8 @@ class TestSprintUpdaterStateMachine:
         }
 
         # Check if phase can complete with blocked tasks
-        non_blocked_tasks = [t for t in phase["tasks"] if t.get("status") != "blocked"]
+        tasks_list: List[Dict[str, Any]] = phase["tasks"]
+        non_blocked_tasks = [t for t in tasks_list if t.get("status") != "blocked"]
 
         all_non_blocked_completed = all(t.get("status") == "completed" for t in non_blocked_tasks)
 

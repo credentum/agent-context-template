@@ -401,12 +401,15 @@ class TestSnapshotVerification:
         assert "checksums" in snapshot
 
         # Validate metadata
-        assert snapshot["metadata"]["version"] == "1.0"
-        assert "created_at" in snapshot["metadata"]
+        metadata: dict[str, any] = snapshot["metadata"]
+        assert metadata["version"] == "1.0"
+        assert "created_at" in metadata
 
         # Validate document counts
-        total = sum(snapshot["documents"]["by_type"].values())
-        assert total == snapshot["documents"]["total_count"]
+        documents: dict[str, any] = snapshot["documents"]
+        by_type: dict[str, any] = documents["by_type"]
+        total = sum(by_type.values())
+        assert total == documents["total_count"]
 
     def test_snapshot_comparison(self):
         """Test comparing snapshots for changes"""
@@ -421,11 +424,11 @@ class TestSnapshotVerification:
         }
 
         # Compare snapshots
+        docs1: dict[str, any] = snapshot1["documents"]
+        docs2: dict[str, any] = snapshot2["documents"]
         changes = {
-            "documents_added": snapshot2["documents"]["total_count"]
-            - snapshot1["documents"]["total_count"],
-            "checksum_changed": snapshot1["documents"]["checksum"]
-            != snapshot2["documents"]["checksum"],
+            "documents_added": docs2["total_count"] - docs1["total_count"],
+            "checksum_changed": docs1["checksum"] != docs2["checksum"],
             "time_elapsed": (
                 datetime.fromisoformat(snapshot2["timestamp"])
                 - datetime.fromisoformat(snapshot1["timestamp"])

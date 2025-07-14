@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any, Dict, Set
 from unittest import mock
 
 import pytest
@@ -12,7 +13,7 @@ import pytest
 # Import the script modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from generate_coverage_matrix import (  # noqa: E402
+from generate_coverage_matrix import (  # noqa: E402  # type: ignore[import-not-found]
     DEFAULT_CONFIG,
     CoverageAnalyzer,
     CoverageDataValidator,
@@ -42,7 +43,7 @@ class TestCoverageDataValidator:
 
     def test_validate_coverage_json_valid(self):
         """Test validation of valid coverage.json data."""
-        data = {"files": {"src/module.py": {"contexts": {}}}}
+        data: Dict[str, Any] = {"files": {"src/module.py": {"contexts": {}}}}
         assert CoverageDataValidator.validate_coverage_json(data) is True
 
     def test_validate_coverage_json_missing_files(self):
@@ -145,7 +146,7 @@ class TestReportGenerator:
         """Test HTML metrics generation."""
         reporter = ReportGenerator(DEFAULT_CONFIG.copy())
         overall = {"line_coverage": 75.5, "branch_coverage": 60, "tests_passed": 100}
-        mapping = {"src/module1.py": set(), "src/module2.py": set()}
+        mapping: Dict[str, Set[str]] = {"src/module1.py": set(), "src/module2.py": set()}
 
         html = reporter.generate_html_metrics(overall, mapping)
 

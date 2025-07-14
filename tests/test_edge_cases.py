@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest  # type: ignore
+import pytest
 import yaml
 
 try:

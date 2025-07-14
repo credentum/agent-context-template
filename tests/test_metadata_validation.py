@@ -177,8 +177,10 @@ class TestConfigurationMetadataValidation:
         assert str(agent_metadata["agent_name"]).endswith("_agent")
         assert isinstance(agent_metadata["capabilities"], list)
         assert isinstance(agent_metadata["enabled"], bool)
-        assert int(agent_metadata["max_retries"]) >= 0
-        assert int(agent_metadata["timeout_seconds"]) > 0
+        max_retries_val = agent_metadata["max_retries"]
+        assert isinstance(max_retries_val, int) and max_retries_val >= 0
+        timeout_seconds_val = agent_metadata["timeout_seconds"]
+        assert isinstance(timeout_seconds_val, int) and timeout_seconds_val > 0
 
     def test_connection_metadata_validation(self):
         """Test connection configuration metadata"""
@@ -194,13 +196,13 @@ class TestConfigurationMetadataValidation:
         }
 
         # Validate connection fields
-        assert int(connection_metadata["port"]) > 0
-        assert int(connection_metadata["port"]) <= 65535
+        port_val = connection_metadata["port"]
+        assert isinstance(port_val, int) and port_val > 0 and port_val <= 65535
         assert isinstance(connection_metadata["ssl"], bool)
-        assert int(connection_metadata["connection_timeout"]) > 0
-        assert int(connection_metadata["read_timeout"]) >= int(
-            connection_metadata["connection_timeout"]
-        )
+        connection_timeout_val = connection_metadata["connection_timeout"]
+        read_timeout_val = connection_metadata["read_timeout"]
+        assert isinstance(connection_timeout_val, int) and connection_timeout_val > 0
+        assert isinstance(read_timeout_val, int) and read_timeout_val >= connection_timeout_val
 
 
 class TestDataIntegrityValidation:
@@ -255,11 +257,12 @@ class TestDataIntegrityValidation:
 
         # Validate reference structure
         for ref in document["references"]:
+            assert isinstance(ref, dict)
             assert "type" in ref
             assert "id" in ref
-            assert ref.get("type") in ["decision", "design", "sprint", "trace"]
-            assert isinstance(ref.get("id"), str)
-            assert len(str(ref.get("id", ""))) > 0
+            assert ref["type"] in ["decision", "design", "sprint", "trace"]
+            assert isinstance(ref["id"], str)
+            assert len(ref["id"]) > 0
 
     def test_schema_version_validation(self):
         """Test schema version compatibility validation"""
@@ -344,7 +347,16 @@ class TestMetricMetadataValidation:
 
         # Validate aggregation fields
         assert aggregation_metadata["aggregation_type"] in ["sum", "average", "min", "max", "count"]
-        assert int(aggregation_metadata["samples"]) > 0
-        assert float(aggregation_metadata["min_value"]) <= float(aggregation_metadata["avg_value"])
-        assert float(aggregation_metadata["avg_value"]) <= float(aggregation_metadata["max_value"])
-        assert float(aggregation_metadata["std_deviation"]) >= 0
+        samples_val = aggregation_metadata["samples"]
+        assert isinstance(samples_val, int) and samples_val > 0
+        min_value_val = aggregation_metadata["min_value"]
+        avg_value_val = aggregation_metadata["avg_value"]
+        max_value_val = aggregation_metadata["max_value"]
+        std_deviation_val = aggregation_metadata["std_deviation"]
+        assert isinstance(min_value_val, (int, float)) and isinstance(avg_value_val, (int, float))
+        assert isinstance(max_value_val, (int, float)) and isinstance(
+            std_deviation_val, (int, float)
+        )
+        assert min_value_val <= avg_value_val
+        assert avg_value_val <= max_value_val
+        assert std_deviation_val >= 0
