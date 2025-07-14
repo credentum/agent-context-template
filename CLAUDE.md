@@ -7,9 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is an **Agent-First Project Context System** that provides structured context management with vector search (Qdrant) and graph relationships (Neo4j) for enhanced AI agent interactions. It includes GitHub Actions templates for integrating Claude AI into workflows using the `anthropics/claude-code-action@beta` action.
 
 **Current Project Status:**
-- Coverage: 59.53% (Target: 85%)
+- Coverage: 59.53% (Current baseline)
+- Target: 85% for all modules, 90% for validators
 - Critical modules need attention (validators <40% coverage)
-- Python 3.8+ codebase with async support
+- Python 3.11 codebase with async support
 
 ## 1 ⚠️ Security & Secrets (first things first)
 * **Never hard‑code API keys or tokens.**
@@ -102,7 +103,7 @@ Add tools: claude mcp add playwright npx @playwright/mcp@latest
 ## 5 📋 Coding & Review Guidelines
 
 ### Python Standards:
-- **Style**: Black formatter (line length: 88), isort for imports
+- **Style**: Black formatter (line length: 100), isort for imports
 - **Type hints**: Required for all functions
 - **Docstrings**: Google style for all public methods
 - **Testing**: pytest with minimum 85% coverage
@@ -163,6 +164,7 @@ Use /clear between distinct tasks to avoid context bleed.
 
 ## 7 ▶️ GitHub Actions Overview
 
+### AI Assistant Workflows
 **.github/workflows/claude.yml** — Interactive assistant that triggers on:
 - Issue comments containing `@claude`
 - Pull request review comments containing `@claude`
@@ -174,10 +176,58 @@ Use /clear between distinct tasks to avoid context bleed.
 - No `@claude` mention required
 - Uses `direct_prompt` for automated review instructions
 
+### Testing and Quality Workflows
+**.github/workflows/test.yml** — Basic test runner:
+- Runs on every push and PR
+- Quick validation of code changes
+
+**.github/workflows/test-suite.yml** — Comprehensive test suite:
+- Runs full test battery including unit, integration, and benchmarks
+- Supports multiple Python versions
+- Includes mutation testing and load testing
+- Generates detailed coverage reports
+
 **.github/workflows/test-coverage.yml** — Coverage tracking:
 - Runs pytest with coverage on every PR
 - Updates coverage badges
 - Fails if coverage drops below threshold
+
+**.github/workflows/context-lint.yml** — YAML validation:
+- Validates all context YAML files
+- Ensures schema compliance
+- Runs on changes to context/ directory
+
+### Sprint and Project Management
+**.github/workflows/sprint-start.yml** — Sprint initialization:
+- Creates new sprint structure
+- Sets up sprint goals and tasks
+- Updates project boards
+- Triggered manually or on schedule
+
+**.github/workflows/sprint-update.yml** — Sprint progress tracking:
+- Updates sprint metrics
+- Links issues to sprint goals
+- Generates progress reports
+- Runs daily during active sprints
+
+### Database Synchronization
+**.github/workflows/vector-graph-sync.yml** — Vector/Graph DB sync:
+- Synchronizes Qdrant vector embeddings
+- Updates Neo4j graph relationships
+- Maintains consistency between databases
+- Runs on context updates
+
+**.github/workflows/kv-analytics-sync.yml** — KV store analytics:
+- Processes key-value store changes
+- Updates analytics dashboards
+- Generates usage reports
+- Scheduled and on-demand execution
+
+### Pull Request Management
+**.github/workflows/pr-required.yml** — PR enforcement:
+- Ensures all changes go through PR process
+- Validates PR format and labels
+- Enforces branch protection rules
 
 **Configuration options include:**
 ```yaml
@@ -211,7 +261,7 @@ For this project specifically:
 
 ### Project-Specific Extensions:
 1. **Custom validators**: Place in `src/validators/` with corresponding tests
-2. **New agents**: Follow template in `src/agents/base_agent.py`
+2. **New agents**: Follow examples in `src/agents/` (e.g., `context_lint.py`, `sprint_issue_linker.py`)
 3. **Context schemas**: Define in YAML under `context/schemas/`
 
 ### Testing Patterns:
