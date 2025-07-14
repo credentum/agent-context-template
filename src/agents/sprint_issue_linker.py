@@ -7,6 +7,7 @@ to sprint tasks for automated tracking.
 """
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -28,6 +29,47 @@ class SprintIssueLinker:
         self.context_dir = Path("context")
         self.sprints_dir = self.context_dir / "sprints"
         self._check_gh_cli()
+
+    def _sanitize_text(self, text: str) -> str:
+        """Sanitize text input to prevent command injection"""
+        if not isinstance(text, str):
+            raise ValueError("Input must be a string")
+
+        # Remove or escape potentially dangerous characters
+        # Allow alphanumeric, spaces, punctuation, and common markdown
+        sanitized = re.sub(r"[`$\\;|&<>(){}[\]]", "", str(text))
+
+        # Limit length to prevent excessively long inputs
+        if len(sanitized) > 1000:
+            sanitized = sanitized[:997] + "..."
+
+        return sanitized.strip()
+
+    def _validate_label(self, label: str) -> str:
+        """Validate and sanitize GitHub label"""
+        if not isinstance(label, str):
+            raise ValueError("Label must be a string")
+
+        # GitHub labels: alphanumeric, hyphens, underscores, periods
+        sanitized = re.sub(r"[^a-zA-Z0-9\-_.]", "", str(label))
+
+        if not sanitized:
+            raise ValueError("Label contains no valid characters")
+
+        if len(sanitized) > 50:
+            sanitized = sanitized[:50]
+
+        return sanitized
+
+    def _validate_issue_number(self, issue_num: Any) -> int:
+        """Validate that issue number is a safe integer"""
+        try:
+            num = int(issue_num)
+            if num <= 0 or num > 999999:  # Reasonable bounds
+                raise ValueError(f"Issue number out of range: {num}")
+            return num
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Invalid issue number: {issue_num}") from e
 
     def _check_gh_cli(self) -> None:
         """Check if GitHub CLI is available and authenticated"""
@@ -87,16 +129,21 @@ class SprintIssueLinker:
 
     def _create_issue(self, title: str, body: str, labels: List[str]) -> Optional[int]:
         """Create a GitHub issue"""
+        # Sanitize all inputs
+        safe_title = self._sanitize_text(title)
+        safe_body = self._sanitize_text(body)
+        safe_labels = [self._validate_label(label) for label in labels]
+
         if self.dry_run:
-            click.echo(f"[DRY RUN] Would create issue: {title}")
+            click.echo(f"[DRY RUN] Would create issue: {safe_title}")
             if self.verbose:
-                click.echo(f"  Labels: {', '.join(labels)}")
-                click.echo(f"  Body preview: {body[:200]}...")
+                click.echo(f"  Labels: {', '.join(safe_labels)}")
+                click.echo(f"  Body preview: {safe_body[:200]}...")
             return None
 
         try:
-            cmd = ["gh", "issue", "create", "--title", title, "--body", body]
-            for label in labels:
+            cmd = ["gh", "issue", "create", "--title", safe_title, "--body", safe_body]
+            for label in safe_labels:
                 cmd.extend(["--label", label])
 
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -154,18 +201,25 @@ class SprintIssueLinker:
             for task in tasks:
                 # Handle both old format (string) and new format (dict)
                 if isinstance(task, str):
-                    # Old format - just a string
-                    task_title = f"[Sprint {sprint_number}] Phase {phase_num}: {task}"
-                    task_description = task
+                    # Old format - just a string (validate input)
+                    task_text = self._sanitize_text(task)
+                    task_title = f"[Sprint {sprint_number}] Phase {phase_num}: {task_text}"
+                    task_description = task_text
                     task_labels = [sprint_label, f"phase-{phase_num}"]
                     task_dependencies = []
                 else:
-                    # New format - detailed task object
-                    task_title = task.get(
-                        "title", f"[Sprint {sprint_number}] Phase {phase_num}: Untitled Task"
-                    )
-                    task_description = task.get("description", "No description provided")
-                    task_labels = task.get("labels", [sprint_label, f"phase-{phase_num}"])
+                    # New format - detailed task object (validate all inputs)
+                    raw_title = task.get("title", "Untitled Task")
+                    raw_description = task.get("description", "No description provided")
+
+                    sanitized_title = self._sanitize_text(raw_title)
+                    task_title = f"[Sprint {sprint_number}] Phase {phase_num}: {sanitized_title}"
+                    task_description = self._sanitize_text(raw_description)
+
+                    # Validate labels
+                    raw_labels = task.get("labels", [sprint_label, f"phase-{phase_num}"])
+                    task_labels = [self._validate_label(label) for label in raw_labels if label]
+
                     task_dependencies = task.get("dependencies", [])
 
                     # Skip if already has a GitHub issue assigned
@@ -282,13 +336,17 @@ _Auto-created from sprint YAML and tracked by sprint system._
             return 0
 
         try:
+            # Sanitize label inputs
+            safe_old_label = self._validate_label(old_label)
+            safe_new_label = self._validate_label(new_label)
+
             # Get issues with old label
             cmd = [
                 "gh",
                 "issue",
                 "list",
                 "--label",
-                old_label,
+                safe_old_label,
                 "--json",
                 "number",
                 "--limit",
@@ -299,17 +357,18 @@ _Auto-created from sprint YAML and tracked by sprint system._
 
             updated_count = 0
             for issue in issues:
-                issue_num = issue["number"]
+                # Validate issue number from API response
+                issue_num = self._validate_issue_number(issue["number"])
                 try:
                     # Remove old label
                     subprocess.run(
-                        ["gh", "issue", "edit", str(issue_num), "--remove-label", old_label],
+                        ["gh", "issue", "edit", str(issue_num), "--remove-label", safe_old_label],
                         capture_output=True,
                         check=True,
                     )
                     # Add new label
                     subprocess.run(
-                        ["gh", "issue", "edit", str(issue_num), "--add-label", new_label],
+                        ["gh", "issue", "edit", str(issue_num), "--add-label", safe_new_label],
                         capture_output=True,
                         check=True,
                     )
@@ -415,9 +474,23 @@ _Auto-created from sprint YAML and tracked by sprint system._
                     # Update issue if needed
                     if need_update and not self.dry_run:
                         try:
-                            cmd = ["gh", "issue", "edit", str(github_issue["number"])]
+                            # Validate issue number from API response
+                            issue_num = self._validate_issue_number(github_issue["number"])
+                            cmd = ["gh", "issue", "edit", str(issue_num)]
+
+                            # Sanitize update field values
                             for field, value in update_fields.items():
-                                cmd.extend([f"--{field}", value])
+                                if field in ["title", "body"]:
+                                    safe_value = self._sanitize_text(value)
+                                elif field == "state":
+                                    # Only allow valid GitHub issue states
+                                    if value not in ["open", "closed"]:
+                                        raise ValueError(f"Invalid issue state: {value}")
+                                    safe_value = value
+                                else:
+                                    # Skip unknown fields for security
+                                    continue
+                                cmd.extend([f"--{field}", safe_value])
 
                             subprocess.run(cmd, capture_output=True, text=True, check=True)
                             sync_count += 1

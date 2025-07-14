@@ -15,21 +15,27 @@ on:
         default: false
 
   # Automatic trigger when sprint files are created/modified
+  # Limited to main branch for security (feature branches use manual dispatch)
   push:
     paths:
       - 'context/sprints/sprint-*.yaml'
     branches:
       - main
-      - 'feature/**'
-      - 'fix/**'
 
 jobs:
   generate:
     runs-on: ubuntu-latest
+    # Minimal permissions for sprint issue generation
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
+      contents: write       # Required for checkout, commit, and push
+      issues: write         # Required for creating GitHub issues
+      pull-requests: write  # Required for creating PRs
+      # Explicitly deny other permissions for security
+      actions: none
+      checks: none
+      deployments: none
+      packages: none
+      security-events: none
 
     steps:
     - uses: actions/checkout@v4

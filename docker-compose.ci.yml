@@ -1,24 +1,108 @@
+# docker-compose.ci.yml - Run CI environment locally exactly like GitHub Actions
 version: '3.8'
 
 services:
-  ci-test:
+  # Run all CI lint checks (default)
+  ci-lint:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    container_name: ci-lint-runner
+    volumes:
+      # Mount source code for real-time changes (read-only)
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - ./context:/app/context:ro
+      # Mount config files
+      - ./mypy.ini:/app/mypy.ini:ro
+      - ./.flake8:/app/.flake8:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - PYTHONUNBUFFERED=1
+    command: /bin/bash scripts/test-like-ci.sh
+
+  # Run specific checks individually
+  ci-black:
     build:
       context: .
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      # Mount the source code to see changes without rebuilding
-      - ./src:/app/src
-      - ./tests:/app/tests
-      - ./scripts:/app/scripts
-      - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml
-      - ./pyproject.toml:/app/pyproject.toml
-      - ./mypy.ini:/app/mypy.ini
-      - ./CLAUDE.md:/app/CLAUDE.md
-      - ./.claude:/app/.claude
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
     environment:
-      - PYTHONUNBUFFERED=1
-    command: /bin/bash scripts/test-like-ci.sh
+      - CI=true
+    command: black --check src/ tests/ scripts/
+
+  ci-isort:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+    environment:
+      - CI=true
+    command: isort --check-only --profile black src/ tests/ scripts/
+
+  ci-flake8:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - ./.flake8:/app/.flake8:ro
+    environment:
+      - CI=true
+    command: flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503
+
+  ci-mypy:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./mypy.ini:/app/mypy.ini:ro
+    environment:
+      - CI=true
+    command: mypy src/ --config-file=mypy.ini
+
+  ci-context-lint:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./context:/app/context:ro
+    environment:
+      - CI=true
+      - PYTHONPATH=/app
+    command: python -m src.agents.context_lint validate context/
+
+  ci-import-check:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+    environment:
+      - CI=true
+      - PYTHONPATH=/app
+    command: python -m pytest --collect-only -q
 
   # Service for interactive debugging
   ci-debug:
@@ -30,11 +114,13 @@ services:
       - ./src:/app/src
       - ./tests:/app/tests
       - ./scripts:/app/scripts
+      - ./context:/app/context
       - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml
       - ./pyproject.toml:/app/pyproject.toml
       - ./mypy.ini:/app/mypy.ini
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
     command: /bin/bash
     stdin_open: true
     tty: true

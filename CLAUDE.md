@@ -133,6 +133,12 @@ Add tools: claude mcp add playwright npx @playwright/mcp@latest
 # ALWAYS run before creating/pushing PR:
 pre-commit run --all-files
 
+# Run exact CI checks locally (Docker - matches GitHub Actions exactly!)
+./scripts/run-ci-docker.sh
+
+# Alternative: Run CI checks with Make (uses local Python)
+make lint
+
 # Run tests with coverage
 pytest --cov=src --cov-report=html --cov-report=term-missing
 
@@ -156,9 +162,10 @@ Refactor | generate checklist → test baseline → refactor → test again → 
 Debug | reproduce issue → add logging → isolate → fix → add regression test
 
 **Before EVERY commit/push:**
-1. Run `pre-commit run --all-files`
-2. Run `pytest --cov=src --cov-report=term-missing`
-3. Fix any issues before proceeding
+1. Run `./scripts/run-ci-docker.sh` (or `make lint`) to match GitHub CI exactly
+2. Run `pre-commit run --all-files`
+3. Run `pytest --cov=src --cov-report=term-missing`
+4. Fix any issues before proceeding
 
 Use /clear between distinct tasks to avoid context bleed.
 
@@ -444,8 +451,14 @@ All documents include `graph_metadata` defining relationships:
    git commit -m "type(scope): description"
    ```
 
-4. **ALWAYS run pre-commit hooks and tests before pushing:**
+4. **ALWAYS run CI checks and tests before pushing:**
    ```bash
+   # Run exact CI checks locally (RECOMMENDED - matches GitHub Actions)
+   ./scripts/run-ci-docker.sh
+
+   # Or use Make (uses local Python)
+   make lint
+
    # Run pre-commit hooks (Black, isort, flake8, etc.)
    pre-commit run --all-files
 
