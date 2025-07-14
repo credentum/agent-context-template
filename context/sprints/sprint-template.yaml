@@ -1,0 +1,179 @@
+# Sprint YAML Template for Agent-First Context System
+# This template provides the structure for creating sprint files that agents can use
+# to automatically generate GitHub issues and track progress
+#
+# Usage:
+# 1. Copy this file to a new sprint file (e.g., sprint-4.1.yaml)
+# 2. Replace all placeholder values with actual sprint data
+# 3. Remove this comment block and rename file
+# 4. Commit the file to trigger automated issue creation
+
+schema_version: 1.0.0
+document_type: sprint
+id: "sprint-template"  # Change to actual sprint ID (e.g., sprint-4-1)
+title: "Sprint Template - Replace with actual title"
+status: planning  # planning | in_progress | completed | draft
+created_date: "2025-01-01"  # Replace with actual date
+sprint_number: 1  # Replace with actual sprint number (must be >= 1)
+start_date: "2025-01-01"  # Replace with actual start date
+end_date: "2025-01-14"  # Replace with actual end date
+last_modified: "2025-01-01"  # Replace with actual date
+last_referenced: "2025-01-01"  # Replace with actual date
+
+# High-level goals for this sprint
+goals:
+  - "Replace with primary goal description"
+  - "Replace with secondary goal description"
+  - "Replace with additional objectives"
+
+# Phases represent major work areas that can be broken down into tasks
+phases:
+  - phase: 1
+    name: "Replace with Phase Name (e.g., Infrastructure Setup)"
+    status: pending  # pending | in_progress | completed | blocked
+    priority: high   # high | medium | low | blocking
+    component: template # Replace with actual component
+    description: "Replace with detailed description of what this phase accomplishes"
+    duration_days: 7  # Optional - number of days for this phase
+
+    # Tasks can be simple strings OR detailed objects (demonstrates both formats)
+    tasks:
+      # Simple format (string)
+      - "Replace with simple task description"
+
+      # Advanced format (object) - demonstrates all supported fields
+      - title: "Replace with Task Title"
+        description: |
+          Replace with detailed task description that will become the GitHub issue body.
+
+          ## Acceptance Criteria
+          - [ ] Replace with specific requirement 1
+          - [ ] Replace with specific requirement 2
+          - [ ] Replace with specific requirement 3
+
+          ## Implementation Notes
+          - Replace with technical details
+          - Replace with dependencies
+          - Replace with special considerations
+
+        # These become GitHub issue labels
+        labels:
+          - "sprint-template"
+          - "phase-1"
+          - "component-template"
+          - "priority-high"
+
+        # Dependencies on other tasks (by task title or issue number)
+        dependencies:
+          - "Replace with dependency task title"
+          - "#123"  # Existing issue number
+
+        # Estimated effort
+        estimate: "Replace with time estimate"
+
+        # Who should work on this
+        assignee: "template-user"  # Replace with actual GitHub username
+
+        # GitHub issue number (filled automatically by sprint_issue_linker)
+        # github_issue: 456
+
+  - phase: 2
+    name: "Replace with Second Phase Name"
+    status: pending
+    priority: medium
+    component: template
+    description: "Replace with description of second phase"
+    duration_days: 7
+
+    tasks:
+      - "Replace with another simple task"
+      - title: "Replace with Another Advanced Task"
+        description: |
+          Replace with another task description
+
+          ## Acceptance Criteria
+          - [ ] Replace with requirement A
+          - [ ] Replace with requirement B
+
+        labels:
+          - "sprint-template"
+          - "phase-2"
+          - "component-template"
+          - "priority-medium"
+
+        dependencies: []
+        estimate: "Replace with estimate"
+        assignee: "template-user"
+
+# Team members and their roles
+team:
+  - role: lead
+    agent: pm_agent
+    responsibilities:
+      - "Sprint planning and coordination"
+      - "Issue creation and tracking"
+
+  - role: implementation
+    agent: code_agent
+    responsibilities:
+      - "Code implementation"
+      - "Technical reviews"
+
+  - role: documentation
+    agent: doc_agent
+    responsibilities:
+      - "Documentation updates"
+      - "README maintenance"
+
+  - role: validation
+    agent: ci_agent
+    responsibilities:
+      - "Test creation"
+      - "CI/CD pipeline maintenance"
+
+# Success metrics for this sprint
+success_metrics:
+  - metric: task_completion
+    target: 100
+    unit: percent
+    description: "Percentage of tasks completed"
+
+  - metric: issue_resolution
+    target: 95
+    unit: percent
+    description: "Percentage of issues resolved"
+
+  - metric: test_coverage
+    target: 85
+    unit: percent
+    description: "Code coverage percentage"
+
+# Metadata for graph relationships
+graph_metadata:
+  node_type: sprint_document
+  relationships:
+    - type: implements
+      target: system_architecture
+    - type: tracks
+      target: project_phases
+    - type: follows
+      target: previous_sprint_id
+
+# Sprint-specific configuration
+config:
+  # Automatically create GitHub issues from tasks
+  auto_create_issues: true
+
+  # Issue template to use
+  issue_template: "sprint-task.md"
+
+  # Default labels for all issues in this sprint
+  default_labels:
+    - "sprint-template"
+    - "template"
+
+  # Milestone to create/assign issues to
+  milestone: "Sprint Template"
+
+  # Project board to add issues to
+  project_board: "Sprint Board"

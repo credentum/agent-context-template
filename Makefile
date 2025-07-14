@@ -15,9 +15,37 @@ format:
 format-check:
 	black --check --diff .
 
-# Run linting
+# Run linting (matches GitHub CI exactly)
 lint:
+	@echo "Running CI lint checks locally..."
+	@echo "=== Black ==="
+	black --check src/ tests/ scripts/
+	@echo "=== isort ==="
+	isort --check-only --profile black src/ tests/ scripts/
+	@echo "=== Flake8 ==="
+	flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503
+	@echo "=== MyPy (src) ==="
+	mypy src/ --config-file=mypy.ini
+	@echo "=== Context Lint ==="
 	python -m src.agents.context_lint validate context/
+	@echo "=== Import Check ==="
+	python -m pytest --collect-only -q
+
+# Quick lint with pre-commit
+lint-quick:
+	pre-commit run --all-files
+
+# Original context lint only
+lint-context:
+	python -m src.agents.context_lint validate context/
+
+# Docker-based CI lint (exact match to GitHub Actions)
+lint-docker:
+	./scripts/run-ci-docker.sh all
+
+# Build Docker CI image
+lint-docker-build:
+	./scripts/run-ci-docker.sh build
 
 # Run type checking with mypy
 type-check:

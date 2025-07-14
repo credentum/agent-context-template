@@ -28,26 +28,35 @@ Follow these steps:
 - Update CLAUDE.md if the changes affect development workflow
 
 # TEST
+- Run exact CI checks locally FIRST: `./scripts/run-ci-docker.sh`
+  - This matches GitHub Actions exactly and prevents CI failures
+  - Alternative: `make lint` (uses local Python)
 - Run pre-commit hooks: `pre-commit run --all-files`
 - Write pytest tests for new functionality in tests/
 - Ensure validators have >90% coverage if modified
 - Run the full test suite: `pytest --cov=src --cov-report=term-missing`
 - Update coverage metrics: `python scripts/update_coverage_metrics.py`
 - If working on MCP tools, test with a mock MCP client
-- Ensure all tests pass and coverage doesn't drop below 59.53%
+- Ensure all tests pass and coverage doesn't drop below 71.82%
 
 # VERIFY
-- Check that all YAML files pass validation: `context-lint`
+- CI Docker checks MUST pass: `./scripts/run-ci-docker.sh`
+  - Includes: Black, isort, Flake8, MyPy, context validation, import checks
+  - Debug failures with: `./scripts/run-ci-docker.sh debug`
+- Check that all YAML files pass validation: `python -m src.agents.context_lint validate context/`
 - Verify any new context files have proper schema_version
 - If you modified embed_doc.py, check hash-diff functionality
 - If you touched GraphRAG, verify Neo4j queries still work
 
 # DEPLOY
 - Ensure your branch is up to date with main
+- Run final CI checks: `./scripts/run-ci-docker.sh`
 - Run final pre-commit and test suite
+- If pre-commit made changes: `git add -A && git commit --amend --no-edit`
 - Open a PR with:
   - Clear description linking to the issue
   - Test results and coverage report
+  - Confirmation that Docker CI passed locally
   - Any changes to context/ structure documented
   - Label with appropriate sprint tag
 - Request a review
@@ -55,6 +64,7 @@ Follow these steps:
 
 # IMPORTANT REMINDERS
 - NEVER push directly to main
+- ALWAYS run `./scripts/run-ci-docker.sh` before pushing to avoid CI failures
 - ALWAYS run pre-commit before pushing
 - If this creates new MCP tools, update context/mcp_contracts/
 - If this affects agent behavior, update relevant agent in src/agents/

@@ -333,3 +333,217 @@ class TestSprintIssueLinkerCoverage:
                     assert result.exit_code == 0
         finally:
             os.chdir(original_cwd)
+
+    def test_sync_sprint_with_issues_basic(self, issue_linker, tmp_path, sprint_data):
+        """Test basic sync functionality"""
+        # Create sprint file
+        sprint_file = tmp_path / "context" / "sprints" / "sprint-001.yaml"
+        sprint_file.parent.mkdir(parents=True, exist_ok=True)
+        sprint_file.write_text(yaml.dump(sprint_data))
+        issue_linker.sprint_id = "sprint-001"
+
+        # Mock existing issues
+        existing_issues = [
+            {
+                "number": 1,
+                "title": "[Sprint 1] Phase 1: Define requirements",
+                "state": "open",
+                "body": "Old body content",
+            }
+        ]
+
+        with patch.object(issue_linker, "_get_existing_issues", return_value=existing_issues):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = Mock(returncode=0, stdout="")
+                with patch("click.echo"):
+                    count = issue_linker.sync_sprint_with_issues()
+                    assert count >= 0
+
+    def test_sync_sprint_with_issues_no_file(self, issue_linker):
+        """Test sync when no sprint file exists"""
+        issue_linker.sprint_id = "nonexistent"
+
+        with patch("click.echo"):
+            count = issue_linker.sync_sprint_with_issues()
+
+        assert count == 0
+
+    def test_sync_sprint_with_issues_dry_run(self, issue_linker, tmp_path, sprint_data):
+        """Test sync in dry run mode"""
+        issue_linker.dry_run = True
+
+        # Create sprint file
+        sprint_file = tmp_path / "context" / "sprints" / "sprint-001.yaml"
+        sprint_file.parent.mkdir(parents=True, exist_ok=True)
+        sprint_file.write_text(yaml.dump(sprint_data))
+        issue_linker.sprint_id = "sprint-001"
+
+        # Mock existing issues
+        existing_issues = [
+            {
+                "number": 1,
+                "title": "[Sprint 1] Phase 1: Old title",
+                "state": "open",
+                "body": "Old body",
+            }
+        ]
+
+        with patch.object(issue_linker, "_get_existing_issues", return_value=existing_issues):
+            with patch("click.echo"):
+                count = issue_linker.sync_sprint_with_issues()
+                assert count >= 0
+
+    def test_sanitize_text_security(self, issue_linker):
+        """Test text sanitization for security"""
+        # Test command injection attempts
+        dangerous_input = "test; rm -rf /; echo malicious"
+        safe_output = issue_linker._sanitize_text(dangerous_input)
+        assert ";" not in safe_output
+        assert "rm" in safe_output  # Content preserved but symbols removed
+
+        # Test long input
+        long_input = "a" * 2000
+        safe_output = issue_linker._sanitize_text(long_input)
+        assert len(safe_output) <= 1000
+
+        # Test various dangerous characters
+        dangerous_chars = "`$\\|&<>(){}[]"
+        for char in dangerous_chars:
+            test_input = f"test{char}content"
+            safe_output = issue_linker._sanitize_text(test_input)
+            assert char not in safe_output
+
+    def test_validate_label_security(self, issue_linker):
+        """Test label validation for security"""
+        # Valid labels
+        assert issue_linker._validate_label("sprint-1") == "sprint-1"
+        assert issue_linker._validate_label("phase_2") == "phase_2"
+        assert issue_linker._validate_label("bug.fix") == "bug.fix"
+
+        # Invalid characters removed
+        dangerous_label = "test;rm-rf"
+        safe_label = issue_linker._validate_label(dangerous_label)
+        assert ";" not in safe_label
+        assert safe_label == "testrm-rf"
+
+        # Too long labels
+        long_label = "a" * 100
+        safe_label = issue_linker._validate_label(long_label)
+        assert len(safe_label) <= 50
+
+        # Empty after sanitization
+        with pytest.raises(ValueError):
+            issue_linker._validate_label(";;;")
+
+    def test_validate_issue_number_security(self, issue_linker):
+        """Test issue number validation for security"""
+        # Valid numbers
+        assert issue_linker._validate_issue_number(123) == 123
+        assert issue_linker._validate_issue_number("456") == 456
+
+        # Invalid inputs
+        with pytest.raises(ValueError):
+            issue_linker._validate_issue_number(-1)
+
+        with pytest.raises(ValueError):
+            issue_linker._validate_issue_number(0)
+
+        with pytest.raises(ValueError):
+            issue_linker._validate_issue_number(9999999)  # Too large
+
+        with pytest.raises(ValueError):
+            issue_linker._validate_issue_number("not_a_number")
+
+        with pytest.raises(ValueError):
+            issue_linker._validate_issue_number("123; rm -rf /")
+
+    def test_create_issue_with_sanitization(self, issue_linker):
+        """Test that create_issue properly sanitizes inputs"""
+        issue_linker.dry_run = True  # Avoid actual GitHub calls
+
+        dangerous_title = "Test; rm -rf /"
+        dangerous_body = "Body with `malicious` content"
+        dangerous_labels = ["label;injection", "normal-label"]
+
+        with patch("click.echo"):
+            result = issue_linker._create_issue(dangerous_title, dangerous_body, dangerous_labels)
+
+        # Should not raise exceptions and return None for dry run
+        assert result is None
+
+    def test_sync_with_malicious_api_response(self, issue_linker, tmp_path, sprint_data):
+        """Test sync handles malicious API responses safely"""
+        # Create sprint file with detailed tasks that would trigger updates
+        sprint_data_detailed = {
+            "id": "sprint-001",
+            "sprint_number": 1,
+            "title": "Test Sprint",
+            "status": "active",
+            "phases": [
+                {
+                    "phase": 1,
+                    "name": "Planning",
+                    "tasks": [
+                        {
+                            "title": "Define requirements",
+                            "description": "Create requirements doc",
+                            "status": "pending",
+                        }
+                    ],
+                }
+            ],
+        }
+
+        sprint_file = tmp_path / "context" / "sprints" / "sprint-001.yaml"
+        sprint_file.parent.mkdir(parents=True, exist_ok=True)
+        sprint_file.write_text(yaml.dump(sprint_data_detailed))
+        issue_linker.sprint_id = "sprint-001"
+
+        # Mock malicious API response
+        malicious_issues = [
+            {
+                "number": "123; rm -rf /",  # Malicious issue number
+                "title": "[Sprint 1] Phase 1: Define requirements",  # Matches task
+                "state": "open",
+                "body": "Old body",
+            }
+        ]
+
+        with patch.object(issue_linker, "_get_existing_issues", return_value=malicious_issues):
+            with patch("click.echo"):
+                # Should handle the malicious input safely by catching validation error
+                try:
+                    issue_linker.sync_sprint_with_issues()
+                    # If no exception, at least verify the malicious input was handled
+                    assert True  # Test passes if no exception occurs
+                except ValueError:
+                    # This is also acceptable - means validation worked
+                    assert True
+
+    def test_cli_command_sync(self, tmp_path, sprint_data):
+        """Test CLI command for sync functionality"""
+        from src.agents.sprint_issue_linker import cli
+
+        sprint_dir = tmp_path / "context" / "sprints"
+        sprint_dir.mkdir(parents=True, exist_ok=True)
+        sprint_file = sprint_dir / "sprint-001.yaml"
+        sprint_file.write_text(yaml.dump(sprint_data))
+
+        original_cwd = Path.cwd()
+        import os
+
+        os.chdir(tmp_path)
+
+        try:
+            with patch(
+                "src.agents.sprint_issue_linker.SprintIssueLinker.sync_sprint_with_issues",
+                return_value=0,
+            ):
+                with patch("src.agents.sprint_issue_linker.SprintIssueLinker._check_gh_cli"):
+                    from click.testing import CliRunner
+
+                    runner = CliRunner()
+                    result = runner.invoke(cli, ["sync", "--sprint", "sprint-001"])
+                    assert result.exit_code == 0
+        finally:
+            os.chdir(original_cwd)

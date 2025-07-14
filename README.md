@@ -1,40 +1,19 @@
 # agent-context-template
 
-![Coverage](https://img.shields.io/badge/coverage-59.53%25-yellow)
-![Branch Coverage](https://img.shields.io/badge/branch%20coverage-45%25-red)
-![Target](https://img.shields.io/badge/target-85%25-blue)
-![Tests](https://img.shields.io/badge/tests-262%20passed-green)
-
 A GitHub Actions template repository that provides workflow templates for an Agent-First Project Context System.
 
-## Test Coverage Status
-- **Current Coverage**: 59.53% (🔴 Below 85% target)
-- **Recent Progress**: +29.53% improvement from baseline
-- **Next Goal**: Phase 1 - Critical modules to 70%
-- [Full Coverage Report](docs/test-coverage-guide.md#current-coverage-status)
-
-### Coverage Summary by Module
-
-| Module | Coverage | Status |
-|--------|----------|--------|
-| **✅ Exceeding Target (>85%)** |||
-| `storage/hash_diff_embedder_async.py` | 95.35% | ✅ |
-| `analytics/sum_scores_api.py` | 89.68% | ✅ |
-| `core/utils.py` | 88.89% | ✅ |
-| `storage/neo4j_init.py` | 86.49% | ✅ |
-| **🔴 Critical Priority (<40%)** |||
-| `validators/kv_validators.py` | 33.64% | 🔴 |
-| `validators/config_validator.py` | 34.66% | 🔴 |
-| `analytics/context_analytics.py` | 35.62% | 🔴 |
-| `storage/vector_db_init.py` | 36.14% | 🔴 |
-
-### How Coverage Updates Work
+## Test Coverage
 
 Coverage is automatically tracked using `pytest-cov` and updated via:
-1. **Local Updates**: Run `scripts/update_coverage_metrics.py` to update metrics
+1. **Local Updates**: Run `python scripts/update_coverage_metrics.py` to update metrics
 2. **CI Integration**: Coverage runs on every PR via `.github/workflows/test-coverage.yml`
-3. **Badge Updates**: README badges auto-update from `coverage-summary.json`
-4. **Report Generation**: `scripts/generate_coverage_report.py` creates visual charts
+3. **Badge Updates**: Coverage badges are updated automatically in PR comments
+4. **Report Generation**: HTML coverage reports are generated in `htmlcov/`
+
+For current coverage status, run:
+```bash
+pytest --cov=src --cov-report=term-missing --cov-report=html
+```
 
 ## Quick Start
 
