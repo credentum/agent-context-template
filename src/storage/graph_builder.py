@@ -11,14 +11,12 @@ This component:
 
 import hashlib
 import json
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Optional, Set, Tuple
 
 import click
 import yaml
 from neo4j import Driver, GraphDatabase
-from neo4j.exceptions import ServiceUnavailable
 
 
 class GraphBuilder:
@@ -161,7 +159,7 @@ class GraphBuilder:
         RETURN d
         """
 
-        result = session.run(query, id=doc_id, props=props)
+        session.run(query, id=doc_id, props=props)
         # Ensure we return a string
         return str(doc_id)
 
@@ -556,7 +554,7 @@ def main(
             click.echo(f"\n{'✓' if success else '✗'} Processed: {path_obj}")
         else:
             processed, total = builder.process_directory(path_obj, force=force)
-            click.echo(f"\nProcessing Results:")
+            click.echo("\nProcessing Results:")
             click.echo(f"  Processed: {processed}/{total}")
             click.echo(f"  Skipped: {total - processed}")
 

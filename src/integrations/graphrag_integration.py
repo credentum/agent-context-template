@@ -9,13 +9,10 @@ This component:
 4. Generates contextual summaries from graph neighborhoods
 """
 
-import json
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, Dict, List, Optional, cast
 
 import click
-import openai
 import yaml
 from neo4j import Driver, GraphDatabase
 from qdrant_client import QdrantClient
@@ -169,7 +166,8 @@ class GraphRAGIntegration:
                         RETURN
                             d as source,
                             connected as target,
-                            [r in rels | {type: type(r), properties: properties(r)}] as relationships,
+                            [r in rels | {type: type(r),
+                                          properties: properties(r)}] as relationships,
                             length(path) as distance
                         ORDER BY distance
                         """
@@ -177,14 +175,17 @@ class GraphRAGIntegration:
                     except Exception:
                         # Fallback to standard Cypher without APOC
                         query = """
-                        MATCH path = (d:Document {id: $doc_id})-[r:REFERENCES|IMPLEMENTS|RELATES_TO|DEPENDS_ON*1..2]-(connected:Document)
+                        MATCH path = (d:Document {id: $doc_id})-
+                              [r:REFERENCES|IMPLEMENTS|RELATES_TO|DEPENDS_ON*1..2]-
+                              (connected:Document)
                         WITH d, connected, path, relationships(path) as rels,
                              length(path) as distance
                         WHERE distance <= $max_hops
                         RETURN
                             d as source,
                             connected as target,
-                            [r in rels | {type: type(r), properties: properties(r)}] as relationships,
+                            [r in rels | {type: type(r),
+                                          properties: properties(r)}] as relationships,
                             distance
                         ORDER BY distance
                         LIMIT 50
@@ -447,7 +448,9 @@ class GraphRAGIntegration:
                 # Get dependency chain (documents that depend on this one)
                 result = session.run(
                     """
-                    MATCH (d:Document {id: $doc_id})<-[:DEPENDS_ON|IMPLEMENTS|REFERENCES*1..3]-(dependent:Document)
+                    MATCH (d:Document {id: $doc_id})<-
+                          [:DEPENDS_ON|IMPLEMENTS|REFERENCES*1..3]-
+                          (dependent:Document)
                     RETURN DISTINCT dependent.id as id, dependent.title as title
                     LIMIT 10
                 """,
@@ -519,7 +522,7 @@ def search(query: str, max_hops: int, top_k: int, neo4j_user: str, neo4j_pass: s
         result = graphrag.search(query, query_vector, max_hops=max_hops, top_k=top_k)
 
         # Display results
-        click.echo(f"\n=== GraphRAG Search Results ===")
+        click.echo("\n=== GraphRAG Search Results ===")
         click.echo(f"Query: {result.query}")
         click.echo(f"Combined Score: {result.combined_score:.3f}")
 
@@ -554,7 +557,7 @@ def analyze(document_id: str, neo4j_user: str, neo4j_pass: str):
     try:
         impact = graphrag.analyze_document_impact(document_id)
 
-        click.echo(f"\n=== Document Impact Analysis ===")
+        click.echo("\n=== Document Impact Analysis ===")
         click.echo(f"Document ID: {impact['document_id']}")
         click.echo(f"Direct Connections: {impact['direct_connections']}")
         click.echo(f"Total Reachable: {impact['total_reachable']}")

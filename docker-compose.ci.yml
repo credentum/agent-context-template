@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  ci-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      # Mount the source code to see changes without rebuilding
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
+      - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./mypy.ini:/app/mypy.ini
+      - ./CLAUDE.md:/app/CLAUDE.md
+      - ./.claude:/app/.claude
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: /bin/bash scripts/test-like-ci.sh
+
+  # Service for interactive debugging
+  ci-debug:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
+      - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./mypy.ini:/app/mypy.ini
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+
+  # Redis service for tests that need it
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

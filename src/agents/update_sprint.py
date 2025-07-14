@@ -47,9 +47,7 @@ class SprintUpdater:
     def _check_gh_cli(self) -> None:
         """Check if GitHub CLI is available and authenticated"""
         try:
-            result = subprocess.run(
-                ["gh", "auth", "status"], capture_output=True, text=True, check=True
-            )
+            subprocess.run(["gh", "auth", "status"], capture_output=True, text=True, check=True)
             if self.verbose:
                 click.echo("✓ GitHub CLI authenticated")
         except FileNotFoundError:
