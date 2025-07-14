@@ -25,7 +25,7 @@ except ImportError:
 
         return decorator
 
-    class RuleBasedStateMachine:
+    class RuleBasedStateMachine:  # type: ignore[no-redef]
         pass
 
 
@@ -118,7 +118,7 @@ class TestAdvancedPropertyValidation:
 
             # Property: Only valid transitions allowed
             for next_status in ["pending", "in_progress", "completed", "blocked"]:
-                can_transition = next_status in allowed_next
+                can_transition = next_status in allowed_next  # type: ignore[operator]
                 if next_status == current_status:
                     can_transition = True  # Can stay in same state
 

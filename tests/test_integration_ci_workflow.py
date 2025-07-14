@@ -5,6 +5,7 @@ Tests: Simulated PR → triggers CI → updates sprint.yaml
 """
 
 import json
+from typing import Any, Dict, List, Optional
 import subprocess
 import tempfile
 from datetime import datetime
@@ -339,7 +340,7 @@ class TestCISprintMetrics:
             {"name": "Task 3", "story_points": 2, "completed_date": "2024-01-10"},
         ]
 
-        total_points = sum(task.get("story_points", 0) for task in completed_tasks)
+        total_points = sum(int(task.get("story_points", 0)) for task in completed_tasks)
         sprint_days = 14
         daily_velocity = total_points / sprint_days
 

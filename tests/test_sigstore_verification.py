@@ -220,7 +220,7 @@ class TestSigstoreWorkflow:
         # Find applicable policy
         applicable_policy = None
         for policy_name, policy in policies.items():
-            if doc_type in policy["document_types"]:
+            if doc_type in policy.get("document_types", []):
                 applicable_policy = policy
                 break
 
@@ -272,7 +272,7 @@ class TestSigstoreWorkflow:
 
         # Validate metadata
         assert "annotations" in signature_metadata
-        assert signature_metadata["annotations"]["git.branch"] == "main"
+        assert signature_metadata.get("annotations", {}).get("git.branch") == "main"
         assert "verification_metadata" in signature_metadata
 
 
@@ -289,7 +289,7 @@ class TestSigstoreRecovery:
         }
 
         # Check for signature file
-        sig_path = Path(doc_info["path"] + ".sig")
+        sig_path = Path(str(doc_info.get("path", "")) + ".sig")
         has_signature = sig_path.exists()
 
         # Handle missing signature
@@ -306,7 +306,7 @@ class TestSigstoreRecovery:
             }
 
             assert recovery_action["action"] == "quarantine"
-            assert len(recovery_action["suggested_remediation"]) > 0
+            assert len(str(recovery_action.get("suggested_remediation", ""))) > 0
 
     def test_signature_chain_validation(self):
         """Test validation of signature chains for document history"""

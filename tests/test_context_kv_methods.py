@@ -149,7 +149,7 @@ class TestContextKVIntegration:
         mock_duckdb.insert_metrics.return_value = True
         kv.duckdb = mock_duckdb
 
-        result = kv.record_event(
+        result = kv.record_event(  # type: ignore[call-arg]
             event_type="test_event",
             metadata={"key": "value"},
             document_id="doc123",

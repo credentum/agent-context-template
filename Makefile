@@ -1,4 +1,4 @@
-.PHONY: format lint type-check test clean install all
+.PHONY: format lint type-check test clean install all up down health
 
 # Default target
 all: format lint type-check test
@@ -46,3 +46,16 @@ dev-setup: install
 
 # Quick quality check before committing
 pre-commit: format-check lint type-check test
+
+# Docker infrastructure management
+up:
+	docker-compose -f infra/docker-compose.yml up -d
+
+down:
+	docker-compose -f infra/docker-compose.yml down -v
+
+health:
+	@echo "Checking Qdrant health..."
+	@curl -f http://localhost:6333/collections 2>/dev/null && echo "Qdrant is healthy" || echo "Qdrant not healthy"
+	@echo "Checking Neo4j health..."
+	@docker exec neo4j cypher-shell "RETURN 1" 2>/dev/null && echo "Neo4j is healthy" || echo "Neo4j not healthy"

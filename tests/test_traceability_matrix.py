@@ -5,7 +5,7 @@ ensuring 100% test case traceability for critical functionality.
 """
 
 import json
-from typing import Dict
+from typing import Any, Dict
 
 # Critical function registry
 CRITICAL_FUNCTIONS = {
@@ -117,7 +117,7 @@ class TestTraceabilityMatrix:
 
     def test_generate_traceability_report(self, tmp_path):
         """Generate a traceability report for documentation"""
-        report = {
+        report: dict[str, Any] = {
             "summary": {
                 "total_critical_functions": len(CRITICAL_FUNCTIONS),
                 "functions_with_tests": sum(

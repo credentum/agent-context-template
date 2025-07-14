@@ -36,6 +36,37 @@ Coverage is automatically tracked using `pytest-cov` and updated via:
 3. **Badge Updates**: README badges auto-update from `coverage-summary.json`
 4. **Report Generation**: `scripts/generate_coverage_report.py` creates visual charts
 
+## Quick Start
+
+### Prerequisites
+- Docker and Docker Compose
+- Make
+- Python 3.11+
+
+### Local Development Setup
+1. **Start Infrastructure**:
+   ```bash
+   make up          # Start Qdrant (6333) and Neo4j (7474/7687)
+   make health      # Check service health
+   ```
+
+2. **Install Dependencies**:
+   ```bash
+   make install     # Install Python dependencies
+   make dev-setup   # Install pre-commit hooks
+   ```
+
+3. **Run Tests**:
+   ```bash
+   make test        # Run test suite
+   make test-cov    # Run with coverage
+   ```
+
+4. **Stop Infrastructure**:
+   ```bash
+   make down        # Stop services and remove volumes
+   ```
+
 ## Features
 
 ### Agent-First Context System
@@ -44,7 +75,6 @@ Coverage is automatically tracked using `pytest-cov` and updated via:
 - **Graph Relationships**: Neo4j-powered GraphRAG for enhanced context understanding
 - **Automated Agents**: Specialized agents for documentation, project management, and CI
 - **Schema Validation**: YAML-based schemas with yamale validation
--
 
 ## Project Structure
 

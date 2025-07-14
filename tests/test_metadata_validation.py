@@ -48,8 +48,8 @@ class TestDocumentMetadataValidation:
         assert sprint_metadata["sprint_number"] > 0
 
         # Validate date consistency
-        start = datetime.fromisoformat(sprint_metadata["start_date"])
-        end = datetime.fromisoformat(sprint_metadata["end_date"])
+        start = datetime.fromisoformat(str(sprint_metadata["start_date"]))
+        end = datetime.fromisoformat(str(sprint_metadata["end_date"]))
         assert end > start
 
     def test_decision_metadata_validation(self):
@@ -67,7 +67,7 @@ class TestDocumentMetadataValidation:
 
         # Validate decision-specific fields
         assert decision_metadata["document_type"] == "decision"
-        assert decision_metadata["decision_id"].startswith("DEC-")
+        assert str(decision_metadata["decision_id"]).startswith("DEC-")
         assert decision_metadata["status"] in [
             "draft",
             "proposed",
@@ -92,7 +92,7 @@ class TestDocumentMetadataValidation:
 
         # Validate trace-specific fields
         assert trace_metadata["document_type"] == "trace"
-        assert trace_metadata["trace_id"].startswith("trace-")
+        assert str(trace_metadata["trace_id"]).startswith("trace-")
         assert trace_metadata["result"] in ["success", "failure", "partial"]
         assert isinstance(trace_metadata["duration_ms"], int)
         assert trace_metadata["duration_ms"] >= 0
@@ -174,11 +174,11 @@ class TestConfigurationMetadataValidation:
         }
 
         # Validate agent fields
-        assert agent_metadata["agent_name"].endswith("_agent")
+        assert str(agent_metadata["agent_name"]).endswith("_agent")
         assert isinstance(agent_metadata["capabilities"], list)
         assert isinstance(agent_metadata["enabled"], bool)
-        assert agent_metadata["max_retries"] >= 0
-        assert agent_metadata["timeout_seconds"] > 0
+        assert int(agent_metadata["max_retries"]) >= 0
+        assert int(agent_metadata["timeout_seconds"]) > 0
 
     def test_connection_metadata_validation(self):
         """Test connection configuration metadata"""
@@ -194,11 +194,11 @@ class TestConfigurationMetadataValidation:
         }
 
         # Validate connection fields
-        assert connection_metadata["port"] > 0
-        assert connection_metadata["port"] <= 65535
+        assert int(connection_metadata["port"]) > 0
+        assert int(connection_metadata["port"]) <= 65535
         assert isinstance(connection_metadata["ssl"], bool)
-        assert connection_metadata["connection_timeout"] > 0
-        assert connection_metadata["read_timeout"] >= connection_metadata["connection_timeout"]
+        assert int(connection_metadata["connection_timeout"]) > 0
+        assert int(connection_metadata["read_timeout"]) >= int(connection_metadata["connection_timeout"])
 
 
 class TestDataIntegrityValidation:
@@ -255,9 +255,9 @@ class TestDataIntegrityValidation:
         for ref in document["references"]:
             assert "type" in ref
             assert "id" in ref
-            assert ref["type"] in ["decision", "design", "sprint", "trace"]
-            assert isinstance(ref["id"], str)
-            assert len(ref["id"]) > 0
+            assert ref.get("type") in ["decision", "design", "sprint", "trace"]
+            assert isinstance(ref.get("id"), str)
+            assert len(str(ref.get("id", ""))) > 0
 
     def test_schema_version_validation(self):
         """Test schema version compatibility validation"""
@@ -269,8 +269,8 @@ class TestDataIntegrityValidation:
         }
 
         # Parse versions
-        current_version = float(document["schema_version"])
-        min_version = float(document["min_compatible_version"])
+        current_version = float(str(document["schema_version"]))
+        min_version = float(str(document["min_compatible_version"]))
 
         # Validate version compatibility
         assert current_version >= min_version
@@ -324,7 +324,7 @@ class TestMetricMetadataValidation:
         assert 0 <= metric_metadata["value"] <= 100  # For percentage metrics
 
         # Validate metric name format
-        name_parts = metric_metadata["metric_name"].split(".")
+        name_parts = str(metric_metadata["metric_name"]).split(".")
         assert len(name_parts) >= 2
         assert all(part.replace("_", "").isalnum() for part in name_parts)
 
@@ -342,7 +342,7 @@ class TestMetricMetadataValidation:
 
         # Validate aggregation fields
         assert aggregation_metadata["aggregation_type"] in ["sum", "average", "min", "max", "count"]
-        assert aggregation_metadata["samples"] > 0
-        assert aggregation_metadata["min_value"] <= aggregation_metadata["avg_value"]
-        assert aggregation_metadata["avg_value"] <= aggregation_metadata["max_value"]
-        assert aggregation_metadata["std_deviation"] >= 0
+        assert int(aggregation_metadata["samples"]) > 0
+        assert float(aggregation_metadata["min_value"]) <= float(aggregation_metadata["avg_value"])
+        assert float(aggregation_metadata["avg_value"]) <= float(aggregation_metadata["max_value"])
+        assert float(aggregation_metadata["std_deviation"]) >= 0
