@@ -1,0 +1,159 @@
+# Sprint YAML Template for Agent-First Context System
+# This template provides the structure for creating sprint files that agents can use
+# to automatically generate GitHub issues and track progress
+
+schema_version: 1.0.0
+document_type: sprint
+id: sprint-X.Y  # Format: sprint-{major}.{minor} (e.g., sprint-4.1)
+title: "Sprint X.Y: Brief Description"
+status: planning  # planning | in_progress | completed | cancelled
+created_date: 'YYYY-MM-DD'
+sprint_number: X.Y
+start_date: 'YYYY-MM-DD'
+end_date: 'YYYY-MM-DD'
+last_modified: 'YYYY-MM-DD'
+last_referenced: 'YYYY-MM-DD'
+
+# High-level goals for this sprint
+goals:
+  - "Primary goal description"
+  - "Secondary goal description"
+  - "Additional objectives"
+
+# Phases represent major work areas that can be broken down into tasks
+phases:
+  - phase: "X.Y-1"
+    name: "Phase Name (e.g., Infrastructure Setup)"
+    status: pending  # pending | in_progress | completed | blocked
+    priority: high   # high | medium | low | blocking
+    component: infra # Component label for GitHub issues
+    description: "Detailed description of what this phase accomplishes"
+
+    # Tasks become GitHub issues when sprint is processed
+    tasks:
+      - title: "X.Y-1 Task Title"
+        description: |
+          Detailed task description that will become the GitHub issue body.
+
+          ## Acceptance Criteria
+          - [ ] Specific requirement 1
+          - [ ] Specific requirement 2
+          - [ ] Specific requirement 3
+
+          ## Implementation Notes
+          - Technical details
+          - Dependencies
+          - Special considerations
+
+        # These become GitHub issue labels
+        labels:
+          - sprint-current
+          - "phase:X.Y"
+          - "component:infra"
+          - "priority:high"
+
+        # Dependencies on other tasks (by task title or issue number)
+        dependencies:
+          - "Other task title"
+          - "#123"  # Existing issue number
+
+        # Estimated effort
+        estimate: "2 days"
+
+        # Who should work on this
+        assignee: "username"  # Optional GitHub username
+
+  - phase: "X.Y-2"
+    name: "Second Phase Name"
+    status: pending
+    priority: medium
+    component: backend
+    description: "Description of second phase"
+
+    tasks:
+      - title: "X.Y-2 Another Task"
+        description: |
+          Another task description
+
+          ## Acceptance Criteria
+          - [ ] Requirement A
+          - [ ] Requirement B
+
+        labels:
+          - sprint-current
+          - "phase:X.Y"
+          - "component:backend"
+          - "priority:medium"
+
+# Team members and their roles
+team:
+  - role: lead
+    agent: pm_agent
+    responsibilities:
+      - "Sprint planning and coordination"
+      - "Issue creation and tracking"
+
+  - role: implementation
+    agent: code_agent
+    responsibilities:
+      - "Code implementation"
+      - "Technical reviews"
+
+  - role: documentation
+    agent: doc_agent
+    responsibilities:
+      - "Documentation updates"
+      - "README maintenance"
+
+  - role: validation
+    agent: ci_agent
+    responsibilities:
+      - "Test creation"
+      - "CI/CD pipeline maintenance"
+
+# Success metrics for this sprint
+success_metrics:
+  - metric: task_completion
+    target: 100
+    unit: percent
+    description: "Percentage of tasks completed"
+
+  - metric: issue_resolution
+    target: 95
+    unit: percent
+    description: "Percentage of issues resolved"
+
+  - metric: test_coverage
+    target: 85
+    unit: percent
+    description: "Code coverage percentage"
+
+# Metadata for graph relationships
+graph_metadata:
+  node_type: sprint_document
+  relationships:
+    - type: implements
+      target: system_architecture
+    - type: tracks
+      target: project_phases
+    - type: follows
+      target: previous_sprint_id
+
+# Sprint-specific configuration
+config:
+  # Automatically create GitHub issues from tasks
+  auto_create_issues: true
+
+  # Issue template to use
+  issue_template: "sprint-task.md"
+
+  # Default labels for all issues in this sprint
+  default_labels:
+    - sprint-current
+    - "sprint:X.Y"
+
+  # Milestone to create/assign issues to
+  milestone: "Sprint X.Y"
+
+  # Project board to add issues to
+  project_board: "Sprint Board"
