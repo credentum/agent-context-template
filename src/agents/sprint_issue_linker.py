@@ -202,7 +202,7 @@ class SprintIssueLinker:
 {deps_text}
 
 ---
-_This issue was automatically created from the sprint YAML file and is tracked by the automated sprint system._
+_Auto-created from sprint YAML and tracked by sprint system._
 """
                 else:
                     # Old format fallback
@@ -228,7 +228,7 @@ _This issue was automatically created from the sprint YAML file and is tracked b
 <!-- Add any technical details or considerations here -->
 
 ---
-_This issue was automatically created from the sprint YAML file and is tracked by the automated sprint system._
+_Auto-created from sprint YAML and tracked by sprint system._
 """
 
                 # Add phase status to labels
@@ -393,9 +393,7 @@ _This issue was automatically created from the sprint YAML file and is tracked b
                         # Create enhanced issue body
                         deps_list = task.get("dependencies", [])
                         deps_text = (
-                            chr(10).join(f"- {dep}" for dep in deps_list)
-                            if deps_list
-                            else "- None"
+                            chr(10).join(f"- {dep}" for dep in deps_list) if deps_list else "- None"
                         )
                         issue_body = f"""{task_description}
 
@@ -409,7 +407,7 @@ _This issue was automatically created from the sprint YAML file and is tracked b
 {deps_text}
 
 ---
-_This issue was automatically created from the sprint YAML file and is tracked by the automated sprint system._
+_Auto-created from sprint YAML and tracked by sprint system._
 """
                         update_fields["body"] = issue_body
                         need_update = True
@@ -441,6 +439,10 @@ _This issue was automatically created from the sprint YAML file and is tracked b
                         task_description = task.get("description", "No description provided")
                         task_labels = task.get("labels", [sprint_label])
 
+                        deps_list = task.get("dependencies", [])
+                        deps_str = (
+                            chr(10).join(f"- {dep}" for dep in deps_list) if deps_list else "- None"
+                        )
                         issue_body = f"""{task_description}
 
 ## Sprint Information
@@ -450,10 +452,10 @@ _This issue was automatically created from the sprint YAML file and is tracked b
 - **Phase Status**: {phase.get('status', 'pending')}
 
 ## Dependencies
-{chr(10).join(f'- {dep}' for dep in task.get('dependencies', [])) if task.get('dependencies') else '- None'}
+{deps_str}
 
 ---
-_This issue was automatically created from the sprint YAML file and is tracked by the automated sprint system._
+_Auto-created from sprint YAML and tracked by sprint system._
 """
 
                         issue_number = self._create_issue(task_title, issue_body, task_labels)

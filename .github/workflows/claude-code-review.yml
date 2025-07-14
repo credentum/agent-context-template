@@ -23,22 +23,22 @@ jobs:
       issues: write             # allow auto-file follow-up issues
       statuses: write           # allow setting commit status
       id-token: write           # for future Sigstore attestation
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0        # full history for context diff
-      
+
       - name: Setup Python and Node
         run: |
           python -m pip install --upgrade pip
           pip install pytest pytest-cov yamale
           npm install -g ajv-cli
-      
+
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           model: "claude-opus-4-20250514"
@@ -51,45 +51,45 @@ jobs:
             ────────────────────────────────────────────────────────
             CRITICAL DOMAINS – fail any ⇒ "REQUEST CHANGES"
             ────────────────────────────────────────────────────────
-            1. **Test Coverage**  
-               • validators/* ≥ 90 % line coverage, no global regression  
+            1. **Test Coverage**
+               • validators/* ≥ 90 % line coverage, no global regression
                • New logic ships with focused tests
                • Overall project coverage must not drop below 59.53%
-            2. **MCP Compatibility**  
-               • Tool contracts updated in context/mcp_contracts/  
-               • TS interfaces match schema (`npm test:mcp-types`)  
+            2. **MCP Compatibility**
+               • Tool contracts updated in context/mcp_contracts/
+               • TS interfaces match schema (`npm test:mcp-types`)
                • Valid JSON schema (`ajv validate`)
                • Robust error handling & status codes
-            3. **Context Integrity**  
-               • All YAML include `schema_version` (SemVer)  
-               • context/ structure intact (design/, decisions/, trace/, sprints/)  
+            3. **Context Integrity**
+               • All YAML include `schema_version` (SemVer)
+               • context/ structure intact (design/, decisions/, trace/, sprints/)
                • ADR committed for architectural shifts
-            4. **Code Quality & Style**  
-               • Python fully typed, public docstrings  
-               • Pre-commit passes (black, flake8, isort, mypy, context-lint)  
+            4. **Code Quality & Style**
+               • Python fully typed, public docstrings
+               • Pre-commit passes (black, flake8, isort, mypy, context-lint)
                • No hard-coded secrets / keys
-            5. **Security & Supply-chain**  
-               • Dockerfiles FROM pinned digests  
-               • New binaries/scripts signed via Sigstore  
+            5. **Security & Supply-chain**
+               • Dockerfiles FROM pinned digests
+               • New binaries/scripts signed via Sigstore
                • New deps free of critical CVEs
             ────────────────────────────────────────────────────────
-            SEVERITY RUBRIC  
-               ❌ BLOCKER   - must fix before merge  
-               ⚠️  WARNING   - high-priority tech-debt (merge-able)  
+            SEVERITY RUBRIC
+               ❌ BLOCKER   - must fix before merge
+               ⚠️  WARNING   - high-priority tech-debt (merge-able)
                💡 NIT       - style or micro-perf polish
             ────────────────────────────────────────────────────────
-            OUTPUT FORMAT (exactly)  
+            OUTPUT FORMAT (exactly)
             **PR Verdict:** APPROVE | REQUEST CHANGES
             **Summary (≤ 2 lines):** <concise observation>
-            **Blocking Issues (❌):**  
-            1. <desc> – file:line  
+            **Blocking Issues (❌):**
+            1. <desc> – file:line
             …
-            **Warnings (⚠️):**  
+            **Warnings (⚠️):**
             1. …
-            **Nits (💡):**  
+            **Nits (💡):**
             1. …
             **Coverage Delta:** <current>% → <new>% [PASS/FAIL]
-            **Suggested Follow-ups:**  
+            **Suggested Follow-ups:**
             • <optional backlog items>
             End of report. Do *not* add anything after this line.
           # enable sticky threaded comment
@@ -103,19 +103,19 @@ jobs:
             Bash(npm run test:mcp-types),
             Bash(ajv validate -s mcp-schema.json -d context/mcp_contracts/*.json),
             Bash(git diff --name-only origin/main...HEAD)
-      
+
       # ---------- Extract and Store Coverage Metrics ----------
       - name: Extract Coverage Metrics
         if: always()
         run: |
           # Run coverage and capture output
           pytest --cov=src --cov-report=term --cov-report=json --cov-report=html || true
-          
+
           # Extract coverage percentage
           if [ -f coverage.json ]; then
             coverage_pct=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
             echo "COVERAGE_PCT=$coverage_pct" >> $GITHUB_ENV
-            
+
             # Check if coverage dropped below baseline
             if (( $(echo "$coverage_pct < 59.53" | bc -l) )); then
               echo "COVERAGE_FAILED=true" >> $GITHUB_ENV
@@ -123,7 +123,7 @@ jobs:
               echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
             fi
           fi
-      
+
       # ---------- Convert Review to Structured JSON ----------
       - name: Convert Review to JSON
         if: always()
@@ -132,19 +132,19 @@ jobs:
           import sys
           import json
           import re
-          
+
           review_text = sys.argv[1]
-          
+
           # Parse structured review
           verdict_match = re.search(r'\*\*PR Verdict:\*\* (APPROVE|REQUEST CHANGES)', review_text)
           verdict = verdict_match.group(1) if verdict_match else "UNKNOWN"
-          
+
           # Extract sections
           blocking = re.findall(r'(?<=Blocking Issues \(❌\):)(.*?)(?=\*\*|$)', review_text, re.DOTALL)
           warnings = re.findall(r'(?<=Warnings \(⚠️\):)(.*?)(?=\*\*|$)', review_text, re.DOTALL)
           nits = re.findall(r'(?<=Nits \(💡\):)(.*?)(?=\*\*|$)', review_text, re.DOTALL)
           followups = re.findall(r'(?<=Suggested Follow-ups:)(.*?)(?=End of report|$)', review_text, re.DOTALL)
-          
+
           review_json = {
               "verdict": verdict,
               "has_blockers": bool(blocking and blocking[0].strip()),
@@ -156,17 +156,17 @@ jobs:
                   "followups": followups[0].strip() if followups else ""
               }
           }
-          
+
           print(json.dumps(review_json, indent=2))
           EOF
-          
+
           python parse_review.py "${{ steps.claude-review.outputs.response }}" "${COVERAGE_PCT:-0}" > review.json
-          
+
           # Store parsed review for downstream steps
           echo "REVIEW_JSON<<EOF" >> $GITHUB_ENV
           cat review.json >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-      
+
       # ---------- Set GitHub Status Check ----------
       - name: Set Commit Status
         if: always()
@@ -175,11 +175,11 @@ jobs:
           script: |
             const review = ${{ env.REVIEW_JSON }};
             const coverage_pct = parseFloat("${{ env.COVERAGE_PCT }}") || 0;
-            
+
             // Determine overall status
             let state = 'success';
             let description = `ARC-Review: PASS | Coverage: ${coverage_pct.toFixed(1)}%`;
-            
+
             if (review.verdict === 'REQUEST CHANGES' || review.has_blockers) {
               state = 'failure';
               description = `ARC-Review: BLOCKED | Coverage: ${coverage_pct.toFixed(1)}%`;
@@ -187,7 +187,7 @@ jobs:
               state = 'failure';
               description = `ARC-Review: Coverage regression (${coverage_pct.toFixed(1)}% < 59.53%)`;
             }
-            
+
             // Create status check
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
@@ -197,7 +197,7 @@ jobs:
               description: description,
               context: 'ARC-Reviewer'
             });
-      
+
       # ---------- Auto-open GitHub issues for Suggested Follow-ups ----------
       - name: Parse Review and Create Issues
         if: contains(steps.claude-review.outputs.response, 'Suggested Follow-ups:')
@@ -205,13 +205,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "${{ steps.claude-review.outputs.response }}" > review.txt
-          
+
           # Extract bullet lines under "Suggested Follow-ups:"
           awk '/Suggested Follow-ups:/,/End of report/' review.txt | grep -E '^\s*•' | while read -r line; do
             follow=${line#*• }
             # Skip empty lines
             [ -z "$follow" ] && continue
-            
+
             # Try to extract title:description format, otherwise use whole line
             if [[ "$follow" == *":"* ]]; then
               title=$(echo "$follow" | cut -d':' -f1 | xargs)
@@ -220,31 +220,15 @@ jobs:
               title="$follow"
               body="Suggested improvement from code review"
             fi
-            
+
             # Create issue with enhanced metadata
+            issue_body="## Context\n\nThis improvement was suggested by ARC-Reviewer during code review.\n\n**Original PR:** #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}\n**PR URL:** ${{ github.event.pull_request.html_url }}\n**Author:** @${{ github.event.pull_request.user.login }}\n\n## Suggestion\n$body\n\n## Acceptance Criteria\n- [ ] Implement the suggested improvement\n- [ ] Add tests if applicable\n- [ ] Update documentation if needed\n\n---\n*Automatically created by ARC-Reviewer bot*"
             gh issue create \
               --title "[PR #${{ github.event.pull_request.number }}] $title" \
-              --body "## Context
-              
-This improvement was suggested by ARC-Reviewer during code review.
-
-**Original PR:** #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}
-**PR URL:** ${{ github.event.pull_request.html_url }}
-**Author:** @${{ github.event.pull_request.user.login }}
-
-## Suggestion
-$body
-
-## Acceptance Criteria
-- [ ] Implement the suggested improvement
-- [ ] Add tests if applicable
-- [ ] Update documentation if needed
-
----
-*Automatically created by ARC-Reviewer bot*" \
+              --body "$issue_body" \
               --label "enhancement,from-code-review,good-first-issue"
           done
-      
+
       # ---------- Upload Coverage Report ----------
       - name: Upload Coverage Report
         if: always()
@@ -255,7 +239,7 @@ $body
             htmlcov/
             coverage.json
             review.json
-      
+
       # ---------- Add PR Comment with Coverage Badge ----------
       - name: Add Coverage Badge Comment
         if: always()
@@ -263,18 +247,18 @@ $body
         with:
           script: |
             const coverage_pct = parseFloat("${{ env.COVERAGE_PCT }}") || 0;
-            const coverage_color = coverage_pct >= 85 ? 'brightgreen' : 
-                                  coverage_pct >= 70 ? 'yellow' : 
+            const coverage_color = coverage_pct >= 85 ? 'brightgreen' :
+                                  coverage_pct >= 70 ? 'yellow' :
                                   coverage_pct >= 60 ? 'orange' : 'red';
-            
+
             const badge_url = `https://img.shields.io/badge/coverage-${coverage_pct.toFixed(1)}%25-${coverage_color}`;
-            
+
             const comment = `## 🤖 ARC-Reviewer Report
-            
+
             ![Coverage](${badge_url})
-            
+
             ${context.payload.pull_request.body || ''}`;
-            
+
             // Only add badge if not already present
             if (!context.payload.pull_request.body?.includes('img.shields.io/badge/coverage')) {
               github.rest.pulls.update({
@@ -284,7 +268,7 @@ $body
                 body: comment
               });
             }
-      
+
       # ---------- Block pipeline on blocking issues or coverage regression ----------
       - name: Check for Blocking Issues
         if: |
@@ -296,7 +280,7 @@ $body
           echo "Review verdict: ${{ fromJson(env.REVIEW_JSON).verdict }}"
           echo "Coverage: ${{ env.COVERAGE_PCT }}% (minimum: 59.53%)"
           exit 1
-      
+
       - name: Success Message
         if: success()
         run: |
