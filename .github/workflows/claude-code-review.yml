@@ -1,77 +1,306 @@
+###############################################################################
+# 🛠️  Enhanced GitHub Workflow — Claude Code Review (Agent-First, ARC-Reviewer)
+# Version: 2025-01-15 with suggested improvements
+###############################################################################
 name: Claude Code Review
-
 on:
   pull_request:
     types: [opened, synchronize]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    paths:
+      - "src/**"
+      - "context/**"
+      - "tests/**"
+      - "*.md"
+      - "*.yaml"
+      - "*.yml"
 
 jobs:
-  claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
+  claude-pr-review:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
-      id-token: write
-
+      pull-requests: write      # allow comment / approval
+      issues: write             # allow auto-file follow-up issues
+      statuses: write           # allow setting commit status
+      id-token: write           # for future Sigstore attestation
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
-
+          fetch-depth: 0        # full history for context diff
+      
+      - name: Setup Python and Node
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov yamale
+          npm install -g ajv-cli
+      
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@beta
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-
-          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
-          # model: "claude-opus-4-20250514"
-
-          # Direct prompt for automated review (no @claude mention needed)
+          model: "claude-opus-4-20250514"
+          # -------- ARC-Reviewer Prompt --------
           direct_prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
+            # Claude PR-Reviewer Prompt  v2025-07-14  (Agent-Context-Template)
+            You are **ARC-Reviewer**, a senior staff engineer reviewing pull-requests on
+            the *agent-context-template* (MCP-based context platform).
+            Speak concisely (≤ 15 lines total). Never praise trivialities.
+            ────────────────────────────────────────────────────────
+            CRITICAL DOMAINS – fail any ⇒ "REQUEST CHANGES"
+            ────────────────────────────────────────────────────────
+            1. **Test Coverage**  
+               • validators/* ≥ 90 % line coverage, no global regression  
+               • New logic ships with focused tests
+               • Overall project coverage must not drop below 59.53%
+            2. **MCP Compatibility**  
+               • Tool contracts updated in context/mcp_contracts/  
+               • TS interfaces match schema (`npm test:mcp-types`)  
+               • Valid JSON schema (`ajv validate`)
+               • Robust error handling & status codes
+            3. **Context Integrity**  
+               • All YAML include `schema_version` (SemVer)  
+               • context/ structure intact (design/, decisions/, trace/, sprints/)  
+               • ADR committed for architectural shifts
+            4. **Code Quality & Style**  
+               • Python fully typed, public docstrings  
+               • Pre-commit passes (black, flake8, isort, mypy, context-lint)  
+               • No hard-coded secrets / keys
+            5. **Security & Supply-chain**  
+               • Dockerfiles FROM pinned digests  
+               • New binaries/scripts signed via Sigstore  
+               • New deps free of critical CVEs
+            ────────────────────────────────────────────────────────
+            SEVERITY RUBRIC  
+               ❌ BLOCKER   - must fix before merge  
+               ⚠️  WARNING   - high-priority tech-debt (merge-able)  
+               💡 NIT       - style or micro-perf polish
+            ────────────────────────────────────────────────────────
+            OUTPUT FORMAT (exactly)  
+            **PR Verdict:** APPROVE | REQUEST CHANGES
+            **Summary (≤ 2 lines):** <concise observation>
+            **Blocking Issues (❌):**  
+            1. <desc> – file:line  
+            …
+            **Warnings (⚠️):**  
+            1. …
+            **Nits (💡):**  
+            1. …
+            **Coverage Delta:** <current>% → <new>% [PASS/FAIL]
+            **Suggested Follow-ups:**  
+            • <optional backlog items>
+            End of report. Do *not* add anything after this line.
+          # enable sticky threaded comment
+          use_sticky_comment: true
+          # Tools Claude may invoke during review
+          allowed_tools: |
+            Bash(pytest --cov=src --cov-report=term --cov-report=json),
+            Bash(pre-commit run --all-files --config .pre-commit-config-ci.yaml),
+            Bash(python -m src.validators.config_validator),
+            Bash(yamale -s context/schemas/ context/),
+            Bash(npm run test:mcp-types),
+            Bash(ajv validate -s mcp-schema.json -d context/mcp_contracts/*.json),
+            Bash(git diff --name-only origin/main...HEAD)
+      
+      # ---------- Extract and Store Coverage Metrics ----------
+      - name: Extract Coverage Metrics
+        if: always()
+        run: |
+          # Run coverage and capture output
+          pytest --cov=src --cov-report=term --cov-report=json --cov-report=html || true
+          
+          # Extract coverage percentage
+          if [ -f coverage.json ]; then
+            coverage_pct=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+            echo "COVERAGE_PCT=$coverage_pct" >> $GITHUB_ENV
+            
+            # Check if coverage dropped below baseline
+            if (( $(echo "$coverage_pct < 59.53" | bc -l) )); then
+              echo "COVERAGE_FAILED=true" >> $GITHUB_ENV
+            else
+              echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
+            fi
+          fi
+      
+      # ---------- Convert Review to Structured JSON ----------
+      - name: Convert Review to JSON
+        if: always()
+        run: |
+          cat > parse_review.py << 'EOF'
+          import sys
+          import json
+          import re
+          
+          review_text = sys.argv[1]
+          
+          # Parse structured review
+          verdict_match = re.search(r'\*\*PR Verdict:\*\* (APPROVE|REQUEST CHANGES)', review_text)
+          verdict = verdict_match.group(1) if verdict_match else "UNKNOWN"
+          
+          # Extract sections
+          blocking = re.findall(r'(?<=Blocking Issues \(❌\):)(.*?)(?=\*\*|$)', review_text, re.DOTALL)
+          warnings = re.findall(r'(?<=Warnings \(⚠️\):)(.*?)(?=\*\*|$)', review_text, re.DOTALL)
+          nits = re.findall(r'(?<=Nits \(💡\):)(.*?)(?=\*\*|$)', review_text, re.DOTALL)
+          followups = re.findall(r'(?<=Suggested Follow-ups:)(.*?)(?=End of report|$)', review_text, re.DOTALL)
+          
+          review_json = {
+              "verdict": verdict,
+              "has_blockers": bool(blocking and blocking[0].strip()),
+              "coverage_pct": float(sys.argv[2]) if len(sys.argv) > 2 else None,
+              "sections": {
+                  "blocking": blocking[0].strip() if blocking else "",
+                  "warnings": warnings[0].strip() if warnings else "",
+                  "nits": nits[0].strip() if nits else "",
+                  "followups": followups[0].strip() if followups else ""
+              }
+          }
+          
+          print(json.dumps(review_json, indent=2))
+          EOF
+          
+          python parse_review.py "${{ steps.claude-review.outputs.response }}" "${COVERAGE_PCT:-0}" > review.json
+          
+          # Store parsed review for downstream steps
+          echo "REVIEW_JSON<<EOF" >> $GITHUB_ENV
+          cat review.json >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      
+      # ---------- Set GitHub Status Check ----------
+      - name: Set Commit Status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const review = ${{ env.REVIEW_JSON }};
+            const coverage_pct = parseFloat("${{ env.COVERAGE_PCT }}") || 0;
+            
+            // Determine overall status
+            let state = 'success';
+            let description = `ARC-Review: PASS | Coverage: ${coverage_pct.toFixed(1)}%`;
+            
+            if (review.verdict === 'REQUEST CHANGES' || review.has_blockers) {
+              state = 'failure';
+              description = `ARC-Review: BLOCKED | Coverage: ${coverage_pct.toFixed(1)}%`;
+            } else if (coverage_pct < 59.53) {
+              state = 'failure';
+              description = `ARC-Review: Coverage regression (${coverage_pct.toFixed(1)}% < 59.53%)`;
+            }
+            
+            // Create status check
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: state,
+              description: description,
+              context: 'ARC-Reviewer'
+            });
+      
+      # ---------- Auto-open GitHub issues for Suggested Follow-ups ----------
+      - name: Parse Review and Create Issues
+        if: contains(steps.claude-review.outputs.response, 'Suggested Follow-ups:')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${{ steps.claude-review.outputs.response }}" > review.txt
+          
+          # Extract bullet lines under "Suggested Follow-ups:"
+          awk '/Suggested Follow-ups:/,/End of report/' review.txt | grep -E '^\s*•' | while read -r line; do
+            follow=${line#*• }
+            # Skip empty lines
+            [ -z "$follow" ] && continue
+            
+            # Try to extract title:description format, otherwise use whole line
+            if [[ "$follow" == *":"* ]]; then
+              title=$(echo "$follow" | cut -d':' -f1 | xargs)
+              body=$(echo "$follow" | cut -d':' -f2- | xargs)
+            else
+              title="$follow"
+              body="Suggested improvement from code review"
+            fi
+            
+            # Create issue with enhanced metadata
+            gh issue create \
+              --title "[PR #${{ github.event.pull_request.number }}] $title" \
+              --body "## Context
+              
+This improvement was suggested by ARC-Reviewer during code review.
 
-            Be constructive and helpful in your feedback.
+**Original PR:** #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}
+**PR URL:** ${{ github.event.pull_request.html_url }}
+**Author:** @${{ github.event.pull_request.user.login }}
 
-          # Optional: Use sticky comments to make Claude reuse the same comment on subsequent pushes to the same PR
-          # use_sticky_comment: true
+## Suggestion
+$body
 
-          # Optional: Customize review based on file types
-          # direct_prompt: |
-          #   Review this PR focusing on:
-          #   - For TypeScript files: Type safety and proper interface usage
-          #   - For API endpoints: Security, input validation, and error handling
-          #   - For React components: Performance, accessibility, and best practices
-          #   - For tests: Coverage, edge cases, and test quality
+## Acceptance Criteria
+- [ ] Implement the suggested improvement
+- [ ] Add tests if applicable
+- [ ] Update documentation if needed
 
-          # Optional: Different prompts for different authors
-          # direct_prompt: |
-          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
-          #   'Welcome! Please review this PR from a first-time contributor. Be encouraging and provide detailed explanations for any suggestions.' ||
-          #   'Please provide a thorough code review focusing on our coding standards and best practices.' }}
-
-          # Optional: Add specific tools for running tests or linting
-          # allowed_tools: "Bash(npm run test),Bash(npm run lint),Bash(npm run typecheck)"
-
-          # Optional: Skip review for certain conditions
-          # if: |
-          #   !contains(github.event.pull_request.title, '[skip-review]') &&
-          #   !contains(github.event.pull_request.title, '[WIP]')
+---
+*Automatically created by ARC-Reviewer bot*" \
+              --label "enhancement,from-code-review,good-first-issue"
+          done
+      
+      # ---------- Upload Coverage Report ----------
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            htmlcov/
+            coverage.json
+            review.json
+      
+      # ---------- Add PR Comment with Coverage Badge ----------
+      - name: Add Coverage Badge Comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const coverage_pct = parseFloat("${{ env.COVERAGE_PCT }}") || 0;
+            const coverage_color = coverage_pct >= 85 ? 'brightgreen' : 
+                                  coverage_pct >= 70 ? 'yellow' : 
+                                  coverage_pct >= 60 ? 'orange' : 'red';
+            
+            const badge_url = `https://img.shields.io/badge/coverage-${coverage_pct.toFixed(1)}%25-${coverage_color}`;
+            
+            const comment = `## 🤖 ARC-Reviewer Report
+            
+            ![Coverage](${badge_url})
+            
+            ${context.payload.pull_request.body || ''}`;
+            
+            // Only add badge if not already present
+            if (!context.payload.pull_request.body?.includes('img.shields.io/badge/coverage')) {
+              github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                body: comment
+              });
+            }
+      
+      # ---------- Block pipeline on blocking issues or coverage regression ----------
+      - name: Check for Blocking Issues
+        if: |
+          contains(steps.claude-review.outputs.response, 'REQUEST CHANGES') ||
+          contains(steps.claude-review.outputs.response, 'Blocking Issues (❌):') ||
+          env.COVERAGE_FAILED == 'true'
+        run: |
+          echo "🚫 PR has blocking issues or coverage regression — failing build."
+          echo "Review verdict: ${{ fromJson(env.REVIEW_JSON).verdict }}"
+          echo "Coverage: ${{ env.COVERAGE_PCT }}% (minimum: 59.53%)"
+          exit 1
+      
+      - name: Success Message
+        if: success()
+        run: |
+          echo "✅ PR cleared ARC-Reviewer!"
+          echo "- No blocking issues found"
+          echo "- Coverage: ${{ env.COVERAGE_PCT }}% ✓"
+          echo "- Ready to merge after human review"
