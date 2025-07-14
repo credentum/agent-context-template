@@ -2,7 +2,7 @@
 name: Sprint Task
 about: Create a task tracked by the sprint system
 title: ''
-labels: 'sprint-current'
+labels: ['sprint-current', 'phase:?', 'component:?', 'priority:?']
 assignees: ''
 
 ---
@@ -14,6 +14,13 @@ assignees: ''
 - **Sprint**: <!-- e.g., sprint-001 -->
 - **Phase**: <!-- e.g., Phase 2 -->
 - **Related Task**: <!-- Task name from sprint YAML -->
+
+## Labels
+<!-- Add relevant labels for filtering and reporting -->
+- `sprint-current`
+- `phase:<number>` (e.g., `phase:5`)
+- `component:<area>` (e.g., `component:infra`, `component:lint`, `component:mcp`)
+- `priority:<level>` (e.g., `priority:high`, `priority:medium`)
 
 ## Acceptance Criteria
 <!-- List what needs to be done for this task to be considered complete -->
