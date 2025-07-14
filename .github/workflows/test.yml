@@ -54,6 +54,7 @@ jobs:
           mkdir -p context/.duckdb
           mkdir -p context/.graph_cache
           mkdir -p context/.vector_cache
+          mkdir -p context/.embeddings_cache
           mkdir -p context/trace
           mkdir -p context/archive
           mkdir -p context/mcp_contracts

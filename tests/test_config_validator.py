@@ -97,7 +97,7 @@ class TestConfigValidator:
         assert any("qdrant.port must be an integer" in e for e in validator.errors)
 
         # Port out of range
-        config["qdrant"]["port"] = str(99999)  # Convert to string to trigger validation error
+        config["qdrant"]["port"] = 99999  # Out of range integer
         config_path = self.create_config_file(".ctxrc2.yaml", config)
 
         validator2 = ConfigValidator()
@@ -121,7 +121,7 @@ class TestConfigValidator:
         assert any("neo4j.port must be an integer" in e for e in validator.errors)
 
         # Port out of range
-        config["neo4j"]["port"] = str(0)  # Convert to string to trigger validation error
+        config["neo4j"]["port"] = 0  # Out of range integer (port 0 is invalid)
         config_path = self.create_config_file(".ctxrc2.yaml", config)
 
         validator2 = ConfigValidator()
@@ -181,8 +181,8 @@ class TestConfigValidator:
         # Invalid threads
         config["duckdb"] = {
             "database_path": "/tmp/db.duckdb",
-            "threads": "0",
-        }  # Convert to string to trigger validation error
+            "threads": 0,
+        }  # Invalid number of threads
         config_path = self.create_config_file(".ctxrc2.yaml", config)
         self.validator.errors = []
 

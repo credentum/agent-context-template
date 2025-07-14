@@ -146,7 +146,11 @@ class TestErrorRecovery:
         """Test handling of disk full errors"""
         embedder = HashDiffEmbedder()
 
-        with patch("builtins.open", side_effect=OSError("No space left on device")):
+        # Mock both directory creation and file opening to simulate disk full error
+        with (
+            patch("pathlib.Path.mkdir"),
+            patch("builtins.open", side_effect=OSError("No space left on device")),
+        ):
             # The method doesn't handle errors internally, so it will raise
             with pytest.raises(OSError, match="No space left on device"):
                 embedder._save_hash_cache()
