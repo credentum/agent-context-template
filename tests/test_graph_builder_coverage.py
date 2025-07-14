@@ -500,7 +500,7 @@ class TestGraphBuilderCoverage:
         removed = builder.cleanup_orphaned_nodes()
         assert removed == 0
 
-    def test_cleanup_orphaned_nodes(self, builder):
+    def test_cleanup_orphaned_nodes(self, builder, temp_dir):
         """Test cleanup of orphaned nodes"""
         # Mock driver and session
         mock_driver = Mock()
@@ -511,25 +511,23 @@ class TestGraphBuilderCoverage:
         mock_driver.session.return_value = mock_context
         builder.driver = mock_driver
 
+        # Create a temporary existing file
+        existing_file = temp_dir / "existing.yaml"
+        existing_file.touch()
+
         # Mock query results
         mock_result = [
             {"id": "doc1", "file_path": "/nonexistent/doc1.yaml"},
-            {"id": "doc2", "file_path": str(Path("existing.yaml").absolute())},
+            {"id": "doc2", "file_path": str(existing_file)},
         ]
         mock_session.run.return_value = mock_result
 
         # Add to cache
         builder.processed_docs["/nonexistent/doc1.yaml"] = "hash1"
 
-        # Create existing file
-        Path("existing.yaml").touch()
-
-        try:
-            removed = builder.cleanup_orphaned_nodes()
-            assert removed == 1  # Should remove only non-existent file
-            assert "/nonexistent/doc1.yaml" not in builder.processed_docs
-        finally:
-            Path("existing.yaml").unlink(missing_ok=True)
+        removed = builder.cleanup_orphaned_nodes()
+        assert removed == 1  # Should remove only non-existent file
+        assert "/nonexistent/doc1.yaml" not in builder.processed_docs
 
     def test_cleanup_orphaned_nodes_exception(self, builder):
         """Test cleanup with exception"""
