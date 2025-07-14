@@ -1,0 +1,38 @@
+# Dockerfile.ci - Simulate CI environment locally
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements files
+COPY requirements*.txt ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements-dev.txt && \
+    pip install --no-cache-dir -r requirements-test.txt
+
+# Copy the rest of the application
+COPY . .
+
+# Create necessary directories (like CI does)
+RUN mkdir -p context/.duckdb \
+    context/.graph_cache \
+    context/.vector_cache \
+    context/trace \
+    context/archive \
+    context/mcp_contracts \
+    context/logs/cleanup \
+    context/logs/eval \
+    context/logs/kv \
+    context/logs/prompts \
+    context/logs/signatures
+
+# Default command runs all CI checks
+CMD ["/bin/bash", "scripts/test-like-ci.sh"]
