@@ -3,13 +3,9 @@
 Tests for context_analytics module
 """
 
-import json
 from datetime import datetime, timedelta
-from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
-import pytest
-import yaml
 from click.testing import CliRunner
 
 from src.analytics.context_analytics import AnalyticsReport, ContextAnalytics, analyze, cli, export
@@ -132,7 +128,9 @@ class TestContextAnalytics:
 
         analytics = ContextAnalytics()
         analytics.ensure_connected = Mock(return_value=True)  # type: ignore[method-assign]
-        analytics.query_metrics = Mock(side_effect=Exception("Database error"))  # type: ignore[method-assign]
+        analytics.query_metrics = Mock(  # type: ignore[method-assign]
+            side_effect=Exception("Database error")
+        )
 
         report = analytics.analyze_document_lifecycle()
 
@@ -289,9 +287,15 @@ class TestContextAnalytics:
         )
 
         # Mock the analysis methods
-        analytics.analyze_document_lifecycle = Mock(return_value=doc_report)  # type: ignore[method-assign]
-        analytics.analyze_agent_performance = Mock(return_value=agent_report)  # type: ignore[method-assign]
-        analytics.analyze_system_health = Mock(return_value=health_report)  # type: ignore[method-assign]
+        analytics.analyze_document_lifecycle = Mock(  # type: ignore[method-assign]
+            return_value=doc_report
+        )
+        analytics.analyze_agent_performance = Mock(  # type: ignore[method-assign]
+            return_value=agent_report
+        )
+        analytics.analyze_system_health = Mock(  # type: ignore[method-assign]
+            return_value=health_report
+        )
 
         summary = analytics.generate_executive_summary()
 

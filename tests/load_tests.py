@@ -8,7 +8,7 @@ import json
 import random
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 # For running without Locust UI
 import gevent
@@ -77,7 +77,8 @@ class DocumentProcessingUser(HttpUser):
     @task(2)
     def read_document(self):
         """Simulate document reading"""
-        doc_id = f"doc_{random.randint(1, 1000)}"
+        # Generate doc_id for simulation (not used in this test)
+        _ = f"doc_{random.randint(1, 1000)}"
 
         start_time = time.time()
         try:
@@ -105,7 +106,8 @@ class DocumentProcessingUser(HttpUser):
     @task(1)
     def search_documents(self):
         """Simulate document search"""
-        query = f"tag:{random.choice(['design', 'architecture', 'api', 'database'])}"
+        # Generate query for simulation (not used in this test)
+        _ = f"tag:{random.choice(['design', 'architecture', 'api', 'database'])}"
 
         start_time = time.time()
         try:

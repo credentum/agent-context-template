@@ -151,7 +151,10 @@ def update_readme_badges(summary):
     branch_color = (
         "green" if branch_coverage >= 70 else "yellow" if branch_coverage >= 50 else "red"
     )
-    branch_badge = f"![Branch Coverage](https://img.shields.io/badge/branch%20coverage-{branch_coverage}%25-{branch_color})"
+    branch_badge = (
+        f"![Branch Coverage](https://img.shields.io/badge/"
+        f"branch%20coverage-{branch_coverage}%25-{branch_color})"
+    )
 
     # Replace badges in content
     content = re.sub(r"!\[Coverage\]\([^)]+\)", coverage_badge, content)
@@ -190,15 +193,16 @@ def main():
     update_readme_badges(summary)
 
     # Print summary
-    print(f"\nCoverage updated:")
+    print("\nCoverage updated:")
     print(f"  Line Coverage: {summary['overall']['line_coverage']}%")
     print(f"  Branch Coverage: {summary['overall']['branch_coverage']}%")
     print(
-        f"  Tests: {summary['overall']['tests_passed']} passed, {summary['overall']['tests_skipped']} skipped"
+        f"  Tests: {summary['overall']['tests_passed']} passed, "
+        f"{summary['overall']['tests_skipped']} skipped"
     )
-    print(f"\nFiles updated:")
-    print(f"  - coverage-summary.json")
-    print(f"  - README.md")
+    print("\nFiles updated:")
+    print("  - coverage-summary.json")
+    print("  - README.md")
 
 
 if __name__ == "__main__":

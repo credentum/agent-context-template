@@ -162,18 +162,20 @@ def update_coverage_guide_with_graphs(trends_path, modules_path):
 
     # Add trends graph section if not present
     if "## Coverage Trends" not in content:
-        trends_section = f"""
+        trends_section = """
 ## Coverage Trends
 
 ![Coverage Trends](assets/coverage-trends.png)
 
-The graph above shows the progression of line and branch coverage over time, with target lines indicated.
+The graph above shows the progression of line and branch coverage over time,
+with target lines indicated.
 
 ## Module Coverage Distribution
 
 ![Module Coverage](assets/module-coverage.png)
 
-This chart displays the current coverage levels for key modules, highlighting which ones need the most attention.
+This chart displays the current coverage levels for key modules,
+highlighting which ones need the most attention.
 """
         # Insert after the roadmap section
         if "### Estimated Timeline" in content:
@@ -209,12 +211,9 @@ def main():
 if __name__ == "__main__":
     # Install matplotlib if not present
     try:
-        import matplotlib.dates as mdates
-        import matplotlib.pyplot as plt
+        __import__("matplotlib")  # Check if matplotlib is available without unused import
     except ImportError:
         print("Installing matplotlib...")
         subprocess.run([sys.executable, "-m", "pip", "install", "matplotlib"])
-        import matplotlib.dates as mdates
-        import matplotlib.pyplot as plt
 
     main()

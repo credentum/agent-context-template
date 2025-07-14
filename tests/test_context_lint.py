@@ -3,7 +3,6 @@
 Tests for context-lint validation system
 """
 
-import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -64,7 +63,7 @@ class TestContextLint:
         with open(doc_path, "w") as f:
             yaml.dump(design_doc, f)
 
-        assert linter.validate_file(doc_path) == True
+        assert linter.validate_file(doc_path) is True
         assert len(linter.errors) == 0
 
     def test_invalid_schema_version(self, temp_context_dir):
@@ -88,7 +87,7 @@ class TestContextLint:
         with open(doc_path, "w") as f:
             yaml.dump(doc, f)
 
-        assert linter.validate_file(doc_path) == False
+        assert linter.validate_file(doc_path) is False
         assert len(linter.errors) > 0
 
     def test_missing_required_field(self, temp_context_dir):
@@ -112,7 +111,7 @@ class TestContextLint:
         with open(doc_path, "w") as f:
             yaml.dump(doc, f)
 
-        assert linter.validate_file(doc_path) == False
+        assert linter.validate_file(doc_path) is False
         assert any("title" in error for error in linter.errors)
 
     def test_auto_fix_timestamps(self, temp_context_dir):
@@ -137,7 +136,7 @@ class TestContextLint:
             yaml.dump(doc, f)
 
         # Validate with fix enabled
-        assert linter.validate_file(doc_path, fix=True) == True
+        assert linter.validate_file(doc_path, fix=True) is True
         assert linter.fixed_count == 1
 
         # Load fixed document
@@ -176,7 +175,7 @@ class TestContextLint:
         with open(doc_path, "w") as f:
             yaml.dump(doc, f)
 
-        assert linter.validate_file(doc_path) == True
+        assert linter.validate_file(doc_path) is True
         assert len(linter.warnings) > 0
         assert any("expires" in warning for warning in linter.warnings)
 
@@ -215,5 +214,5 @@ class TestContextLint:
         with open(doc_path, "w") as f:
             yaml.dump(sprint_doc, f)
 
-        assert linter.validate_file(doc_path) == True
+        assert linter.validate_file(doc_path) is True
         assert len(linter.errors) == 0

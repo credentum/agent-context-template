@@ -3,10 +3,7 @@
 Tests for kv_validators module
 """
 
-import json
 from datetime import datetime, timedelta
-
-import pytest
 
 from src.validators.kv_validators import (
     sanitize_metric_name,

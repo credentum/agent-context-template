@@ -13,8 +13,7 @@ import sys
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 
 @dataclass
@@ -49,7 +48,7 @@ def run_test_group(group: TestGroup, pytest_args: List[str]) -> Tuple[str, Dict]
         "-m",
         group.markers,
         f"--junit-xml=test-results/junit-{group.name}.xml",
-        f"--cov=src",
+        "--cov=src",
         "--cov-branch",
         f"--cov-report=xml:coverage-{group.name}.xml",
         f"--cov-report=html:htmlcov-{group.name}",

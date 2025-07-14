@@ -6,14 +6,11 @@ Additional tests for graph_builder.py to improve coverage to 75%+
 import json
 import shutil
 import tempfile
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
-import click
 import pytest
 import yaml
-from neo4j.exceptions import ServiceUnavailable
 
 from src.storage.graph_builder import GraphBuilder
 
@@ -68,7 +65,7 @@ class TestGraphBuilderCoverage:
             builder = GraphBuilder(config_path=str(config_path))
             # If it doesn't raise, it should have empty config
             assert builder.config == {}
-        except:
+        except Exception:
             # Expected behavior - current code doesn't handle this
             pass
 
@@ -181,7 +178,7 @@ class TestGraphBuilderCoverage:
     def test_connect_no_password(self, builder):
         """Test connect without password"""
         result = builder.connect(username="neo4j", password=None)
-        assert result == False
+        assert result is False
 
     def test_connect_success(self, builder):
         """Test successful connection"""
@@ -194,7 +191,7 @@ class TestGraphBuilderCoverage:
 
         with patch("src.storage.graph_builder.GraphDatabase.driver", return_value=mock_driver):
             result = builder.connect(username="neo4j", password="password")
-            assert result == True
+            assert result is True
             assert builder.driver == mock_driver
 
     def test_connect_failure(self, builder):
@@ -204,7 +201,7 @@ class TestGraphBuilderCoverage:
             side_effect=Exception("Connection failed"),
         ):
             result = builder.connect(username="neo4j", password="password")
-            assert result == False
+            assert result is False
 
     def test_create_document_node_basic(self, builder):
         """Test creating basic document node"""
@@ -346,7 +343,7 @@ class TestGraphBuilderCoverage:
         doc_path.touch()
 
         result = builder.process_document(doc_path)
-        assert result == False
+        assert result is False
 
     def test_process_document_no_driver(self, builder, temp_dir):
         """Test processing document without driver connection"""
@@ -356,7 +353,7 @@ class TestGraphBuilderCoverage:
 
         builder.driver = None
         result = builder.process_document(doc_path)
-        assert result == False
+        assert result is False
 
     def test_process_document_cached(self, builder, temp_dir):
         """Test processing already cached document"""
@@ -372,7 +369,7 @@ class TestGraphBuilderCoverage:
 
         # Should skip processing
         result = builder.process_document(doc_path)
-        assert result == True
+        assert result is True
 
     def test_process_document_force(self, builder, temp_dir):
         """Test force processing cached document"""
@@ -397,7 +394,7 @@ class TestGraphBuilderCoverage:
 
         # Should process despite cache
         result = builder.process_document(doc_path, force=True)
-        assert result == True
+        assert result is True
         assert mock_session.run.call_count > 0
 
     def test_process_document_with_references(self, builder, temp_dir):
@@ -423,7 +420,7 @@ class TestGraphBuilderCoverage:
         builder.driver = mock_driver
 
         result = builder.process_document(doc_path)
-        assert result == True
+        assert result is True
 
         # Should create document, references, and timeline relationships
         assert mock_session.run.call_count >= 3
@@ -435,7 +432,7 @@ class TestGraphBuilderCoverage:
             f.write("invalid: yaml: [")
 
         result = builder.process_document(doc_path)
-        assert result == False
+        assert result is False
 
     def test_process_directory(self, builder, temp_dir):
         """Test processing directory of documents"""

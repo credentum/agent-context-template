@@ -1,11 +1,9 @@
 """Comprehensive tests for SprintIssueLinker to improve coverage"""
 
 import json
-import shutil
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 import yaml
@@ -105,7 +103,7 @@ class TestSprintIssueLinkerCoverage:
             with patch("subprocess.run") as mock_run:
                 mock_run.side_effect = FileNotFoundError("gh not found")
                 with patch("sys.exit") as mock_exit:
-                    linker = SprintIssueLinker()
+                    SprintIssueLinker()
                     mock_exit.assert_called_once_with(1)
         finally:
             os.chdir(original_cwd)

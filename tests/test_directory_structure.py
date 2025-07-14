@@ -3,7 +3,6 @@
 Smoke tests for directory structure validation
 """
 
-import os
 from pathlib import Path
 
 import pytest

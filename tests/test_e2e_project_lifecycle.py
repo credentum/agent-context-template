@@ -13,7 +13,6 @@ import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
 
 import pytest
 import yaml
@@ -454,7 +453,7 @@ class TestErrorRecovery:
 
         # Try to parse
         try:
-            data = yaml.safe_load(corrupted_yaml)
+            yaml.safe_load(corrupted_yaml)
             assert False, "Should have raised exception"
         except yaml.YAMLError as e:
             # Expected behavior

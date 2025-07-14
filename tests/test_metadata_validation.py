@@ -5,21 +5,9 @@ Tests validation of document metadata, configuration metadata, and data integrit
 """
 
 import json
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any, Dict
+from datetime import datetime
 
 import pytest
-
-from src.validators.config_validator import ConfigValidator
-from src.validators.kv_validators import (
-    sanitize_metric_name,
-    validate_cache_entry,
-    validate_metric_event,
-    validate_redis_key,
-    validate_session_data,
-    validate_time_range,
-)
 
 
 class TestDocumentMetadataValidation:
@@ -145,15 +133,6 @@ class TestDocumentMetadataValidation:
             assert isinstance(tag, str)
             assert len(tag) > 0
             assert len(tag) <= 50  # Reasonable tag length limit
-
-        # Invalid tags
-        invalid_tags = [
-            "",  # Empty tag
-            " ",  # Whitespace only
-            "a" * 100,  # Too long
-            None,  # None value
-            123,  # Non-string
-        ]
 
         # Validate tag list
         tags = ["backend", "api"]

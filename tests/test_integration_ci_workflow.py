@@ -5,14 +5,12 @@ Tests: Simulated PR → triggers CI → updates sprint.yaml
 """
 
 import json
-import os
 import subprocess
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import Mock, patch
 
-import pytest
 import yaml
 
 
@@ -124,11 +122,12 @@ class TestCIWorkflowIntegration:
     def test_pr_triggers_ci_workflow(self, mock_subprocess):
         """Test that PR events trigger CI workflow"""
         # Create workflow and sprint files
-        workflow_path = self.create_ci_workflow()
+        self.create_ci_workflow()
         sprint_path = self.create_sprint_document()
 
         # Simulate GitHub webhook for PR opened
-        webhook_payload = {"action": "opened", "pull_request": self.test_pr}
+        # webhook_payload would be used in actual webhook handling
+        _ = {"action": "opened", "pull_request": self.test_pr}
 
         # Mock GitHub CLI responses
         mock_subprocess.return_value = Mock(
@@ -169,8 +168,8 @@ class TestCIWorkflowIntegration:
         with open(sprint_path, "w") as f:
             yaml.dump(sprint, f)
 
-        # 4. Create CI run trace
-        ci_trace = {
+        # 4. Create CI run trace (for documentation)
+        _ = {
             "workflow_run_id": "123456789",
             "triggered_by": "pull_request",
             "pr_number": self.test_pr["number"],
@@ -197,8 +196,8 @@ class TestCIWorkflowIntegration:
         """Test sprint updates when PR is merged"""
         sprint_path = self.create_sprint_document()
 
-        # Simulate PR merge event
-        merge_event = {
+        # Simulate PR merge event (for documentation)
+        _ = {
             "action": "closed",
             "pull_request": {
                 **self.test_pr,
@@ -300,8 +299,8 @@ class TestCIWorkflowIntegration:
             1, "python -m src.agents.update_sprint"
         )
 
-        # Create failure trace
-        failure_trace = {
+        # Create failure trace (for documentation)
+        _ = {
             "workflow_run_id": "987654321",
             "status": "failure",
             "error": "Failed to update sprint document",
@@ -356,8 +355,9 @@ class TestCISprintMetrics:
 
     def test_burndown_tracking(self):
         """Test sprint burndown chart data generation"""
-        sprint_start = datetime(2024, 1, 1)
-        total_points = 21
+        # Define sprint parameters (for documentation)
+        _ = datetime(2024, 1, 1)
+        _ = 21
 
         # Daily progress
         burndown_data = [

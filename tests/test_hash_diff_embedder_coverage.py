@@ -3,13 +3,11 @@
 Extended tests for hash_diff_embedder module to improve coverage
 """
 
-import json
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
-import pytest
 import yaml
 
 from src.storage.hash_diff_embedder import DocumentHash, HashDiffEmbedder
@@ -243,7 +241,7 @@ class TestHashDiffEmbedderCoverage:
             # This simulates the case where we force re-embed the same content
             with patch.object(embedder, "needs_embedding", return_value=(True, "old_vector_id")):
                 with patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"}):
-                    result = embedder.embed_document(test_file, force=True)
+                    embedder.embed_document(test_file, force=True)
 
             # Verify old vector was deleted
             mock_qdrant.delete.assert_called_once()

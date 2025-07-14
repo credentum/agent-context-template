@@ -5,9 +5,6 @@ import json
 from datetime import datetime
 from unittest.mock import Mock, patch
 
-import pytest
-import redis
-
 from src.storage.context_kv import ContextKV, MetricEvent, RedisConnector
 
 

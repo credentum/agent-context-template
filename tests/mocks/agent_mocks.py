@@ -82,7 +82,11 @@ class MockSigstoreClient:
         return {
             "artifact_hash": content_hash,
             "signature": signature,
-            "certificate": f"-----BEGIN CERTIFICATE-----\\nMOCK_CERT_{content_hash[:8]}\\n-----END CERTIFICATE-----",
+            "certificate": (
+                f"-----BEGIN CERTIFICATE-----\\n"
+                f"MOCK_CERT_{content_hash[:8]}\\n"
+                f"-----END CERTIFICATE-----"
+            ),
             "transparency_log_index": str(len(self.signed_documents)),
             "timestamp": doc_data["timestamp"],
             "identity": identity,

@@ -7,7 +7,6 @@ import os
 import tempfile
 from typing import Any, Dict
 
-import pytest
 import yaml
 from click.testing import CliRunner
 
@@ -391,11 +390,11 @@ class TestConfigValidator:
             "storage": {},
             "agents": {},
         }
-        main_path = self.create_config_file(".ctxrc.yaml", main_config)
+        self.create_config_file(".ctxrc.yaml", main_config)
 
         # Create invalid performance config
         perf_config = {"resources": {"max_memory_gb": 0.1}}
-        perf_path = self.create_config_file("performance.yaml", perf_config)
+        self.create_config_file("performance.yaml", perf_config)
 
         # Change to temp directory
         original_dir = os.getcwd()

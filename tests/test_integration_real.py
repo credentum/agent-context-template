@@ -308,7 +308,9 @@ def cleanup_test_data(request, test_config, neo4j_creds):
         with driver.session(database=neo4j_config.get("database", "neo4j")) as session:
             # Clean test data
             session.run(
-                "MATCH (n) WHERE n.id STARTS WITH 'test-' OR n.id STARTS WITH 'design-' OR n.id STARTS WITH 'decision-' OR n.id STARTS WITH 'sprint-' DETACH DELETE n"
+                "MATCH (n) WHERE n.id STARTS WITH 'test-' OR n.id STARTS WITH 'design-' "
+                "OR n.id STARTS WITH 'decision-' OR n.id STARTS WITH 'sprint-' "
+                "DETACH DELETE n"
             )
 
         driver.close()

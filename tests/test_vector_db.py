@@ -2,11 +2,10 @@
 Tests for vector database components
 """
 
-import json
 import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -282,7 +281,8 @@ class TestSumScoresAPI:
             payload={},
         )
 
-        result2 = SearchResult(
+        # Create second result for same document (for aggregation test)
+        _ = SearchResult(
             vector_id="vec1",  # Same document
             document_id="doc1",
             document_type="design",
@@ -297,7 +297,8 @@ class TestSumScoresAPI:
         )
 
         # Test sum aggregation
-        all_results = {"vec1": result1}
+        # Track results for aggregation test
+        _ = {"vec1": result1}
         result1.raw_scores.append(0.7)
         result1.score = 0.8 + 0.7  # Sum
         result1.final_score = 1.5 * 1.0 * 1.2

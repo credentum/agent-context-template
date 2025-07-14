@@ -3,21 +3,11 @@
 Comprehensive tests for vector_db_init module
 """
 
-import sys
-from pathlib import Path
-from unittest.mock import MagicMock, Mock, mock_open, patch
+from unittest.mock import Mock, mock_open, patch
 
-import pytest
 import yaml
 from click.testing import CliRunner
-from qdrant_client.http.exceptions import UnexpectedResponse
-from qdrant_client.models import (
-    CollectionInfo,
-    Distance,
-    HnswConfig,
-    OptimizersConfig,
-    VectorParams,
-)
+from qdrant_client.models import Distance
 
 from src.storage.vector_db_init import VectorDBInitializer, main
 

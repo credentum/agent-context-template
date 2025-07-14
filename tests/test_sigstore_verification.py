@@ -4,16 +4,12 @@ Sigstore signature verification tests
 Tests document signing, verification, and tamper detection
 """
 
-import base64
-import hashlib
 import json
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Optional
-from unittest.mock import MagicMock, Mock, patch
+from typing import Any, Dict
 
-import pytest
 import yaml
 
 from tests.mocks import MockSigstoreClient
@@ -186,8 +182,8 @@ class TestSigstoreWorkflow:
             "GITHUB_REF": "refs/heads/main",
         }
 
-        # Mock getting OIDC token
-        mock_token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+        # Mock getting OIDC token (for documentation)
+        _ = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
 
         # Signing configuration
         signing_config = {

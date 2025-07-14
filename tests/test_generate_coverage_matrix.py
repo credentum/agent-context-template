@@ -2,19 +2,17 @@
 
 import json
 import subprocess
-
-# Import the script modules
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
 from unittest import mock
 
 import pytest
 
+# Import the script modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from generate_coverage_matrix import (
+from generate_coverage_matrix import (  # noqa: E402
     DEFAULT_CONFIG,
     CoverageAnalyzer,
     CoverageDataValidator,
