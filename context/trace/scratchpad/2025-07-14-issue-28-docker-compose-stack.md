@@ -44,3 +44,16 @@ Need to create a reproducible Docker Compose stack with:
 - `curl localhost:6333/collections` returns `{"result":{"collections":[]},"status":"ok"}`
 - `docker exec neo4j cypher-shell "RETURN 1"` returns `1`
 - Both services start within 30 seconds and pass health checks
+## Issue Resolution (2025-07-14)
+**Problem Found**: Health checks were failing even though services were functional
+- Neo4j health check used username/password authentication despite `NEO4J_AUTH=none`
+- Qdrant health check used `curl` (not available in container) and wrong endpoint
+
+**Fixes Applied**:
+1. **Neo4j**: Removed `-u neo4j -p neo4j` from health check command
+2. **Qdrant**: Changed from `curl /health` to `/proc/net/tcp` port check (18BD = port 6333)
+
+**Final Status**: ✅ Both services show as "healthy" in `docker ps`
+- Branch: `fix/28-docker-compose-health-checks`
+- Commit: `11b8759` - Fixed Docker Compose health checks
+- All CI checks pass successfully

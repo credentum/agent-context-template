@@ -29,6 +29,14 @@ pytest --cov=src --cov-report=term-missing --cov-report=html
    make health      # Check service health
    ```
 
+   **Health Check Implementation**:
+   Our Docker Compose stack uses innovative port monitoring for reliable health checks:
+
+   - **Qdrant**: Monitors port 6333 via `/proc/net/tcp` (18BD in hex = 6333 decimal)
+   - **Neo4j**: Uses `cypher-shell "RETURN 1"` with `NEO4J_AUTH=none` for development
+
+   This approach ensures health checks work reliably without external dependencies like `curl` or network authentication issues.
+
 2. **Install Dependencies**:
    ```bash
    make install     # Install Python dependencies
@@ -88,6 +96,7 @@ Configuration is managed via `.ctxrc.yaml` with settings for:
 - Never commit API keys or tokens
 - Use GitHub Secrets for authentication
 - Grant minimal required permissions
+- Docker images pinned to specific SHA256 digests for supply chain security
 - Sigstore signing available for artifacts
 
 ## Documentation

@@ -1,6 +1,12 @@
+---
 name: Generate Sprint Issues
 
-on:
+# Security improvements:
+# - Triggers only on merged PRs (not direct pushes) to ensure code review
+# - Uses minimal permissions (principle of least privilege)
+# - References PR commit SHAs for security traceability
+
+'on':
   # Manual trigger for specific sprints
   workflow_dispatch:
     inputs:
@@ -14,9 +20,10 @@ on:
         type: boolean
         default: false
 
-  # Automatic trigger when sprint files are created/modified
-  # Limited to main branch for security (feature branches use manual dispatch)
-  push:
+  # Automatic trigger when sprint files are modified via PR merge
+  # Only triggers on successful PR merge to main, ensuring security review
+  pull_request:
+    types: [closed]
     paths:
       - 'context/sprints/sprint-*.yaml'
     branches:
@@ -25,93 +32,79 @@ on:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    # Required permissions for sprint issue generation
+    # Minimal required permissions (principle of least privilege)
     permissions:
-      contents: write       # Required for checkout, commit, and push
+      contents: read        # Required for checkout only
       issues: write         # Required for creating GitHub issues
-      pull-requests: write  # Required for creating PRs
+      pull-requests: write  # Required for creating PRs with sprint updates
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 2  # Need previous commit to detect changes
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need previous commit to detect changes
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-    - name: Install dependencies
-      run: pip install click pyyaml
+      - name: Install dependencies
+        run: pip install click pyyaml
 
-    - name: Generate issues (Manual)
-      if: github.event_name == 'workflow_dispatch'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-          python -m src.agents.sprint_issue_linker create --sprint ${{ github.event.inputs.sprint_id }} --dry-run --verbose
-        else
-          python -m src.agents.sprint_issue_linker create --sprint ${{ github.event.inputs.sprint_id }} --verbose
-        fi
-
-    - name: Generate issues (Auto)
-      if: github.event_name == 'push'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        echo "Checking for modified sprint files..."
-
-        # Check for modified sprint files
-        git diff --name-only HEAD~1 HEAD | grep 'context/sprints/sprint-.*\.yaml' | while read file; do
-          if [ -f "$file" ]; then
-            sprint_id=$(basename "$file" .yaml)
-            echo "Checking sprint file: $sprint_id"
-
-            # Only generate if sprint is in planning or in_progress
-            status=$(python -c "import yaml; f=open('$file'); data=yaml.safe_load(f); f.close(); print(data.get('status', 'unknown'))")
-
-            if [ "$status" = "planning" ] || [ "$status" = "in_progress" ]; then
-              echo "Auto-generating issues for $sprint_id (status: $status)"
-              python -m src.agents.sprint_issue_linker create --sprint "$sprint_id" --verbose
-            else
-              echo "Skipping $sprint_id (status: $status)"
-            fi
+      - name: Generate issues (Manual)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            python -m src.agents.sprint_issue_linker create \
+              --sprint ${{ github.event.inputs.sprint_id }} \
+              --dry-run --verbose
+          else
+            python -m src.agents.sprint_issue_linker create \
+              --sprint ${{ github.event.inputs.sprint_id }} --verbose
           fi
-        done
 
-    - name: Update sprint files with issue numbers
-      if: github.event_name == 'push'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Check if any sprint files were updated with issue numbers
-        if git diff --name-only | grep -q 'context/sprints/sprint-.*\.yaml'; then
-          echo "Sprint files updated with issue numbers, creating PR..."
+      - name: Generate issues (Auto)
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.merged == true
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          echo "Checking for modified sprint files..."
 
-          # Configure git
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          # Check for modified sprint files in the merged PR
+          # Using the PR base and head commits for security
+          git diff --name-only \
+            ${{ github.event.pull_request.base.sha }} \
+            ${{ github.event.pull_request.head.sha }} | \
+            grep 'context/sprints/sprint-.*\.yaml' | while read file; do
+            if [ -f "$file" ]; then
+              sprint_id=$(basename "$file" .yaml)
+              echo "Checking sprint file: $sprint_id"
 
-          # Create branch for sprint updates
-          branch_name="auto/sprint-issues-$(date +%Y%m%d-%H%M%S)"
-          git checkout -b "$branch_name"
+              # Only generate if sprint is in planning or in_progress
+              status=$(python -c \
+                "import yaml; f=open('$file'); data=yaml.safe_load(f); \
+                f.close(); print(data.get('status', 'unknown'))")
 
-          # Commit changes
-          git add context/sprints/sprint-*.yaml
-          git commit -m "feat(sprint): add GitHub issue numbers to sprint files"
+              if [ "$status" = "planning" ] || \
+                 [ "$status" = "in_progress" ]; then
+                echo "Auto-generating issues for $sprint_id (status: $status)"
+                python -m src.agents.sprint_issue_linker create \
+                  --sprint "$sprint_id" --verbose
+              else
+                echo "Skipping $sprint_id (status: $status)"
+              fi
+            fi
+          done
 
-          # Push branch
-          git push origin "$branch_name"
-
-          # Create PR
-          gh pr create \
-            --title "Auto-generated: Update sprint files with GitHub issue numbers" \
-            --body "Sprint files updated with GitHub issue numbers by automated workflow" \
-            --label "sprint-automation" \
-            --label "auto-merge"
-
-          echo "Created PR for sprint file updates"
-        else
-          echo "No sprint files updated"
-        fi
+      - name: Log completion
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.merged == true
+        run: |
+          echo "Sprint issue generation complete"
+          echo "Note: Sprint file updates with issue numbers will be \
+            handled manually or through separate PRs"
