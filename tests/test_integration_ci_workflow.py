@@ -5,7 +5,6 @@ Tests: Simulated PR → triggers CI → updates sprint.yaml
 """
 
 import json
-from typing import Any, Dict, List, Optional
 import subprocess
 import tempfile
 from datetime import datetime
@@ -256,7 +255,7 @@ class TestCIWorkflowIntegration:
         }
 
         # Parse command from comment
-        comment_body = comment_event["comment"]["body"]
+        comment_body = comment_event.get("comment", {}).get("body", "")
         if comment_body.startswith("/update-sprint"):
             parts = comment_body.split()
             updates = {}

@@ -20,7 +20,7 @@ class TestRunner:
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
         self.project_root = Path.cwd()
-        self.results = {}
+        self.results: dict[str, Any] = {}
         self.start_time = time.time()
 
     def run_unit_tests(self) -> Dict[str, Any]:
@@ -128,7 +128,7 @@ class TestRunner:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
         # Parse coverage percentage from output
-        coverage_percent = 0
+        coverage_percent = 0.0
         for line in result.stdout.split("\n"):
             if "TOTAL" in line:
                 parts = line.split()
@@ -148,7 +148,7 @@ class TestRunner:
         """Generate comprehensive test report"""
         duration = time.time() - self.start_time
 
-        report = {
+        report: dict[str, Any] = {
             "test_run": {
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "duration_seconds": round(duration, 2),
