@@ -63,7 +63,6 @@ jobs:
 
     - name: Check YAML files
       run: |
-        pip install yamllint
         yamllint context/ -d "{extends: default, rules: {line-length: {max: 120}}}"
 
     - name: Run Context Lint
