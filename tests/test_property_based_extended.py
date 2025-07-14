@@ -145,8 +145,11 @@ class TestAdvancedPropertyValidation:
             sorted_values = sorted(values)
             median = sorted_values[len(values) // 2]
 
-            # Property: Mean is within bounds
-            assert min(values) <= mean <= max(values)
+            # Property: Mean is within bounds (with floating point tolerance)
+            min_val, max_val = min(values), max(values)
+            # Use relative tolerance for floating point comparison
+            tolerance = max(abs(min_val), abs(max_val)) * 1e-10 + 1e-15
+            assert min_val - tolerance <= mean <= max_val + tolerance
 
             # Property: Median is an actual value for odd-length lists
             if len(values) % 2 == 1:

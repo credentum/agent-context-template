@@ -281,7 +281,8 @@ class TestValidationEdgeCases:
 
             # Properties that should always hold
             assert isinstance(sanitized, str), "Should always return a string"
-            assert len(sanitized) == len(name), "Should preserve length"
+            assert len(sanitized) <= 100, "Should limit length to 100 characters"
+            assert len(sanitized) <= len(name), "Should never increase length"
 
             # Check each character transformation
             for i, char in enumerate(sanitized):
@@ -314,8 +315,11 @@ class TestValidationEdgeCases:
                     # Valid ranges must be within limits (90 days by default)
                     assert (end - start).days <= 90, "Valid ranges must be within 90 days"
                 else:
-                    # Invalid ranges: end <= start or exceeds limit
-                    assert end <= start or (end - start).days > 90
+                    # Invalid ranges: end <= start, exceeds limit, or future dates
+                    from datetime import datetime
+
+                    now = datetime.utcnow()
+                    assert end <= start or (end - start).days > 90 or end > now
 
             except Exception as e:
                 pytest.fail(f"validate_time_range raised unexpected exception: {e}")

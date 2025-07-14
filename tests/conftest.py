@@ -9,6 +9,23 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def preserve_working_directory():
+    """Ensure tests don't permanently change the working directory"""
+    original_cwd = os.getcwd()
+    try:
+        yield
+    finally:
+        try:
+            os.chdir(original_cwd)
+        except (OSError, FileNotFoundError):
+            # If the original directory was deleted, just ensure we're in a valid directory
+            # Use the project root as a fallback
+            project_root = Path(__file__).parent.parent
+            if project_root.exists():
+                os.chdir(str(project_root))
+
+
 @pytest.fixture
 def test_config():
     """Test configuration fixture"""
