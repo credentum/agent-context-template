@@ -460,6 +460,10 @@ class TestGraphBuilderCoverage:
         mock_driver.session.return_value = mock_context
         builder.driver = mock_driver
 
+        # Redirect cache path to temp directory to avoid filesystem issues
+        cache_dir = temp_dir / ".graph_cache"
+        builder.processed_cache_path = cache_dir / "processed.json"
+
         processed, total = builder.process_directory(docs_dir)
 
         assert total == 3  # Should skip schema file
