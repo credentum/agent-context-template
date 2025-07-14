@@ -38,7 +38,7 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@main
+        uses: anthropics/claude-code-action@beta
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           model: "claude-opus-4-20250514"
@@ -54,7 +54,7 @@ jobs:
             1. **Test Coverage**
                • validators/* ≥ 90 % line coverage, no global regression
                • New logic ships with focused tests
-               • Overall project coverage must not drop below 59.53%
+               • Overall project coverage must not drop below 78.89%
             2. **MCP Compatibility**
                • Tool contracts updated in context/mcp_contracts/
                • TS interfaces match schema (`npm test:mcp-types`)
@@ -117,7 +117,7 @@ jobs:
             echo "COVERAGE_PCT=$coverage_pct" >> $GITHUB_ENV
 
             # Check if coverage dropped below baseline
-            if (( $(echo "$coverage_pct < 59.53" | bc -l) )); then
+            if (( $(echo "$coverage_pct < 78.89" | bc -l) )); then
               echo "COVERAGE_FAILED=true" >> $GITHUB_ENV
             else
               echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
@@ -183,9 +183,9 @@ jobs:
             if (review.verdict === 'REQUEST CHANGES' || review.has_blockers) {
               state = 'failure';
               description = `ARC-Review: BLOCKED | Coverage: ${coverage_pct.toFixed(1)}%`;
-            } else if (coverage_pct < 59.53) {
+            } else if (coverage_pct < 78.89) {
               state = 'failure';
-              description = `ARC-Review: Coverage regression (${coverage_pct.toFixed(1)}% < 59.53%)`;
+              description = `ARC-Review: Coverage regression (${coverage_pct.toFixed(1)}% < 78.89%)`;
             }
 
             // Create status check
@@ -278,7 +278,7 @@ jobs:
         run: |
           echo "🚫 PR has blocking issues or coverage regression — failing build."
           echo "Review verdict: ${{ fromJson(env.REVIEW_JSON).verdict }}"
-          echo "Coverage: ${{ env.COVERAGE_PCT }}% (minimum: 59.53%)"
+          echo "Coverage: ${{ env.COVERAGE_PCT }}% (minimum: 78.89%)"
           exit 1
 
       - name: Success Message

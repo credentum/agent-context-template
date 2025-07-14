@@ -373,8 +373,7 @@ class TestHashDiffEmbedderCoverage:
 
     @patch("src.storage.hash_diff_embedder.HashDiffEmbedder.connect")
     @patch("src.storage.hash_diff_embedder.HashDiffEmbedder.embed_document")
-    @patch("click.echo")
-    def test_main_single_file(self, mock_echo, mock_embed_doc, mock_connect):
+    def test_main_single_file(self, mock_embed_doc, mock_connect):
         """Test main function with single file"""
         from src.storage.hash_diff_embedder import main
 
@@ -396,8 +395,7 @@ class TestHashDiffEmbedderCoverage:
 
     @patch("src.storage.hash_diff_embedder.HashDiffEmbedder.connect")
     @patch("src.storage.hash_diff_embedder.HashDiffEmbedder.embed_document")
-    @patch("click.echo")
-    def test_main_single_file_failed(self, mock_echo, mock_embed_doc, mock_connect):
+    def test_main_single_file_failed(self, mock_embed_doc, mock_connect):
         """Test main function with single file that fails"""
         from src.storage.hash_diff_embedder import main
 

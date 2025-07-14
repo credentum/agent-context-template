@@ -1,5 +1,6 @@
 # Dockerfile.ci - Simulate CI environment locally
-FROM python:3.11-slim
+# Using pinned digest for supply-chain security
+FROM python:3.11-slim@sha256:139020233cc412efe4c8135b0efe1c7569dc8b28ddd88bddb109b764f8977e30
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \

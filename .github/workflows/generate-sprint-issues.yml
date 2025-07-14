@@ -25,17 +25,11 @@ on:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    # Minimal permissions for sprint issue generation
+    # Required permissions for sprint issue generation
     permissions:
       contents: write       # Required for checkout, commit, and push
       issues: write         # Required for creating GitHub issues
       pull-requests: write  # Required for creating PRs
-      # Explicitly deny other permissions for security
-      actions: none
-      checks: none
-      deployments: none
-      packages: none
-      security-events: none
 
     steps:
     - uses: actions/checkout@v4

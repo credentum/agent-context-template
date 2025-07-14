@@ -119,13 +119,22 @@ class TestEndToEnd:
             yaml.dump(sprint_doc, f)
 
         # Change to test directory
-        original_cwd = os.getcwd()
+        try:
+            original_cwd = os.getcwd()
+        except FileNotFoundError:
+            # Current working directory was deleted, use project root
+            original_cwd = Path(__file__).parent.parent
+
         os.chdir(tmp_path)
 
         yield tmp_path
 
         # Cleanup
-        os.chdir(original_cwd)
+        try:
+            os.chdir(original_cwd)
+        except (FileNotFoundError, OSError):
+            # If original directory no longer exists, go to project root
+            os.chdir(Path(__file__).parent.parent)
 
     def test_config_validation_workflow(self, test_project):
         """Test configuration validation workflow"""
@@ -211,11 +220,11 @@ class TestEndToEnd:
 
         # Step 1: Validate YAML
         mock_run.return_value.returncode = 0
-        result = subprocess.run(["python", "context_lint.py", "validate", "context/"])
+        result = subprocess.run(["python", "-m", "src.agents.context_lint", "validate", "context/"])
         assert result.returncode == 0
 
         # Step 2: Check configuration
-        result = subprocess.run(["python", "config_validator.py"])
+        result = subprocess.run(["python", "-m", "src.validators.config_validator"])
         assert result.returncode == 0
 
         # Step 3: Simulate database operations (mocked)
