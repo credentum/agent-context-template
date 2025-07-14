@@ -5,22 +5,10 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
-    # Temporarily skip coverage for infrastructure-only PRs
-    paths-ignore:
-      - 'infra/**'
-      - 'docker-compose.yml'
-      - '.github/workflows/**'
-      - 'context/trace/**'
-      - 'context/sprints/**'
 
 jobs:
   coverage:
     runs-on: ubuntu-latest
-    # Skip coverage checks for infrastructure-only changes
-    if: >
-      !contains(github.event.pull_request.head.ref, 'docker-compose') &&
-      !contains(github.event.pull_request.head.ref, 'infra') &&
-      !contains(github.event.pull_request.head.ref, 'workflow')
 
     services:
       redis:
