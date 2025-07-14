@@ -385,8 +385,9 @@ def cli():
 def update(sprint, verbose):
     """Update sprint document based on current state"""
     updater = SprintUpdater(sprint_id=sprint, verbose=verbose)
-    success = updater.update_sprint()
-    sys.exit(0 if success else 1)
+    updater.update_sprint()
+    # Always exit with success - "no updates needed" is not a failure
+    sys.exit(0)
 
 
 @cli.command()
@@ -415,7 +416,8 @@ def watch(label, verbose):
             updates_json = json.dumps(updater.updates_made)
             print(f"::set-output name=updates::{updates_json}")
 
-    sys.exit(0 if success else 1)
+    # Always exit with success - "no updates needed" is not a failure
+    sys.exit(0)
 
 
 if __name__ == "__main__":
