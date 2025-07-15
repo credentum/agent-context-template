@@ -5,6 +5,8 @@ FROM python:3.11-slim@sha256:139020233cc412efe4c8135b0efe1c7569dc8b28ddd88bddb10
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
+    curl \
+    redis-tools \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

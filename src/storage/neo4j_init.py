@@ -368,17 +368,26 @@ def main(
         if not initializer.connect(username=username, password=password):
             sys.exit(1)
 
-        # Create database if needed
+        # Create database if needed (Enterprise feature - skip for Community Edition)
         if not initializer.driver:
             click.echo("✗ Not connected to Neo4j", err=True)
             sys.exit(1)
 
-        with initializer.driver.session(database="system") as session:
-            db_name = initializer.database
-            result = session.run("SHOW DATABASES WHERE name = $name", name=db_name)
-            if not result.single():
-                click.echo(f"Creating database '{db_name}'...")
-                session.run(f"CREATE DATABASE {db_name}")
+        # Check if we're using Enterprise Edition
+        try:
+            with initializer.driver.session(database="system") as session:
+                db_name = initializer.database
+                result = session.run("SHOW DATABASES WHERE name = $name", name=db_name)
+                if not result.single():
+                    click.echo(f"Creating database '{db_name}'...")
+                    session.run(f"CREATE DATABASE {db_name}")
+        except Exception as e:
+            if "UnsupportedAdministrationCommand" in str(e):
+                click.echo("Note: Using Neo4j Community Edition - using default database")
+                # Use default database for Community Edition
+                initializer.database = "neo4j"
+            else:
+                raise e
 
         # Create constraints
         if not skip_constraints:
