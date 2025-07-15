@@ -92,6 +92,62 @@ git push -u origin fix/mypy-errors
 gh pr create --title "fix: Address mypy type errors" --body "..."
 ```
 
+## ARC-Reviewer and Auto-Triage Flow
+
+This project uses ARC-Reviewer (Automated Review and Code-review) to provide structured code reviews and automatically create follow-up issues for suggested improvements.
+
+### How It Works
+
+When you create a pull request, ARC-Reviewer will:
+1. Analyze your code changes
+2. Provide structured feedback with blocking issues, warnings, and suggestions
+3. Automatically create GitHub issues for follow-up improvements
+
+### ISSUE: Schema for Follow-ups
+
+ARC-Reviewer uses a structured format for creating follow-up issues:
+
+```
+ISSUE: <title> - <description> - labels=<csv> - phase=<milestone>
+```
+
+**Example:**
+```
+ISSUE: Fix validator coverage - Improve test coverage for validators module - labels=test,validator,coverage - phase=4.2
+ISSUE: Add performance benchmarks - Create benchmark suite for vector operations - labels=performance,benchmark - phase=backlog
+```
+
+### Schema Fields
+
+- **title**: Short descriptive title for the issue (required)
+- **description**: Detailed description of the improvement (required)
+- **labels**: Comma-separated list of labels (optional, defaults to `enhancement`)
+  - Always includes `from-code-review` automatically
+- **phase**: Project phase or milestone (optional, defaults to `backlog`)
+
+### Auto-Generated Issues
+
+Issues created by ARC-Reviewer include:
+- Title prefixed with `[PR #<number>]` for traceability
+- Link to the original PR and author
+- Comprehensive issue body with context and acceptance criteria
+- Appropriate labels for filtering and organization
+- Milestone assignment based on the phase field
+
+### Duplicate Prevention
+
+The system prevents duplicate issues by checking existing issue titles before creation. If an issue with the same title already exists, it will be skipped.
+
+### Testing the Parser
+
+To test the ISSUE: parser logic:
+
+```bash
+./scripts/test_arc_reviewer_parser.sh
+```
+
+This script validates that the parser correctly handles the ISSUE: schema format with mocked review data.
+
 ### Infrastructure Setup
 
 This project uses Qdrant (vector database) and Neo4j (graph database) for development and testing.
