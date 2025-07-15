@@ -45,6 +45,18 @@ Please set up the following branch protection rules for the `main` branch:
    gh pr create --title "type: description" --body "Details..."
    ```
 
+   **Important: Include closing keywords in your PR description to auto-close related issues:**
+   ```markdown
+   ## Summary
+   Brief description of changes
+
+   ## Related Issues
+   - Closes #123
+   - Fixes #456
+   - Resolves #789
+   - Implements #101
+   ```
+
 5. Wait for CI checks to pass and get approval before merging
 
 ### Commit Message Format

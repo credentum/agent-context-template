@@ -2,7 +2,6 @@
 """Check mutation testing baseline enforcement"""
 
 import json
-import os
 import subprocess
 import sys
 from typing import Dict, Optional
@@ -63,46 +62,35 @@ def get_mutation_score() -> Optional[float]:
 
 
 def run_mutation_tests() -> bool:
-    """Run mutation tests on critical modules"""
-    # Define modules to test
-    critical_modules = [
-        "src/validators/kv_validators.py",
-        "src/storage/context_kv.py",
-        "src/agents/context_lint.py",
-        "src/storage/hash_diff_embedder_async.py",
-    ]
+    """Run mutation tests using the configured paths"""
+    print("🧪 Running mutation testing on configured paths...")
 
-    print("🧪 Running mutation testing on critical modules...")
+    try:
+        # Run mutation tests using the configuration in pyproject.toml
+        result = subprocess.run(
+            ["mutmut", "run", "--max-children", "4"],
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minute timeout
+        )
 
-    for module in critical_modules:
-        if os.path.exists(module):
-            print(f"   Testing {module}...")
-            try:
-                result = subprocess.run(
-                    [
-                        "mutmut",
-                        "run",
-                        f"--paths-to-mutate={module}",
-                        "--runner=python -m pytest -x -q",
-                        "--timeout=60",
-                    ],
-                    capture_output=True,
-                    text=True,
-                )
-
-                if result.returncode != 0:
-                    print(f"   ⚠️  Mutation testing failed for {module}")
-                    print(f"   Error: {result.stderr}")
-                else:
-                    print(f"   ✅ Mutation testing completed for {module}")
-
-            except Exception as e:
-                print(f"   ⚠️  Error running mutation tests on {module}: {e}")
-                continue
+        if result.returncode == 0:
+            print("   ✅ Mutation testing completed successfully")
+            return True
         else:
-            print(f"   ⚠️  Module {module} not found, skipping")
+            print(f"   ⚠️  Mutation testing failed with return code {result.returncode}")
+            if result.stderr:
+                print(f"   Error: {result.stderr}")
+            if result.stdout:
+                print(f"   Output: {result.stdout}")
+            return False
 
-    return True
+    except subprocess.TimeoutExpired:
+        print("   ⚠️  Mutation testing timed out after 5 minutes")
+        return False
+    except Exception as e:
+        print(f"   ⚠️  Error running mutation tests: {e}")
+        return False
 
 
 def main():

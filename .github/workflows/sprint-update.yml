@@ -38,6 +38,47 @@ jobs:
         python -m pip install --upgrade pip
         pip install click pyyaml
 
+    - name: Auto-close completed issues on PR merge
+      if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -e
+
+        # Extract PR body and commit messages to find issue references
+        pr_number="${{ github.event.pull_request.number }}"
+        pr_body="${{ github.event.pull_request.body }}"
+        pr_title="${{ github.event.pull_request.title }}"
+
+        echo "Checking PR #$pr_number for issue closing keywords..."
+
+        issues_to_close=""
+
+        # Check PR body and title for closing patterns
+        combined_text="$pr_body $pr_title"
+
+        # Extract issue numbers after closing keywords
+        issue_nums=$(echo "$combined_text" | grep -ioE "(closes?|fixes?|resolves?|implements?)\s+#[0-9]+" | grep -oE "#[0-9]+" | sed 's/#//')
+
+        if [ -n "$issue_nums" ]; then
+          issues_to_close="$issue_nums"
+        fi
+
+        # Remove duplicates and close issues
+        if [ -n "$issues_to_close" ]; then
+          unique_issues=$(echo "$issues_to_close" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          echo "Found issues to close: $unique_issues"
+
+          for issue_num in $unique_issues; do
+            if [ -n "$issue_num" ]; then
+              echo "Closing issue #$issue_num..."
+              gh issue close "$issue_num" --comment "Automatically closed by merged PR #$pr_number" || echo "Failed to close issue #$issue_num"
+            fi
+          done
+        else
+          echo "No closing keywords found in PR #$pr_number"
+        fi
+
     - name: Update sprint document
       id: update
       env:
