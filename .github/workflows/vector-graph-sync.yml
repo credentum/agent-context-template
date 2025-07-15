@@ -65,6 +65,9 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Infrastructure health check
+        env:
+          NEO4J_USER: neo4j
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_TEST_PASSWORD || 'testpassword' }}
         run: |
           echo "Running comprehensive infrastructure health check..."
           chmod +x infra/healthcheck.sh

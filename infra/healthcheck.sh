@@ -10,6 +10,8 @@ QDRANT_HOST="${QDRANT_HOST:-localhost}"
 QDRANT_PORT="${QDRANT_PORT:-6333}"
 NEO4J_HOST="${NEO4J_HOST:-localhost}"
 NEO4J_PORT="${NEO4J_PORT:-7687}"
+NEO4J_USER="${NEO4J_USER:-}"
+NEO4J_PASSWORD="${NEO4J_PASSWORD:-}"
 CURL_TIMEOUT="${CURL_TIMEOUT:-10}"
 
 # Colors for output
@@ -73,11 +75,22 @@ check_neo4j() {
 
     # Test Neo4j connectivity using the driver
     local neo4j_test_result
+
     neo4j_test_result=$($python_cmd -c "
 import sys
+import os
 try:
     from neo4j import GraphDatabase
-    driver = GraphDatabase.driver('bolt://${NEO4J_HOST}:${NEO4J_PORT}')
+
+    # Check for authentication
+    neo4j_user = os.environ.get('NEO4J_USER', '')
+    neo4j_password = os.environ.get('NEO4J_PASSWORD', '')
+
+    if neo4j_user and neo4j_password:
+        driver = GraphDatabase.driver('bolt://${NEO4J_HOST}:${NEO4J_PORT}', auth=(neo4j_user, neo4j_password))
+    else:
+        driver = GraphDatabase.driver('bolt://${NEO4J_HOST}:${NEO4J_PORT}')
+
     driver.verify_connectivity()
     driver.close()
     print('SUCCESS')
@@ -173,6 +186,8 @@ show_help() {
     echo "  QDRANT_PORT     - Qdrant port (default: 6333)"
     echo "  NEO4J_HOST      - Neo4j hostname (default: localhost)"
     echo "  NEO4J_PORT      - Neo4j bolt port (default: 7687)"
+    echo "  NEO4J_USER      - Neo4j username (optional, for authenticated instances)"
+    echo "  NEO4J_PASSWORD  - Neo4j password (optional, for authenticated instances)"
     echo "  CURL_TIMEOUT    - Curl timeout in seconds (default: 10)"
     echo
     echo "Prerequisites:"
@@ -186,6 +201,9 @@ show_help() {
     echo
     echo "  # Check remote services"
     echo "  QDRANT_HOST=qdrant.example.com NEO4J_HOST=neo4j.example.com ./healthcheck.sh"
+    echo
+    echo "  # Check authenticated Neo4j"
+    echo "  NEO4J_USER=neo4j NEO4J_PASSWORD=mypassword ./healthcheck.sh"
     echo
 }
 
