@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is an **Agent-First Project Context System** that provides structured context management with vector search (Qdrant) and graph relationships (Neo4j) for enhanced AI agent interactions. It includes GitHub Actions templates for integrating Claude AI into workflows using the `anthropics/claude-code-action@beta` action.
 
 **Current Project Status:**
-- Coverage: 80.0% (Current baseline)
-- Target: 85.0% for all modules, 90.0% for validators
+- Coverage: 78.5% (Current baseline)
+- Target: 80.0% for all modules, 90.0% for validators
 - Progress: Good coverage improvements across most modules
 - Python 3.11 codebase with async support
 
