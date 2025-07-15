@@ -1,76 +1,83 @@
-schema_version: "1.0.0"
+schema_version: "1.1.0"
 document_type: "decision"
 id: "001-technology-stack"
 title: "Technology Stack Selection"
 status: "active"
 created_date: "2025-07-11"
-decision_date: "2025-07-11"
-last_modified: "2025-07-11"
-last_referenced: "2025-07-11"
+decision_date: "2025-07-15"
+last_modified: "2025-07-15"
+last_referenced: "2025-07-15"
 expires: null
 authors:
   - "system"
+  - "assistant"
 tags:
   - "decision"
   - "technology"
   - "infrastructure"
+  - "mcp"
 
 decision: |
-  # Technology Stack Decisions
+  # Technology Stack Decisions  (Rev 2025-07-15)
 
-  ## Vector Database: Qdrant v1.14.x
-  **Rationale**:
-  - Native support for hybrid search (vector + metadata filtering)
-  - Excellent performance at scale
-  - REST and gRPC APIs
-  - Built-in persistence and snapshots
+  ## Datastores
+  ### • Vector DB – **Qdrant v1.14.x**
+  Rationale: native hybrid search, self-host, hash-diff re-embed, gRPC + REST.
 
-  ## Graph Database: Neo4j 5.x
-  **Rationale**:
-  - Industry standard for graph operations
-  - Mature GraphRAG capabilities
-  - Strong Python client support
-  - ACID compliance
+  ### • Graph DB – **Neo4j 5.20 Community**
+  Rationale: mature Cypher, strong Python driver, proven GraphRAG patterns.
 
-  ## Key-Value Store: Redis
-  **Rationale**:
-  - Low latency for ephemeral state
-  - Pub/sub capabilities for agent coordination
-  - Widespread adoption and tooling
-  - Optional persistence with AOF
+  ### • KV Store – **Redis 7**  (fallback **DuckDB 0.10** for file-based dev)
+  Rationale: <1 ms latency for sprint state; optional persistence; DuckDB enables
+  offline CI runs without Redis daemon.
 
-  ## Embedding Model: OpenAI text-embedding-ada-002
-  **Rationale**:
-  - Excellent quality/cost ratio
-  - Fast inference
-  - 1536 dimensions suitable for our use case
-  - Stable API
+  ## Embeddings
+  ### • **OpenAI text-embedding-ada-002**  (1536-d)
+  Rationale: best $/quality; plan to support **hosted models** via env flag
+  (`EMBED_PROVIDER={openai,ollama}`) to avoid lock-in.
 
-  ## Schema Validation: Yamale
-  **Rationale**:
-  - Python-native YAML validation
-  - Clear error messages
-  - Extensible validation rules
-  - CI/CD friendly
+  ## API Layer
+  ### • **FastAPI + Uvicorn (Python 3.11)** – MCP Gateway
+  Rationale: async, OpenAPI auto-docs, easy JSON-RPC shim.
+
+  ## Agent Runtime
+  ### • **Claude Code CLI (Anthropic Opus)** – default code-gen adapter
+  Rationale: higher context window & code reasoning than Copilot; adapters can
+  swap to Copilot, GPT-4o, or local Llama.cpp via env flag.
+
+  ## CI / CD
+  ### • **GitHub Actions** with service containers
+  ### • **Sigstore / cosign** for image & artefact signing
+  ### • **semantic-release** for version/tag automation
+
+  ## Tooling & Quality Gates
+  * **Pre-commit** (black 23.12.1, isort 5.13.2, flake8 7, mypy 1.8)
+  * **Yamale** for YAML schema validation
+  * **PromptLayer** for LLM regression metrics
+  * **pytest-cov + cosmic-ray** for coverage & mutation testing
 
 alternatives_considered:
   pinecone:
     name: "Pinecone"
-    reason_rejected: "Vendor lock-in, no self-hosting option"
+    reason_rejected: "Cloud-only, vendor lock-in"
   weaviate:
     name: "Weaviate"
-    reason_rejected: "More complex setup, overkill for our needs"
+    reason_rejected: "Complex op-chain; no need for built-in modules"
   arangodb:
     name: "ArangoDB"
-    reason_rejected: "Less mature GraphRAG ecosystem"
+    reason_rejected: "Graph features solid but GraphRAG ecosystem immature"
   amazon_neptune:
     name: "Amazon Neptune"
-    reason_rejected: "Cloud-only, vendor lock-in"
+    reason_rejected: "Vendor lock-in; higher latency for local dev"
+  chromadb:
+    name: "Chroma"
+    reason_rejected: "Less stable persistence layer, no native Graph hooks"
 
 impacts:
-  - "Requires Docker/Kubernetes for local development"
-  - "Need to manage multiple database connections"
-  - "OpenAI API dependency for embeddings"
+  - "Requires Docker/Compose for local setup (Qdrant, Neo4j, Redis)."
+  - "Multiple client libraries: qdrant-client, neo4j-python, redis-py."
+  - "OpenAI key prerequisite; mitigation: env-driven provider plug-in."
+  - "Supply-chain signing step lengthens CI by ~30 s per job."
 
 graph_metadata:
   node_type: "decision_document"
@@ -79,3 +86,5 @@ graph_metadata:
       target: "system_architecture"
     - type: "constrains"
       target: "deployment_options"
+    - type: "provides"
+      target: "mcp_contracts"

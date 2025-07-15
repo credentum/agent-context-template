@@ -1,6 +1,6 @@
 # agent-context-template
 
-A GitHub Actions template repository that provides workflow templates for an Agent-First Project Context System.
+A template repository that provides workflow templates for an Agent-First Project Context System.
 
 ## Test Coverage
 
