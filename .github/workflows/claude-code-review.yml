@@ -187,7 +187,12 @@ jobs:
           import json
           import re
 
-          review_text = sys.argv[1]
+          # Read review content from file
+          try:
+              with open('review.txt', 'r') as f:
+                  review_text = f.read()
+          except FileNotFoundError:
+              review_text = sys.argv[1] if len(sys.argv) > 1 else ""
 
           # Parse structured review
           verdict_match = re.search(r'\*\*PR Verdict:\*\* (APPROVE|REQUEST CHANGES)', review_text)
@@ -214,7 +219,12 @@ jobs:
           print(json.dumps(review_json, indent=2))
           EOF
 
-          python parse_review.py "${{ steps.claude-review.outputs.response }}" "${COVERAGE_PCT:-0}" > review.json
+          # Use review.txt if available, otherwise fallback to action output
+          if [ -f review.txt ]; then
+            python parse_review.py "" "${COVERAGE_PCT:-0}" > review.json
+          else
+            python parse_review.py "${{ steps.claude-review.outputs.response }}" "${COVERAGE_PCT:-0}" > review.json
+          fi
 
           # Store parsed review for downstream steps
           echo "REVIEW_JSON<<EOF" >> $GITHUB_ENV
@@ -256,10 +266,24 @@ jobs:
             });
 
       # ---------- Auto-open GitHub issues for Suggested Follow-ups ----------
-      - name: Debug Review Content
+      - name: Fetch Claude Review Comment
         if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "${{ steps.claude-review.outputs.response }}" > review.txt
+          # Fetch the latest Claude review comment from the PR
+          # Look for comments from the Claude action or containing ARC-Reviewer content
+          pr_num="${{ github.event.pull_request.number }}"
+          repo="${{ github.repository }}"
+          gh api "repos/${repo}/pulls/${pr_num}/comments" \
+            --jq '.[] | select(.body | contains("ARC-Reviewer") or contains("ISSUE:"))' \
+            --jq '.body' | tail -1 > review.txt || echo "No Claude review found"
+
+          # Fallback: try the action output if available
+          if [ ! -s review.txt ]; then
+            echo "Trying action output fallback..."
+            echo "${{ steps.claude-review.outputs.response }}" > review.txt
+          fi
 
           # Debug: Show review content and check for ISSUE: lines
           echo "=== REVIEW CONTENT DEBUG ==="
@@ -273,7 +297,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "${{ steps.claude-review.outputs.response }}" > review.txt
+          # Use the fetched review content
+          if [ ! -f review.txt ]; then
+            echo "No review.txt found, skipping issue creation"
+            exit 0
+          fi
 
           # Collect all ISSUE: lines for aggregated issue creation
           issue_count=0
@@ -346,6 +374,19 @@ jobs:
           # Only create aggregated issue if we have suggestions
           if [ "$issue_count" -gt 0 ]; then
             echo "Found $issue_count ISSUE suggestions, creating aggregated issue..."
+
+            # Ensure required labels exist (create them if missing)
+            echo "Ensuring required labels exist..."
+            gh label create "from-code-review" \
+              --description "Auto-generated from code review" \
+              --color "0366d6" --force || true
+            gh label create "sprint-triage" \
+              --description "Needs PM/agent triage review" \
+              --color "d876e3" --force || true
+            gh label create "phase=backlog" \
+              --description "Default phase for new suggestions" \
+              --color "c5def5" --force || true
+
             # Clean up phases list
             all_phases=${all_phases%, }
 
