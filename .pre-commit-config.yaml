@@ -63,3 +63,11 @@ repos:
         language: system
         pass_filenames: false
         stages: [manual]
+
+      - id: check-pr-keywords
+        name: Check PR Keywords
+        entry: ./scripts/check-pr-keywords.sh
+        language: script
+        always_run: true
+        pass_filenames: false
+        stages: [commit-msg]

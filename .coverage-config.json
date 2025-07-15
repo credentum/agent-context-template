@@ -1,7 +1,9 @@
 {
-  "baseline": 78.5,
+  "baseline": 80.0,
   "target": 85.0,
   "validator_target": 90.0,
+  "branch_coverage": 60.0,
+  "mutation_baseline": 20.0,
   "description": "Coverage thresholds for the agent-context-template project",
   "last_updated": "2025-07-15"
 }

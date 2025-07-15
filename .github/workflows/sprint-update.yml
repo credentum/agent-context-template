@@ -38,6 +38,74 @@ jobs:
         python -m pip install --upgrade pip
         pip install click pyyaml
 
+    - name: Auto-close completed issues on PR merge
+      if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -e
+
+        # Extract PR body and commit messages to find issue references
+        pr_number="${{ github.event.pull_request.number }}"
+        pr_body="${{ github.event.pull_request.body }}"
+        pr_title="${{ github.event.pull_request.title }}"
+
+        echo "Checking PR #$pr_number for issue closing keywords..."
+
+        issues_to_close=""
+
+        # Check PR body and title for closing patterns
+        combined_text="$pr_body $pr_title"
+
+        # Extract issue numbers after closing keywords (improved regex)
+        issue_nums=$(echo "$combined_text" | grep -ioE "(closes?|fixes?|resolves?|implements?)\s+#[0-9]+" | grep -oE "#[0-9]+" | sed 's/#//')
+
+        # Also check commit messages for closing keywords
+        commit_messages=$(gh pr view $pr_number --json commits --jq '.commits[].messageHeadline' | tr '\n' ' ')
+        commit_issue_nums=$(echo "$commit_messages" | grep -ioE "(closes?|fixes?|resolves?|implements?)\s+#[0-9]+" | grep -oE "#[0-9]+" | sed 's/#//')
+
+        if [ -n "$issue_nums" ]; then
+          issues_to_close="$issue_nums"
+        fi
+
+        if [ -n "$commit_issue_nums" ]; then
+          issues_to_close="$issues_to_close $commit_issue_nums"
+        fi
+
+        # Remove duplicates and close issues
+        if [ -n "$issues_to_close" ]; then
+          unique_issues=$(echo "$issues_to_close" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          echo "Found issues to close: $unique_issues"
+
+          for issue_num in $unique_issues; do
+            if [ -n "$issue_num" ]; then
+              echo "Attempting to close issue #$issue_num..."
+
+              # Check if issue exists and is open
+              issue_state=$(gh issue view "$issue_num" --json state --jq '.state' 2>/dev/null || echo "NOT_FOUND")
+
+              if [ "$issue_state" = "NOT_FOUND" ]; then
+                echo "⚠️  Issue #$issue_num does not exist - skipping"
+                continue
+              fi
+
+              if [ "$issue_state" = "CLOSED" ]; then
+                echo "ℹ️  Issue #$issue_num is already closed - skipping"
+                continue
+              fi
+
+              # Close the issue
+              if gh issue close "$issue_num" --comment "Automatically closed by merged PR #$pr_number 🎉"; then
+                echo "✅ Successfully closed issue #$issue_num"
+              else
+                echo "❌ Failed to close issue #$issue_num"
+              fi
+            fi
+          done
+        else
+          echo "No closing keywords found in PR #$pr_number"
+        fi
+
     - name: Update sprint document
       id: update
       env:
