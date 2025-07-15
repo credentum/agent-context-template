@@ -92,6 +92,67 @@ git push -u origin fix/mypy-errors
 gh pr create --title "fix: Address mypy type errors" --body "..."
 ```
 
+### Infrastructure Setup
+
+This project uses Qdrant (vector database) and Neo4j (graph database) for development and testing.
+
+#### Quick Start
+
+1. **Start the infrastructure:**
+   ```bash
+   make up
+   ```
+   This starts Qdrant on port 6333 and Neo4j on ports 7474/7687.
+
+2. **Check health status:**
+   ```bash
+   # Option 1: Use the dedicated health check script
+   ./infra/healthcheck.sh
+
+   # Option 2: Use the Makefile target
+   make health
+   ```
+
+3. **Install Python dependencies:**
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
+   This includes the Neo4j driver needed for health checks.
+
+4. **Stop the infrastructure:**
+   ```bash
+   make down
+   ```
+   This stops services and removes volumes.
+
+#### Prerequisites
+
+- Docker and Docker Compose
+- curl (for Qdrant health checks)
+- Python 3.11+ with pip
+
+#### Services Information
+
+- **Qdrant**: Vector database at `http://localhost:6333`
+  - Collections endpoint: `http://localhost:6333/collections`
+  - Web UI: `http://localhost:6333/dashboard`
+
+- **Neo4j**: Graph database at `bolt://localhost:7687`
+  - Browser UI: `http://localhost:7474`
+  - Authentication: Disabled for development (`NEO4J_AUTH=none`)
+
+#### Health Check Details
+
+The `./infra/healthcheck.sh` script verifies:
+- Qdrant is responding and returns empty collections array
+- Neo4j connectivity using the Python driver
+
+Exit codes:
+- `0`: All services healthy
+- `1`: Qdrant failed
+- `2`: Neo4j failed
+- `3`: Python not available
+
 ### Pre-commit Hooks
 
 We use pre-commit hooks to ensure code quality. Install them:
