@@ -286,27 +286,73 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const reviewResponse = `${{ steps.claude-review.outputs.response }}`;
+            // ROBUST: Handle Claude action output bug with fallback
+            let reviewResponse = `${{ steps.claude-review.outputs.response }}`;
 
-            // Extract JSON block with automated issues
-            const jsonMatch = reviewResponse.match(/```json\s*(\{[\s\S]*?"automated_issues"[\s\S]*?\})\s*```/);
+            console.log(`Action output length: ${reviewResponse.length}`);
+            console.log(`Action output preview: ${reviewResponse.substring(0, 200)}...`);
 
-            if (jsonMatch) {
+            // FALLBACK: If action output is empty, fetch from PR comments
+            if (!reviewResponse || reviewResponse.trim() === '') {
+              console.log('Action output empty, fetching from PR comments...');
+
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number
+              });
+
+              // Find Claude's review comment (most recent with automation JSON)
+              const claudeComment = comments.data
+                .filter(comment => comment.body.includes('automated_issues'))
+                .pop(); // Get the most recent
+
+              if (claudeComment) {
+                reviewResponse = claudeComment.body;
+                console.log(`Found Claude comment with automation data: ${reviewResponse.length} chars`);
+              }
+            }
+
+            // ROBUST: Better JSON extraction with multiple strategies
+            function extractAutomationJSON(text) {
+              // Strategy 1: Standard JSON blocks
+              let match = text.match(/```json\s*(\{[\s\S]*?"automated_issues"[\s\S]*?\})\s*```/);
+              if (match) return match[1];
+
+              // Strategy 2: Handle escaped JSON
+              match = text.match(/```json\s*(\{[^`]*"automated_issues"[^`]*\})\s*```/);
+              if (match) return match[1];
+
+              // Strategy 3: Find JSON object with automated_issues anywhere
+              match = text.match(/(\{[^{}]*"automated_issues"[^{}]*\})/);
+              if (match) return match[1];
+
+              return null;
+            }
+
+            const jsonString = extractAutomationJSON(reviewResponse);
+            console.log(`Extracted JSON: ${jsonString ? 'Found' : 'Not found'}`);
+
+            if (jsonString) {
               try {
-                const issuesData = JSON.parse(jsonMatch[1]);
-                if (issuesData.automated_issues && issuesData.automated_issues.length > 0) {
+                const issuesData = JSON.parse(jsonString);
+                if (issuesData.automated_issues && Array.isArray(issuesData.automated_issues) && issuesData.automated_issues.length > 0) {
 
-                  // Create YAML automation comment
+                  // ROBUST: Build YAML with proper escaping
                   let yamlContent = `# ARC-Automation\nschema_version: "1.0"\nsource_pr: ${context.issue.number}\n` +
                     `generated_at: "${new Date().toISOString()}"\nautomated_issues:\n`;
 
                   for (const issue of issuesData.automated_issues) {
-                    yamlContent += `  - title: "${issue.title.replace(/"/g, '\\"')}"\n`;
-                    yamlContent += `    description: "${issue.description.replace(/"/g, '\\"')}"\n`;
-                    yamlContent += `    labels: [${issue.labels.map(l => `"${l}"`).join(', ')}]\n`;
-                    yamlContent += `    phase: "${issue.phase}"\n`;
+                    // Sanitize strings for YAML
+                    const sanitize = (str) => str.replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '');
+
+                    yamlContent += `  - title: "${sanitize(issue.title || 'Untitled')}"\n`;
+                    yamlContent += `    description: "${sanitize(issue.description || 'No description')}"\n`;
+                    yamlContent += `    labels: [${(issue.labels || []).map(l => `"${sanitize(l)}"`).join(', ')}]\n`;
+                    yamlContent += `    phase: "${sanitize(issue.phase || 'backlog')}"\n`;
                   }
 
+                  // Create the automation comment
                   await github.rest.issues.createComment({
                     issue_number: context.issue.number,
                     owner: context.repo.owner,
@@ -314,11 +360,16 @@ jobs:
                     body: `<!-- ARC-AUTOMATION -->\n\`\`\`yaml\n${yamlContent}\n\`\`\``
                   });
 
-                  console.log(`Created automation comment with ${issuesData.automated_issues.length} issues`);
+                  console.log(`✅ Created automation comment with ${issuesData.automated_issues.length} issues`);
+                } else {
+                  console.log('No valid automated_issues array found in JSON');
                 }
               } catch (e) {
-                console.log(`Failed to parse automation JSON: ${e}`);
+                console.log(`❌ Failed to parse automation JSON: ${e.message}`);
+                console.log(`Raw JSON: ${jsonString.substring(0, 500)}...`);
               }
+            } else {
+              console.log('No automation JSON found in review content');
             }
       # ---------- Upload Coverage Report ----------
       - name: Upload Coverage Report
