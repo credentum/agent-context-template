@@ -176,7 +176,7 @@ All coverage thresholds are managed centrally in `.coverage-config.json`:
 
 ```json
 {
-  "baseline": 78.5,      // Current minimum acceptable coverage
+  "baseline": 80.0,      // Current minimum acceptable coverage
   "target": 85.0,        // Goal for all modules
   "validator_target": 90.0,  // Higher goal for validator modules
   "description": "Coverage thresholds for the agent-context-template project",
@@ -532,7 +532,7 @@ All documents include `graph_metadata` defining relationships:
 - ALWAYS create a PR for code review
 - Include test results and coverage report in PR descriptions
 - Wait for CI checks to pass before merging
-- Ensure coverage stays above 78.5% (current baseline)
+- Ensure coverage stays above 80.0% (current baseline)
 - If pre-commit makes changes, amend your commit before pushing
 
 ## 🎯 Current Focus Areas
@@ -542,7 +542,7 @@ All documents include `graph_metadata` defining relationships:
    - `validators/config_validator.py` (34.66% → 90%)
 
 2. **Phase 1 Goals**:
-   - Overall coverage: 78.5% → 85%
+   - Overall coverage: 80.0% → 85%
    - Critical modules: All above 85%
    - Complete async error handling
 

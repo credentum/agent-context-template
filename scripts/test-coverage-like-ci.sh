@@ -38,16 +38,9 @@ echo "📋 COVERAGE ANALYSIS WORKFLOW"
 echo "----------------------------"
 
 # From test-coverage.yml lines 62-74
-echo -e "\n${YELLOW}▶ Run tests with coverage${NC}"
-echo "  Command: python -m pytest --cov=src --cov-branch --cov-report=term-missing:skip-covered --cov-report=html --cov-report=xml --cov-report=json -v"
 export REDIS_HOST=localhost
 export REDIS_PORT=6379
-if python -m pytest --cov=src --cov-branch --cov-report=term-missing:skip-covered --cov-report=html --cov-report=xml --cov-report=json -v; then
-    echo -e "  ${GREEN}✓ PASSED${NC}"
-else
-    echo -e "  ${RED}✗ FAILED${NC}"
-    FAILED=$((FAILED + 1))
-fi
+run_check "Run tests with coverage" "python -m pytest --cov=src --cov-branch --cov-report=term-missing:skip-covered --cov-report=html --cov-report=xml --cov-report=json -v"
 
 # From test-coverage.yml lines 76-78
 run_check "Check coverage thresholds" "python scripts/coverage_summary.py"

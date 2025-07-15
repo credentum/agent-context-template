@@ -132,7 +132,8 @@ def main():
             return 1
     else:
         print("⚠️  No mutation testing results available.")
-        print("   Consider running: mutmut run --paths-to-mutate=src/")
+        print("   Consider running: mutmut run --max-children 4")
+        print("   (paths configured in pyproject.toml)")
         return 0  # Don't fail CI if no mutation tests exist yet
 
 
