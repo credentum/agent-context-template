@@ -11,12 +11,35 @@ class CoverageSummary:
     """Generate and analyze test coverage metrics"""
 
     def __init__(self):
-        self.targets = {
-            "line_coverage": 49,  # Adjusted to current level: 49.29%
-            "branch_coverage": 35,  # Adjusted to current level: 36.21%
-            "mutation_score": 75,  # Current level: 75.00%
-            "critical_function_coverage": 100,  # Keep high standard
-        }
+        self.targets = self._load_coverage_config()
+
+    def _load_coverage_config(self) -> Dict[str, float]:
+        """Load coverage configuration from .coverage-config.json"""
+        try:
+            with open(".coverage-config.json") as f:
+                config = json.load(f)
+                return {
+                    "line_coverage": config.get("baseline", 80.0),
+                    "branch_coverage": config.get("branch_coverage", 60.0),
+                    "mutation_score": config.get("mutation_baseline", 20.0),
+                    "critical_function_coverage": 100,  # Keep high standard
+                }
+        except FileNotFoundError:
+            print("⚠️  .coverage-config.json not found. Using default thresholds.")
+            return {
+                "line_coverage": 80.0,
+                "branch_coverage": 60.0,
+                "mutation_score": 20.0,
+                "critical_function_coverage": 100,
+            }
+        except Exception as e:
+            print(f"⚠️  Error loading coverage config: {e}")
+            return {
+                "line_coverage": 80.0,
+                "branch_coverage": 60.0,
+                "mutation_score": 20.0,
+                "critical_function_coverage": 100,
+            }
 
     def get_coverage_metrics(self) -> Dict[str, float]:
         """Get coverage metrics from coverage.json"""
@@ -42,10 +65,34 @@ class CoverageSummary:
     def get_mutation_score(self) -> float:
         """Get mutation testing score"""
         try:
-            subprocess.run(["mutmut", "results"], capture_output=True, text=True)
+            result = subprocess.run(["mutmut", "results"], capture_output=True, text=True)
+
             # Parse mutation results
-            # This is a simplified version - actual parsing would be more robust
-            return 75.0  # Placeholder
+            if result.returncode == 0:
+                output = result.stdout
+                # Look for mutation score information
+                if "killed" in output and "survived" in output:
+                    lines = output.split("\n")
+                    for line in lines:
+                        if "killed" in line and "survived" in line:
+                            # Extract numbers - this is a simplified parser
+                            # Expected format: "killed: X, survived: Y"
+                            try:
+                                parts = line.split(",")
+                                killed = int(parts[0].split(":")[1].strip())
+                                survived = int(parts[1].split(":")[1].strip())
+                                total = killed + survived
+                                if total > 0:
+                                    return (killed / total) * 100
+                            except (ValueError, IndexError):
+                                continue
+
+                # If no mutation tests have been run yet, return 0
+                return 0.0
+            else:
+                print(f"⚠️  mutmut results returned non-zero exit code: {result.returncode}")
+                return 0.0
+
         except FileNotFoundError:
             print("⚠️  mutmut not found. Install with: pip install mutmut")
             return 0.0

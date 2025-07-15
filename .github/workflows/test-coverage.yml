@@ -77,6 +77,16 @@ jobs:
       run: |
         python scripts/coverage_summary.py
 
+    - name: Enforce coverage thresholds
+      run: |
+        # Use coverage.py's built-in fail_under check
+        python -m coverage report --fail-under=80
+
+    - name: Check mutation testing baseline
+      run: |
+        python scripts/check_mutation_baseline.py
+      continue-on-error: true
+
     - name: Run mutation testing (sample)
       env:
         MUTMUT_PATHS: "src/validators/kv_validators.py src/storage/context_kv.py"
