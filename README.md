@@ -1,6 +1,6 @@
 # agent-context-template
 
-A GitHub Actions template repository that provides workflow templates for an Agent-First Project Context System.
+A template repository that provides workflow templates for an Agent-First Project Context System.
 
 ## Test Coverage
 
@@ -8,11 +8,11 @@ Coverage is automatically tracked using `pytest-cov` and updated via:
 1. **Local Updates**: Run `python scripts/update_coverage_metrics.py` to update metrics
 2. **CI Integration**: Coverage runs on every PR via `.github/workflows/test-coverage.yml`
 3. **Badge Updates**: Coverage badges are updated automatically in PR comments
-4. **Report Generation**: HTML coverage reports are generated in `htmlcov/`
+4. **Report Generation**: Coverage reports are generated in XML, JSON, and terminal formats
 
 For current coverage status, run:
 ```bash
-pytest --cov=src --cov-report=term-missing --cov-report=html
+pytest --cov=src --cov-report=term-missing
 ```
 
 ## Quick Start

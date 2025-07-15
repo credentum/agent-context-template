@@ -125,6 +125,55 @@ services:
     stdin_open: true
     tty: true
 
+  # Test GitHub Actions workflows (simple version)
+  ci-workflow-simple:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - ./context:/app/context:ro
+      - ./.github:/app/.github:ro
+      - ./infra:/app/infra:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+    command: /bin/bash scripts/test-workflow-simple.sh
+
+  # Qdrant service for workflow tests
+  qdrant:
+    image: qdrant/qdrant:v1.14.1
+    ports:
+      - "6335:6333"
+      - "6336:6334"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/collections"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Neo4j service for workflow tests
+  neo4j:
+    image: neo4j:5.20.0
+    ports:
+      - "7688:7687"
+      - "7475:7474"
+    environment:
+      - NEO4J_AUTH=neo4j/testpassword
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "testpassword", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Redis service for tests that need it
   redis:
     image: redis:7-alpine

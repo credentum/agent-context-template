@@ -9,7 +9,6 @@ echo "================================================"
 
 # Clean previous coverage data
 rm -f .coverage
-rm -rf htmlcov/
 rm -f coverage.xml coverage.json
 
 # Run tests with coverage
@@ -18,7 +17,6 @@ python -m pytest \
     --cov=src \
     --cov-branch \
     --cov-report=term-missing:skip-covered \
-    --cov-report=html \
     --cov-report=xml \
     --cov-report=json \
     -v
@@ -87,6 +85,5 @@ with open('coverage.json') as f:
 echo ""
 echo "📄 Coverage reports generated:"
 echo "  - Terminal: See output above"
-echo "  - HTML: htmlcov/index.html"
 echo "  - XML: coverage.xml"
 echo "  - JSON: coverage.json"

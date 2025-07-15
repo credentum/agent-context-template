@@ -51,7 +51,6 @@ def run_test_group(group: TestGroup, pytest_args: List[str]) -> Tuple[str, Dict]
         "--cov=src",
         "--cov-branch",
         f"--cov-report=xml:coverage-{group.name}.xml",
-        f"--cov-report=html:htmlcov-{group.name}",
         "--cov-report=term",
         "-n",
         str(group.max_workers),  # Use pytest-xdist for parallel execution
@@ -102,7 +101,6 @@ def merge_coverage_files(coverage_files: List[str], output_file: str):
 
     # Generate final report
     subprocess.run(["coverage", "xml", "-o", output_file], check=True)
-    subprocess.run(["coverage", "html", "-d", "htmlcov-combined"], check=True)
     subprocess.run(["coverage", "report"], check=True)
 
 

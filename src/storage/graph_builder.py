@@ -504,8 +504,16 @@ class GraphBuilder:
 @click.option("--cleanup", is_flag=True, help="Remove orphaned nodes")
 @click.option("--stats", is_flag=True, help="Show graph statistics")
 @click.option("--verbose", is_flag=True, help="Show detailed output")
+@click.option("--dry-run", is_flag=True, help="Test connectivity without making changes")
 def main(
-    path: str, username: str, password: str, force: bool, cleanup: bool, stats: bool, verbose: bool
+    path: str,
+    username: str,
+    password: str,
+    force: bool,
+    cleanup: bool,
+    stats: bool,
+    verbose: bool,
+    dry_run: bool,
 ):
     """Build and maintain context graph from YAML documents"""
 
@@ -519,6 +527,12 @@ def main(
         return
 
     try:
+        # Dry run - just test connectivity
+        if dry_run:
+            click.echo("✓ Dry run: Neo4j connection successful")
+            click.echo("✓ Graph builder initialized properly")
+            return
+
         click.echo("=== Context Graph Builder ===\n")
 
         # Cleanup if requested

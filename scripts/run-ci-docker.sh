@@ -22,6 +22,7 @@ show_help() {
     echo "  mypy      Run MyPy type checking only"
     echo "  context   Run context YAML validation only"
     echo "  imports   Run import checking only"
+    echo "  workflows Test GitHub Actions workflow compatibility"
     echo "  debug     Start interactive debug shell"
     echo "  build     Build/rebuild the CI Docker image"
     echo "  clean     Stop and remove containers"
@@ -70,6 +71,11 @@ case $COMMAND in
         ;;
     imports)
         run_service ci-import-check "import checking"
+        ;;
+    workflows)
+        echo -e "${BLUE}▶ Testing GitHub Actions workflow compatibility...${NC}"
+        echo "This will test workflow components without external services"
+        run_service ci-workflow-simple "GitHub Actions workflow compatibility"
         ;;
     debug)
         echo -e "${BLUE}▶ Starting interactive debug shell...${NC}"
