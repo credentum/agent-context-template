@@ -267,7 +267,6 @@ jobs:
               context: 'ARC-Reviewer'
             });
 
-
       # ---------- Upload Coverage Report ----------
       - name: Upload Coverage Report
         if: always()
