@@ -7,13 +7,13 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, closed]
-    #paths:
-    #  - "src/**"
-    #  - "context/**"
-    #  - "tests/**"
-    #  - "*.md"
-    #  - "*.yaml"
-    #  - "*.yml"
+    # paths:
+    #   - "src/**"
+    #   - "context/**"
+    #   - "tests/**"
+    #   - "*.md"
+    #   - "*.yaml"
+    #   - "*.yml"
 
 jobs:
   claude-pr-review:
@@ -108,9 +108,20 @@ jobs:
             **Nits (💡):**
             1. …
             **Coverage Delta:** <current>% → <new>% [PASS/FAIL]
-            **Suggested Follow-ups:**
-            ISSUE: <title> - <description> - labels=<csv> - phase=<milestone>
-            (Use ISSUE: format for machine-parseable follow-ups that will auto-create GitHub issues)
+
+            **Follow-up Issues (JSON):**
+            ```json
+            {
+              "automated_issues": [
+                {
+                  "title": "Issue title",
+                  "description": "Issue description",
+                  "labels": ["label1", "label2"],
+                  "phase": "4.1|4.2|4.3|4.4|backlog"
+                }
+              ]
+            }
+            ```
             End of report. Do *not* add anything after this line.
           # enable sticky threaded comment
           use_sticky_comment: true
@@ -129,7 +140,8 @@ jobs:
         id: load-config
         run: |
           # Load baseline and tolerance buffer
-          config=$(python -c "import json; data=json.load(open('.coverage-config.json')); print(f\"{data['baseline']},{data.get('tolerance_buffer', 0.0)}\")")
+          config=$(python -c "import json; data=json.load(open('.coverage-config.json')); \
+                      print(f\"{data['baseline']},{data.get('tolerance_buffer', 0.0)}\")")
           baseline=$(echo "$config" | cut -d',' -f1)
           tolerance=$(echo "$config" | cut -d',' -f2)
           effective_baseline=$(python -c "print(max(0, $baseline - $tolerance))")
@@ -146,7 +158,8 @@ jobs:
              [[ "${{ github.head_ref }}" == *"workflow"* ]] || \
              [[ "${{ github.head_ref }}" == *"fix/28"* ]]; then
             echo "Skipping coverage check for infrastructure PR"
-            echo "COVERAGE_PCT=${{ env.COVERAGE_BASELINE }}" >> $GITHUB_ENV  # Set to baseline to avoid failure
+            echo "COVERAGE_PCT=${{ env.COVERAGE_BASELINE }}" >> $GITHUB_ENV
+            # Set to baseline to avoid failure
             echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
             echo "INFRASTRUCTURE_PR=true" >> $GITHUB_ENV
           else
@@ -267,6 +280,46 @@ jobs:
               context: 'ARC-Reviewer'
             });
 
+      # ---------- Create Agent-First Automation Comment ----------
+      - name: Create Automation Comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reviewResponse = `${{ steps.claude-review.outputs.response }}`;
+
+            // Extract JSON block with automated issues
+            const jsonMatch = reviewResponse.match(/```json\s*(\{[\s\S]*?"automated_issues"[\s\S]*?\})\s*```/);
+
+            if (jsonMatch) {
+              try {
+                const issuesData = JSON.parse(jsonMatch[1]);
+                if (issuesData.automated_issues && issuesData.automated_issues.length > 0) {
+
+                  // Create YAML automation comment
+                  let yamlContent = `# ARC-Automation\nschema_version: "1.0"\nsource_pr: ${context.issue.number}\n` +
+                    `generated_at: "${new Date().toISOString()}"\nautomated_issues:\n`;
+
+                  for (const issue of issuesData.automated_issues) {
+                    yamlContent += `  - title: "${issue.title.replace(/"/g, '\\"')}"\n`;
+                    yamlContent += `    description: "${issue.description.replace(/"/g, '\\"')}"\n`;
+                    yamlContent += `    labels: [${issue.labels.map(l => `"${l}"`).join(', ')}]\n`;
+                    yamlContent += `    phase: "${issue.phase}"\n`;
+                  }
+
+                  await github.rest.issues.createComment({
+                    issue_number: context.issue.number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: `<!-- ARC-AUTOMATION -->\n\`\`\`yaml\n${yamlContent}\n\`\`\``
+                  });
+
+                  console.log(`Created automation comment with ${issuesData.automated_issues.length} issues`);
+                }
+              } catch (e) {
+                console.log(`Failed to parse automation JSON: ${e}`);
+              }
+            }
       # ---------- Upload Coverage Report ----------
       - name: Upload Coverage Report
         if: always()
@@ -328,7 +381,7 @@ jobs:
           echo "- Ready to merge after human review"
 
 
-  # Post-merge job to create aggregated issues from review suggestions
+  # Agent-First Post-merge job to process automation data
   create-follow-up-issues:
     if: github.event.action == 'closed' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
@@ -338,165 +391,90 @@ jobs:
       pull-requests: read
 
     steps:
-      - name: Fetch Claude Review Comment
+      - name: Process Automation Data
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Fetch Claude review comments from the merged PR
           pr_num="${{ github.event.pull_request.number }}"
-          repo="${{ github.repository }}"
 
-          echo "Looking for Claude review comments on PR #$pr_num"
-          gh api "repos/${repo}/issues/${pr_num}/comments" \
-            --jq '.[] | select(.body | contains("ARC-Reviewer") or contains("ISSUE:")) | .body' \
-            | tail -1 > review.txt || echo "No Claude review found"
+          echo "Processing automation data for PR #$pr_num"
 
-          # Debug: Show review content and check for ISSUE: lines
-          echo "=== REVIEW CONTENT DEBUG ==="
-          cat review.txt
-          echo "=== ISSUE LINES FOUND ==="
-          grep '^ISSUE:' review.txt || echo "No ISSUE: lines found"
-          echo "=== END DEBUG ==="
+          # Get automation comment
+          gh api "repos/${{ github.repository }}/issues/$pr_num/comments" \
+            --jq '.[] | select(.body | contains("ARC-AUTOMATION")) | .body' > automation.txt || echo ""
 
-      - name: Parse Review and Create Issues
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Use the fetched review content
-          if [ \! -f review.txt ] || [ \! -s review.txt ]; then
-            echo "No review.txt found or empty, skipping issue creation"
-            exit 0
-          fi
+          if [ -s automation.txt ]; then
+            # Extract and process YAML
+            python3 << 'PYEOF'
+          import re
+          import yaml
 
-          # Collect all ISSUE: lines for aggregated issue creation
-          issue_count=0
-          suggestions_checklist=""
+          with open('automation.txt', 'r') as f:
+              content = f.read()
 
-          # Parse all ISSUE: lines to build aggregated content
-          while read -r line; do
-            echo "Processing: $line"
+          yaml_match = re.search(r'```yaml\s*\n(.*?)\n```', content, re.DOTALL)
+          if yaml_match:
+              try:
+                  data = yaml.safe_load(yaml_match.group(1))
+                  issues = data.get('automated_issues', [])
 
-            # Remove ISSUE: prefix and trim whitespace
-            content=$(echo "${line#ISSUE:}" | xargs)
-            [ -z "$content" ] && continue
+                  if issues:
+                      print(f"Found {len(issues)} automation issues")
 
-            # Parse using robust field extraction that handles spaces in fields
-            # Format: title - description - labels=csv - phase=milestone
-            # Split on ' - ' delimiter manually to preserve spaces within fields
+                      # Create aggregated issue
+                      import subprocess
+                      import json
 
-            # Extract title (everything before first ' - ')
-            if [[ "$content" =~ ^([^-]*[^[:space:]])[[:space:]]*-[[:space:]](.*)$ ]]; then
-                title="${BASH_REMATCH[1]}"
-                remaining="${BASH_REMATCH[2]}"
-            else
-                title="$content"
-                remaining=""
-            fi
+                      # Ensure labels exist
+                      for label in ['from-code-review', 'sprint-triage', 'phase=backlog']:
+                          subprocess.run(['gh', 'label', 'create', label, '--force'],
+                                       capture_output=True, text=True)
 
-            # Extract description (everything before next ' - ')
-            if [[ "$remaining" =~ ^([^-]*[^[:space:]])[[:space:]]*-[[:space:]](.*)$ ]]; then
-                description="${BASH_REMATCH[1]}"
-                remaining="${BASH_REMATCH[2]}"
-            else
-                description="${remaining:-Suggested improvement from code review}"
-                remaining=""
-            fi
+                      # Build issue content
+                      checklist = []
+                      for issue in issues:
+                          title = issue['title']
+                          desc = issue['description']
+                          phase = issue['phase']
+                          checklist.append(f"- [ ] **{title}**: {desc} (phase: {phase})")
 
-            # Extract labels field (everything before next ' - ')
-            if [[ "$remaining" =~ ^([^-]*[^[:space:]])[[:space:]]*-[[:space:]](.*)$ ]]; then
-                labels_field="${BASH_REMATCH[1]}"
-                phase_field="${BASH_REMATCH[2]}"
-            else
-                labels_field="$remaining"
-                phase_field=""
-            fi
+                      pr_num = "${{ github.event.pull_request.number }}"
+                      pr_url = "${{ github.event.pull_request.html_url }}"
+                      pr_author = "${{ github.event.pull_request.user.login }}"
 
-            # Skip if no title
-            [ -z "$title" ] && continue
+                      # Build issue content safely
+                      issue_body = "## Automated Follow-ups from PR #" + pr_num + "\n\n"
+                      issue_body += "Source: " + pr_url + "\n"
+                      issue_body += "Author: @" + pr_author + "\n\n"
+                      issue_body += "## Issues to Triage\n\n"
+                      issue_body += "\n".join(checklist) + "\n\n"
+                      issue_body += "## Instructions\n\n"
+                      issue_body += "For agents/PMs: Review, prioritize, and move high-value items to sprint YAML files.\n\n"
+                      issue_body += "---\n"
+                      issue_body += "Auto-generated by ARC-Reviewer"
 
-            # Parse phase/milestone (format: phase=4.2 or phase=backlog)
-            if [[ "$phase_field" =~ ^phase=(.+)$ ]]; then
-              phase="${BASH_REMATCH[1]}"
-            else
-              phase="backlog"
-            fi
+                      with open('issue_body.md', 'w') as f:
+                          f.write(issue_body)
 
-            echo "Parsed - Title: $title, Phase: $phase"
+                      # Create the issue
+                      result = subprocess.run([
+                          'gh', 'issue', 'create',
+                          '--title', f'[PR #{pr_num}] ARC-Reviewer Follow-ups',
+                          '--body-file', 'issue_body.md',
+                          '--label', 'from-code-review,sprint-triage,phase=backlog'
+                      ], capture_output=True, text=True)
 
-            # Build checklist item
-            item="- [ ] **${title}**: ${description} (phase: ${phase})\n"
-            suggestions_checklist="${suggestions_checklist}${item}"
-
-            ((issue_count++))
-
-          done < <(grep '^ISSUE:' review.txt)
-
-          # Only create aggregated issue if we have suggestions
-          if [ "$issue_count" -gt 0 ]; then
-            echo "Found $issue_count ISSUE suggestions, creating aggregated issue..."
-
-            # Ensure required labels exist (create them if missing)
-            echo "Ensuring required labels exist..."
-            gh label create "from-code-review" \
-              --description "Auto-generated from code review" \
-              --color "0366d6" --force || true
-            gh label create "sprint-triage" \
-              --description "Needs PM/agent triage review" \
-              --color "d876e3" --force || true
-            gh label create "phase=backlog" \
-              --description "Default phase for new suggestions" \
-              --color "c5def5" --force || true
-
-            # Get commit hash for this review cycle
-            commit_hash="${{ github.event.pull_request.head.sha }}"
-            commit_short="${commit_hash:0:7}"
-            review_date=$(date -u +"%Y-%m-%d %H:%M UTC")
-
-            # Create aggregated issue
-            pr_num="${{ github.event.pull_request.number }}"
-            aggregated_title="[PR #${pr_num}] Follow-ups Suggested by ARC-Reviewer"
-
-            # Create issue body content
-            {
-              echo "## Context"
-              echo ""
-              echo "This issue consolidates all follow-up suggestions from ARC-Reviewer for better triage and sprint planning."
-              echo ""
-              echo "**Original PR:** #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}"
-              echo "**PR URL:** ${{ github.event.pull_request.html_url }}"
-              echo "**Author:** @${{ github.event.pull_request.user.login }}"
-              echo ""
-              echo "## Review Suggestions - $review_date (Commit $commit_short)"
-              echo ""
-              echo "$suggestions_checklist"
-              echo ""
-              echo "## Triage Instructions"
-              echo ""
-              echo "**For PM/Agent Review:**"
-              echo "1. Review each suggestion for actionable value"
-              echo "2. Check priority alignment with current sprint goals"
-              echo "3. Promote high-value items to appropriate sprint YAML files"
-              echo "4. Check off completed suggestions as they are addressed"
-              echo "5. Add \`sprint-triage\` label when reviewed"
-              echo "6. Close this issue once all suggestions are triaged"
-              echo ""
-              echo "## Labels"
-              echo "- \`from-code-review\`: Auto-generated from code review"
-              echo "- \`sprint-triage\`: Needs PM/agent triage review"
-              echo "- \`phase=backlog\`: Default phase for new suggestions"
-              echo ""
-              echo "---"
-              echo "*Automatically created by ARC-Reviewer post-merge process*"
-            } > issue_body.md
-
-            gh issue create \
-              --title "$aggregated_title" \
-              --body-file issue_body.md \
-              --label "from-code-review,sprint-triage,phase=backlog"
-
-            echo "✅ Successfully created aggregated issue for merged PR #${{ github.event.pull_request.number }}"
+                      if result.returncode == 0:
+                          print(f"✅ Created aggregated issue: {result.stdout.strip()}")
+                      else:
+                          print(f"❌ Failed to create issue: {result.stderr}")
+                  else:
+                      print("No automation issues found")
+              except Exception as e:
+                  print(f"Error processing automation data: {e}")
+          else:
+              print("No automation comment found")
+          PYEOF
           else
-            echo "No ISSUE: suggestions found in review"
-            echo "Review content was:"
-            cat review.txt | head -20
+            echo "No automation data found for this PR"
           fi
