@@ -46,7 +46,9 @@ run_check "Run tests with coverage" "python -m pytest --cov=src --cov-branch --c
 run_check "Check coverage thresholds" "python scripts/coverage_summary.py"
 
 # From test-coverage.yml lines 80-83
-run_check "Enforce coverage thresholds" "python -m coverage report --fail-under=80"
+# Get threshold from centralized config
+THRESHOLD=$(python scripts/get_coverage_threshold.py)
+run_check "Enforce coverage thresholds" "python -m coverage report --fail-under=$THRESHOLD"
 
 # From test-coverage.yml lines 85-88 (allowed to fail)
 echo -e "\n${YELLOW}▶ Check mutation testing baseline - allowed to fail${NC}"

@@ -14,7 +14,7 @@ services:
       - ./src:/app/src:ro
       - ./tests:/app/tests:ro
       - ./scripts:/app/scripts:ro
-      - ./context:/app/context:ro
+      - ./context:/app/context
       # Mount config files
       - ./mypy.ini:/app/mypy.ini:ro
       - ./.flake8:/app/.flake8:ro
@@ -85,7 +85,7 @@ services:
     image: agent-context-ci:latest
     volumes:
       - ./src:/app/src:ro
-      - ./context:/app/context:ro
+      - ./context:/app/context
     environment:
       - CI=true
       - PYTHONPATH=/app
@@ -135,7 +135,7 @@ services:
       - ./src:/app/src:ro
       - ./tests:/app/tests:ro
       - ./scripts:/app/scripts:ro
-      - ./context:/app/context:ro
+      - ./context:/app/context
       - ./.github:/app/.github:ro
       - ./infra:/app/infra:ro
     environment:
@@ -153,7 +153,7 @@ services:
       - ./src:/app/src:ro
       - ./tests:/app/tests:ro
       - ./scripts:/app/scripts:ro
-      - ./context:/app/context:ro
+      - ./context:/app/context
       - ./.coverage-config.json:/app/.coverage-config.json:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
       - ./pytest.ini:/app/pytest.ini:ro
@@ -165,6 +165,50 @@ services:
     depends_on:
       - redis
     command: /bin/bash scripts/test-coverage-like-ci.sh
+
+  # Test unit tests like GitHub Actions
+  ci-unit-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - ./context:/app/context
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./pytest.ini:/app/pytest.ini:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    command: /bin/bash scripts/test-unit-like-ci.sh
+
+  # Test suite like GitHub Actions
+  ci-test-suite:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - ./context:/app/context
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./pytest.ini:/app/pytest.ini:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    command: /bin/bash scripts/test-suite-like-ci.sh
 
   # Qdrant service for workflow tests
   qdrant:
