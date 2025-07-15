@@ -259,8 +259,13 @@ jobs:
         run: |
           echo "${{ steps.claude-review.outputs.response }}" > review.txt
 
-          # Extract ISSUE: lines from review output
-          grep '^ISSUE:' review.txt | while read -r line; do
+          # Collect all ISSUE: lines for aggregated issue creation
+          issue_count=0
+          suggestions_checklist=""
+          all_phases=""
+
+          # Parse all ISSUE: lines to build aggregated content
+          while read -r line; do
             echo "Processing: $line"
 
             # Remove ISSUE: prefix and trim whitespace
@@ -301,14 +306,6 @@ jobs:
             # Skip if no title
             [ -z "$title" ] && continue
 
-            # Parse labels (format: labels=tag1,tag2,tag3)
-            if [[ "$labels_field" =~ ^labels=(.+)$ ]]; then
-              custom_labels="${BASH_REMATCH[1]}"
-              all_labels="from-code-review,$custom_labels"
-            else
-              all_labels="from-code-review,enhancement"
-            fi
-
             # Parse phase/milestone (format: phase=4.2 or phase=backlog)
             if [[ "$phase_field" =~ ^phase=(.+)$ ]]; then
               phase="${BASH_REMATCH[1]}"
@@ -316,38 +313,105 @@ jobs:
               phase="backlog"
             fi
 
-            echo "Parsed - Title: $title, Labels: $all_labels, Phase: $phase"
+            echo "Parsed - Title: $title, Phase: $phase"
 
-            # Check for duplicate issues to prevent spam
-            issue_title="[PR #${{ github.event.pull_request.number }}] $title"
-            existing_issues=$(gh issue list --search "\"$issue_title\"" --json number --jq length)
+            # Build checklist item
+            suggestions_checklist="${suggestions_checklist}- [ ] **${title}**: ${description} (phase: ${phase})\n"
 
-            if [ "$existing_issues" -gt 0 ]; then
-              echo "Skipping duplicate issue: $issue_title"
-              continue
+            # Track phases for metadata
+            if [[ "$all_phases" != *"$phase"* ]]; then
+              all_phases="${all_phases}${phase}, "
             fi
 
-            # Create comprehensive issue body
-            issue_body="## Context\n\nThis improvement was suggested by ARC-Reviewer during code review.\n\n**Original PR:** #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}\n**PR URL:** ${{ github.event.pull_request.html_url }}\n**Author:** @${{ github.event.pull_request.user.login }}\n**Phase:** $phase\n\n## Suggestion\n$description\n\n## Acceptance Criteria\n- [ ] Implement the suggested improvement\n- [ ] Add tests if applicable\n- [ ] Update documentation if needed\n- [ ] Ensure changes align with phase $phase requirements\n\n## Labels\n$all_labels\n\n---\n*Automatically created by ARC-Reviewer bot using ISSUE: schema*"
+            ((issue_count++))
 
-            # Create issue with enhanced metadata
-            gh_args=(
-              issue create
-              --title "$issue_title"
-              --body "$issue_body"
-              --label "$all_labels"
-            )
+          done < <(grep '^ISSUE:' review.txt)
 
-            # Add milestone if phase is not 'backlog'
-            if [ "$phase" != "backlog" ]; then
-              # Try to set milestone (may fail if milestone doesn't exist)
-              gh_args+=(--milestone "Phase $phase" || true)
+          # Only create aggregated issue if we have suggestions
+          if [ "$issue_count" -gt 0 ]; then
+            # Clean up phases list
+            all_phases=${all_phases%, }
+
+            # Get commit hash for this review cycle
+            commit_hash="${{ github.event.pull_request.head.sha }}"
+            commit_short="${commit_hash:0:7}"
+            review_date=$(date -u +"%Y-%m-%d %H:%M UTC")
+
+            # Check for existing aggregated issue for this PR
+            aggregated_title="[PR #${{ github.event.pull_request.number }}] Follow-ups Suggested by ARC-Reviewer"
+            existing_issue=$(gh issue list --search "\"$aggregated_title\"" --json number,body --jq '.[0] // empty')
+
+            if [ -n "$existing_issue" ]; then
+              # Parse existing issue to preserve previous review cycles
+              issue_number=$(echo "$existing_issue" | jq -r '.number')
+              existing_body=$(echo "$existing_issue" | jq -r '.body')
+
+              echo "Found existing aggregated issue #$issue_number, appending new review cycle"
+
+              # Check if this commit already has a review cycle (avoid duplicates)
+              if echo "$existing_body" | grep -q "## Review Cycle.*($commit_short)"; then
+                echo "Review cycle for commit $commit_short already exists, updating it"
+
+                # Replace the existing cycle for this commit using a more robust approach
+                temp_file=$(mktemp)
+                echo "$existing_body" > "$temp_file"
+
+                # Create new cycle section
+                new_cycle_section="## Review Cycle - $review_date (Commit $commit_short)\n\n$suggestions_checklist"
+
+                # Use sed to replace the section
+                awk -v new_section="$new_cycle_section" -v commit="$commit_short" '
+                  BEGIN { in_section = 0; replaced = 0 }
+                  /^## Review Cycle.*\(Commit '"$commit_short"'\)/ {
+                    print new_section;
+                    in_section = 1;
+                    replaced = 1;
+                    next
+                  }
+                  /^## / && in_section && !/^## Review Cycle.*\(Commit '"$commit_short"'\)/ { in_section = 0 }
+                  !in_section { print }
+                  END { if (!replaced) { print ""; print new_section } }
+                ' "$temp_file" > "${temp_file}.new"
+
+                updated_body=$(cat "${temp_file}.new")
+                rm -f "$temp_file" "${temp_file}.new"
+              else
+                echo "Adding new review cycle for commit $commit_short"
+
+                # Find insertion point (before Triage Instructions)
+                if echo "$existing_body" | grep -q "## Triage Instructions"; then
+                  # Insert before Triage Instructions
+                  before_triage=$(echo "$existing_body" | awk '/^## Triage Instructions/,0 {exit} {print}')
+                  triage_and_after=$(echo "$existing_body" | awk '/^## Triage Instructions/,0 {print}')
+
+                  new_cycle_section="## Review Cycle - $review_date (Commit $commit_short)\n\n$suggestions_checklist\n"
+                  updated_body="${before_triage}\n${new_cycle_section}\n${triage_and_after}"
+                else
+                  # Append at the end if no triage section found
+                  new_cycle_section="## Review Cycle - $review_date (Commit $commit_short)\n\n$suggestions_checklist"
+                  updated_body="${existing_body}\n\n${new_cycle_section}"
+                fi
+              fi
+
+              # Update existing issue with accumulated content
+              gh issue edit "$issue_number" --body "$updated_body"
+              echo "Updated aggregated issue #$issue_number with review cycle for commit $commit_short"
+              echo "Issue URL: https://github.com/${{ github.repository }}/issues/$issue_number"
+
+            else
+              echo "Creating new aggregated issue with first review cycle"
+
+              # Create initial issue body with first review cycle
+              issue_body="## Context\n\nThis issue consolidates all follow-up suggestions from ARC-Reviewer across multiple review cycles for better triage and sprint planning.\n\n**Original PR:** #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}\n**PR URL:** ${{ github.event.pull_request.html_url }}\n**Author:** @${{ github.event.pull_request.user.login }}\n\n## Review Cycle - $review_date (Commit $commit_short)\n\n$suggestions_checklist\n\n## Triage Instructions\n\n**For PM/Agent Review:**\n1. Review each suggestion for actionable value across all review cycles\n2. Check priority alignment with current sprint goals\n3. Promote high-value items to appropriate sprint YAML files\n4. Check off completed suggestions as they are addressed\n5. Add \`sprint-triage\` label when reviewed\n6. Close this issue once all cycles are triaged\n\n## Labels\n- \`from-code-review\`: Auto-generated from code review\n- \`sprint-triage\`: Needs PM/agent triage review\n- \`phase=backlog\`: Default phase for new suggestions\n\n---\n*Automatically created by ARC-Reviewer bot - tracks suggestions across multiple review cycles*"
+
+              gh issue create \
+                --title "$aggregated_title" \
+                --body "$issue_body" \
+                --label "from-code-review,sprint-triage,phase=backlog"
             fi
-
-            echo "Creating issue: ${gh_args[*]}"
-            gh "${gh_args[@]}"
-
-          done
+          else
+            echo "No ISSUE: suggestions found in review"
+          fi
 
       # ---------- Upload Coverage Report ----------
       - name: Upload Coverage Report
