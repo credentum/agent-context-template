@@ -1,254 +1,261 @@
 schema_version: 1.0.0
 document_type: sprint
 id: sprint-41
-title: "Sprint 4.1: Infrastructure Bring-Up"
+title: 'Sprint 4.1: Infrastructure Bring-Up'
 status: in_progress
 created_date: '2025-07-14'
 sprint_number: 41
 start_date: '2025-07-14'
 end_date: '2025-07-21'
-last_modified: '2025-07-14'
-last_referenced: '2025-07-14'
-
+last_modified: '2025-07-15'
+last_referenced: '2025-07-15'
 goals:
-  - "Establish reproducible local development infrastructure"
-  - "Set up CI service containers for reliable testing"
-  - "Implement health checks and automation for infrastructure"
-  - "Ensure platform-agnostic Docker setup"
-
+- Establish reproducible local development infrastructure
+- Set up CI service containers for reliable testing
+- Implement health checks and automation for infrastructure
+- Ensure platform-agnostic Docker setup
 phases:
-  - phase: 1
-    name: "Docker Infrastructure Setup"
-    status: completed
-    priority: high
-    component: infra
-    description: "Create reproducible Docker Compose stack for Qdrant and Neo4j"
-    tasks:
-      - title: "Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20"
-        description: |
-          Author a reproducible Docker Compose stack pinned to Qdrant v1.14.x and Neo4j 5.20.
+- phase: 1
+  name: Docker Infrastructure Setup
+  status: completed
+  priority: high
+  component: infra
+  description: Create reproducible Docker Compose stack for Qdrant and Neo4j
+  tasks:
+  - title: Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
+    description: 'Author a reproducible Docker Compose stack pinned to Qdrant v1.14.x
+      and Neo4j 5.20.
 
-          ## Acceptance Criteria
-          - [x] File `infra/docker-compose.yml` exists.
-          - [x] `make up` starts Qdrant (6333) and Neo4j (7474/7687); `make down` stops & removes volumes.
-          - [x] Named volumes `qdrant_data`, `neo4j_data` created.
-          - [x] Neo4j runs with `NEO4J_AUTH=none` for dev.
-          - [x] README updates include quick-start prerequisites.
 
-          ## Implementation Notes
-          - mkdir -p infra
-          - Populate compose with pinned images and volumes
-          - Ensure platform-agnostic (linux/amd64 & linux/arm64) tags if available.
-        labels:
-          - sprint-current
-          - "phase:4.1"
-          - "component:infra"
-          - "priority:high"
-        dependencies: []
-        estimate: "4 hours"
-        github_issue: 28
+      ## Acceptance Criteria
 
-  - phase: 2
-    name: "Health Check Implementation"
-    status: pending
-    priority: high
-    component: infra
-    description: "Add health check scripts to verify infrastructure status"
-    tasks:
-      - title: "Add infra/healthcheck.sh smoke test"
-        description: |
-          Create a bash script verifying Qdrant and Neo4j are healthy after `make up`.
+      - [x] File `infra/docker-compose.yml` exists.
 
-          ## Acceptance Criteria
-          - [ ] `infra/healthcheck.sh` exits 0 on healthy stack.
-          - [ ] Script checks:
-                curl localhost:6333/collections ⇒ `[]`
-                python -c "from neo4j import GraphDatabase; GraphDatabase.driver('bolt://localhost:7687').verify_connectivity()"
-          - [ ] Neo4j driver added to `requirements-dev.txt`.
-          - [ ] CONTRIBUTING updated with run instructions.
+      - [x] `make up` starts Qdrant (6333) and Neo4j (7474/7687); `make down` stops
+      & removes volumes.
 
-          ## Implementation Notes
-          - chmod +x infra/healthcheck.sh
-          - add to Makefile: make health
-        labels:
-          - sprint-current
-          - "phase:4.1"
-          - "component:infra"
-          - "priority:high"
-        dependencies:
-          - "Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20"
-        estimate: "2 hours"
-        github_issue: 29
+      - [x] Named volumes `qdrant_data`, `neo4j_data` created.
 
-  - phase: 3
-    name: "CI Integration"
-    status: pending
-    priority: high
-    component: ci
-    description: "Configure GitHub Actions to use service containers"
-    tasks:
-      - title: "Configure GitHub Actions service containers"
-        description: |
-          Spin up Qdrant and Neo4j as service containers in CI to run all test jobs against live stores.
+      - [x] Neo4j runs with `NEO4J_AUTH=none` for dev.
 
-          ## Acceptance Criteria
-          - [ ] `ci.yml` includes `services:` for Qdrant v1.14.x and Neo4j 5.20.
-          - [ ] Tests run green on live services.
-          - [ ] Docker layers cached; total CI spin-up < 4 minutes.
+      - [x] README updates include quick-start prerequisites.
 
-          ## Implementation Notes
-          - Use GitHub Actions service-container syntax
-          - Ensure ports match compose stack.
-        labels:
-          - sprint-current
-          - "phase:4.1"
-          - "component:ci"
-          - "priority:high"
-        dependencies:
-          - "Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20"
-        estimate: "3 hours"
-        github_issue: 30
 
-  - phase: 4
-    name: "Validation & Testing"
-    status: pending
-    priority: medium
-    component: vector
-    description: "Validate infrastructure with real data processing"
-    tasks:
-      - title: "Embedder sanity test with README.md"
-        description: |
-          Index README.md via embed pipeline and confirm both vector and graph entries exist.
+      ## Implementation Notes
 
-          ## Acceptance Criteria
-          - [ ] New test `tests/smoke/test_embed_readme.py` passes.
-          - [ ] Qdrant vector count ≥ 1; corresponding Neo4j node present.
+      - mkdir -p infra
 
-          ## Implementation Notes
-          - pytest -k test_embed_readme
-          - use qdrant_client & neo4j driver inside test.
-        labels:
-          - sprint-current
-          - "phase:4.1"
-          - "component:vector"
-          - "priority:medium"
-        dependencies:
-          - "Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20"
-          - "Configure GitHub Actions service containers"
-        estimate: "2 hours"
-        github_issue: 31
+      - Populate compose with pinned images and volumes
 
-  - phase: 5
-    name: "Developer Experience"
-    status: pending
-    priority: low
-    component: dx
-    description: "Improve local development workflow"
-    tasks:
-      - title: "Makefile convenience targets"
-        description: |
-          Provide `make up`, `make down`, `make health` for local development.
+      - Ensure platform-agnostic (linux/amd64 & linux/arm64) tags if available.
 
-          ## Acceptance Criteria
-          - [ ] Make targets wrap docker-compose and healthcheck script.
-          - [ ] Root README documents usage.
+      '
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:infra
+    - priority:high
+    dependencies: []
+    estimate: 4 hours
+    github_issue: 28
+- phase: 2
+  name: Health Check Implementation
+  status: pending
+  priority: high
+  component: infra
+  description: Add health check scripts to verify infrastructure status
+  tasks:
+  - title: Add infra/healthcheck.sh smoke test
+    description: "Create a bash script verifying Qdrant and Neo4j are healthy after\
+      \ `make up`.\n\n## Acceptance Criteria\n- [ ] `infra/healthcheck.sh` exits 0\
+      \ on healthy stack.\n- [ ] Script checks:\n      curl localhost:6333/collections\
+      \ \u21D2 `[]`\n      python -c \"from neo4j import GraphDatabase; GraphDatabase.driver('bolt://localhost:7687').verify_connectivity()\"\
+      \n- [ ] Neo4j driver added to `requirements-dev.txt`.\n- [ ] CONTRIBUTING updated\
+      \ with run instructions.\n\n## Implementation Notes\n- chmod +x infra/healthcheck.sh\n\
+      - add to Makefile: make health\n"
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:infra
+    - priority:high
+    dependencies:
+    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
+    estimate: 2 hours
+    github_issue: 29
+- phase: 3
+  name: CI Integration
+  status: pending
+  priority: high
+  component: ci
+  description: Configure GitHub Actions to use service containers
+  tasks:
+  - title: Configure GitHub Actions service containers
+    description: 'Spin up Qdrant and Neo4j as service containers in CI to run all
+      test jobs against live stores.
 
-          ## Implementation Notes
-          - .PHONY: up down health
-        labels:
-          - sprint-current
-          - "phase:4.1"
-          - "component:dx"
-          - "priority:low"
-        dependencies:
-          - "Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20"
-          - "Add infra/healthcheck.sh smoke test"
-        estimate: "1 hour"
-        github_issue: 32
 
-  - phase: 6
-    name: "Security"
-    status: pending
-    priority: medium
-    component: security
-    description: "Implement supply-chain security for infrastructure"
-    tasks:
-      - title: "Sigstore sign compose & images"
-        description: |
-          Begin supply-chain integrity chain for infra artefacts using Sigstore/cosign.
+      ## Acceptance Criteria
 
-          ## Acceptance Criteria
-          - [ ] cosign signatures committed under `context/logs/signatures/infra/`.
-          - [ ] CI step verifies signatures before tests execute.
+      - [ ] `ci.yml` includes `services:` for Qdrant v1.14.x and Neo4j 5.20.
 
-          ## Implementation Notes
-          - cosign sign --key k.json docker.io/qdrant/qdrant@sha256:...
-          - cosign verify ...
-        labels:
-          - sprint-current
-          - "phase:4.1"
-          - "component:security"
-          - "priority:medium"
-        dependencies: []
-        estimate: "3 hours"
-        github_issue: 33
+      - [ ] Tests run green on live services.
 
+      - [ ] Docker layers cached; total CI spin-up < 4 minutes.
+
+
+      ## Implementation Notes
+
+      - Use GitHub Actions service-container syntax
+
+      - Ensure ports match compose stack.
+
+      '
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:ci
+    - priority:high
+    dependencies:
+    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
+    estimate: 3 hours
+    github_issue: 30
+- phase: 4
+  name: Validation & Testing
+  status: pending
+  priority: medium
+  component: vector
+  description: Validate infrastructure with real data processing
+  tasks:
+  - title: Embedder sanity test with README.md
+    description: "Index README.md via embed pipeline and confirm both vector and graph\
+      \ entries exist.\n\n## Acceptance Criteria\n- [ ] New test `tests/smoke/test_embed_readme.py`\
+      \ passes.\n- [ ] Qdrant vector count \u2265 1; corresponding Neo4j node present.\n\
+      \n## Implementation Notes\n- pytest -k test_embed_readme\n- use qdrant_client\
+      \ & neo4j driver inside test.\n"
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:vector
+    - priority:medium
+    dependencies:
+    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
+    - Configure GitHub Actions service containers
+    estimate: 2 hours
+    github_issue: 31
+- phase: 5
+  name: Developer Experience
+  status: pending
+  priority: low
+  component: dx
+  description: Improve local development workflow
+  tasks:
+  - title: Makefile convenience targets
+    description: 'Provide `make up`, `make down`, `make health` for local development.
+
+
+      ## Acceptance Criteria
+
+      - [ ] Make targets wrap docker-compose and healthcheck script.
+
+      - [ ] Root README documents usage.
+
+
+      ## Implementation Notes
+
+      - .PHONY: up down health
+
+      '
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:dx
+    - priority:low
+    dependencies:
+    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
+    - Add infra/healthcheck.sh smoke test
+    estimate: 1 hour
+    github_issue: 32
+- phase: 6
+  name: Security
+  status: pending
+  priority: medium
+  component: security
+  description: Implement supply-chain security for infrastructure
+  tasks:
+  - title: Sigstore sign compose & images
+    description: 'Begin supply-chain integrity chain for infra artefacts using Sigstore/cosign.
+
+
+      ## Acceptance Criteria
+
+      - [ ] cosign signatures committed under `context/logs/signatures/infra/`.
+
+      - [ ] CI step verifies signatures before tests execute.
+
+
+      ## Implementation Notes
+
+      - cosign sign --key k.json docker.io/qdrant/qdrant@sha256:...
+
+      - cosign verify ...
+
+      '
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:security
+    - priority:medium
+    dependencies: []
+    estimate: 3 hours
+    github_issue: 33
 team:
-  - role: lead
-    agent: pm_agent
-    responsibilities:
-      - "Sprint coordination and issue tracking"
-      - "Infrastructure architecture decisions"
-
-  - role: implementation
-    agent: code_agent
-    responsibilities:
-      - "Docker configuration implementation"
-      - "CI/CD pipeline setup"
-
-  - role: documentation
-    agent: doc_agent
-    responsibilities:
-      - "README and CONTRIBUTING updates"
-      - "Infrastructure documentation"
-
-  - role: validation
-    agent: ci_agent
-    responsibilities:
-      - "Health check implementation"
-      - "Test infrastructure validation"
-
+- role: lead
+  agent: pm_agent
+  responsibilities:
+  - Sprint coordination and issue tracking
+  - Infrastructure architecture decisions
+- role: implementation
+  agent: code_agent
+  responsibilities:
+  - Docker configuration implementation
+  - CI/CD pipeline setup
+- role: documentation
+  agent: doc_agent
+  responsibilities:
+  - README and CONTRIBUTING updates
+  - Infrastructure documentation
+- role: validation
+  agent: ci_agent
+  responsibilities:
+  - Health check implementation
+  - Test infrastructure validation
 success_metrics:
-  - metric: task_completion
-    target: 100
-    unit: percent
-    description: "All infrastructure tasks completed"
-
-  - metric: ci_reliability
-    target: 95
-    unit: percent
-    description: "CI success rate with service containers"
-
-  - metric: setup_time
-    target: 4
-    unit: minutes
-    description: "Maximum time for infrastructure startup"
-
+- metric: task_completion
+  target: 100
+  unit: percent
+  description: All infrastructure tasks completed
+- metric: ci_reliability
+  target: 95
+  unit: percent
+  description: CI success rate with service containers
+- metric: setup_time
+  target: 4
+  unit: minutes
+  description: Maximum time for infrastructure startup
 graph_metadata:
   node_type: sprint_document
   relationships:
-    - type: implements
-      target: infrastructure_architecture
-    - type: prepares
-      target: sprint-5
-    - type: follows
-      target: sprint-4
-
+  - type: implements
+    target: infrastructure_architecture
+  - type: prepares
+    target: sprint-5
+  - type: follows
+    target: sprint-4
 config:
   auto_create_issues: true
-  issue_template: "sprint-task.md"
+  issue_template: sprint-task.md
   default_labels:
-    - sprint-current
-    - "sprint:4.1"
-  milestone: "Sprint 4.1"
-  project_board: "Infrastructure Board"
+  - sprint-current
+  - sprint:4.1
+  milestone: Sprint 4.1
+  project_board: Infrastructure Board
