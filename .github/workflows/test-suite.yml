@@ -228,25 +228,40 @@ jobs:
 
     - name: Generate test summary
       run: |
-        echo "# Test Summary" > test-summary.md
-        echo "" >> test-summary.md
-        echo "## Test Results" >> test-summary.md
-        echo "| Python Version | Unit Tests | Integration Tests | Benchmarks |" >> test-summary.md
-        echo "|----------------|------------|------------------|------------|" >> test-summary.md
+        # Check job results from previous steps
+        test_status="${{ needs.test.result }}"
+        mutation_status="${{ needs.mutation-tests.result }}"
+        load_status="${{ needs.load-tests.result }}"
 
-        echo "| 3.11 | ✓ | ✓ | ✓ |" >> test-summary.md
+        # Convert to emojis
+        get_emoji() {
+          case $1 in
+            "success") echo "✅" ;;
+            "failure") echo "❌" ;;
+            "cancelled") echo "⏸️" ;;
+            "skipped") echo "⏭️" ;;
+            *) echo "❓" ;;
+          esac
+        }
 
-        echo "" >> test-summary.md
-        echo "## Coverage Report" >> test-summary.md
-        echo "Overall coverage: See badge in README" >> test-summary.md
+        test_emoji=$(get_emoji "$test_status")
+        mutation_emoji=$(get_emoji "$mutation_status")
+        load_emoji=$(get_emoji "$load_status")
 
-        echo "" >> test-summary.md
-        echo "## Performance Benchmarks" >> test-summary.md
-        echo "All critical paths meet performance requirements" >> test-summary.md
+        # Get actual coverage if available
+        coverage_text="See detailed report"
+        if [[ -f pytest-coverage.txt ]]; then
+          coverage_line=$(grep "TOTAL" pytest-coverage.txt || echo "")
+          if [[ -n "$coverage_line" ]]; then
+            coverage_text=$(echo "$coverage_line" | awk '{print $NF}')
+          fi
+        fi
 
+        # Generate concise summary
+        echo "## 🧪 Test Results" > test-summary.md
+        echo "$test_emoji **Unit/Integration** | $mutation_emoji **Mutation** | $load_emoji **Load**" >> test-summary.md
         echo "" >> test-summary.md
-        echo "## Mutation Testing" >> test-summary.md
-        echo "Mutation score: Check mutation-report.txt" >> test-summary.md
+        echo "**Coverage:** $coverage_text | **Python:** 3.11" >> test-summary.md
 
     - name: Comment PR with summary
       if: github.event_name == 'pull_request'
@@ -256,9 +271,33 @@ jobs:
         script: |
           const fs = require('fs');
           const summary = fs.readFileSync('test-summary.md', 'utf8');
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
+
+          // Find existing comment
+          const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: summary
+            issue_number: context.issue.number
           });
+
+          const existingComment = comments.find(comment =>
+            comment.user.type === 'Bot' &&
+            comment.body.includes('🧪 Test Results')
+          );
+
+          if (existingComment) {
+            // Update existing comment
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: summary
+            });
+          } else {
+            // Create new comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: summary
+            });
+          }
