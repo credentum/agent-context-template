@@ -169,6 +169,50 @@ Debug | reproduce issue → add logging → isolate → fix → add regression t
 
 Use /clear between distinct tasks to avoid context bleed.
 
+## 6.1 📊 Coverage Configuration Management
+
+### Centralized Coverage Thresholds
+All coverage thresholds are managed centrally in `.coverage-config.json`:
+
+```json
+{
+  "baseline": 78.5,      // Current minimum acceptable coverage
+  "target": 85.0,        // Goal for all modules
+  "validator_target": 90.0,  // Higher goal for validator modules
+  "description": "Coverage thresholds for the agent-context-template project",
+  "last_updated": "2025-07-15"
+}
+```
+
+### Updating Coverage Baselines
+To change coverage thresholds:
+
+```bash
+# 1. Edit the configuration file
+vim .coverage-config.json  # Update baseline, target, or validator_target
+
+# 2. Sync documentation automatically
+python scripts/update-coverage-baseline.py
+
+# 3. Commit changes
+git add .coverage-config.json CLAUDE.md
+git commit -m "feat(coverage): update baseline from X% to Y%"
+```
+
+### What Gets Updated Automatically
+The configuration is used by:
+- **GitHub Actions** (.github/workflows/claude-code-review.yml) - ARC-Reviewer status checks
+- **Local CI script** (scripts/test-github-ci-locally.sh) - Local testing validation
+- **Documentation** (CLAUDE.md) - Via update script keeps docs in sync
+
+### Rationale
+This eliminates the previous brittle system where coverage thresholds were hardcoded in 7+ locations, causing:
+- ❌ "Coverage regression" false positives when thresholds were inconsistent
+- ❌ Manual hunting through multiple files to update baselines
+- ❌ Documentation drift from actual CI settings
+
+Now changing coverage baselines requires updating only one file! 🎉
+
 ## 7 ▶️ GitHub Actions Overview
 
 ### AI Assistant Workflows
@@ -488,7 +532,7 @@ All documents include `graph_metadata` defining relationships:
 - ALWAYS create a PR for code review
 - Include test results and coverage report in PR descriptions
 - Wait for CI checks to pass before merging
-- Ensure coverage stays above 71.82% (current baseline)
+- Ensure coverage stays above 78.5% (current baseline)
 - If pre-commit makes changes, amend your commit before pushing
 
 ## 🎯 Current Focus Areas
@@ -498,7 +542,7 @@ All documents include `graph_metadata` defining relationships:
    - `validators/config_validator.py` (34.66% → 90%)
 
 2. **Phase 1 Goals**:
-   - Overall coverage: 71.82% → 85%
+   - Overall coverage: 78.5% → 85%
    - Critical modules: All above 85%
    - Complete async error handling
 
