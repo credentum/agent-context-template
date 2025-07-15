@@ -9,6 +9,7 @@ import os
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock, patch
 
 import yaml
@@ -80,7 +81,6 @@ content:
         agent = CleanupAgent(verbose=True)
         agent.config = self.test_config
         agent.context_dir = self.context_dir
-        agent.trace_dir = self.trace_dir
         agent.archive_dir = self.archive_dir
 
         # Execute cleanup
@@ -401,7 +401,7 @@ class TestAgentReflectionPatterns:
 
     def test_reflection_structure(self):
         """Test standard reflection structure for agents"""
-        reflection = {
+        reflection: dict[str, Any] = {
             "summary": "Processed 10 documents, archived 3, found 2 issues",
             "observations": [
                 "Most documents are within retention period",
@@ -430,7 +430,7 @@ class TestAgentReflectionPatterns:
     def test_learning_from_traces(self):
         """Test how agents can learn from historical traces"""
         # Historical traces
-        past_traces = [
+        past_traces: list[dict[str, Any]] = [
             {
                 "trace_id": "cleanup_20240101_120000",
                 "metrics": {"files_archived": 10, "duration_ms": 1000},
@@ -467,7 +467,7 @@ class TestAgentErrorHandling:
 
     def test_agent_error_trace(self):
         """Test trace generation when agent encounters errors"""
-        error_trace = {
+        error_trace: dict[str, Any] = {
             "metadata": {
                 "document_type": "trace",
                 "trace_id": "cleanup_20240115_130000",

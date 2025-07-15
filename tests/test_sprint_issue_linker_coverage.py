@@ -3,6 +3,7 @@
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -151,7 +152,7 @@ class TestSprintIssueLinkerCoverage:
     def test_find_task_in_issues(self, issue_linker):
         """Test finding task in existing issues"""
         # Note: The actual implementation embeds tasks in issue body, not title matching
-        existing_issues = [
+        existing_issues: list[dict[str, Any]] = [
             {
                 "number": 1,
                 "title": "Sprint 1 Tasks",

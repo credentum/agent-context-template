@@ -570,7 +570,8 @@ class TestNeo4jInitializer:
         mock_session_cm.__exit__ = Mock(return_value=None)
         mock_initializer.driver.session.return_value = mock_session_cm
 
-        main.callback("neo4j", "test", True, True, True)
+        if main.callback is not None:
+            main.callback("neo4j", "test", True, True, True)
 
         # Should skip all creation steps
         mock_initializer.create_constraints.assert_not_called()

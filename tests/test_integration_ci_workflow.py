@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock, patch
 
 import yaml
@@ -245,7 +246,7 @@ class TestCIWorkflowIntegration:
         sprint_path = self.create_sprint_document()
 
         # Simulate issue comment event
-        comment_event = {
+        comment_event: dict[str, Any] = {
             "action": "created",
             "issue": {"number": 10, "state": "open"},
             "comment": {
@@ -255,7 +256,8 @@ class TestCIWorkflowIntegration:
         }
 
         # Parse command from comment
-        comment_body = comment_event.get("comment", {}).get("body", "")
+        comment_dict: dict[str, Any] = comment_event.get("comment", {})
+        comment_body: str = comment_dict.get("body", "")
         if comment_body.startswith("/update-sprint"):
             parts = comment_body.split()
             updates = {}
@@ -333,12 +335,13 @@ class TestCISprintMetrics:
 
     def test_velocity_calculation(self):
         """Test sprint velocity calculation from completed tasks"""
-        completed_tasks = [
+        completed_tasks: list[dict[str, Any]] = [
             {"name": "Task 1", "story_points": 3, "completed_date": "2024-01-05"},
             {"name": "Task 2", "story_points": 5, "completed_date": "2024-01-08"},
             {"name": "Task 3", "story_points": 2, "completed_date": "2024-01-10"},
         ]
 
+        # Type annotation to help mypy understand that story_points values are convertible to int
         total_points = sum(int(task.get("story_points", 0)) for task in completed_tasks)
         sprint_days = 14
         daily_velocity = total_points / sprint_days
@@ -360,7 +363,7 @@ class TestCISprintMetrics:
         _ = 21
 
         # Daily progress
-        burndown_data = [
+        burndown_data: list[dict[str, Any]] = [
             {"day": 1, "remaining_points": 21, "ideal_remaining": 21},
             {"day": 2, "remaining_points": 21, "ideal_remaining": 19.5},
             {"day": 3, "remaining_points": 18, "ideal_remaining": 18},
@@ -369,12 +372,14 @@ class TestCISprintMetrics:
         ]
 
         # Calculate burn rate
-        actual_burned = burndown_data[0]["remaining_points"] - burndown_data[-1]["remaining_points"]
+        first_day: dict[str, Any] = burndown_data[0]
+        last_day: dict[str, Any] = burndown_data[-1]
+        actual_burned = first_day["remaining_points"] - last_day["remaining_points"]
         days_elapsed = len(burndown_data)
         burn_rate = actual_burned / days_elapsed
 
         # Project completion
-        remaining = burndown_data[-1]["remaining_points"]
+        remaining = last_day["remaining_points"]
         days_to_complete = remaining / burn_rate if burn_rate > 0 else float("inf")
 
         analysis = {
@@ -393,16 +398,17 @@ class TestGitHubActionsIntegration:
 
     def test_workflow_dispatch_event(self):
         """Test manual workflow dispatch for sprint updates"""
-        workflow_dispatch = {
+        workflow_dispatch: dict[str, Any] = {
             "inputs": {"sprint_id": "sprint_001", "update_type": "full", "dry_run": "false"},
             "ref": "main",
             "actor": "project_manager",
         }
 
         # Validate inputs
-        assert workflow_dispatch["inputs"]["sprint_id"].startswith("sprint_")
-        assert workflow_dispatch["inputs"]["update_type"] in ["full", "incremental"]
-        assert workflow_dispatch["inputs"]["dry_run"] in ["true", "false"]
+        inputs: dict[str, str] = workflow_dispatch["inputs"]
+        assert inputs["sprint_id"].startswith("sprint_")
+        assert inputs["update_type"] in ["full", "incremental"]
+        assert inputs["dry_run"] in ["true", "false"]
 
     def test_scheduled_sprint_update(self):
         """Test scheduled sprint updates via cron"""

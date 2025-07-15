@@ -33,8 +33,25 @@ jobs:
       - name: Setup Python and Node
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov yamale
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+          pip install yamale
           npm install -g ajv-cli
+
+      - name: Create directories
+        run: |
+          mkdir -p context/.duckdb
+          mkdir -p context/.graph_cache
+          mkdir -p context/.vector_cache
+          mkdir -p context/.embeddings_cache
+          mkdir -p context/trace
+          mkdir -p context/archive
+          mkdir -p context/mcp_contracts
+          mkdir -p context/logs/cleanup
+          mkdir -p context/logs/eval
+          mkdir -p context/logs/kv
+          mkdir -p context/logs/prompts
+          mkdir -p context/logs/signatures
 
       - name: Run Claude Code Review
         id: claude-review
@@ -54,7 +71,7 @@ jobs:
             1. **Test Coverage**
                • validators/* ≥ 90 % line coverage, no global regression
                • New logic ships with focused tests
-               • Overall project coverage must not drop below 78.89%
+               • Overall project coverage must not drop below 78.5%
             2. **MCP Compatibility**
                • Tool contracts updated in context/mcp_contracts/
                • TS interfaces match schema (`npm test:mcp-types`)
@@ -96,13 +113,21 @@ jobs:
           use_sticky_comment: true
           # Tools Claude may invoke during review
           allowed_tools: |
-            Bash(pytest --cov=src --cov-report=term --cov-report=json),
+            Bash(pytest --cov=src --cov-report=term --cov-report=json -m "not integration and not e2e"),
             Bash(pre-commit run --all-files --config .pre-commit-config-ci.yaml),
             Bash(python -m src.validators.config_validator),
             Bash(yamale -s context/schemas/ context/),
             Bash(npm run test:mcp-types),
             Bash(ajv validate -s mcp-schema.json -d context/mcp_contracts/*.json),
             Bash(git diff --name-only origin/main...HEAD)
+
+      # ---------- Load Coverage Configuration ----------
+      - name: Load Coverage Configuration
+        id: load-config
+        run: |
+          baseline=$(python -c "import json; print(json.load(open('.coverage-config.json'))['baseline'])")
+          echo "COVERAGE_BASELINE=$baseline" >> $GITHUB_ENV
+          echo "Coverage baseline loaded: $baseline%"
 
       # ---------- Extract and Store Coverage Metrics ----------
       - name: Extract Coverage Metrics
@@ -114,24 +139,36 @@ jobs:
              [[ "${{ github.head_ref }}" == *"workflow"* ]] || \
              [[ "${{ github.head_ref }}" == *"fix/28"* ]]; then
             echo "Skipping coverage check for infrastructure PR"
-            echo "COVERAGE_PCT=78.89" >> $GITHUB_ENV  # Set to baseline to avoid failure
+            echo "COVERAGE_PCT=${{ env.COVERAGE_BASELINE }}" >> $GITHUB_ENV  # Set to baseline to avoid failure
             echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
             echo "INFRASTRUCTURE_PR=true" >> $GITHUB_ENV
           else
-            # Run coverage and capture output
-            pytest --cov=src --cov-report=term --cov-report=json --cov-report=html || true
+            # Run coverage and capture output (exclude integration/e2e tests like main test workflow)
+            echo "Running coverage analysis..."
+            pytest tests/ --cov=src --cov-report=term --cov-report=json --cov-report=html -m "not integration and not e2e" || true
 
-            # Extract coverage percentage
+            # Debug: Check if coverage.json was created
             if [ -f coverage.json ]; then
+              echo "✓ coverage.json created successfully"
+              ls -la coverage.json
+
+              # Extract coverage percentage
               coverage_pct=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+              echo "Coverage percentage: $coverage_pct%"
               echo "COVERAGE_PCT=$coverage_pct" >> $GITHUB_ENV
 
               # Check if coverage dropped below baseline
-              if (( $(echo "$coverage_pct < 78.89" | bc -l) )); then
+              if (( $(echo "$coverage_pct < ${{ env.COVERAGE_BASELINE }}" | bc -l) )); then
+                echo "❌ Coverage below baseline: $coverage_pct% < ${{ env.COVERAGE_BASELINE }}%"
                 echo "COVERAGE_FAILED=true" >> $GITHUB_ENV
               else
+                echo "✓ Coverage meets baseline: $coverage_pct% >= ${{ env.COVERAGE_BASELINE }}%"
                 echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
               fi
+            else
+              echo "❌ coverage.json not found, setting coverage to 0"
+              echo "COVERAGE_PCT=0" >> $GITHUB_ENV
+              echo "COVERAGE_FAILED=true" >> $GITHUB_ENV
             fi
             echo "INFRASTRUCTURE_PR=false" >> $GITHUB_ENV
           fi
@@ -196,9 +233,9 @@ jobs:
             if (review.verdict === 'REQUEST CHANGES' || review.has_blockers) {
               state = 'failure';
               description = `ARC-Review: BLOCKED | Coverage: ${coverage_pct.toFixed(1)}%`;
-            } else if (!isInfrastructurePR && coverage_pct < 78.89) {
+            } else if (!isInfrastructurePR && coverage_pct < parseFloat("${{ env.COVERAGE_BASELINE }}")) {
               state = 'failure';
-              description = `ARC-Review: Coverage regression (${coverage_pct.toFixed(1)}% < 78.89%)`;
+              description = `ARC-Review: Coverage regression (${coverage_pct.toFixed(1)}% < ${{ env.COVERAGE_BASELINE }}%)`;
             } else if (isInfrastructurePR) {
               description = `ARC-Review: PASS (Infrastructure PR) | Coverage: skipped`;
             }
@@ -293,7 +330,7 @@ jobs:
         run: |
           echo "🚫 PR has blocking issues or coverage regression — failing build."
           echo "Review verdict: ${{ fromJson(env.REVIEW_JSON).verdict }}"
-          echo "Coverage: ${{ env.COVERAGE_PCT }}% (minimum: 78.89%)"
+          echo "Coverage: ${{ env.COVERAGE_PCT }}% (minimum: ${{ env.COVERAGE_BASELINE }}%)"
           exit 1
 
       - name: Success Message

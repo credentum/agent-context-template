@@ -5,14 +5,16 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any, Dict, Set
 from unittest import mock
+from unittest.mock import patch
 
 import pytest
 
 # Import the script modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from generate_coverage_matrix import (  # noqa: E402
+from generate_coverage_matrix import (  # noqa: E402  # type: ignore[import-not-found]
     DEFAULT_CONFIG,
     CoverageAnalyzer,
     CoverageDataValidator,
@@ -42,7 +44,7 @@ class TestCoverageDataValidator:
 
     def test_validate_coverage_json_valid(self):
         """Test validation of valid coverage.json data."""
-        data = {"files": {"src/module.py": {"contexts": {}}}}
+        data: Dict[str, Any] = {"files": {"src/module.py": {"contexts": {}}}}
         assert CoverageDataValidator.validate_coverage_json(data) is True
 
     def test_validate_coverage_json_missing_files(self):
@@ -145,7 +147,7 @@ class TestReportGenerator:
         """Test HTML metrics generation."""
         reporter = ReportGenerator(DEFAULT_CONFIG.copy())
         overall = {"line_coverage": 75.5, "branch_coverage": 60, "tests_passed": 100}
-        mapping = {"src/module1.py": set(), "src/module2.py": set()}
+        mapping: Dict[str, Set[str]] = {"src/module1.py": set(), "src/module2.py": set()}
 
         html = reporter.generate_html_metrics(overall, mapping)
 
@@ -265,26 +267,27 @@ class TestCoverageMatrixGenerator:
     def test_update_gitignore(self):
         """Test updating .gitignore file."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Change to temp directory
-            import os
+            # Work in temp directory without changing cwd
+            tmpdir_path = Path(tmpdir)
+            gitignore_path = tmpdir_path / ".gitignore"
 
-            old_cwd = os.getcwd()
-            os.chdir(tmpdir)
+            # Create initial .gitignore
+            with open(gitignore_path, "w") as f:
+                f.write("*.pyc\n")
 
-            try:
-                # Create initial .gitignore
-                gitignore_path = Path(".gitignore")
-                with open(gitignore_path, "w") as f:
-                    f.write("*.pyc\n")
-
+            # Mock the current directory to be the temp directory for Path operations
+            with (
+                patch("pathlib.Path.cwd", return_value=tmpdir_path),
+                patch(
+                    "generate_coverage_matrix.Path",
+                    side_effect=lambda p: tmpdir_path / p if p == ".gitignore" else Path(p),
+                ),
+            ):
                 generator = CoverageMatrixGenerator(DEFAULT_CONFIG.copy())
                 generator._update_gitignore()
 
-                content = gitignore_path.read_text()
-                assert "coverage-matrix.html" in content
-
-            finally:
-                os.chdir(old_cwd)
+            content = gitignore_path.read_text()
+            assert "coverage-matrix.html" in content
 
     def test_generate_error_handling(self):
         """Test error handling in main generate method."""

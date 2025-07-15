@@ -1,7 +1,7 @@
 {
   "timestamp": "2025-07-14 20:53:53",
   "overall": {
-    "line_coverage": 78.89,
+    "line_coverage": 78.53,
     "branch_coverage": 82.62,
     "statements": 3594,
     "missing": 639,

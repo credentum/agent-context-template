@@ -1,0 +1,608 @@
+tests/test_sigstore_verification.py:275: error: "Collection[str]" has no
+attribute "get"  [attr-defined]
+            assert signature_metadata.get("annotations", {}).get("git.bran...
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_integration_agent_flow.py:84: error: "CleanupAgent" has no attribute
+"trace_dir"  [attr-defined]
+            agent.trace_dir = self.trace_dir
+            ^~~~~~~~~~~~~~~
+tests/test_config_validator.py:149: error: Unused "type: ignore" comment
+[unused-ignore]
+            config["redis"]["port"] = 70000  # type: ignore[assignment]
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_config_validator.py:182: error: Dict entry 0 has incompatible type
+"str": "str"; expected "str": "int"  [dict-item]
+            config["duckdb"] = {"database_path": "/tmp/db.duckdb", "thread...
+                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_agent_state_machines.py:86: error: Value of type "object" is not
+indexable  [index]
+            sprint["phases"][1]["tasks"][1]["status"] = "pending"
+            ^~~~~~~~~~~~~~~~~~~
+tests/test_agent_state_machines.py:111: error: "object" has no attribute
+"__iter__"; maybe "__dir__" or "__str__"? (not iterable)  [attr-defined]
+            for phase in phases:
+                         ^~~~~~
+tests/test_agent_state_machines.py:118: error: Value of type "object" is not
+indexable  [index]
+            assert phases[1]["tasks"][1]["status"] == "in_progress"
+                   ^~~~~~~~~
+tests/test_agent_state_machines.py:123: error: Value of type "object" is not
+indexable  [index]
+            sprint["phases"][1]["tasks"][0]["status"] = "in_progress"
+            ^~~~~~~~~~~~~~~~~~~
+tests/test_agent_state_machines.py:127: error: "object" has no attribute
+"__iter__"; maybe "__dir__" or "__str__"? (not iterable)  [attr-defined]
+            for phase in phases:
+                         ^~~~~~
+tests/test_agent_state_machines.py:132: error: Value of type "object" is not
+indexable  [index]
+            assert phases[1]["tasks"][0]["status"] == "completed"
+                   ^~~~~~~~~
+tests/test_agent_state_machines.py:139: error: Value of type "object" is not
+indexable  [index]
+            for task in sprint["phases"][1]["tasks"]:
+                        ^~~~~~~~~~~~~~~~~~~
+tests/test_agent_state_machines.py:143: error: Value of type "object" is not
+indexable  [index]
+            phase = sprint["phases"][1]
+                    ^~~~~~~~~~~~~~~~~~~
+tests/test_agent_state_machines.py:151: error: Value of type "object" is not
+indexable  [index]
+            assert sprint["phases"][1]["status"] == "completed"
+                   ^~~~~~~~~~~~~~~~~~~
+tests/test_agent_state_machines.py:159: error: Value of type "object" is not
+indexable  [index]
+            if sprint["phases"][0]["status"] == "completed":
+               ^~~~~~~~~~~~~~~~~~~
+tests/test_agent_state_machines.py:165: error: "object" has no attribute
+"__iter__"; maybe "__dir__" or "__str__"? (not iterable)  [attr-defined]
+            for phase in sprint["phases"]:
+                         ^~~~~~~~~~~~~~~~
+tests/test_agent_state_machines.py:168: error: "object" has no attribute
+"__iter__"; maybe "__dir__" or "__str__"? (not iterable)  [attr-defined]
+    ... all(phase.get("status") == "completed" for phase in sprint["phases"])
+                                                            ^~~~~~~~~~~~~~~~
+tests/test_agent_state_machines.py:242: error: Value of type "object" is not
+indexable  [index]
+    ...phases = [phase for phase in sprint["phases"] if phase["status"] == "i...
+                                                        ^~~~~~~~~~~~~~~
+tests/test_agent_state_machines.py:245: error: "object" has no attribute "get"
+[attr-defined]
+            assert all(phase.get("concurrent", True) for phase in active_p...
+                       ^~~~~~~~~
+tests/test_agent_state_machines.py:268: error: "Collection[str]" has no
+attribute "get"  [attr-defined]
+    ...on_blocked_tasks = [t for t in phase["tasks"] if t.get("status") != "b...
+                                                        ^~~~~
+tests/test_agent_state_machines.py:270: error: "Collection[str]" has no
+attribute "get"  [attr-defined]
+            all_non_blocked_completed = all(t.get("status") == "completed"...
+                                            ^~~~~
+tests/test_sprint_issue_linker_coverage.py:166: error: Unsupported right
+operand type for in ("object")  [operator]
+            assert "Implement feature A" in existing_issues[0]["body"]
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_property_based_extended.py:22: error: Name "given" already defined
+(possibly by an import)  [no-redef]
+        def given(*args, **kwargs):
+        ^
+tests/test_property_based_extended.py:39: error: List item 2 has incompatible
+type "Literal['.']"; expected
+"Literal['L', 'Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'M', 'Mn', 'Mc', 'Me', 'N', 'Nd', 'Nl', 'No', 'P', 'Pc', 'Pd', 'Ps', 'Pe', 'Pi', 'Pf', 'Po', 'S', 'Sm', 'Sc', 'Sk', 'So', 'Z', 'Zs', 'Zl', 'Zp', 'C', 'Cc', 'Cf', 'Cs', 'Co', 'Cn']"
+ [list-item]
+    ...ze=1, max_size=10, alphabet=st.characters(categories=["Nd", "L", "."])
+                                                                        ^~~
+tests/test_property_based_extended.py:121: error: Unused "type: ignore" comment
+ [unused-ignore]
+                    can_transition = next_status in allowed_next  # type: ...
+                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/test_property_based_extended.py:217: error: Argument 1 to "len" has
+incompatible type "Bundle[Any]"; expected "Sized"  [arg-type]
+                doc_id = f"doc_{len(self.documents)}"
+                                    ^~~~~~~~~~~~~~
+tests/test_property_based_extended.py:280: error: Signature of "invariants"
+incompatible with supertype "RuleBasedStateMachine"  [override]
+            def invariants(self):
+            ^
+tests/test_property_based_extended.py:280: note:      Superclass:
+tests/test_property_based_extended.py:280: note:          def invariants(cls) -> list[Invariant]
+tests/test_property_based_extended.py:280: note:      Subclass:
+tests/test_property_based_extended.py:280: note:          def invariants(self) -> Any
+tests/test_property_based_extended.py:282: error: "Bundle[Any]" has no
+attribute "__iter__" (not iterable)  [attr-defined]
+                for doc in self.documents:
+                           ^~~~~~~~~~~~~~
+tests/test_metadata_validation.py:180: error: No overload variant of "int"
+matches argument type "object"  [call-overload]
+            assert int(agent_metadata["max_retries"]) >= 0
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_metadata_validation.py:180: note: Possible overload variants:
+tests/test_metadata_validation.py:180: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+tests/test_metadata_validation.py:180: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+tests/test_metadata_validation.py:181: error: No overload variant of "int"
+matches argument type "object"  [call-overload]
+            assert int(agent_metadata["timeout_seconds"]) > 0
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_metadata_validation.py:181: note: Possible overload variants:
+tests/test_metadata_validation.py:181: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+tests/test_metadata_validation.py:181: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+tests/test_metadata_validation.py:197: error: No overload variant of "int"
+matches argument type "object"  [call-overload]
+            assert int(connection_metadata["port"]) > 0
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_metadata_validation.py:197: note: Possible overload variants:
+tests/test_metadata_validation.py:197: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+tests/test_metadata_validation.py:197: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+tests/test_metadata_validation.py:198: error: No overload variant of "int"
+matches argument type "object"  [call-overload]
+            assert int(connection_metadata["port"]) <= 65535
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_metadata_validation.py:198: note: Possible overload variants:
+tests/test_metadata_validation.py:198: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+tests/test_metadata_validation.py:198: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+tests/test_metadata_validation.py:200: error: No overload variant of "int"
+matches argument type "object"  [call-overload]
+            assert int(connection_metadata["connection_timeout"]) > 0
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_metadata_validation.py:200: note: Possible overload variants:
+tests/test_metadata_validation.py:200: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+tests/test_metadata_validation.py:200: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+tests/test_metadata_validation.py:201: error: No overload variant of "int"
+matches argument type "object"  [call-overload]
+            assert int(connection_metadata["read_timeout"]) >= int(
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_metadata_validation.py:201: note: Possible overload variants:
+tests/test_metadata_validation.py:201: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+tests/test_metadata_validation.py:201: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+tests/test_metadata_validation.py:260: error: "Collection[str]" has no
+attribute "get"  [attr-defined]
+                assert ref.get("type") in ["decision", "design", "sprint",...
+                       ^~~~~~~
+tests/test_metadata_validation.py:261: error: "Collection[str]" has no
+attribute "get"  [attr-defined]
+                assert isinstance(ref.get("id"), str)
+                                  ^~~~~~~
+tests/test_metadata_validation.py:262: error: "Collection[str]" has no
+attribute "get"  [attr-defined]
+                assert len(str(ref.get("id", ""))) > 0
+                               ^~~~~~~
+tests/test_metadata_validation.py:347: error: No overload variant of "int"
+matches argument type "object"  [call-overload]
+            assert int(aggregation_metadata["samples"]) > 0
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_metadata_validation.py:347: note: Possible overload variants:
+tests/test_metadata_validation.py:347: note:     def int(str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc = ..., /) -> int
+tests/test_metadata_validation.py:347: note:     def int(str | bytes | bytearray, /, base: SupportsIndex) -> int
+tests/test_metadata_validation.py:348: error: Argument 1 to "float" has
+incompatible type "object"; expected
+"str | Buffer | SupportsFloat | SupportsIndex"  [arg-type]
+            assert float(aggregation_metadata["min_value"]) <= float(aggre...
+                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_metadata_validation.py:349: error: Argument 1 to "float" has
+incompatible type "object"; expected
+"str | Buffer | SupportsFloat | SupportsIndex"  [arg-type]
+            assert float(aggregation_metadata["avg_value"]) <= float(aggre...
+                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_metadata_validation.py:350: error: Argument 1 to "float" has
+incompatible type "object"; expected
+"str | Buffer | SupportsFloat | SupportsIndex"  [arg-type]
+            assert float(aggregation_metadata["std_deviation"]) >= 0
+                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:404: error: Value of type "object" is not
+indexable  [index]
+            assert snapshot["metadata"]["version"] == "1.0"
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:405: error: Unsupported right operand type
+for in ("object")  [operator]
+            assert "created_at" in snapshot["metadata"]
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:408: error: Value of type "object" is not
+indexable  [index]
+            total = sum(snapshot["documents"]["by_type"].values())
+                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:409: error: Value of type "object" is not
+indexable  [index]
+            assert total == snapshot["documents"]["total_count"]
+                            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:425: error: Value of type "Collection[str]"
+is not indexable  [index]
+                "documents_added": snapshot2["documents"]["total_count"]
+                                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:426: error: Value of type "Collection[str]"
+is not indexable  [index]
+                - snapshot1["documents"]["total_count"],
+                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:427: error: Value of type "Collection[str]"
+is not indexable  [index]
+                "checksum_changed": snapshot1["documents"]["checksum"]
+                                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:428: error: Value of type "Collection[str]"
+is not indexable  [index]
+                != snapshot2["documents"]["checksum"],
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:430: error: Argument 1 to "fromisoformat"
+of "date" has incompatible type "Collection[str]"; expected "str"  [arg-type]
+                    datetime.fromisoformat(snapshot2["timestamp"])
+                                           ^~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:431: error: Argument 1 to "fromisoformat"
+of "date" has incompatible type "Collection[str]"; expected "str"  [arg-type]
+                    - datetime.fromisoformat(snapshot1["timestamp"])
+                                             ^~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:477: error: Value of type "object" is not
+indexable  [index]
+            assert config["agents"]["cleanup_agent"]["retention_days"] == ...
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_e2e_project_lifecycle.py:478: error: Value of type "object" is not
+indexable  [index]
+            assert config["system"]["project_name"] == "unnamed_project"
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_chaos_engineering.py:271: error: Returning Any from function
+declared to return "dict[Any, Any]"  [no-any-return]
+                            return response.json()
+                            ^~~~~~~~~~~~~~~~~~~~~~
+tests/test_security.py:215: error: Incompatible types in assignment (expression
+has type "object", variable has type "int")  [assignment]
+            for num in invalid_numbers:
+            ^
+tests/test_security.py:220: error: Statement is unreachable  [unreachable]
+                    assert not isinstance(num, int)
+                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/load_tests.py:290: error: Item "None" of "Runner | None" has no attribute
+"start"  [union-attr]
+            env.runner.start(users, spawn_rate=spawn_rate)
+            ^~~~~~~~~~~~~~~~
+tests/load_tests.py:298: error: Item "None" of "Runner | None" has no attribute
+"greenlet"  [union-attr]
+            env.runner.greenlet.join(timeout=run_seconds)
+            ^~~~~~~~~~~~~~~~~~~
+tests/load_tests.py:301: error: Item "None" of "Runner | None" has no attribute
+"quit"  [union-attr]
+            env.runner.quit()
+            ^~~~~~~~~~~~~~~
+tests/load_tests.py:312: error: Unsupported target for indexed assignment
+("object")  [index]
+                results["endpoints"][name] = {
+                ^~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/load_tests.py:324: error: Argument 1 to "check_performance_thresholds"
+has incompatible type "object"; expected "dict[str, Any]"  [arg-type]
+            passed = check_performance_thresholds(results["endpoints"])
+                                                  ^~~~~~~~~~~~~~~~~~~~
+tests/load_tests.py:375: error: Value of type "dict[str, Any] | None" is not
+indexable  [index]
+    ...              writer.writerow(["total_requests", results["total_reques...
+                                                        ^~~~~~~~~~~~~~~~~~~~~...
+tests/load_tests.py:376: error: Value of type "dict[str, Any] | None" is not
+indexable  [index]
+                    writer.writerow(["failure_rate", results["failure_rate...
+                                                     ^~~~~~~~~~~~~~~~~~~~~~~
+tests/load_tests.py:377: error: Value of type "dict[str, Any] | None" is not
+indexable  [index]
+    ...           writer.writerow(["avg_response_time", results["avg_response...
+                                                        ^~~~~~~~~~~~~~~~~~~~~...
+tests/load_tests.py:378: error: Value of type "dict[str, Any] | None" is not
+indexable  [index]
+    ...           writer.writerow(["thresholds_passed", results["thresholds_p...
+                                                        ^~~~~~~~~~~~~~~~~~~~~...
+tests/load_tests.py:384: error: Value of type "dict[str, Any] | None" is not
+indexable  [index]
+                    for name, stats in results["endpoints"].items():
+                                       ^~~~~~~~~~~~~~~~~~~~
+tests/load_tests.py:405: error: Value of type "dict[str, Any] | None" is not
+indexable  [index]
+                    <p>Total Requests: {results['total_requests']}</p>
+                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/load_tests.py:406: error: Value of type "dict[str, Any] | None" is not
+indexable  [index]
+                    <p>Failure Rate: {results['failure_rate']:.2%}</p>
+                                     ^~~~~~~~~~~~~~~~~~~~~~~~
+tests/load_tests.py:407: error: Value of type "dict[str, Any] | None" is not
+indexable  [index]
+                    <p>Avg Response Time: {results['avg_response_time']:.2...
+                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/load_tests.py:408: error: Value of type "dict[str, Any] | None" is not
+indexable  [index]
+                    <p>Thresholds: {'✅ PASSED' if results['thresholds_pass...
+                                                    ^~~~~~~~~~~~~~~~~~~~~~...
+tests/load_tests.py:418: error: Value of type "dict[str, Any] | None" is not
+indexable  [index]
+                for name, stats in results["endpoints"].items():
+                                   ^~~~~~~~~~~~~~~~~~~~
+tests/load_tests.py:440: error: Value of type "dict[str, Any] | None" is not
+indexable  [index]
+            exit(0 if results["thresholds_passed"] else 1)
+                      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_graph_db.py:573: error: "None" not callable  [misc]
+            main.callback("neo4j", "test", True, True, True)
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:109: error: Unsupported target for indexed
+assignment ("Collection[str]")  [index]
+                snapshot["documents"][str(doc_file.name)] = {
+                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:116: error: Value of type "Collection[str]" is
+not indexable  [index]
+                snapshot["metadata"]["total_documents"] += 1
+                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:116: error: Unsupported target for indexed
+assignment ("Collection[str]")  [index]
+                snapshot["metadata"]["total_documents"] += 1
+                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:118: error: Value of type "Collection[str]" is
+not indexable  [index]
+                snapshot["metadata"]["document_types"][doc_type] = (
+                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:119: error: Value of type "Collection[str]" is
+not indexable  [index]
+                    snapshot["metadata"]["document_types"].get(doc_type, 0...
+                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:128: error: Value of type "Collection[str]" is
+not indexable  [index]
+            assert snapshot["metadata"]["total_documents"] == 2
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:129: error: Value of type "Collection[str]" is
+not indexable  [index]
+            assert "sprint" in snapshot["metadata"]["document_types"]
+                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:130: error: Value of type "Collection[str]" is
+not indexable  [index]
+            assert "decision" in snapshot["metadata"]["document_types"]
+                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:217: error: Unsupported target for indexed
+assignment ("object")  [index]
+            graph_snapshot["metadata"]["snapshot_hash"] = hashlib.sha256(
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:235: error: Value of type "object" is not
+indexable  [index]
+            assert recalc_hash == graph_snapshot["metadata"]["snapshot_has...
+                                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:276: error: Argument "ttl_seconds" to "set_cache"
+of "RedisConnector" has incompatible type "object"; expected "int | None"
+[arg-type]
+    ... kv_store.redis.set_cache(key, data["value"], ttl_seconds=data["ttl"])
+                                                                 ^~~~~~~~~~~
+tests/test_reproducibility.py:293: error: Value of type "Collection[str]" is
+not indexable  [index]
+                checkpoint["system_state"]["documents"][doc_file.name] = d...
+                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:298: error: Value of type "Collection[str]" is
+not indexable  [index]
+            checkpoint["system_state"]["configuration"]["config"] = config...
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:303: error: Value of type "Collection[str]" is
+not indexable  [index]
+            checkpoint["system_state"]["metrics"]["performance"] = metrics...
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:307: error: Unsupported target for indexed
+assignment ("Collection[str]")  [index]
+            checkpoint["verification"]["total_hash"] = hashlib.sha256(stat...
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:341: error: Value of type "object" is not
+indexable  [index]
+                if change["op"] == "add" or change["op"] == "update":
+                   ^~~~~~~~~~~~
+tests/test_reproducibility.py:342: error: Value of type "object" is not
+indexable  [index]
+                    current_content[change["path"]] = change["value"]
+                                    ^~~~~~~~~~~~~~
+tests/test_reproducibility.py:361: error: Value of type "object" is not
+indexable  [index]
+                if change["op"] in ["add", "update"]:
+                   ^~~~~~~~~~~~
+tests/test_reproducibility.py:362: error: Value of type "object" is not
+indexable  [index]
+                    reproduced_content[change["path"]] = change["value"]
+                                       ^~~~~~~~~~~~~~
+tests/test_reproducibility.py:389: error: Unsupported target for indexed
+assignment ("Collection[str]")  [index]
+                snapshot["documents"][doc_file.name] = {
+                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_reproducibility.py:409: error: Returning Any from function declared
+to return "bool"  [no-any-return]
+            return calculated_hash == checkpoint["verification"]["total_ha...
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/test_property_based.py:21: error: Name "given" already defined (possibly
+by an import)  [no-redef]
+        def given(*args, **kwargs):
+        ^
+tests/test_property_based.py:27: error: All conditional function variants must
+have identical signatures  [misc]
+        def assume(*args, **kwargs):
+        ^
+tests/test_property_based.py:27: note: Original:
+tests/test_property_based.py:27: note:     def assume(condition: object) -> bool
+tests/test_property_based.py:27: note: Redefinition:
+tests/test_property_based.py:27: note:     def assume(*args: Any, **kwargs: Any) -> Any
+tests/test_property_based.py:30: error: Name "st" already defined (by an
+import)  [no-redef]
+        class st:
+        ^
+tests/test_property_based.py:393: error: Unsupported operand types for <=
+("int" and "object")  [operator]
+                    assert event["value"] >= 0
+                           ^
+tests/test_performance_benchmarks.py:204: error: Unsupported right operand type
+for in ("object")  [operator]
+                results = [item for item in items if "tag_2" in item["tags...
+                                                     ^~~~~~~~~~~~~~~~~~~~~~~
+tests/test_performance_benchmarks.py:204: error: Unsupported operand types for
+% ("object" and "int")  [operator]
+    ...for item in items if "tag_2" in item["tags"] and item["id"] % 50 == 3]
+                                                        ^
+tests/test_performance_benchmarks.py:229: error: Incompatible types in
+assignment (expression has type "Any | None", variable has type
+"dict[str, object]")  [assignment]
+                    value = cache.get(key)
+                            ^~~~~~~~~~~~~~
+tests/test_integration_real.py:106: error: Value of type "object" is not
+indexable  [index]
+            file_path = test_dir / f"{doc['id']}.yaml"
+                                     ^~~~~~~~~~
+tests/test_integration_real.py:188: error: Item "None" of "Driver | None" has
+no attribute "session"  [union-attr]
+            with builder.driver.session(database=builder.database) as sess...
+                 ^~~~~~~~~~~~~~~~~~~~~~
+tests/test_integration_real.py:191: error: Value of type "Record | Any | None"
+is not indexable  [index]
+                assert result.single()["count"] == 3
+                       ^~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_integration_real.py:195: error: Value of type "Record | Any | None"
+is not indexable  [index]
+                assert result.single()["count"] >= 1  # At least one refer...
+                       ^~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_integration_real.py:285: error: Item "None" of "Driver | None" has
+no attribute "session"  [union-attr]
+                with builder.driver.session(database=builder.database) as ...
+                     ^~~~~~~~~~~~~~~~~~~~~~
+tests/test_integration_embedding_flow.py:272: error: Argument 1 to
+"_compute_content_hash" of "HashDiffEmbedder" has incompatible type "None";
+expected "str"  [arg-type]
+                embedder._compute_content_hash(None)
+                                               ^~~~
+tests/test_integration_embedding_flow.py:276: error: Argument 1 to
+"_compute_embedding_hash" of "HashDiffEmbedder" has incompatible type "str";
+expected "list[float]"  [arg-type]
+            hash_result = embedder._compute_embedding_hash("not a list")
+                                                           ^~~~~~~~~~~~
+tests/test_integration_embedding_flow.py:297: error: Argument 1 to
+"embed_document" of "HashDiffEmbedder" has incompatible type "str"; expected
+"Path"  [arg-type]
+                    embedder.embed_document("test content", "test_doc")
+                                            ^~~~~~~~~~~~~~
+tests/test_integration_embedding_flow.py:297: error: Argument 2 to
+"embed_document" of "HashDiffEmbedder" has incompatible type "str"; expected
+"bool"  [arg-type]
+                    embedder.embed_document("test content", "test_doc")
+                                                            ^~~~~~~~~~
+tests/test_integration_embedding_flow.py:398: error: Unsupported operand types
+for < ("int" and "object")  [operator]
+                assert config["dimensions"] > 0
+                       ^
+tests/test_integration_embedding_flow.py:399: error: Unsupported operand types
+for < ("int" and "object")  [operator]
+                assert config["max_tokens"] > 0
+                       ^
+tests/test_integration_embedding_flow.py:400: error: "object" has no attribute
+"startswith"  [attr-defined]
+                assert config["model"].startswith("text-embedding")
+                       ^~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_integration_embedding_flow.py:411: error: Value of type "object" is
+not indexable  [index]
+            assert collection_config["vectors"]["size"] in [1536, 3072]
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_integration_embedding_flow.py:412: error: Value of type "object" is
+not indexable  [index]
+            assert collection_config["vectors"]["distance"] in ["Cosine", ...
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_integration_embedding_flow.py:415: error: Value of type "object" is
+not indexable  [index]
+            assert collection_config["optimizers_config"]["indexing_thresh...
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/test_integration_embedding_flow.py:416: error: Value of type "object" is
+not indexable  [index]
+            assert collection_config["hnsw_config"]["m"] >= 4
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_integration_embedding_flow.py:446: error: Incompatible types in
+assignment (expression has type "float", target has type "int")  [assignment]
+            metrics["total_time_ms"] = (end_time - start_time).total_secon...
+                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/test_integration_embedding_flow.py:448: error: Incompatible types in
+assignment (expression has type "float | int", target has type "int")
+[assignment]
+                metrics["total_time_ms"] / metrics["documents_processed"]
+                ^
+tests/test_hash_diff_embedder_coverage.py:284: error: Cannot assign to a method
+ [method-assign]
+                embedder.embed_document = mock_embed
+                ^~~~~~~~~~~~~~~~~~~~~~~
+tests/test_hash_diff_embedder.py:37: error: "TestHashDiffEmbedder" has no
+attribute "test_config"  [attr-defined]
+                yaml.dump(self.test_config, f)
+                          ^~~~~~~~~~~~~~~~
+tests/test_hash_diff_embedder.py:300: error: Argument 1 to
+"_compute_content_hash" of "HashDiffEmbedder" has incompatible type "None";
+expected "str"  [arg-type]
+                embedder._compute_content_hash(None)
+                                               ^~~~
+tests/test_hash_diff_embedder.py:331: error: Argument 1 to
+"_compute_embedding_hash" of "HashDiffEmbedder" has incompatible type "str";
+expected "list[float]"  [arg-type]
+            hash1 = embedder._compute_embedding_hash("not a list")
+                                                     ^~~~~~~~~~~~
+tests/test_hash_diff_embedder.py:335: error: Argument 1 to
+"_compute_embedding_hash" of "HashDiffEmbedder" has incompatible type
+"dict[str, str]"; expected "list[float]"  [arg-type]
+            hash2 = embedder._compute_embedding_hash({"key": "value"})
+                                                     ^~~~~~~~~~~~~~~~
+tests/test_hash_diff_embedder.py:340: error: Argument 1 to
+"_compute_embedding_hash" of "HashDiffEmbedder" has incompatible type "None";
+expected "list[float]"  [arg-type]
+                embedder._compute_embedding_hash(None)
+                                                 ^~~~
+tests/test_hash_diff_embedder.py:416: error: Argument 1 to
+"ResponseHandlingException" has incompatible type "str"; expected "Exception"
+[arg-type]
+    ...t_client.side_effect = ResponseHandlingException("Connection timeout")
+                                                        ^~~~~~~~~~~~~~~~~~~~
+tests/test_hash_diff_embedder.py:430: error: Argument "document_id" to
+"DocumentHash" has incompatible type "int"; expected "str"  [arg-type]
+                document_id=123,  # Should be string
+                            ^~~
+tests/test_hash_diff_embedder.py:431: error: Argument "file_path" to
+"DocumentHash" has incompatible type "None"; expected "str"  [arg-type]
+                file_path=None,  # Should be string
+                          ^~~~
+tests/test_hash_diff_embedder.py:432: error: Argument "content_hash" to
+"DocumentHash" has incompatible type "list[Never]"; expected "str"  [arg-type]
+                content_hash=[],  # Should be string
+                             ^~
+tests/test_hash_diff_embedder.py:433: error: Argument "embedding_hash" to
+"DocumentHash" has incompatible type "dict[Never, Never]"; expected "str"
+[arg-type]
+                embedding_hash={},  # Should be string
+                               ^~
+tests/test_hash_diff_embedder.py:434: error: Argument "last_embedded" to
+"DocumentHash" has incompatible type "datetime"; expected "str"  [arg-type]
+                last_embedded=datetime.now(),  # Should be string
+                              ^~~~~~~~~~~~~~
+tests/test_hash_diff_embedder.py:435: error: Argument "vector_id" to
+"DocumentHash" has incompatible type "bool"; expected "str"  [arg-type]
+                vector_id=True,  # Should be string
+                          ^~~~
+tests/test_hash_diff_embedder.py:439: error: Non-overlapping equality check
+(left operand type: "str", right operand type: "Literal[123]")
+[comparison-overlap]
+            assert doc_hash.document_id == 123
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_hash_diff_embedder.py:572: error: Cannot assign to a method
+[method-assign]
+            embedder._save_hash_cache = lambda: increment_access()
+            ^~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_edge_cases.py:26: error: Name "given" already defined (possibly by
+an import)  [no-redef]
+        def given(*args, **kwargs):
+        ^
+tests/test_edge_cases.py:32: error: Name "st" already defined (by an import)
+[no-redef]
+        class st:
+        ^
+tests/test_edge_cases.py:249: error: Argument 1 to "validate_time_range" has
+incompatible type "datetime | None"; expected "datetime"  [arg-type]
+                    result = validate_time_range(start, end)
+                                                 ^~~~~
+tests/test_edge_cases.py:249: error: Argument 2 to "validate_time_range" has
+incompatible type "datetime | None"; expected "datetime"  [arg-type]
+                    result = validate_time_range(start, end)
+                                                        ^~~
+tests/test_e2e.py:126: error: Incompatible types in assignment (expression has
+type "Path", variable has type "str")  [assignment]
+                original_cwd = Path(__file__).parent.parent
+                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/test_benchmarks.py:162: error: Argument 3 to "submit" of "Executor" has
+incompatible type "str"; expected "DocumentHash"  [arg-type]
+    ...             embedder.hash_cache.__setitem__, f"key_{i}", f"value_{i}"
+                                                                 ^~~~~~~~~~~~
+tests/test_benchmarks.py:166: error: Argument 1 to "submit" of "Executor" has
+incompatible type overloaded function; expected "Callable[[str, None], None]"
+[arg-type]
+                            future = executor.submit(embedder.hash_cache.g...
+                                                     ^~~~~~~~~~~~~~~~~~~~~~~
+Found 140 errors in 22 files (checked 72 source files)

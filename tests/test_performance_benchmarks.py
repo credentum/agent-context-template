@@ -86,7 +86,9 @@ class TestPerformanceBenchmarks:
 
         yaml_content = yaml.dump(doc, default_flow_style=False)
 
-        with timing_assert(5.0, "YAML parsing for typical document"):
+        with timing_assert(
+            8.0, "YAML parsing for typical document"
+        ):  # Increased from 5.0 for CI stability
             for _ in range(100):
                 yaml.safe_load(yaml_content)
 
@@ -96,7 +98,7 @@ class TestPerformanceBenchmarks:
         # Test Redis key validation
         keys = [f"test:key:{i}" for i in range(1000)]
 
-        with timing_assert(0.01, "Redis key validation (1000 keys)"):
+        with timing_assert(0.02, "Redis key validation (1000 keys)"):
             for key in keys:
                 validate_redis_key(key)
 

@@ -200,7 +200,7 @@ class TestSigstoreWorkflow:
     def test_verification_policy(self):
         """Test document verification policies"""
         # Define verification policies
-        policies = {
+        policies: dict[str, dict[str, Any]] = {
             "critical_documents": {
                 "document_types": ["decision", "design"],
                 "require_signature": True,
@@ -220,7 +220,8 @@ class TestSigstoreWorkflow:
         # Find applicable policy
         applicable_policy = None
         for policy_name, policy in policies.items():
-            if doc_type in policy.get("document_types", []):
+            document_types: list[str] = policy.get("document_types", [])
+            if doc_type in document_types:
                 applicable_policy = policy
                 break
 
@@ -253,7 +254,7 @@ class TestSigstoreWorkflow:
     def test_signature_metadata(self):
         """Test signature metadata and annotations"""
         # Create signature with metadata
-        signature_metadata = {
+        signature_metadata: dict[str, Any] = {
             "signature": "base64_signature_here",
             "certificate": "base64_certificate_here",
             "annotations": {
@@ -272,7 +273,9 @@ class TestSigstoreWorkflow:
 
         # Validate metadata
         assert "annotations" in signature_metadata
-        assert signature_metadata.get("annotations", {}).get("git.branch") == "main"
+        annotations: dict[str, Any] = signature_metadata.get("annotations", {})
+        git_branch: str = annotations.get("git.branch", "")
+        assert git_branch == "main"
         assert "verification_metadata" in signature_metadata
 
 
@@ -282,19 +285,20 @@ class TestSigstoreRecovery:
     def test_missing_signature_handling(self):
         """Test handling documents with missing signatures"""
         # Document without signature
-        doc_info = {
+        doc_info: dict[str, Any] = {
             "path": "context/docs/unsigned.yaml",
             "type": "design",
             "requires_signature": True,
         }
 
         # Check for signature file
-        sig_path = Path(str(doc_info.get("path", "")) + ".sig")
+        doc_path: str = str(doc_info.get("path", ""))
+        sig_path = Path(doc_path + ".sig")
         has_signature = sig_path.exists()
 
         # Handle missing signature
         if not has_signature and doc_info["requires_signature"]:
-            recovery_action = {
+            recovery_action: dict[str, Any] = {
                 "action": "quarantine",
                 "reason": "Missing required signature",
                 "document": doc_info["path"],
@@ -306,7 +310,8 @@ class TestSigstoreRecovery:
             }
 
             assert recovery_action["action"] == "quarantine"
-            assert len(str(recovery_action.get("suggested_remediation", ""))) > 0
+            remediation: list[str] = recovery_action.get("suggested_remediation", [])
+            assert isinstance(remediation, list) and len(remediation) > 0
 
     def test_signature_chain_validation(self):
         """Test validation of signature chains for document history"""

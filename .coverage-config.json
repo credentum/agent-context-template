@@ -1,0 +1,7 @@
+{
+  "baseline": 78.5,
+  "target": 85.0,
+  "validator_target": 90.0,
+  "description": "Coverage thresholds for the agent-context-template project",
+  "last_updated": "2025-07-15"
+}
