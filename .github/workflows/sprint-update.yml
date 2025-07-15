@@ -1,6 +1,7 @@
+---
 name: Sprint Update
 
-on:
+"on":
   issues:
     types: [opened, closed, reopened, labeled, unlabeled]
   pull_request:
@@ -24,167 +25,184 @@ jobs:
       pull-requests: write
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install click pyyaml
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install click pyyaml
 
-    - name: Auto-close completed issues on PR merge
-      if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        set -e
+      - name: Auto-close completed issues on PR merge
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.action == 'closed' &&
+          github.event.pull_request.merged == true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
 
-        # Extract PR body and commit messages to find issue references
-        pr_number="${{ github.event.pull_request.number }}"
-        pr_body="${{ github.event.pull_request.body }}"
-        pr_title="${{ github.event.pull_request.title }}"
+          # Extract PR body and commit messages to find issue references
+          pr_number="${{ github.event.pull_request.number }}"
+          pr_body="${{ github.event.pull_request.body }}"
+          pr_title="${{ github.event.pull_request.title }}"
 
-        echo "Checking PR #$pr_number for issue closing keywords..."
+          echo "Checking PR #$pr_number for issue closing keywords..."
 
-        issues_to_close=""
+          issues_to_close=""
 
-        # Check PR body and title for closing patterns
-        combined_text="$pr_body $pr_title"
+          # Check PR body and title for closing patterns
+          combined_text="$pr_body $pr_title"
 
-        # Extract issue numbers after closing keywords (improved regex)
-        issue_nums=$(echo "$combined_text" | grep -ioE "(closes?|fixes?|resolves?|implements?)\s+#[0-9]+" | grep -oE "#[0-9]+" | sed 's/#//')
+          # Extract issue numbers after closing keywords (improved regex)
+          issue_nums=$(echo "$combined_text" | \
+            grep -ioE "(closes?|fixes?|resolves?|implements?)\s+#[0-9]+" | \
+            grep -oE "#[0-9]+" | sed 's/#//')
 
-        # Also check commit messages for closing keywords
-        commit_messages=$(gh pr view $pr_number --json commits --jq '.commits[].messageHeadline' | tr '\n' ' ')
-        commit_issue_nums=$(echo "$commit_messages" | grep -ioE "(closes?|fixes?|resolves?|implements?)\s+#[0-9]+" | grep -oE "#[0-9]+" | sed 's/#//')
+          # Also check commit messages for closing keywords
+          commit_messages=$(gh pr view $pr_number --json commits \
+            --jq '.commits[].messageHeadline' | tr '\n' ' ')
+          commit_issue_nums=$(echo "$commit_messages" | \
+            grep -ioE "(closes?|fixes?|resolves?|implements?)\s+#[0-9]+" | \
+            grep -oE "#[0-9]+" | sed 's/#//')
 
-        if [ -n "$issue_nums" ]; then
-          issues_to_close="$issue_nums"
-        fi
+          if [ -n "$issue_nums" ]; then
+            issues_to_close="$issue_nums"
+          fi
 
-        if [ -n "$commit_issue_nums" ]; then
-          issues_to_close="$issues_to_close $commit_issue_nums"
-        fi
+          if [ -n "$commit_issue_nums" ]; then
+            issues_to_close="$issues_to_close $commit_issue_nums"
+          fi
 
-        # Remove duplicates and close issues
-        if [ -n "$issues_to_close" ]; then
-          unique_issues=$(echo "$issues_to_close" | tr ' ' '\n' | sort -u | tr '\n' ' ')
-          echo "Found issues to close: $unique_issues"
+          # Remove duplicates and close issues
+          if [ -n "$issues_to_close" ]; then
+            unique_issues=$(echo "$issues_to_close" | \
+              tr ' ' '\n' | sort -u | tr '\n' ' ')
+            echo "Found issues to close: $unique_issues"
 
-          for issue_num in $unique_issues; do
-            if [ -n "$issue_num" ]; then
-              echo "Attempting to close issue #$issue_num..."
+            for issue_num in $unique_issues; do
+              if [ -n "$issue_num" ]; then
+                echo "Attempting to close issue #$issue_num..."
 
-              # Check if issue exists and is open
-              issue_state=$(gh issue view "$issue_num" --json state --jq '.state' 2>/dev/null || echo "NOT_FOUND")
+                # Check if issue exists and is open
+                issue_state=$(gh issue view "$issue_num" --json state \
+                  --jq '.state' 2>/dev/null || echo "NOT_FOUND")
 
-              if [ "$issue_state" = "NOT_FOUND" ]; then
-                echo "⚠️  Issue #$issue_num does not exist - skipping"
-                continue
+                if [ "$issue_state" = "NOT_FOUND" ]; then
+                  echo "WARNING: Issue #$issue_num does not exist - skipping"
+                  continue
+                fi
+
+                if [ "$issue_state" = "CLOSED" ]; then
+                  echo "INFO: Issue #$issue_num is already closed - skipping"
+                  continue
+                fi
+
+                # Close the issue
+                comment="Automatically closed by merged PR #$pr_number"
+                if gh issue close "$issue_num" --comment "$comment"; then
+                  echo "SUCCESS: Successfully closed issue #$issue_num"
+                else
+                  echo "ERROR: Failed to close issue #$issue_num"
+                fi
               fi
+            done
+          else
+            echo "No closing keywords found in PR #$pr_number"
+          fi
 
-              if [ "$issue_state" = "CLOSED" ]; then
-                echo "ℹ️  Issue #$issue_num is already closed - skipping"
-                continue
-              fi
+      - name: Update sprint document
+        id: update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e  # Exit on error
+          if [ -n "${{ github.event.inputs.sprint_id }}" ]; then
+            python -m src.agents.update_sprint update \
+              --sprint "${{ github.event.inputs.sprint_id }}" --verbose
+          else
+            python -m src.agents.update_sprint update --verbose
+          fi
+          echo "update_status=$?" >> $GITHUB_OUTPUT
 
-              # Close the issue
-              if gh issue close "$issue_num" --comment "Automatically closed by merged PR #$pr_number 🎉"; then
-                echo "✅ Successfully closed issue #$issue_num"
-              else
-                echo "❌ Failed to close issue #$issue_num"
-              fi
-            fi
-          done
-        else
-          echo "No closing keywords found in PR #$pr_number"
-        fi
+      - name: Generate sprint report
+        if: success()
+        run: |
+          python -m src.agents.update_sprint report --verbose > sprint_report.md
+          cat sprint_report.md
 
-    - name: Update sprint document
-      id: update
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        set -e  # Exit on error
-        if [ -n "${{ github.event.inputs.sprint_id }}" ]; then
-          python -m src.agents.update_sprint update --sprint "${{ github.event.inputs.sprint_id }}" --verbose
-        else
-          python -m src.agents.update_sprint update --verbose
-        fi
-        echo "update_status=$?" >> $GITHUB_OUTPUT
+      - name: Create Pull Request for Sprint Updates
+        if: success()
+        uses: peter-evans/create-pull-request@v6
+        id: create-pr
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            chore: update sprint status via automation
 
-    - name: Generate sprint report
-      if: success()
-      run: |
-        python -m src.agents.update_sprint report --verbose > sprint_report.md
-        cat sprint_report.md
+            Updated based on issue/PR activity
+            Triggered by: ${{ github.event_name }}
 
-    - name: Create Pull Request for Sprint Updates
-      if: success()
-      uses: peter-evans/create-pull-request@v6
-      id: create-pr
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        commit-message: |
-          chore: update sprint status via automation
+            Co-Authored-By: github-actions[bot]
+              <github-actions[bot]@users.noreply.github.com>
+          title: "chore: automated sprint status update"
+          body: |
+            ## Sprint Status Update
 
-          Updated based on issue/PR activity
-          Triggered by: ${{ github.event_name }}
+            This PR contains automated updates to sprint status based on
+            recent issue/PR activity.
 
-          Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
-        title: "chore: automated sprint status update"
-        body: |
-          ## Sprint Status Update
+            **Triggered by:** ${{ github.event_name }}
+            **Event:** ${{ github.event.action }}
+            **Issue/PR:** #${{ github.event.number }}
 
-          This PR contains automated updates to sprint status based on recent issue/PR activity.
+            ### Changes
+            - Updated sprint YAML files in `context/sprints/`
+            - Reflected current issue states and progress
 
-          **Triggered by:** ${{ github.event_name }}
-          **Event:** ${{ github.event.action }}
-          **Issue/PR:** #${{ github.event.number }}
+            _This PR was automatically generated by the sprint update workflow._
+          branch: automation/sprint-update-${{ github.run_number }}
+          delete-branch: true
+          draft: false
+          labels: |
+            automation
+            sprint-update
+            auto-merge
 
-          ### Changes
-          - Updated sprint YAML files in `context/sprints/`
-          - Reflected current issue states and progress
+      - name: Enable Auto-Merge
+        if: steps.create-pr.outputs.pull-request-operation == 'created'
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: >-
+            ${{ steps.create-pr.outputs.pull-request-number }}
+          merge-method: squash
 
-          _This PR was automatically generated by the sprint update workflow._
-        branch: automation/sprint-update-${{ github.run_number }}
-        delete-branch: true
-        draft: false
-        labels: |
-          automation
-          sprint-update
-          auto-merge
+      - name: Create issue comment with report
+        if: github.event_name == 'issues' && success()
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('sprint_report.md', 'utf8');
 
-    - name: Enable Auto-Merge
-      if: steps.create-pr.outputs.pull-request-operation == 'created'
-      uses: peter-evans/enable-pull-request-automerge@v3
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
-        merge-method: squash
-
-    - name: Create issue comment with report
-      if: github.event_name == 'issues' && success()
-      continue-on-error: true
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const fs = require('fs');
-          const report = fs.readFileSync('sprint_report.md', 'utf8');
-
-          // Only comment on sprint-labeled issues
-          const labels = context.payload.issue.labels.map(l => l.name);
-          if (labels.some(l => l.startsWith('sprint-'))) {
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: `## Sprint Status Update\n\n${report}\n\n_This comment was automatically generated by the sprint update workflow._`
-            });
-          }
+            // Only comment on sprint-labeled issues
+            const labels = context.payload.issue.labels.map(l => l.name);
+            if (labels.some(l => l.startsWith('sprint-'))) {
+              const commentBody = `## Sprint Status Update\n\n${report}\n\n` +
+                `_This comment was automatically generated by the workflow._`;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            }

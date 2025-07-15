@@ -64,6 +64,16 @@ run_check "Context YAML validation" "python -m src.agents.context_lint validate 
 # From lint-verification.yml lines 73-75
 run_check "Import check" "python -m pytest --collect-only -q"
 
+# Additional: GitHub Actions workflow validation
+echo -e "\n${YELLOW}▶ GitHub Actions workflow validation${NC}"
+echo "  Command: yamllint .github/workflows/"
+if yamllint .github/workflows/; then
+    echo -e "  ${GREEN}✓ PASSED${NC}"
+else
+    echo -e "  ${RED}✗ FAILED${NC}"
+    FAILED=$((FAILED + 1))
+fi
+
 # Summary
 echo -e "\n========================================"
 if [ $FAILED -eq 0 ]; then

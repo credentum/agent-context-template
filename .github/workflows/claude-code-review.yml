@@ -257,11 +257,18 @@ jobs:
 
       # ---------- Auto-open GitHub issues for Suggested Follow-ups ----------
       - name: Parse Review and Create Issues
-        if: always() && contains(steps.claude-review.outputs.response, 'ISSUE:')
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "${{ steps.claude-review.outputs.response }}" > review.txt
+
+          # Debug: Show review content and check for ISSUE: lines
+          echo "=== REVIEW CONTENT DEBUG ==="
+          cat review.txt
+          echo "=== ISSUE LINES FOUND ==="
+          grep '^ISSUE:' review.txt || echo "No ISSUE: lines found"
+          echo "=== END DEBUG ==="
 
           # Collect all ISSUE: lines for aggregated issue creation
           issue_count=0
@@ -333,6 +340,7 @@ jobs:
 
           # Only create aggregated issue if we have suggestions
           if [ "$issue_count" -gt 0 ]; then
+            echo "Found $issue_count ISSUE suggestions, creating aggregated issue..."
             # Clean up phases list
             all_phases=${all_phases%, }
 
@@ -412,9 +420,13 @@ jobs:
                 --title "$aggregated_title" \
                 --body "$issue_body" \
                 --label "from-code-review,sprint-triage,phase=backlog"
+
+              echo "✅ Successfully created aggregated issue"
             fi
           else
             echo "No ISSUE: suggestions found in review"
+            echo "Review content was:"
+            cat review.txt | head -20
           fi
 
       # ---------- Upload Coverage Report ----------
