@@ -107,7 +107,8 @@ jobs:
             1. …
             **Coverage Delta:** <current>% → <new>% [PASS/FAIL]
             **Suggested Follow-ups:**
-            • <optional backlog items>
+            ISSUE: <title> - <description> - labels=<csv> - phase=<milestone>
+            (Use ISSUE: format for machine-parseable follow-ups that will auto-create GitHub issues)
             End of report. Do *not* add anything after this line.
           # enable sticky threaded comment
           use_sticky_comment: true
@@ -252,33 +253,81 @@ jobs:
 
       # ---------- Auto-open GitHub issues for Suggested Follow-ups ----------
       - name: Parse Review and Create Issues
-        if: contains(steps.claude-review.outputs.response, 'Suggested Follow-ups:')
+        if: contains(steps.claude-review.outputs.response, 'ISSUE:')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "${{ steps.claude-review.outputs.response }}" > review.txt
 
-          # Extract bullet lines under "Suggested Follow-ups:"
-          awk '/Suggested Follow-ups:/,/End of report/' review.txt | grep -E '^\s*•' | while read -r line; do
-            follow=${line#*• }
-            # Skip empty lines
-            [ -z "$follow" ] && continue
+          # Extract ISSUE: lines from review output
+          grep '^ISSUE:' review.txt | while read -r line; do
+            echo "Processing: $line"
 
-            # Try to extract title:description format, otherwise use whole line
-            if [[ "$follow" == *":"* ]]; then
-              title=$(echo "$follow" | cut -d':' -f1 | xargs)
-              body=$(echo "$follow" | cut -d':' -f2- | xargs)
+            # Remove ISSUE: prefix and trim whitespace
+            content=$(echo "${line#ISSUE:}" | xargs)
+            [ -z "$content" ] && continue
+
+            # Parse using robust field extraction
+            # Format: title - description - labels=csv - phase=milestone
+
+            # Split on ' - ' delimiter (more robust than simple cut)
+            IFS=' - ' read -ra FIELDS <<< "$content"
+
+            # Extract fields with defaults
+            title="${FIELDS[0]:-}"
+            description="${FIELDS[1]:-Suggested improvement from code review}"
+            labels_field="${FIELDS[2]:-}"
+            phase_field="${FIELDS[3]:-}"
+
+            # Skip if no title
+            [ -z "$title" ] && continue
+
+            # Parse labels (format: labels=tag1,tag2,tag3)
+            if [[ "$labels_field" =~ ^labels=(.+)$ ]]; then
+              custom_labels="${BASH_REMATCH[1]}"
+              all_labels="from-code-review,$custom_labels"
             else
-              title="$follow"
-              body="Suggested improvement from code review"
+              all_labels="from-code-review,enhancement"
             fi
 
+            # Parse phase/milestone (format: phase=4.2 or phase=backlog)
+            if [[ "$phase_field" =~ ^phase=(.+)$ ]]; then
+              phase="${BASH_REMATCH[1]}"
+            else
+              phase="backlog"
+            fi
+
+            echo "Parsed - Title: $title, Labels: $all_labels, Phase: $phase"
+
+            # Check for duplicate issues to prevent spam
+            issue_title="[PR #${{ github.event.pull_request.number }}] $title"
+            existing_issues=$(gh issue list --search "\"$issue_title\"" --json number --jq length)
+
+            if [ "$existing_issues" -gt 0 ]; then
+              echo "Skipping duplicate issue: $issue_title"
+              continue
+            fi
+
+            # Create comprehensive issue body
+            issue_body="## Context\n\nThis improvement was suggested by ARC-Reviewer during code review.\n\n**Original PR:** #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}\n**PR URL:** ${{ github.event.pull_request.html_url }}\n**Author:** @${{ github.event.pull_request.user.login }}\n**Phase:** $phase\n\n## Suggestion\n$description\n\n## Acceptance Criteria\n- [ ] Implement the suggested improvement\n- [ ] Add tests if applicable\n- [ ] Update documentation if needed\n- [ ] Ensure changes align with phase $phase requirements\n\n## Labels\n$all_labels\n\n---\n*Automatically created by ARC-Reviewer bot using ISSUE: schema*"
+
             # Create issue with enhanced metadata
-            issue_body="## Context\n\nThis improvement was suggested by ARC-Reviewer during code review.\n\n**Original PR:** #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}\n**PR URL:** ${{ github.event.pull_request.html_url }}\n**Author:** @${{ github.event.pull_request.user.login }}\n\n## Suggestion\n$body\n\n## Acceptance Criteria\n- [ ] Implement the suggested improvement\n- [ ] Add tests if applicable\n- [ ] Update documentation if needed\n\n---\n*Automatically created by ARC-Reviewer bot*"
-            gh issue create \
-              --title "[PR #${{ github.event.pull_request.number }}] $title" \
-              --body "$issue_body" \
-              --label "enhancement,from-code-review,good-first-issue"
+            gh_args=(
+              issue create
+              --title "$issue_title"
+              --body "$issue_body"
+              --label "$all_labels"
+            )
+
+            # Add milestone if phase is not 'backlog'
+            if [ "$phase" != "backlog" ]; then
+              # Try to set milestone (may fail if milestone doesn't exist)
+              gh_args+=(--milestone "Phase $phase" || true)
+            fi
+
+            echo "Creating issue: ${gh_args[*]}"
+            gh "${gh_args[@]}"
+
           done
 
       # ---------- Upload Coverage Report ----------
