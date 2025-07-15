@@ -442,6 +442,9 @@ jobs:
       pull-requests: read
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Process Automation Data
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
