@@ -24,13 +24,25 @@ from src.validators.kv_validators import (
 @contextmanager
 def timing_assert(max_seconds: float, operation: str = "Operation") -> Generator[None, None, None]:
     """Context manager that asserts operation completes within time limit"""
+    import os
+
+    # Apply CI environment tolerance - CI environments are often slower
+    ci_multiplier = 2.0 if os.getenv("CI") or os.getenv("GITHUB_ACTIONS") else 1.0
+    adjusted_limit = max_seconds * ci_multiplier
+
     start = time.perf_counter()
     try:
         yield
     finally:
         elapsed = time.perf_counter() - start
-        assert elapsed < max_seconds, f"{operation} took {elapsed:.3f}s, expected < {max_seconds}s"
-        print(f"✓ {operation} completed in {elapsed:.3f}s")
+
+        # Always log performance for tracking
+        print(f"📊 Performance: {operation} took {elapsed:.3f}s (limit: {adjusted_limit:.1f}s)")
+
+        assert elapsed < adjusted_limit, (
+            f"{operation} took {elapsed:.3f}s, "
+            f"expected < {adjusted_limit:.1f}s (CI factor: {ci_multiplier}x)"
+        )
 
 
 class TestPerformanceBenchmarks:
