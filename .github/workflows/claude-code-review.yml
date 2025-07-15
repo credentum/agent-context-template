@@ -267,17 +267,36 @@ jobs:
             content=$(echo "${line#ISSUE:}" | xargs)
             [ -z "$content" ] && continue
 
-            # Parse using robust field extraction
+            # Parse using robust field extraction that handles spaces in fields
             # Format: title - description - labels=csv - phase=milestone
+            # Split on ' - ' delimiter manually to preserve spaces within fields
 
-            # Split on ' - ' delimiter (more robust than simple cut)
-            IFS=' - ' read -ra FIELDS <<< "$content"
+            # Extract title (everything before first ' - ')
+            if [[ "$content" =~ ^([^-]*[^[:space:]])[[:space:]]*-[[:space:]](.*)$ ]]; then
+                title="${BASH_REMATCH[1]}"
+                remaining="${BASH_REMATCH[2]}"
+            else
+                title="$content"
+                remaining=""
+            fi
 
-            # Extract fields with defaults
-            title="${FIELDS[0]:-}"
-            description="${FIELDS[1]:-Suggested improvement from code review}"
-            labels_field="${FIELDS[2]:-}"
-            phase_field="${FIELDS[3]:-}"
+            # Extract description (everything before next ' - ')
+            if [[ "$remaining" =~ ^([^-]*[^[:space:]])[[:space:]]*-[[:space:]](.*)$ ]]; then
+                description="${BASH_REMATCH[1]}"
+                remaining="${BASH_REMATCH[2]}"
+            else
+                description="${remaining:-Suggested improvement from code review}"
+                remaining=""
+            fi
+
+            # Extract labels field (everything before next ' - ')
+            if [[ "$remaining" =~ ^([^-]*[^[:space:]])[[:space:]]*-[[:space:]](.*)$ ]]; then
+                labels_field="${BASH_REMATCH[1]}"
+                phase_field="${BASH_REMATCH[2]}"
+            else
+                labels_field="$remaining"
+                phase_field=""
+            fi
 
             # Skip if no title
             [ -z "$title" ] && continue
