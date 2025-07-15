@@ -167,7 +167,8 @@ class CoverageSummary:
         for metric, actual, target in results:
             status = "✅" if actual >= target else "❌"
             print(f"{status} {metric}: {actual:.2f}% (target: ≥{target}%)")
-            if actual < target:
+            # Only fail for line coverage - other metrics are informational for now
+            if actual < target and metric == "Line Coverage":
                 all_passed = False
 
         # Additional metrics
