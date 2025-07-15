@@ -50,8 +50,8 @@ class SprintIssueLinker:
         if not isinstance(label, str):
             raise ValueError("Label must be a string")
 
-        # GitHub labels: alphanumeric, hyphens, underscores, periods
-        sanitized = re.sub(r"[^a-zA-Z0-9\-_.]", "", str(label))
+        # GitHub labels: alphanumeric, hyphens, underscores, periods, colons
+        sanitized = re.sub(r"[^a-zA-Z0-9\-_.:']", "", str(label))
 
         if not sanitized:
             raise ValueError("Label contains no valid characters")
@@ -385,6 +385,199 @@ _Auto-created from sprint YAML and tracked by sprint system._
             click.echo(f"Error updating labels: {e}")
             return 0
 
+    def _get_current_issue_state(self, issue_number: int) -> str:
+        """Get current GitHub issue state (open/closed)"""
+        try:
+            cmd = ["gh", "issue", "view", str(issue_number), "--json", "state"]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            data = json.loads(result.stdout)
+            state = data.get("state", "open")
+            return str(state).lower()
+        except Exception as e:
+            if self.verbose:
+                click.echo(f"Warning: Could not get state for issue #{issue_number}: {e}")
+            return "unknown"
+
+    def _get_current_issue_labels(self, issue_number: int) -> List[str]:
+        """Get current GitHub issue labels"""
+        try:
+            cmd = ["gh", "issue", "view", str(issue_number), "--json", "labels"]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            data = json.loads(result.stdout)
+            return [label["name"] for label in data.get("labels", [])]
+        except Exception as e:
+            if self.verbose:
+                click.echo(f"Warning: Could not get labels for issue #{issue_number}: {e}")
+            return []
+
+    def _update_issue_state(self, issue_number: int, new_state: str, reason: str = "") -> bool:
+        """Open or close GitHub issue"""
+        if new_state not in ["open", "closed"]:
+            raise ValueError(f"Invalid issue state: {new_state}")
+
+        if self.dry_run:
+            action = "close" if new_state == "closed" else "reopen"
+            click.echo(f"[DRY RUN] Would {action} issue #{issue_number}")
+            if reason:
+                click.echo(f"  Reason: {reason}")
+            return True
+
+        try:
+            if new_state == "closed":
+                cmd = ["gh", "issue", "close", str(issue_number)]
+                if reason:
+                    cmd.extend(["--comment", self._sanitize_text(reason)])
+            else:
+                cmd = ["gh", "issue", "reopen", str(issue_number)]
+                if reason:
+                    cmd.extend(["--comment", self._sanitize_text(reason)])
+
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
+            action = "closed" if new_state == "closed" else "reopened"
+            if self.verbose:
+                click.echo(f"✓ {action.title()} issue #{issue_number}")
+            return True
+        except Exception as e:
+            click.echo(f"✗ Failed to update state for issue #{issue_number}: {e}")
+            return False
+
+    def _calculate_task_labels(
+        self, task: Dict[str, Any], phase: Dict[str, Any], sprint_data: Dict[str, Any]
+    ) -> List[str]:
+        """Calculate target labels for a task based on sprint, phase, and task data"""
+        labels = set()
+
+        # Sprint-level labels
+        sprint_number = sprint_data.get("sprint_number", 1)
+        labels.add(f"sprint-{sprint_number}")
+
+        # Default labels from config
+        config = sprint_data.get("config", {})
+        default_labels = config.get("default_labels", [])
+        labels.update(default_labels)
+
+        # Phase-based labels
+        phase_num = phase.get("phase", 1)
+        labels.add(f"phase-{phase_num}")
+
+        # Phase status labels
+        phase_status = phase.get("status", "pending")
+        if phase_status == "blocked":
+            labels.add("blocked")
+        elif phase_status == "in_progress":
+            labels.add("in-progress")
+
+        # Phase component and priority
+        if phase.get("component"):
+            labels.add(f"component:{phase['component']}")
+        if phase.get("priority"):
+            labels.add(f"priority:{phase['priority']}")
+
+        # Task-specific labels
+        task_labels = task.get("labels", [])
+        labels.update(task_labels)
+
+        # Validate all labels and return sorted list
+        validated_labels = []
+        for label in labels:
+            try:
+                validated_labels.append(self._validate_label(str(label)))
+            except ValueError:
+                if self.verbose:
+                    click.echo(f"Warning: Skipping invalid label: {label}")
+                continue
+
+        return sorted(validated_labels)
+
+    def _sync_issue_labels(self, issue_number: int, target_labels: List[str]) -> bool:
+        """Sync GitHub issue labels with target state"""
+        current_labels = self._get_current_issue_labels(issue_number)
+        target_set = set(target_labels)
+        current_set = set(current_labels)
+
+        # Calculate changes needed
+        labels_to_add = target_set - current_set
+        labels_to_remove = current_set - target_set
+
+        # Only remove sprint-related labels to preserve other labels
+        sprint_prefixes = ("sprint-", "phase-", "component:", "priority:", "blocked", "in-progress")
+        labels_to_remove = {
+            label
+            for label in labels_to_remove
+            if any(label.startswith(prefix) for prefix in sprint_prefixes)
+        }
+
+        if not labels_to_add and not labels_to_remove:
+            return True  # No changes needed
+
+        if self.dry_run:
+            if labels_to_add:
+                labels_str = ", ".join(labels_to_add)
+                click.echo(f"[DRY RUN] Would add labels to issue #{issue_number}: {labels_str}")
+            if labels_to_remove:
+                labels_str = ", ".join(labels_to_remove)
+                click.echo(
+                    f"[DRY RUN] Would remove labels from issue #{issue_number}: {labels_str}"
+                )
+            return True
+
+        success = True
+        try:
+            # Add new labels
+            for label in labels_to_add:
+                cmd = ["gh", "issue", "edit", str(issue_number), "--add-label", label]
+                subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+            # Remove old labels
+            for label in labels_to_remove:
+                cmd = ["gh", "issue", "edit", str(issue_number), "--remove-label", label]
+                subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+            if self.verbose and (labels_to_add or labels_to_remove):
+                click.echo(f"✓ Updated labels for issue #{issue_number}")
+
+        except Exception as e:
+            click.echo(f"✗ Failed to update labels for issue #{issue_number}: {e}")
+            success = False
+
+        return success
+
+    def _find_orphaned_issues(
+        self, existing_issues: List[Dict[str, Any]], current_tasks: List[Dict[str, Any]]
+    ) -> List[int]:
+        """Find GitHub issues for tasks no longer in sprint"""
+        # Get all current task GitHub issue numbers
+        current_issue_numbers = set()
+        for task in current_tasks:
+            if isinstance(task, dict) and task.get("github_issue"):
+                current_issue_numbers.add(task["github_issue"])
+
+        # Find existing issues not in current tasks
+        orphaned = []
+        for issue in existing_issues:
+            issue_number = issue["number"]
+            if issue_number not in current_issue_numbers:
+                orphaned.append(issue_number)
+
+        return orphaned
+
+    def _close_orphaned_issue(self, issue_number: int, reason: str) -> bool:
+        """Close orphaned issue with explanatory comment"""
+        comment = f"""🤖 **Automated Sprint Sync**
+
+{reason}
+
+This issue was automatically closed because the corresponding task is no longer present in the
+sprint YAML file. If this was done in error, please:
+
+1. Re-add the task to the sprint YAML, or
+2. Manually reopen this issue if it should remain independent
+
+---
+_Automated by sprint bidirectional sync system_"""
+
+        return self._update_issue_state(issue_number, "closed", comment)
+
     def sync_sprint_with_issues(self) -> int:
         """Sync sprint YAML with GitHub issues bidirectionally"""
         sprint_file = self._get_sprint_file()
@@ -413,15 +606,19 @@ _Auto-created from sprint YAML and tracked by sprint system._
 
         sync_count = 0
         changes_made = False
+        all_current_tasks = []  # Track all tasks for orphan detection
 
         # Process each phase
         phases = sprint_data.get("phases", [])
         for phase in phases:
+            phase_status = phase.get("status", "pending")
             tasks = phase.get("tasks", [])
+
             for task in tasks:
                 if not isinstance(task, dict):
                     continue  # Skip old format tasks
 
+                all_current_tasks.append(task)  # Track for orphan detection
                 task_title = task.get("title", "")
                 existing_issue_num = task.get("github_issue")
 
@@ -437,6 +634,8 @@ _Auto-created from sprint YAML and tracked by sprint system._
                         changes_made = True
 
                 if github_issue:
+                    issue_number = github_issue["number"]
+
                     # Check if we need to update the issue
                     need_update = False
                     update_fields = {}
@@ -506,11 +705,30 @@ _Auto-created from sprint YAML and tracked by sprint system._
                         )
                         sync_count += 1
 
+                    # NEW: Sync issue state based on phase status
+                    current_state = self._get_current_issue_state(issue_number)
+                    target_state = "closed" if phase_status == "completed" else "open"
+
+                    if current_state != "unknown" and current_state != target_state:
+                        reason = (
+                            f"Phase '{phase.get('name', '')}' marked as completed"
+                            if target_state == "closed"
+                            else f"Phase '{phase.get('name', '')}' status changed to {phase_status}"
+                        )
+                        if self._update_issue_state(issue_number, target_state, reason):
+                            sync_count += 1
+
+                    # NEW: Sync issue labels
+                    target_labels = self._calculate_task_labels(task, phase, sprint_data)
+                    if self._sync_issue_labels(issue_number, target_labels):
+                        if self.verbose:
+                            pass  # Already logged in _sync_issue_labels
+
                 else:
                     # Create new issue for task without GitHub issue
                     if not task.get("github_issue"):
                         task_description = task.get("description", "No description provided")
-                        task_labels = task.get("labels", [sprint_label])
+                        task_labels = self._calculate_task_labels(task, phase, sprint_data)
 
                         deps_list = task.get("dependencies", [])
                         deps_str = (
@@ -537,6 +755,17 @@ _Auto-created from sprint YAML and tracked by sprint system._
                             changes_made = True
                             sync_count += 1
 
+                            # NEW: Set initial state for new issue based on phase status
+                            if phase_status == "completed":
+                                reason = f"Created in completed phase '{phase.get('name', '')}'"
+                                self._update_issue_state(issue_number, "closed", reason)
+
+        # NEW: Handle orphaned issues (tasks removed from sprint)
+        orphaned_issues = self._find_orphaned_issues(existing_issues, all_current_tasks)
+        for issue_number in orphaned_issues:
+            if self._close_orphaned_issue(issue_number, "Task removed from sprint YAML"):
+                sync_count += 1
+
         # Save updated sprint file if changes were made
         if changes_made and not self.dry_run:
             try:
@@ -547,6 +776,8 @@ _Auto-created from sprint YAML and tracked by sprint system._
                 click.echo(f"⚠️  Warning: Could not update sprint file: {e}")
 
         click.echo(f"\nSync Summary: {sync_count} items processed")
+        if orphaned_issues:
+            click.echo(f"Closed {len(orphaned_issues)} orphaned issues: {orphaned_issues}")
         return sync_count
 
 

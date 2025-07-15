@@ -548,3 +548,111 @@ class TestSprintIssueLinkerCoverage:
                     assert result.exit_code == 0
         finally:
             os.chdir(original_cwd)
+
+
+class TestSprintIssueLinkerBidirectionalSync:
+    """Tests for new bidirectional sync functionality"""
+
+    def test_get_current_issue_state_success(self, issue_linker):
+        """Test successful retrieval of current issue state"""
+        mock_response = json.dumps({"state": "closed"})
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=0, stdout=mock_response)
+            state = issue_linker._get_current_issue_state(123)
+            assert state == "closed"
+
+    def test_get_current_issue_state_failure(self, issue_linker):
+        """Test handling of API failure when getting issue state"""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.CalledProcessError(1, "gh", stderr="API Error")
+            with patch("click.echo"):
+                state = issue_linker._get_current_issue_state(123)
+                assert state == "unknown"
+
+    def test_calculate_task_labels(self, issue_linker):
+        """Test calculation of target labels for a task"""
+        task = {"title": "Test Task", "labels": ["custom-label", "test"]}
+        phase = {
+            "phase": 2,
+            "name": "Implementation",
+            "status": "in_progress",
+            "component": "backend",
+            "priority": "high",
+        }
+        sprint_data = {
+            "sprint_number": 5,
+            "config": {"default_labels": ["sprint-current", "team-alpha"]},
+        }
+
+        labels = issue_linker._calculate_task_labels(task, phase, sprint_data)
+
+        # Should include sprint number, phase, status, and custom labels
+        assert "sprint-5" in labels
+        assert "phase-2" in labels
+        assert "in-progress" in labels
+        assert "component:backend" in labels
+        assert "priority:high" in labels
+        assert "sprint-current" in labels
+        assert "team-alpha" in labels
+        assert "custom-label" in labels
+        assert "test" in labels
+
+        # Should be sorted
+        assert labels == sorted(labels)
+
+    def test_find_orphaned_issues(self, issue_linker):
+        """Test finding orphaned issues"""
+        existing_issues = [
+            {"number": 1, "title": "Task 1"},
+            {"number": 2, "title": "Task 2"},
+            {"number": 3, "title": "Task 3"},
+        ]
+        current_tasks = [
+            {"title": "Task 1", "github_issue": 1},  # Still exists
+            {"title": "Task 4", "github_issue": None},  # New task without issue
+            # Task 2 and 3 removed from sprint
+        ]
+
+        orphaned = issue_linker._find_orphaned_issues(existing_issues, current_tasks)
+        assert orphaned == [2, 3]
+
+    def test_update_issue_state_close(self, issue_linker):
+        """Test closing an issue"""
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=0)
+            with patch("click.echo"):
+                success = issue_linker._update_issue_state(123, "closed", "Task completed")
+                assert success is True
+                # Verify correct command was called
+                mock_run.assert_called_once()
+                args = mock_run.call_args[0][0]
+                assert "gh" in args
+                assert "issue" in args
+                assert "close" in args
+                assert "123" in args
+
+    def test_update_issue_state_invalid(self, issue_linker):
+        """Test invalid state raises ValueError"""
+        with pytest.raises(ValueError, match="Invalid issue state"):
+            issue_linker._update_issue_state(123, "invalid", "")
+
+    def test_sync_issue_labels_no_changes(self, issue_linker):
+        """Test label sync when no changes needed"""
+        current_labels = ["sprint-1", "bug", "priority:high"]
+        target_labels = ["sprint-1", "bug", "priority:high"]
+
+        with patch.object(issue_linker, "_get_current_issue_labels", return_value=current_labels):
+            success = issue_linker._sync_issue_labels(123, target_labels)
+            assert success is True
+
+    def test_close_orphaned_issue(self, issue_linker):
+        """Test closing an orphaned issue"""
+        with patch.object(issue_linker, "_update_issue_state", return_value=True) as mock_update:
+            success = issue_linker._close_orphaned_issue(123, "Task removed")
+            assert success is True
+            mock_update.assert_called_once_with(123, "closed", mock_update.call_args[0][2])
+            # Check comment content
+            comment = mock_update.call_args[0][2]
+            assert "Task removed" in comment
+            assert "Automated Sprint Sync" in comment
