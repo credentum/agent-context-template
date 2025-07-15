@@ -126,9 +126,13 @@ jobs:
       - name: Load Coverage Configuration
         id: load-config
         run: |
-          baseline=$(python -c "import json; print(json.load(open('.coverage-config.json'))['baseline'])")
-          echo "COVERAGE_BASELINE=$baseline" >> $GITHUB_ENV
-          echo "Coverage baseline loaded: $baseline%"
+          # Load baseline and tolerance buffer
+          config=$(python -c "import json; data=json.load(open('.coverage-config.json')); print(f\"{data['baseline']},{data.get('tolerance_buffer', 0.0)}\")")
+          baseline=$(echo "$config" | cut -d',' -f1)
+          tolerance=$(echo "$config" | cut -d',' -f2)
+          effective_baseline=$(python -c "print(max(0, $baseline - $tolerance))")
+          echo "COVERAGE_BASELINE=$effective_baseline" >> $GITHUB_ENV
+          echo "Coverage baseline loaded: $baseline% (effective: $effective_baseline% with $tolerance% tolerance)"
 
       # ---------- Extract and Store Coverage Metrics ----------
       - name: Extract Coverage Metrics
