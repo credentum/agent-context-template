@@ -91,19 +91,10 @@ jobs:
       env:
         MUTMUT_PATHS: "src/validators/kv_validators.py src/storage/context_kv.py"
       run: |
-        # Run mutation testing on configurable modules
-        for path in $MUTMUT_PATHS; do
-          if [ -f "$path" ]; then
-            echo "Running mutation testing on $path"
-            mutmut run \
-              --paths-to-mutate="$path" \
-              --runner="python -m pytest -x -q" \
-              || true
-          else
-            echo "Path $path not found, skipping"
-          fi
-        done
-        mutmut results
+        # Run mutation testing using pyproject.toml configuration
+        echo "Running mutation testing on configured modules"
+        mutmut run --max-children 4 || true
+        mutmut results || true
       continue-on-error: true
 
     - name: Upload coverage reports

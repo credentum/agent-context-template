@@ -143,6 +143,29 @@ services:
       - CI=true
     command: /bin/bash scripts/test-workflow-simple.sh
 
+  # Test coverage like GitHub Actions
+  ci-coverage:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - ./context:/app/context:ro
+      - ./.coverage-config.json:/app/.coverage-config.json:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./pytest.ini:/app/pytest.ini:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    command: /bin/bash scripts/test-coverage-like-ci.sh
+
   # Qdrant service for workflow tests
   qdrant:
     image: qdrant/qdrant:v1.14.1

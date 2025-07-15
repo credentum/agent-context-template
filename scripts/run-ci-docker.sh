@@ -16,6 +16,7 @@ show_help() {
     echo ""
     echo "Commands:"
     echo "  all       Run all CI lint checks (default)"
+    echo "  coverage  Run coverage tests like GitHub Actions"
     echo "  black     Run Black formatting check only"
     echo "  isort     Run isort import sorting check only"
     echo "  flake8    Run Flake8 linting only"
@@ -29,6 +30,7 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  $0              # Run all checks"
+    echo "  $0 coverage     # Run coverage tests"
     echo "  $0 black        # Run only Black check"
     echo "  $0 build        # Rebuild image after requirements change"
     echo "  $0 debug        # Interactive shell for debugging"
@@ -53,6 +55,12 @@ case $COMMAND in
         echo -e "${YELLOW}This replicates GitHub Actions environment exactly${NC}"
         echo ""
         run_service ci-lint "all CI checks"
+        ;;
+    coverage)
+        echo -e "${GREEN}🚀 Running coverage tests in Docker${NC}"
+        echo -e "${YELLOW}This replicates GitHub Actions coverage workflow exactly${NC}"
+        echo ""
+        run_service ci-coverage "coverage tests"
         ;;
     black)
         run_service ci-black "Black formatting check"

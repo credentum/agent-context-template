@@ -41,5 +41,8 @@ echo -e "${YELLOW}   - Closes #123${NC}"
 echo -e "${YELLOW}   - Fixes #123${NC}"
 echo -e "${YELLOW}   - Resolves #123${NC}"
 echo -e "${YELLOW}   - Implements #123${NC}"
+echo ""
+echo -e "${YELLOW}📋 The PR template will help you remember to add these keywords!${NC}"
+echo -e "${YELLOW}🤖 Our GitHub Actions will automatically close referenced issues when the PR is merged.${NC}"
 
 exit 0  # Don't block commits, just remind

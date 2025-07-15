@@ -4,14 +4,16 @@
 Brief description of changes
 
 ## Related Issues
-<!-- Use keywords to auto-close issues when PR is merged -->
-<!-- Examples: -->
-<!-- - Closes #123 -->
-<!-- - Fixes #456 -->
-<!-- - Resolves #789 -->
-<!-- - Implements #101 -->
+<!-- ⚠️ IMPORTANT: Use keywords to auto-close issues when PR is merged -->
+<!-- Required format - uncomment and fill in the issue number: -->
 
-- [ ] This PR addresses issue #
+- Closes #
+- Fixes #
+- Resolves #
+- Implements #
+
+<!-- Alternative: If this PR doesn't close any issues, check this box -->
+- [ ] This PR doesn't close any existing issues
 
 ## Type of Change
 - [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
