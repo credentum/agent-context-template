@@ -11,3 +11,4 @@ mutmut>=2.0.0
 coverage-badge>=1.1.0
 types-jsonschema>=4.0.0
 yamllint>=1.30.0
+neo4j>=5.0.0
