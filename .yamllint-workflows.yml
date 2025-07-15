@@ -1,0 +1,33 @@
+---
+# YAML linting config specifically for GitHub workflows
+# More permissive than general YAML linting
+extends: default
+
+rules:
+  # Allow longer lines for workflow files (common for GitHub Actions)
+  line-length:
+    max: 150
+    level: warning
+
+  # Document start not required for workflows
+  document-start: disable
+
+  # GitHub allows 'on', 'true', 'false' values
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+    level: warning
+
+  # Allow more flexible indentation in complex workflows
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Comments formatting is less strict in workflows
+  comments:
+    min-spaces-from-content: 1
+
+  # Brackets can be useful in GitHub expressions
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1

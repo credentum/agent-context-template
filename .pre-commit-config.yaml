@@ -1,3 +1,4 @@
+---
 # Updated pre-commit configuration that matches CI but is practical
 repos:
   - repo: https://github.com/psf/black
@@ -40,6 +41,18 @@ repos:
       - id: flake8
         args: ['--max-line-length=100', '--extend-ignore=E203,W503']
         # Run on all Python files like CI does
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        name: yamllint (general)
+        args: [--format, parsable, --strict]
+        exclude: ^\.github/workflows/
+      - id: yamllint
+        name: yamllint (workflows)
+        args: [--format, parsable, -c, .yamllint-workflows.yml]
+        files: ^\.github/workflows/.*\.ya?ml$
 
   - repo: local
     hooks:
