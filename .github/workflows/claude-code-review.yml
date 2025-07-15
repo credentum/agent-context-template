@@ -256,10 +256,8 @@ jobs:
             });
 
       # ---------- Auto-open GitHub issues for Suggested Follow-ups ----------
-      - name: Parse Review and Create Issues
+      - name: Debug Review Content
         if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "${{ steps.claude-review.outputs.response }}" > review.txt
 
@@ -269,6 +267,13 @@ jobs:
           echo "=== ISSUE LINES FOUND ==="
           grep '^ISSUE:' review.txt || echo "No ISSUE: lines found"
           echo "=== END DEBUG ==="
+
+      - name: Parse Review and Create Issues
+        if: always() && contains(steps.claude-review.outputs.response, 'ISSUE:')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${{ steps.claude-review.outputs.response }}" > review.txt
 
           # Collect all ISSUE: lines for aggregated issue creation
           issue_count=0
