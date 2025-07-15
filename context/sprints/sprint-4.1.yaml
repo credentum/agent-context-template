@@ -208,6 +208,50 @@ phases:
     dependencies: []
     estimate: 3 hours
     github_issue: 33
+- phase: 7
+  name: Bug Fixes
+  status: pending
+  priority: high
+  component: agents
+  description: Fix critical bugs affecting user experience
+  tasks:
+  - title: "Fix Sprint Issue Linker Label Batching to Prevent Multiple Comments"
+    description: |
+      Fix the sprint issue linker's `_sync_issue_labels()` method that currently makes individual GitHub API calls for each label operation, causing multiple comments when creating/updating issues with many labels.
+
+      ## Problem Analysis
+      The current implementation calls `gh issue edit` separately for each label:
+      - One subprocess call per label to add (lines 527-530)
+      - One subprocess call per label to remove (lines 532-535)
+      - With 8-12+ labels per task, this creates 8-12+ GitHub API calls
+      - Each call can trigger comment creation, leading to comment spam
+
+      ## Acceptance Criteria
+      - [ ] Batch all label additions into single `gh issue edit --add-label label1,label2,label3` call
+      - [ ] Batch all label removals into single `gh issue edit --remove-label label1,label2,label3` call
+      - [ ] Reduce API calls from ~10+ per issue to maximum 2 per issue
+      - [ ] Add exponential backoff retry logic for GitHub API failures
+      - [ ] Add label count warnings when approaching GitHub limits
+      - [ ] Test with high-label-count scenarios (sprint 4.1 tasks)
+      - [ ] Verify no duplicate comments are created
+      - [ ] Ensure bidirectional sync still works correctly
+      - [ ] Preserve existing dry-run and verbose logging functionality
+
+      ## Implementation Notes
+      - Modify `_sync_issue_labels()` method in `src/agents/sprint_issue_linker.py`
+      - GitHub CLI supports comma-separated labels: `--add-label label1,label2,label3`
+      - Add comprehensive unit tests for batching behavior
+      - Test with current sprint-4.1 tasks that have extensive labels
+
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:agents
+    - priority:high
+    - type:bug
+    - scope:github-api
+    dependencies: []
+    estimate: 3 hours
 team:
 - role: lead
   agent: pm_agent
