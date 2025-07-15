@@ -16,7 +16,13 @@ from typing import Any, Dict, Optional
 import click
 import yaml
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, HnswConfig, OptimizersConfig, PointStruct, VectorParams
+from qdrant_client.models import (
+    Distance,
+    HnswConfigDiff,
+    OptimizersConfigDiff,
+    PointStruct,
+    VectorParams,
+)
 
 
 class VectorDBInitializer:
@@ -109,13 +115,13 @@ class VectorDBInitializer:
                     size=1536,  # OpenAI ada-002 embedding size
                     distance=Distance.COSINE,
                 ),
-                optimizers_config=OptimizersConfig(
+                optimizers_config=OptimizersConfigDiff(
                     deleted_threshold=0.2,
                     vacuum_min_vector_number=1000,
                     default_segment_number=2,
                     flush_interval_sec=5,
                 ),
-                hnsw_config=HnswConfig(
+                hnsw_config=HnswConfigDiff(
                     m=16,
                     ef_construct=128,
                     full_scan_threshold=10000,

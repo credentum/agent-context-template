@@ -43,9 +43,9 @@ check_qdrant() {
         return $QDRANT_FAIL
     fi
 
-    # Parse the response - should contain an empty collections array
-    # Response format: {"result":{"collections":[]},"status":"ok"}
-    if echo "$response" | grep -q '"collections":\[\]'; then
+    # Parse the response - should contain collections array (empty or with collections)
+    # Response format: {"result":{"collections":[...]},"status":"ok"}
+    if echo "$response" | grep -q '"result".*"collections".*"status":"ok"'; then
         echo -e "${GREEN}✅ Qdrant: Healthy (collections endpoint responsive)${NC}"
         return $SUCCESS
     else
@@ -76,20 +76,25 @@ check_neo4j() {
     # Test Neo4j connectivity using the driver
     local neo4j_test_result
 
-    neo4j_test_result=$($python_cmd -c "
+    neo4j_test_result=$(NEO4J_HOST="$NEO4J_HOST" NEO4J_PORT="$NEO4J_PORT" $python_cmd -c "
 import sys
 import os
 try:
     from neo4j import GraphDatabase
 
-    # Check for authentication
+    # Get connection parameters from environment
+    neo4j_host = os.environ.get('NEO4J_HOST', 'localhost')
+    neo4j_port = os.environ.get('NEO4J_PORT', '7687')
     neo4j_user = os.environ.get('NEO4J_USER', '')
     neo4j_password = os.environ.get('NEO4J_PASSWORD', '')
 
+    # Build connection URI safely
+    uri = f'bolt://{neo4j_host}:{neo4j_port}'
+
     if neo4j_user and neo4j_password:
-        driver = GraphDatabase.driver('bolt://${NEO4J_HOST}:${NEO4J_PORT}', auth=(neo4j_user, neo4j_password))
+        driver = GraphDatabase.driver(uri, auth=(neo4j_user, neo4j_password))
     else:
-        driver = GraphDatabase.driver('bolt://${NEO4J_HOST}:${NEO4J_PORT}')
+        driver = GraphDatabase.driver(uri)
 
     driver.verify_connectivity()
     driver.close()
