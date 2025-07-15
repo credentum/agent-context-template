@@ -131,7 +131,7 @@ jobs:
       uses: schneegans/dynamic-badges-action@v1.6.0
       with:
         auth: ${{ secrets.GIST_SECRET }}
-        gistID: your-gist-id  # Replace with actual Gist ID
+        gistID: ${{ secrets.COVERAGE_GIST_ID }}
         filename: coverage-badge.json
         label: Coverage
         message: ${{ env.COVERAGE_PERCENT }}%
@@ -265,7 +265,7 @@ jobs:
 
     - name: Comment PR with summary
       if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
