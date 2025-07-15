@@ -275,7 +275,7 @@ jobs:
           # Look for comments from the Claude action or containing ARC-Reviewer content
           pr_num="${{ github.event.pull_request.number }}"
           repo="${{ github.repository }}"
-          gh api "repos/${repo}/pulls/${pr_num}/comments" \
+          gh api "repos/${repo}/issues/${pr_num}/comments" \
             --jq '.[] | select(.body | contains("ARC-Reviewer") or contains("ISSUE:"))' \
             --jq '.body' | tail -1 > review.txt || echo "No Claude review found"
 
