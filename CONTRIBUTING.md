@@ -92,6 +92,102 @@ git push -u origin fix/mypy-errors
 gh pr create --title "fix: Address mypy type errors" --body "..."
 ```
 
+## ARC-Reviewer and Auto-Triage Flow
+
+This project uses ARC-Reviewer (Automated Review and Code-review) to provide structured code reviews and automatically create follow-up issues for suggested improvements.
+
+### How It Works
+
+When you create a pull request, ARC-Reviewer will:
+1. Analyze your code changes
+2. Provide structured feedback with blocking issues, warnings, and suggestions
+3. Automatically create GitHub issues for follow-up improvements
+
+### ISSUE: Schema for Follow-ups
+
+ARC-Reviewer uses a structured format for creating follow-up issues:
+
+```
+ISSUE: <title> - <description> - labels=<csv> - phase=<milestone>
+```
+
+**Example:**
+```
+ISSUE: Fix validator coverage - Improve test coverage for validators module - labels=test,validator,coverage - phase=4.2
+ISSUE: Add performance benchmarks - Create benchmark suite for vector operations - labels=performance,benchmark - phase=backlog
+```
+
+### Schema Fields
+
+- **title**: Short descriptive title for the issue (required)
+- **description**: Detailed description of the improvement (required)
+- **labels**: Comma-separated list of labels (optional, defaults to `enhancement`)
+  - Always includes `from-code-review` automatically
+- **phase**: Project phase or milestone (optional, defaults to `backlog`)
+
+### Auto-Generated Aggregated Issues with Multi-Cycle Support
+
+Instead of creating multiple individual issues (which creates noise), ARC-Reviewer creates a single aggregated issue per PR that accumulates suggestions across multiple review cycles:
+
+- **Title**: `[PR #<number>] Follow-ups Suggested by ARC-Reviewer`
+- **Content**: Multiple review cycle sections with commit tracking
+- **Labels**: `from-code-review`, `sprint-triage`, `phase=backlog`
+- **Triage Flow**: PM/Agent reviews and promotes actionable items to sprint YAML
+
+**Multi-Cycle Structure:**
+```markdown
+## Context
+[PR metadata and overview]
+
+## Review Cycle - 2025-07-15 10:30 UTC (Commit abc1234)
+- [ ] **Add error handling**: Improve validators (phase: 4.2)
+- [ ] **Update docs**: Add docstrings (phase: backlog)
+
+## Review Cycle - 2025-07-15 14:45 UTC (Commit def5678)
+- [ ] **Add tests**: Create unit tests (phase: 4.3)
+
+## Triage Instructions
+[PM/Agent workflow instructions]
+```
+
+**Benefits:**
+- Reduces backlog noise and clutter significantly
+- Preserves complete history across multiple reviews
+- Enables systematic triage with commit context
+- Provides clear traceability to original PR and specific commits
+- Supports sprint planning integration with phase tracking
+
+### Multi-Review Workflow
+
+**When ARC-Reviewer runs multiple times on the same PR:**
+1. **First Review**: Creates new aggregated issue
+2. **Subsequent Reviews**: Appends new review cycle sections
+3. **Same Commit Re-review**: Updates existing cycle for that commit
+4. **Commit Tracking**: Each cycle tagged with commit hash and timestamp
+
+### Duplicate Prevention
+
+The system detects existing aggregated issues for each PR and intelligently manages updates:
+- **New commits**: Adds new review cycle section
+- **Existing commits**: Updates the existing cycle section for that commit
+- **Preservation**: Previous review cycles are always preserved
+
+### Testing the Parser
+
+To test the ISSUE: parser logic:
+
+```bash
+# Basic aggregated parser test
+./scripts/test_arc_reviewer_parser.sh
+
+# Multi-cycle functionality test
+./scripts/test_arc_reviewer_multi_cycle_simple.sh
+```
+
+These scripts validate:
+- **Basic Parser**: ISSUE: schema parsing and aggregated issue creation
+- **Multi-Cycle**: Multiple review cycles, commit tracking, and suggestion preservation
+
 ### Infrastructure Setup
 
 This project uses Qdrant (vector database) and Neo4j (graph database) for development and testing.
