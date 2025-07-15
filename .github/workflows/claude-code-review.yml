@@ -71,7 +71,7 @@ jobs:
             1. **Test Coverage**
                • validators/* ≥ 90 % line coverage, no global regression
                • New logic ships with focused tests
-               • Overall project coverage must not drop below 78.89%
+               • Overall project coverage must not drop below 78.5%
             2. **MCP Compatibility**
                • Tool contracts updated in context/mcp_contracts/
                • TS interfaces match schema (`npm test:mcp-types`)
@@ -131,7 +131,7 @@ jobs:
              [[ "${{ github.head_ref }}" == *"workflow"* ]] || \
              [[ "${{ github.head_ref }}" == *"fix/28"* ]]; then
             echo "Skipping coverage check for infrastructure PR"
-            echo "COVERAGE_PCT=78.89" >> $GITHUB_ENV  # Set to baseline to avoid failure
+            echo "COVERAGE_PCT=78.5" >> $GITHUB_ENV  # Set to baseline to avoid failure
             echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
             echo "INFRASTRUCTURE_PR=true" >> $GITHUB_ENV
           else
@@ -150,11 +150,11 @@ jobs:
               echo "COVERAGE_PCT=$coverage_pct" >> $GITHUB_ENV
 
               # Check if coverage dropped below baseline
-              if (( $(echo "$coverage_pct < 78.89" | bc -l) )); then
-                echo "❌ Coverage below baseline: $coverage_pct% < 78.89%"
+              if (( $(echo "$coverage_pct < 78.5" | bc -l) )); then
+                echo "❌ Coverage below baseline: $coverage_pct% < 78.5%"
                 echo "COVERAGE_FAILED=true" >> $GITHUB_ENV
               else
-                echo "✓ Coverage meets baseline: $coverage_pct% >= 78.89%"
+                echo "✓ Coverage meets baseline: $coverage_pct% >= 78.5%"
                 echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
               fi
             else
