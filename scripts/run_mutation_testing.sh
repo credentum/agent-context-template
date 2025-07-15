@@ -40,10 +40,12 @@ for module in "${CRITICAL_MODULES[@]}"; do
     mutmut show
 done
 
-# Generate HTML report
+# Generate mutation reports
 echo ""
 echo "📊 Generating mutation report..."
-mutmut html
+mutmut results > mutation-summary.txt
+mutmut results --all true > mutation-detailed.txt
+echo "Reports generated: mutation-summary.txt, mutation-detailed.txt"
 
 # Calculate mutation score
 echo ""

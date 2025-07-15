@@ -96,7 +96,7 @@ jobs:
           use_sticky_comment: true
           # Tools Claude may invoke during review
           allowed_tools: |
-            Bash(pytest --cov=src --cov-report=term --cov-report=json),
+            Bash(pytest --cov=src --cov-report=term --cov-report=json -m "not integration and not e2e"),
             Bash(pre-commit run --all-files --config .pre-commit-config-ci.yaml),
             Bash(python -m src.validators.config_validator),
             Bash(yamale -s context/schemas/ context/),
@@ -118,20 +118,32 @@ jobs:
             echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
             echo "INFRASTRUCTURE_PR=true" >> $GITHUB_ENV
           else
-            # Run coverage and capture output
-            pytest --cov=src --cov-report=term --cov-report=json --cov-report=html || true
+            # Run coverage and capture output (exclude integration/e2e tests like main test workflow)
+            echo "Running coverage analysis..."
+            pytest tests/ --cov=src --cov-report=term --cov-report=json --cov-report=html -m "not integration and not e2e" || true
 
-            # Extract coverage percentage
+            # Debug: Check if coverage.json was created
             if [ -f coverage.json ]; then
+              echo "✓ coverage.json created successfully"
+              ls -la coverage.json
+
+              # Extract coverage percentage
               coverage_pct=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+              echo "Coverage percentage: $coverage_pct%"
               echo "COVERAGE_PCT=$coverage_pct" >> $GITHUB_ENV
 
               # Check if coverage dropped below baseline
               if (( $(echo "$coverage_pct < 78.89" | bc -l) )); then
+                echo "❌ Coverage below baseline: $coverage_pct% < 78.89%"
                 echo "COVERAGE_FAILED=true" >> $GITHUB_ENV
               else
+                echo "✓ Coverage meets baseline: $coverage_pct% >= 78.89%"
                 echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
               fi
+            else
+              echo "❌ coverage.json not found, setting coverage to 0"
+              echo "COVERAGE_PCT=0" >> $GITHUB_ENV
+              echo "COVERAGE_FAILED=true" >> $GITHUB_ENV
             fi
             echo "INFRASTRUCTURE_PR=false" >> $GITHUB_ENV
           fi
