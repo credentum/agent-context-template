@@ -253,7 +253,7 @@ jobs:
 
       # ---------- Auto-open GitHub issues for Suggested Follow-ups ----------
       - name: Parse Review and Create Issues
-        if: contains(steps.claude-review.outputs.response, 'ISSUE:')
+        if: always() && contains(steps.claude-review.outputs.response, 'ISSUE:')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
