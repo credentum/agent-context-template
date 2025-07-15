@@ -523,14 +523,23 @@ _Auto-created from sprint YAML and tracked by sprint system._
 
         success = True
         try:
-            # Add new labels
-            for label in labels_to_add:
-                cmd = ["gh", "issue", "edit", str(issue_number), "--add-label", label]
+            # Batch add labels in single command
+            if labels_to_add:
+                add_labels_str = ",".join(labels_to_add)
+                cmd = ["gh", "issue", "edit", str(issue_number), "--add-label", add_labels_str]
                 subprocess.run(cmd, capture_output=True, text=True, check=True)
 
-            # Remove old labels
-            for label in labels_to_remove:
-                cmd = ["gh", "issue", "edit", str(issue_number), "--remove-label", label]
+            # Batch remove labels in single command
+            if labels_to_remove:
+                remove_labels_str = ",".join(labels_to_remove)
+                cmd = [
+                    "gh",
+                    "issue",
+                    "edit",
+                    str(issue_number),
+                    "--remove-label",
+                    remove_labels_str,
+                ]
                 subprocess.run(cmd, capture_output=True, text=True, check=True)
 
             if self.verbose and (labels_to_add or labels_to_remove):

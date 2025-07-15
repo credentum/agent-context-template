@@ -252,6 +252,7 @@ phases:
     - scope:github-api
     dependencies: []
     estimate: 3 hours
+    github_issue: 79
 team:
 - role: lead
   agent: pm_agent
