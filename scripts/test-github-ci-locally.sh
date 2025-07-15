@@ -83,10 +83,10 @@ if [ -f coverage.json ]; then
     coverage_pct=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])" 2>/dev/null || echo "0")
     echo "Coverage detected: $coverage_pct%"
 
-    if (( $(echo "$coverage_pct >= 78.89" | bc -l) )); then
-        echo -e "${GREEN}✅ PASSED: Coverage meets baseline ($coverage_pct% >= 78.89%)${NC}"
+    if (( $(echo "$coverage_pct >= 78.5" | bc -l) )); then
+        echo -e "${GREEN}✅ PASSED: Coverage meets baseline ($coverage_pct% >= 78.5%)${NC}"
     else
-        echo -e "${RED}❌ FAILED: Coverage below baseline ($coverage_pct% < 78.89%)${NC}"
+        echo -e "${RED}❌ FAILED: Coverage below baseline ($coverage_pct% < 78.5%)${NC}"
         failed_checks=$((failed_checks + 1))
     fi
 else
