@@ -72,3 +72,4 @@ coverage-matrix.html
 # Coverage files
 coverage.json
 .coverage
+.coverage.*

@@ -72,3 +72,31 @@ None identified - this is a foundational task that enables other MCP work.
 - Path clarification needed: Issue mentions `mcp/contracts/context_v0.json` but existing structure suggests `context/mcp_contracts/context_v0.json`
 - Will proceed with existing structure pattern for consistency
 - This contract will enable implementation of actual MCP server in subsequent issues
+
+## Future MCP Server Validation
+
+For subsequent issues (#35, #36) implementing the actual MCP server, the contract should be validated against:
+
+### Real MCP Server Integration Checklist
+- [ ] Contract compatibility with MCP SDK/library
+- [ ] Tool registration matches contract definitions
+- [ ] Input/output schemas validated at runtime
+- [ ] Error handling matches expected patterns
+- [ ] Performance characteristics within acceptable bounds
+
+### Validation Methods
+1. **Schema Validation**: Use `tests/test_mcp_contract_validation.py` for ongoing contract validation
+2. **Runtime Testing**: Create mock MCP client to test actual server implementation
+3. **Integration Testing**: Test against real MCP client tools (if available)
+4. **Load Testing**: Validate performance under expected usage patterns
+
+### Contract Evolution
+- Version bumps should follow semantic versioning in `schema_version` field
+- Breaking changes require new contract version (context_v1.json)
+- Backward compatibility testing recommended for contract updates
+
+### Implementation Notes
+- Server implementation should validate inputs against `inputSchema`
+- Server responses should conform to `outputSchema` definitions
+- Examples in contract serve as integration test cases
+- Error responses should follow consistent format (add to future contract versions)
