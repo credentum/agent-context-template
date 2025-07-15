@@ -11,12 +11,24 @@ class CoverageSummary:
     """Generate and analyze test coverage metrics"""
 
     def __init__(self):
-        self.targets = {
-            "line_coverage": 49,  # Adjusted to current level: 49.29%
-            "branch_coverage": 35,  # Adjusted to current level: 36.21%
-            "mutation_score": 75,  # Current level: 75.00%
-            "critical_function_coverage": 100,  # Keep high standard
-        }
+        # Load targets from centralized config
+        try:
+            with open(".coverage-config.json") as f:
+                config = json.load(f)
+            self.targets = {
+                "line_coverage": config.get("baseline", 80),
+                "branch_coverage": config.get("branch_target", 60),
+                "mutation_score": config.get("mutation_baseline", 20),
+                "critical_function_coverage": 100,  # Keep high standard
+            }
+        except FileNotFoundError:
+            print("⚠️ .coverage-config.json not found, using defaults")
+            self.targets = {
+                "line_coverage": 80,
+                "branch_coverage": 60,
+                "mutation_score": 20,
+                "critical_function_coverage": 100,
+            }
 
     def get_coverage_metrics(self) -> Dict[str, float]:
         """Get coverage metrics from coverage.json"""

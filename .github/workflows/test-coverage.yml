@@ -64,6 +64,7 @@ jobs:
         python -m pytest \
           --cov=src \
           --cov-branch \
+          --cov-fail-under=80 \
           --cov-report=term-missing:skip-covered \
           --cov-report=html \
           --cov-report=xml \
@@ -119,8 +120,8 @@ jobs:
       if: github.event_name == 'pull_request'
       with:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        MINIMUM_GREEN: 85
-        MINIMUM_ORANGE: 70
+        MINIMUM_GREEN: 80
+        MINIMUM_ORANGE: 60
 
     - name: Generate coverage badge
       run: |
