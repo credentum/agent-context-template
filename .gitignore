@@ -71,4 +71,18 @@ coverage-matrix.html
 
 # Coverage files
 coverage.json
+coverage.xml
+coverage.svg
+coverage-summary.json
 .coverage
+
+# Reports directory (contains temporary files)
+reports/logs/
+reports/coverage/
+
+# Mypy and lint output
+mypy-errors*.txt
+lint-results.log
+
+# Package installation artifacts
+=*

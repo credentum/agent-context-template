@@ -43,10 +43,10 @@ python run_all_tests.py --suite mutation
 ### Run with Coverage
 ```bash
 # Run all tests with coverage
-pytest --cov=src --cov-branch --cov-report=term-missing --cov-report=html
+pytest --cov=src --cov-branch --cov-report=term-missing --cov-report=xml
 
-# View HTML coverage report
-open htmlcov/index.html
+# View coverage report
+coverage report
 ```
 
 ### Run Individual Test Files
@@ -163,7 +163,7 @@ The test suite is designed to run in CI/CD pipelines:
 After running tests, reports are generated:
 - `test_report.yaml` - Detailed test results in YAML format
 - `test_report.json` - Test results in JSON format for CI integration
-- `htmlcov/` - HTML coverage report
+- `coverage.xml` - XML coverage report for CI integration
 - `mutation_test_report.yaml` - Mutation testing results
 
 ## Requirements
