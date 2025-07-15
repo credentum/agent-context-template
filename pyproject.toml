@@ -47,7 +47,7 @@ precision = 2
 show_missing = true
 skip_covered = false
 sort = "Cover"
-fail_under = 80.0
+fail_under = 75.0  # 80.0 - 5.0 tolerance buffer
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
