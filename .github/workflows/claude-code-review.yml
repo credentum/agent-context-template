@@ -269,7 +269,7 @@ jobs:
           echo "=== END DEBUG ==="
 
       - name: Parse Review and Create Issues
-        if: always() && contains(steps.claude-review.outputs.response, 'ISSUE:')
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
