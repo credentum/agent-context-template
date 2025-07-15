@@ -121,6 +121,14 @@ jobs:
             Bash(ajv validate -s mcp-schema.json -d context/mcp_contracts/*.json),
             Bash(git diff --name-only origin/main...HEAD)
 
+      # ---------- Load Coverage Configuration ----------
+      - name: Load Coverage Configuration
+        id: load-config
+        run: |
+          baseline=$(python -c "import json; print(json.load(open('.coverage-config.json'))['baseline'])")
+          echo "COVERAGE_BASELINE=$baseline" >> $GITHUB_ENV
+          echo "Coverage baseline loaded: $baseline%"
+
       # ---------- Extract and Store Coverage Metrics ----------
       - name: Extract Coverage Metrics
         if: always()
@@ -131,7 +139,7 @@ jobs:
              [[ "${{ github.head_ref }}" == *"workflow"* ]] || \
              [[ "${{ github.head_ref }}" == *"fix/28"* ]]; then
             echo "Skipping coverage check for infrastructure PR"
-            echo "COVERAGE_PCT=78.5" >> $GITHUB_ENV  # Set to baseline to avoid failure
+            echo "COVERAGE_PCT=${{ env.COVERAGE_BASELINE }}" >> $GITHUB_ENV  # Set to baseline to avoid failure
             echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
             echo "INFRASTRUCTURE_PR=true" >> $GITHUB_ENV
           else
@@ -150,11 +158,11 @@ jobs:
               echo "COVERAGE_PCT=$coverage_pct" >> $GITHUB_ENV
 
               # Check if coverage dropped below baseline
-              if (( $(echo "$coverage_pct < 78.5" | bc -l) )); then
-                echo "❌ Coverage below baseline: $coverage_pct% < 78.5%"
+              if (( $(echo "$coverage_pct < ${{ env.COVERAGE_BASELINE }}" | bc -l) )); then
+                echo "❌ Coverage below baseline: $coverage_pct% < ${{ env.COVERAGE_BASELINE }}%"
                 echo "COVERAGE_FAILED=true" >> $GITHUB_ENV
               else
-                echo "✓ Coverage meets baseline: $coverage_pct% >= 78.5%"
+                echo "✓ Coverage meets baseline: $coverage_pct% >= ${{ env.COVERAGE_BASELINE }}%"
                 echo "COVERAGE_FAILED=false" >> $GITHUB_ENV
               fi
             else
@@ -225,9 +233,9 @@ jobs:
             if (review.verdict === 'REQUEST CHANGES' || review.has_blockers) {
               state = 'failure';
               description = `ARC-Review: BLOCKED | Coverage: ${coverage_pct.toFixed(1)}%`;
-            } else if (!isInfrastructurePR && coverage_pct < 78.5) {
+            } else if (!isInfrastructurePR && coverage_pct < parseFloat("${{ env.COVERAGE_BASELINE }}")) {
               state = 'failure';
-              description = `ARC-Review: Coverage regression (${coverage_pct.toFixed(1)}% < 78.5%)`;
+              description = `ARC-Review: Coverage regression (${coverage_pct.toFixed(1)}% < ${{ env.COVERAGE_BASELINE }}%)`;
             } else if (isInfrastructurePR) {
               description = `ARC-Review: PASS (Infrastructure PR) | Coverage: skipped`;
             }
@@ -322,7 +330,7 @@ jobs:
         run: |
           echo "🚫 PR has blocking issues or coverage regression — failing build."
           echo "Review verdict: ${{ fromJson(env.REVIEW_JSON).verdict }}"
-          echo "Coverage: ${{ env.COVERAGE_PCT }}% (minimum: 78.5%)"
+          echo "Coverage: ${{ env.COVERAGE_PCT }}% (minimum: ${{ env.COVERAGE_BASELINE }}%)"
           exit 1
 
       - name: Success Message

@@ -75,6 +75,15 @@ echo ""
 echo "📊 4. COVERAGE ANALYSIS (from claude-code-review.yml)"
 echo "===================================================="
 
+# Load coverage baseline from config
+if [ -f .coverage-config.json ]; then
+    baseline=$(python -c "import json; print(json.load(open('.coverage-config.json'))['baseline'])" 2>/dev/null || echo "78.5")
+    echo "Coverage baseline loaded: $baseline%"
+else
+    baseline="78.5"
+    echo "Warning: .coverage-config.json not found, using default baseline: $baseline%"
+fi
+
 # Test the exact coverage command from ARC-Reviewer
 echo "Running ARC-Reviewer coverage analysis..."
 pytest tests/ --cov=src --cov-report=term --cov-report=json -m "not integration and not e2e" > /tmp/coverage_output.txt 2>&1 || true
@@ -83,10 +92,10 @@ if [ -f coverage.json ]; then
     coverage_pct=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])" 2>/dev/null || echo "0")
     echo "Coverage detected: $coverage_pct%"
 
-    if (( $(echo "$coverage_pct >= 78.5" | bc -l) )); then
-        echo -e "${GREEN}✅ PASSED: Coverage meets baseline ($coverage_pct% >= 78.5%)${NC}"
+    if (( $(echo "$coverage_pct >= $baseline" | bc -l) )); then
+        echo -e "${GREEN}✅ PASSED: Coverage meets baseline ($coverage_pct% >= $baseline%)${NC}"
     else
-        echo -e "${RED}❌ FAILED: Coverage below baseline ($coverage_pct% < 78.5%)${NC}"
+        echo -e "${RED}❌ FAILED: Coverage below baseline ($coverage_pct% < $baseline%)${NC}"
         failed_checks=$((failed_checks + 1))
     fi
 else

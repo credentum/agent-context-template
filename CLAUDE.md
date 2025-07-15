@@ -8,7 +8,7 @@ This is an **Agent-First Project Context System** that provides structured conte
 
 **Current Project Status:**
 - Coverage: 78.5% (Current baseline)
-- Target: 85% for all modules, 90% for validators
+- Target: 85.0% for all modules, 90.0% for validators
 - Progress: Good coverage improvements across most modules
 - Python 3.11 codebase with async support
 

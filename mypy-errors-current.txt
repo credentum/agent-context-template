@@ -287,7 +287,7 @@ indexable  [index]
             assert recalc_hash == graph_snapshot["metadata"]["snapshot_has...
                                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 tests/test_reproducibility.py:276: error: Argument "ttl_seconds" to "set_cache"
-of "RedisConnector" has incompatible type "object"; expected "int | None" 
+of "RedisConnector" has incompatible type "object"; expected "int | None"
 [arg-type]
     ... kv_store.redis.set_cache(key, data["value"], ttl_seconds=data["ttl"])
                                                                  ^~~~~~~~~~~
@@ -437,7 +437,7 @@ assignment (expression has type "float", target has type "int")  [assignment]
             metrics["total_time_ms"] = (end_time - start_time).total_secon...
                                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
 tests/test_integration_embedding_flow.py:448: error: Incompatible types in
-assignment (expression has type "float | int", target has type "int") 
+assignment (expression has type "float | int", target has type "int")
 [assignment]
                 metrics["total_time_ms"] / metrics["documents_processed"]
                 ^
@@ -470,7 +470,7 @@ expected "list[float]"  [arg-type]
                 embedder._compute_embedding_hash(None)
                                                  ^~~~
 tests/test_hash_diff_embedder.py:416: error: Argument 1 to
-"ResponseHandlingException" has incompatible type "str"; expected "Exception" 
+"ResponseHandlingException" has incompatible type "str"; expected "Exception"
 [arg-type]
     ...t_client.side_effect = ResponseHandlingException("Connection timeout")
                                                         ^~~~~~~~~~~~~~~~~~~~
@@ -487,7 +487,7 @@ tests/test_hash_diff_embedder.py:432: error: Argument "content_hash" to
                 content_hash=[],  # Should be string
                              ^~
 tests/test_hash_diff_embedder.py:433: error: Argument "embedding_hash" to
-"DocumentHash" has incompatible type "dict[Never, Never]"; expected "str" 
+"DocumentHash" has incompatible type "dict[Never, Never]"; expected "str"
 [arg-type]
                 embedding_hash={},  # Should be string
                                ^~
@@ -500,11 +500,11 @@ tests/test_hash_diff_embedder.py:435: error: Argument "vector_id" to
                 vector_id=True,  # Should be string
                           ^~~~
 tests/test_hash_diff_embedder.py:439: error: Non-overlapping equality check
-(left operand type: "str", right operand type: "Literal[123]") 
+(left operand type: "str", right operand type: "Literal[123]")
 [comparison-overlap]
             assert doc_hash.document_id == 123
                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~
-tests/test_hash_diff_embedder.py:572: error: Cannot assign to a method 
+tests/test_hash_diff_embedder.py:572: error: Cannot assign to a method
 [method-assign]
             embedder._save_hash_cache = lambda: increment_access()
             ^~~~~~~~~~~~~~~~~~~~~~~~~
@@ -512,7 +512,7 @@ tests/test_edge_cases.py:26: error: Name "given" already defined (possibly by
 an import)  [no-redef]
         def given(*args, **kwargs):
         ^
-tests/test_edge_cases.py:32: error: Name "st" already defined (by an import) 
+tests/test_edge_cases.py:32: error: Name "st" already defined (by an import)
 [no-redef]
         class st:
         ^
@@ -533,7 +533,7 @@ incompatible type "str"; expected "DocumentHash"  [arg-type]
     ...             embedder.hash_cache.__setitem__, f"key_{i}", f"value_{i}"
                                                                  ^~~~~~~~~~~~
 tests/test_benchmarks.py:166: error: Argument 1 to "submit" of "Executor" has
-incompatible type overloaded function; expected "Callable[[str, None], None]" 
+incompatible type overloaded function; expected "Callable[[str, None], None]"
 [arg-type]
                             future = executor.submit(embedder.hash_cache.g...
                                                      ^~~~~~~~~~~~~~~~~~~~~~~
