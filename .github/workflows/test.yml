@@ -67,7 +67,7 @@ jobs:
       - name: Run unit tests
         run: |
           python -m pytest tests/ -v --tb=short -m "not integration and not e2e" \
-            --cov=. --cov-report=term-missing --cov-report=xml \
+            --cov=src --cov-report=term-missing --cov-report=xml \
             --timeout=60 --timeout-method=thread -x
 
       - name: Upload coverage reports

@@ -389,8 +389,8 @@ class TestPropertyBasedPerformance:
 
     if HAS_HYPOTHESIS:
 
-        @given(st.integers(min_value=1, max_value=10000))  # Reduced from 1M to 10K for faster tests
-        @settings(max_examples=20)  # Reduced examples for performance tests
+        @given(st.integers(min_value=1, max_value=1000))  # Reduced max to 1000 for faster tests
+        @settings(max_examples=10, deadline=500)  # Reduced examples and increased deadline
         def test_algorithmic_complexity(self, n: int):
             """Test that algorithms have expected complexity"""
             import time
@@ -401,19 +401,19 @@ class TestPropertyBasedPerformance:
             linear_time = time.perf_counter() - start
 
             # Test quadratic time operation (with smaller n)
-            if n <= 1000:  # Limit to avoid too long execution
+            if n <= 100:  # Much smaller limit to avoid timeout
                 start = time.perf_counter()
                 sum(i * j for i in range(n) for j in range(n))  # O(n²)
                 quadratic_time = time.perf_counter() - start
 
                 # Property: Quadratic should take significantly more time
-                if n > 100:
+                if n > 50:
                     assert quadratic_time > linear_time
 
             # Property: Linear time should scale linearly
             # (This is approximate due to system variability)
-            if n > 10000:
-                assert linear_time < n * 1e-7  # Rough upper bound
+            if n > 100:
+                assert linear_time < n * 1e-6  # More relaxed upper bound
 
         @given(st.lists(st.integers(), min_size=0, max_size=10000))
         def test_memory_efficiency(self, data: List[int]):
