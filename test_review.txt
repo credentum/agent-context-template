@@ -1,1 +1,0 @@
-ISSUE: Clean up test artifacts after verification - Remove test-workflow-fix.md once workflow functionality is confirmed - labels=cleanup,test - phase=backlog
