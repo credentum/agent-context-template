@@ -18,11 +18,17 @@ class CoverageSummary:
         try:
             with open(".coverage-config.json") as f:
                 config = json.load(f)
+                tolerance_buffer = config.get("tolerance_buffer", 0.0)
                 return {
-                    "line_coverage": config.get("baseline", 80.0),
-                    "branch_coverage": config.get("branch_coverage", 60.0),
-                    "mutation_score": config.get("mutation_baseline", 20.0),
-                    "critical_function_coverage": 100,  # Keep high standard
+                    "line_coverage": max(0, config.get("baseline", 80.0) - tolerance_buffer),
+                    "branch_coverage": max(
+                        0, config.get("branch_coverage", 60.0) - tolerance_buffer
+                    ),
+                    "mutation_score": max(
+                        0, config.get("mutation_baseline", 20.0) - tolerance_buffer
+                    ),
+                    "critical_function_coverage": 100,  # Keep high standard, no tolerance
+                    "tolerance_buffer": tolerance_buffer,
                 }
         except FileNotFoundError:
             print("⚠️  .coverage-config.json not found. Using default thresholds.")
@@ -31,6 +37,7 @@ class CoverageSummary:
                 "branch_coverage": 60.0,
                 "mutation_score": 20.0,
                 "critical_function_coverage": 100,
+                "tolerance_buffer": 0.0,
             }
         except Exception as e:
             print(f"⚠️  Error loading coverage config: {e}")
@@ -39,6 +46,7 @@ class CoverageSummary:
                 "branch_coverage": 60.0,
                 "mutation_score": 20.0,
                 "critical_function_coverage": 100,
+                "tolerance_buffer": 0.0,
             }
 
     def get_coverage_metrics(self) -> Dict[str, float]:

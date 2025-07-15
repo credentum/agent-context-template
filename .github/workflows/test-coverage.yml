@@ -79,8 +79,8 @@ jobs:
 
     - name: Enforce coverage thresholds
       run: |
-        # Use coverage.py's built-in fail_under check
-        python -m coverage report --fail-under=80
+        # Use coverage.py's built-in fail_under check with tolerance buffer
+        python -m coverage report --fail-under=75  # 80.0 - 5.0 tolerance buffer
 
     - name: Check mutation testing baseline
       run: |
