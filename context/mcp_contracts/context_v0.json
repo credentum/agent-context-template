@@ -24,7 +24,9 @@
       }
     }
   },
-  "required": ["tools"],
+  "required": [
+    "tools"
+  ],
   "definitions": {
     "store_context": {
       "type": "object",
@@ -60,21 +62,31 @@
                       "const": "Unique identifier for the context item"
                     }
                   },
-                  "required": ["type", "description"]
+                  "required": [
+                    "type",
+                    "description"
+                  ]
                 },
                 "value": {
                   "type": "object",
                   "properties": {
                     "type": {
                       "type": "string",
-                      "enum": ["string", "object", "array"]
+                      "enum": [
+                        "string",
+                        "object",
+                        "array"
+                      ]
                     },
                     "description": {
                       "type": "string",
                       "const": "Context data to store"
                     }
                   },
-                  "required": ["type", "description"]
+                  "required": [
+                    "type",
+                    "description"
+                  ]
                 },
                 "metadata": {
                   "type": "object",
@@ -88,7 +100,10 @@
                       "const": "Optional metadata for the context item"
                     }
                   },
-                  "required": ["type", "description"]
+                  "required": [
+                    "type",
+                    "description"
+                  ]
                 },
                 "ttl": {
                   "type": "object",
@@ -106,23 +121,60 @@
                       "const": 1
                     }
                   },
-                  "required": ["type", "description"]
+                  "required": [
+                    "type",
+                    "description"
+                  ]
                 }
               },
-              "required": ["key", "value"]
+              "required": [
+                "key",
+                "value"
+              ]
             },
             "required": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "const": ["key", "value"]
+              "const": [
+                "key",
+                "value"
+              ]
             }
           },
-          "required": ["type", "properties", "required"]
+          "required": [
+            "type",
+            "properties",
+            "required"
+          ]
         }
       },
-      "required": ["name", "description", "inputSchema"]
+      "required": [
+        "name",
+        "description",
+        "inputSchema",
+        "outputSchema"
+      ],
+      "outputSchema": {
+        "type": "object",
+        "description": "Response from store_context operation",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "success",
+          "key"
+        ]
+      }
     },
     "retrieve_context": {
       "type": "object",
@@ -158,7 +210,10 @@
                       "const": "Specific key to retrieve (optional)"
                     }
                   },
-                  "required": ["type", "description"]
+                  "required": [
+                    "type",
+                    "description"
+                  ]
                 },
                 "query": {
                   "type": "object",
@@ -172,7 +227,10 @@
                       "const": "Semantic query for context search (optional)"
                     }
                   },
-                  "required": ["type", "description"]
+                  "required": [
+                    "type",
+                    "description"
+                  ]
                 },
                 "limit": {
                   "type": "object",
@@ -198,7 +256,11 @@
                       "const": 100
                     }
                   },
-                  "required": ["type", "description", "default"]
+                  "required": [
+                    "type",
+                    "description",
+                    "default"
+                  ]
                 },
                 "include_metadata": {
                   "type": "object",
@@ -216,7 +278,11 @@
                       "const": false
                     }
                   },
-                  "required": ["type", "description", "default"]
+                  "required": [
+                    "type",
+                    "description",
+                    "default"
+                  ]
                 }
               },
               "required": []
@@ -229,10 +295,46 @@
               "const": []
             }
           },
-          "required": ["type", "properties", "required"]
+          "required": [
+            "type",
+            "properties",
+            "required"
+          ]
         }
       },
-      "required": ["name", "description", "inputSchema"]
+      "required": [
+        "name",
+        "description",
+        "inputSchema",
+        "outputSchema"
+      ],
+      "outputSchema": {
+        "type": "object",
+        "description": "Response from retrieve_context operation",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "value": {},
+                "score": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "total_found": {
+            "type": "integer"
+          },
+          "found": {
+            "type": "boolean"
+          }
+        }
+      }
     },
     "get_agent_state": {
       "type": "object",
@@ -272,7 +374,11 @@
                       "const": true
                     }
                   },
-                  "required": ["type", "description", "default"]
+                  "required": [
+                    "type",
+                    "description",
+                    "default"
+                  ]
                 },
                 "include_metrics": {
                   "type": "object",
@@ -290,7 +396,11 @@
                       "const": false
                     }
                   },
-                  "required": ["type", "description", "default"]
+                  "required": [
+                    "type",
+                    "description",
+                    "default"
+                  ]
                 }
               },
               "required": []
@@ -303,14 +413,56 @@
               "const": []
             }
           },
-          "required": ["type", "properties", "required"]
+          "required": [
+            "type",
+            "properties",
+            "required"
+          ]
         }
       },
-      "required": ["name", "description", "inputSchema"]
+      "required": [
+        "name",
+        "description",
+        "inputSchema",
+        "outputSchema"
+      ],
+      "outputSchema": {
+        "type": "object",
+        "description": "Response from get_agent_state operation",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "error"
+            ]
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "status",
+          "capabilities",
+          "version"
+        ]
+      }
     }
   },
-  "examples": {
-    "store_context": {
+  "examples": [
+    {
+      "tool": "store_context",
       "description": "Examples of store_context tool usage",
       "examples": [
         {
@@ -329,7 +481,10 @@
               "current_sprint": "sprint-5",
               "phase": "Phase 5",
               "completion": 0.3,
-              "blockers": ["issue-34", "issue-42"]
+              "blockers": [
+                "issue-34",
+                "issue-42"
+              ]
             },
             "metadata": {
               "type": "sprint_tracking",
@@ -344,14 +499,19 @@
           "name": "Store temporary session data",
           "input": {
             "key": "session-temp-data",
-            "value": ["item1", "item2", "item3"],
+            "value": [
+              "item1",
+              "item2",
+              "item3"
+            ],
             "ttl": 3600
           },
           "description": "Store temporary array data with 1-hour TTL"
         }
       ]
     },
-    "retrieve_context": {
+    {
+      "tool": "retrieve_context",
       "description": "Examples of retrieve_context tool usage",
       "examples": [
         {
@@ -381,7 +541,10 @@
                   "current_sprint": "sprint-5",
                   "phase": "Phase 5",
                   "completion": 0.3,
-                  "blockers": ["issue-34", "issue-42"]
+                  "blockers": [
+                    "issue-34",
+                    "issue-42"
+                  ]
                 },
                 "metadata": {
                   "type": "sprint_tracking",
@@ -416,7 +579,8 @@
         }
       ]
     },
-    "get_agent_state": {
+    {
+      "tool": "get_agent_state",
       "description": "Examples of get_agent_state tool usage",
       "examples": [
         {
@@ -432,7 +596,11 @@
               "context_items_stored": 15,
               "last_activity": "2025-07-15T11:00:00Z"
             },
-            "capabilities": ["store_context", "retrieve_context", "get_agent_state"],
+            "capabilities": [
+              "store_context",
+              "retrieve_context",
+              "get_agent_state"
+            ],
             "version": "1.0.0"
           },
           "description": "Get current agent state with session details"
@@ -460,7 +628,11 @@
               "cache_hit_rate": 0.85,
               "storage_usage_bytes": 2048576
             },
-            "capabilities": ["store_context", "retrieve_context", "get_agent_state"],
+            "capabilities": [
+              "store_context",
+              "retrieve_context",
+              "get_agent_state"
+            ],
             "version": "1.0.0"
           },
           "description": "Get agent state with performance metrics included"
@@ -474,12 +646,17 @@
           "expected_output": {
             "agent_id": "claude-code-agent",
             "status": "active",
-            "capabilities": ["store_context", "retrieve_context", "get_agent_state"],
+            "capabilities": [
+              "store_context",
+              "retrieve_context",
+              "get_agent_state"
+            ],
             "version": "1.0.0"
           },
           "description": "Get minimal agent state without session or metrics"
         }
       ]
     }
-  }
+  ],
+  "schema_version": "1.0.0"
 }

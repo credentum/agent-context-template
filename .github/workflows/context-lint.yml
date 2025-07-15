@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'context/**/*.yaml'
+      - 'context/**/*.json'
       - 'context_lint.py'
       - '.ctxrc.yaml'
       - '**/*.py'
@@ -12,6 +13,7 @@ on:
   pull_request:
     paths:
       - 'context/**/*.yaml'
+      - 'context/**/*.json'
       - 'context_lint.py'
       - '.ctxrc.yaml'
       - '**/*.py'
@@ -31,13 +33,22 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        npm install
 
     - name: Check configuration
       run: python -m src.agents.context_lint check-config --verbose
+
+    - name: Validate MCP schemas
+      run: npm run validate-mcp
 
     - name: Validate context files
       run: python -m src.agents.context_lint validate context/ --verbose
