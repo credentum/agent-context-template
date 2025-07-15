@@ -1,3 +1,4 @@
+---
 ###############################################################################
 # 🛠️  Enhanced GitHub Workflow — Claude Code Review (Agent-First, ARC-Reviewer)
 # Version: 2025-01-15 with suggested improvements
@@ -424,7 +425,8 @@ jobs:
             echo "Parsed - Title: $title, Phase: $phase"
 
             # Build checklist item
-            suggestions_checklist="${suggestions_checklist}- [ ] **${title}**: ${description} (phase: ${phase})\n"
+            item="- [ ] **${title}**: ${description} (phase: ${phase})\n"
+            suggestions_checklist="${suggestions_checklist}${item}"
 
             ((issue_count++))
 
@@ -452,14 +454,45 @@ jobs:
             review_date=$(date -u +"%Y-%m-%d %H:%M UTC")
 
             # Create aggregated issue
-            aggregated_title="[PR #${{ github.event.pull_request.number }}] Follow-ups Suggested by ARC-Reviewer"
+            pr_num="${{ github.event.pull_request.number }}"
+            aggregated_title="[PR #${pr_num}] Follow-ups Suggested by ARC-Reviewer"
 
-            # Create initial issue body
-            issue_body="## Context\n\nThis issue consolidates all follow-up suggestions from ARC-Reviewer for better triage and sprint planning.\n\n**Original PR:** #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}\n**PR URL:** ${{ github.event.pull_request.html_url }}\n**Author:** @${{ github.event.pull_request.user.login }}\n\n## Review Suggestions - $review_date (Commit $commit_short)\n\n$suggestions_checklist\n\n## Triage Instructions\n\n**For PM/Agent Review:**\n1. Review each suggestion for actionable value\n2. Check priority alignment with current sprint goals\n3. Promote high-value items to appropriate sprint YAML files\n4. Check off completed suggestions as they are addressed\n5. Add \`sprint-triage\` label when reviewed\n6. Close this issue once all suggestions are triaged\n\n## Labels\n- \`from-code-review\`: Auto-generated from code review\n- \`sprint-triage\`: Needs PM/agent triage review\n- \`phase=backlog\`: Default phase for new suggestions\n\n---\n*Automatically created by ARC-Reviewer post-merge process*"
+            # Create issue body content
+            {
+              echo "## Context"
+              echo ""
+              echo "This issue consolidates all follow-up suggestions from ARC-Reviewer for better triage and sprint planning."
+              echo ""
+              echo "**Original PR:** #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}"
+              echo "**PR URL:** ${{ github.event.pull_request.html_url }}"
+              echo "**Author:** @${{ github.event.pull_request.user.login }}"
+              echo ""
+              echo "## Review Suggestions - $review_date (Commit $commit_short)"
+              echo ""
+              echo "$suggestions_checklist"
+              echo ""
+              echo "## Triage Instructions"
+              echo ""
+              echo "**For PM/Agent Review:**"
+              echo "1. Review each suggestion for actionable value"
+              echo "2. Check priority alignment with current sprint goals"
+              echo "3. Promote high-value items to appropriate sprint YAML files"
+              echo "4. Check off completed suggestions as they are addressed"
+              echo "5. Add \`sprint-triage\` label when reviewed"
+              echo "6. Close this issue once all suggestions are triaged"
+              echo ""
+              echo "## Labels"
+              echo "- \`from-code-review\`: Auto-generated from code review"
+              echo "- \`sprint-triage\`: Needs PM/agent triage review"
+              echo "- \`phase=backlog\`: Default phase for new suggestions"
+              echo ""
+              echo "---"
+              echo "*Automatically created by ARC-Reviewer post-merge process*"
+            } > issue_body.md
 
             gh issue create \
               --title "$aggregated_title" \
-              --body "$issue_body" \
+              --body-file issue_body.md \
               --label "from-code-review,sprint-triage,phase=backlog"
 
             echo "✅ Successfully created aggregated issue for merged PR #${{ github.event.pull_request.number }}"
