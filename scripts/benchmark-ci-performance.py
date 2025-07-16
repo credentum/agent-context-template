@@ -14,8 +14,14 @@ from typing import Any, Dict, List
 
 
 class CIBenchmark:
-    def __init__(self) -> None:
+    def __init__(self, default_timeout: int = 1800) -> None:
+        """Initialize CI benchmark tool.
+
+        Args:
+            default_timeout: Default timeout in seconds for command execution (default: 1800).
+        """
         self.results: Dict[str, Any] = {"timestamp": datetime.now().isoformat(), "benchmarks": {}}
+        self.default_timeout = default_timeout
         # Allowed commands for security validation
         self.allowed_commands = {
             "scripts/run-ci-docker.sh",
@@ -45,7 +51,7 @@ class CIBenchmark:
         return False
 
     def run_command(
-        self, command: List[str], description: str, timeout: int = 1800
+        self, command: List[str], description: str, timeout: int = None
     ) -> Dict[str, Any]:
         """Run a command and measure execution time with security validation"""
         # Security validation
@@ -57,6 +63,10 @@ class CIBenchmark:
                 "returncode": -3,
                 "error": "Command blocked by security policy",
             }
+
+        # Use default timeout if not specified
+        if timeout is None:
+            timeout = self.default_timeout
 
         print(f"🔄 Running: {description}")
         print(f"   Command: {' '.join(command)}")
@@ -97,7 +107,18 @@ class CIBenchmark:
             return {"duration": 0, "success": False, "returncode": -2, "error": str(e)}
 
     def benchmark_legacy_ci(self) -> float:
-        """Benchmark legacy CI pipeline"""
+        """Benchmark legacy CI pipeline performance.
+
+        Executes the legacy CI components (black, mypy, flake8, unit tests, coverage)
+        sequentially and measures total execution time and success rate.
+
+        Returns:
+            float: Total execution time in seconds for the legacy pipeline.
+
+        Note:
+            Results are stored in self.results['benchmarks']['legacy'] with
+            detailed timing and success metrics for each component.
+        """
         print("\n🕰️  Benchmarking Legacy CI Pipeline")
         print("=" * 50)
 
@@ -130,7 +151,18 @@ class CIBenchmark:
         return total_time
 
     def benchmark_optimized_ci(self) -> float:
-        """Benchmark optimized CI pipeline"""
+        """Benchmark optimized CI pipeline performance.
+
+        Executes the optimized CI components (fast pipeline, parallel pipeline)
+        and measures total execution time and success rate with parallelization benefits.
+
+        Returns:
+            float: Total execution time in seconds for the optimized pipeline.
+
+        Note:
+            Results are stored in self.results['benchmarks']['optimized'] with
+            performance improvements and parallel execution metrics.
+        """
         print("\n🚀 Benchmarking Optimized CI Pipeline")
         print("=" * 50)
 
@@ -160,7 +192,15 @@ class CIBenchmark:
         return total_time
 
     def benchmark_individual_components(self) -> None:
-        """Benchmark individual components for detailed analysis"""
+        """Benchmark individual CI components for detailed performance analysis.
+
+        Runs isolated tests on optimized components (Black, MyPy, Core Tests) to measure
+        individual performance characteristics and identify optimization opportunities.
+
+        Note:
+            Results are stored in self.results['benchmarks']['components'] with
+            per-component timing and success metrics.
+        """
         print("\n🔍 Benchmarking Individual Components")
         print("=" * 50)
 
@@ -202,13 +242,24 @@ class CIBenchmark:
 
         benchmarks = []
         for command, description in components:
-            result = self.run_command(command, description, timeout=600)
+            # Use shorter timeout for individual components
+            component_timeout = min(600, self.default_timeout)
+            result = self.run_command(command, description, timeout=component_timeout)
             benchmarks.append({"name": description, "command": " ".join(command), **result})
 
         self.results["benchmarks"]["components"] = benchmarks
 
     def generate_report(self) -> None:
-        """Generate comprehensive performance report"""
+        """Generate comprehensive performance report comparing legacy vs optimized CI.
+
+        Analyzes benchmark results and produces a detailed comparison report including:
+        - Total execution time comparison
+        - Performance improvement percentage
+        - Success rate analysis
+        - Component-level performance breakdown
+
+        The report is printed to stdout with formatted metrics and recommendations.
+        """
         print("\n📊 Performance Report")
         print("=" * 50)
 
@@ -308,10 +359,13 @@ def main() -> None:
         "--output", default="ci-benchmark-results.json", help="Output file for results"
     )
     parser.add_argument("--compare-with", help="Compare with previous results file")
+    parser.add_argument(
+        "--timeout", type=int, default=1800, help="Command timeout in seconds (default: 1800)"
+    )
 
     args = parser.parse_args()
 
-    benchmark = CIBenchmark()
+    benchmark = CIBenchmark(default_timeout=args.timeout)
 
     print("🏁 CI Performance Benchmark Tool")
     print("=" * 50)
