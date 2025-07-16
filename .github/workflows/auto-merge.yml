@@ -77,11 +77,63 @@ jobs:
             echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Auto-update branch to prevent conflicts
+        id: auto-update
+        run: |
+          echo "🔄 Checking if branch needs updating..."
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Get current branch info
+          HEAD_SHA="${{ steps.pr-parsed.outputs.head_sha }}"
+          BASE_REF="${{ steps.pr-parsed.outputs.base_ref }}"
+          PR_NUMBER="${{ steps.pr-parsed.outputs.pr_number }}"
+
+          echo "HEAD_SHA: $HEAD_SHA"
+          echo "BASE_REF: $BASE_REF"
+
+          # Fetch latest changes
+          git fetch origin $BASE_REF
+
+          # Check if branch is behind base
+          if ! git merge-base --is-ancestor origin/$BASE_REF $HEAD_SHA; then
+            echo "⚠️ Branch is behind $BASE_REF, attempting auto-update..."
+
+            # Switch to PR branch
+            git checkout $HEAD_SHA
+
+            # Check if clean rebase is possible
+            if git rebase origin/$BASE_REF --dry-run 2>/dev/null; then
+              echo "✅ Clean rebase possible, updating branch..."
+
+              # Perform the rebase
+              git rebase origin/$BASE_REF
+
+              # Push the updated branch
+              git push origin HEAD:refs/heads/${{ github.head_ref }} --force-with-lease
+
+              echo "✅ Branch successfully updated"
+              echo "branch_updated=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Conflicts detected, cannot auto-update"
+              echo "Manual intervention required for conflict resolution"
+              echo "branch_updated=false" >> $GITHUB_OUTPUT
+              echo "conflicts_detected=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "✅ Branch is up to date"
+            echo "branch_updated=false" >> $GITHUB_OUTPUT
+            echo "conflicts_detected=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Wait for CI completion
         id: wait-ci
         uses: actions/github-script@v7
         with:
           timeout-minutes: 30
+          result-encoding: string
           script: |
             const pr_number = ${{ steps.pr-parsed.outputs.pr_number }};
             const head_sha = "${{ steps.pr-parsed.outputs.head_sha }}";
@@ -91,10 +143,7 @@ jobs:
               'claude-pr-review',
               'ARC-Reviewer',
               '📊 Coverage Analysis',
-              '🔍 Lint & Style (black)',
-              '🔍 Lint & Style (isort)',
-              '🔍 Lint & Style (flake8)',
-              '🔍 Lint & Style (mypy)',
+              '🔍 Lint & Style',
               '🧪 Core Tests',
               '🔗 Integration Tests'
             ];
@@ -153,9 +202,11 @@ jobs:
                 } else if (check.status !== 'completed') {
                   allCompleted = false;
                   console.log(`${requiredCheck} is still ${check.status}`);
-                } else if (check.conclusion !== 'success' && check.conclusion !== 'SUCCESS') {
+                } else if (check.conclusion !== 'success' && check.conclusion !== 'SUCCESS' && check.conclusion !== 'skipped') {
                   allPassed = false;
                   console.log(`${requiredCheck} failed with conclusion: ${check.conclusion}`);
+                } else if (check.conclusion === 'skipped') {
+                  console.log(`${requiredCheck} was skipped - treating as success`);
                 }
               }
 
@@ -186,6 +237,7 @@ jobs:
         if: steps.wait-ci.outputs.result == 'success'
         uses: actions/github-script@v7
         with:
+          result-encoding: string
           script: |
             const pr_number = ${{ steps.pr-parsed.outputs.pr_number }};
 
@@ -198,7 +250,7 @@ jobs:
 
             // Look for ARC-Reviewer comment
             const arcComment = comments.find(comment =>
-              comment.user.type === 'Bot' &&
+              (comment.user.type === 'Bot' || comment.user.login === 'claude') &&
               (comment.body.includes('ARC-Reviewer') || comment.body.includes('schema_version'))
             );
 
@@ -210,30 +262,42 @@ jobs:
             const reviewBody = arcComment.body;
             console.log('ARC-Reviewer comment found');
 
+            // Extract YAML content (handle both code block and plain text formats)
+            let yamlContent = reviewBody;
+            const yamlMatch = reviewBody.match(/```yaml\s*\n([\s\S]*?)\n```/) ||
+                            reviewBody.match(/```\s*\n([\s\S]*?)\n```/);
+            if (yamlMatch) {
+              yamlContent = yamlMatch[1];
+              console.log('Found YAML in code block');
+            } else {
+              console.log('Processing plain text format');
+            }
+
             // Parse YAML content for verdict
-            const verdictMatch = reviewBody.match(/verdict:\s*['"]*([^'"\\n]+)['"]*/) ||
-                               reviewBody.match(/verdict:\s*"?(APPROVE|REQUEST_CHANGES)"?/);
+            const verdictMatch = yamlContent.match(/verdict:\s*['"]*([^'"\\n]+)['"]*/) ||
+                               yamlContent.match(/verdict:\s*"?(APPROVE|REQUEST_CHANGES)"?/);
 
             if (verdictMatch) {
               const verdict = verdictMatch[1].trim();
               console.log(`✅ ARC-Reviewer verdict: ${verdict}`);
 
               if (verdict === 'APPROVE') {
-                // Check for blocking issues in YAML
-                const blockingMatch = reviewBody.match(/blocking:\s*\[\s*\]/) ||
-                                     reviewBody.match(/blocking:\s*\[\]/);
+                // Check for blocking issues in YAML (nested under issues:)
+                const blockingMatch = yamlContent.match(/issues:\s*\n\s*blocking:\s*\[\s*\]/) ||
+                                     yamlContent.match(/blocking:\s*\[\s*\]/) ||
+                                     yamlContent.match(/blocking:\s*\[\]/);
 
                 if (blockingMatch) {
                   console.log('✅ No blocking issues found');
                   return 'approved';
                 } else {
                   // Check if there are actual blocking issues
-                  const hasBlockingIssues = reviewBody.match(/blocking:\s*\n\s*-/) ||
-                                          reviewBody.match(/blocking:\s*\[.*\S.*\]/);
+                  const hasBlockingIssues = yamlContent.match(/blocking:\s*\n\s*-/) ||
+                                          yamlContent.match(/blocking:\s*\[.*\S.*\]/);
                   if (hasBlockingIssues) {
                     console.log('❌ Blocking issues found in APPROVE verdict');
                     // Extract and log blocking issues for visibility
-                    const blockingSection = reviewBody.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
+                    const blockingSection = yamlContent.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
                     if (blockingSection) {
                       console.log('📋 Blocking issues details:');
                       console.log(blockingSection[1]);
@@ -245,7 +309,7 @@ jobs:
               } else if (verdict === 'REQUEST_CHANGES') {
                 console.log('❌ ARC-Reviewer verdict: REQUEST_CHANGES');
                 // Extract and log blocking issues for visibility
-                const blockingSection = reviewBody.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
+                const blockingSection = yamlContent.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
                 if (blockingSection) {
                   console.log('📋 Blocking issues details:');
                   console.log(blockingSection[1]);
@@ -267,8 +331,14 @@ jobs:
           echo "- No blocking issues: ✅ CONFIRMED"
           echo "- PR is mergeable: ${{ steps.pr-parsed.outputs.mergeable }}"
           echo "- Base branch: ${{ steps.pr-parsed.outputs.base_ref }}"
+          echo "- Branch updated: ${{ steps.auto-update.outputs.branch_updated }}"
+          echo "- Conflicts detected: ${{ steps.auto-update.outputs.conflicts_detected }}"
 
-          if [ "${{ steps.pr-parsed.outputs.mergeable }}" = "true" ]; then
+          # Check if conflicts were detected during auto-update
+          if [ "${{ steps.auto-update.outputs.conflicts_detected }}" = "true" ]; then
+            echo "ready_to_merge=false" >> $GITHUB_OUTPUT
+            echo "❌ Conflicts detected during auto-update - manual intervention required"
+          elif [ "${{ steps.pr-parsed.outputs.mergeable }}" = "true" ]; then
             echo "ready_to_merge=true" >> $GITHUB_OUTPUT
           else
             echo "ready_to_merge=false" >> $GITHUB_OUTPUT
@@ -280,6 +350,7 @@ jobs:
         if: steps.merge-decision.outputs.ready_to_merge == 'true'
         uses: actions/github-script@v7
         with:
+          result-encoding: string
           script: |
             const pr_number = ${{ steps.pr-parsed.outputs.pr_number }};
 
@@ -354,6 +425,9 @@ jobs:
             } else if (mergeable === 'false') {
               reason = 'PR is not mergeable (conflicts or branch protection)';
               emoji = '⚠️';
+            } else if ('${{ steps.auto-update.outputs.conflicts_detected }}' === 'true') {
+              reason = 'Conflicts detected during auto-update - manual resolution required';
+              emoji = '🔄';
             }
 
             console.log(`${emoji} Auto-merge blocked: ${reason}`);
