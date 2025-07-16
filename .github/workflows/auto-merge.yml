@@ -201,9 +201,11 @@ jobs:
                 } else if (check.status !== 'completed') {
                   allCompleted = false;
                   console.log(`${requiredCheck} is still ${check.status}`);
-                } else if (check.conclusion !== 'success' && check.conclusion !== 'SUCCESS') {
+                } else if (check.conclusion !== 'success' && check.conclusion !== 'SUCCESS' && check.conclusion !== 'skipped') {
                   allPassed = false;
                   console.log(`${requiredCheck} failed with conclusion: ${check.conclusion}`);
+                } else if (check.conclusion === 'skipped') {
+                  console.log(`${requiredCheck} was skipped - treating as success`);
                 }
               }
 

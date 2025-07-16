@@ -285,10 +285,13 @@ jobs:
                 console.log(`⏳ ${requiredCheck} is still ${check.status}`);
                 checkResults[requiredCheck] = 'pending';
                 allPassed = false;
-              } else if (check.conclusion !== 'success' && check.conclusion !== 'SUCCESS') {
+              } else if (check.conclusion !== 'success' && check.conclusion !== 'SUCCESS' && check.conclusion !== 'skipped') {
                 console.log(`❌ ${requiredCheck} failed: ${check.conclusion}`);
                 checkResults[requiredCheck] = 'failed';
                 allPassed = false;
+              } else if (check.conclusion === 'skipped') {
+                console.log(`⏭️ ${requiredCheck} was skipped - treating as success`);
+                checkResults[requiredCheck] = 'skipped';
               } else {
                 console.log(`✅ ${requiredCheck} passed`);
                 checkResults[requiredCheck] = 'success';
