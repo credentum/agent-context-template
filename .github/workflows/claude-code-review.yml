@@ -1,7 +1,12 @@
 ---
 ###############################################################################
 # 🛠️  Enhanced GitHub Workflow — Claude Code Review (Agent-First, ARC-Reviewer)
-# Version: 2025-01-15 with suggested improvements
+# Version: 2025-07-16 with comment format consistency improvements
+#
+# Recent improvements:
+# - Added explicit formatting instructions to direct_prompt
+# - Added comment format validation step
+# - Ensured consistent YAML structure across review iterations
 ###############################################################################
 name: Claude Code Review
 on:
@@ -66,6 +71,8 @@ jobs:
             You are ARC-Reviewer, a senior staff engineer reviewing pull-requests on the agent-context-template (MCP-based context platform).
 
             CRITICAL: Output ONLY valid YAML. No markdown, no explanations, no code blocks. Start directly with the YAML schema.
+            FORMATTING: Ensure consistent YAML formatting for both initial reviews and subsequent edits.
+            COMMENT_FORMAT: Use identical structure and indentation for all review iterations.
 
             Review criteria (any failure = REQUEST_CHANGES):
             - Test Coverage: validators/* ≥ 90%, overall ≥ 78.0%
@@ -80,7 +87,8 @@ jobs:
             - What category it falls under
             - How to fix it (actionable guidance)
 
-            Output this exact YAML structure (replace bracketed values with actuals):
+            Output this exact YAML structure (replace bracketed values with actuals).
+            IMPORTANT: Use identical formatting, indentation, and structure for all reviews:
 
             schema_version: "1.0"
             pr_number: [ACTUAL_PR_NUMBER]
@@ -129,6 +137,46 @@ jobs:
             Bash(npm run test:mcp-types),
             Bash(ajv validate -s mcp-schema.json -d context/mcp_contracts/*.json),
             Bash(git diff --name-only origin/main...HEAD)
+
+      # ---------- Validate Comment Format Consistency ----------
+      - name: Validate Comment Format
+        if: always()
+        run: |
+          echo "🔍 Validating Claude Code Review comment format consistency..."
+
+          # Check if the action output contains valid YAML
+          if [[ -n "${{ steps.claude-review.outputs.response }}" ]]; then
+            echo "✓ Claude action produced output"
+
+            # Validate YAML format
+            echo "${{ steps.claude-review.outputs.response }}" > review_output.yaml
+
+            # Check for consistent structure
+            if python -c "import yaml; yaml.safe_load(open('review_output.yaml'))" 2>/dev/null; then
+              echo "✓ YAML format is valid"
+            else
+              echo "⚠️ YAML format validation failed, but continuing..."
+            fi
+
+            # Check for required fields
+            if grep -q "schema_version" review_output.yaml && \
+               grep -q "pr_number" review_output.yaml && \
+               grep -q "timestamp" review_output.yaml && \
+               grep -q "reviewer" review_output.yaml; then
+              echo "✓ Required YAML fields present"
+            else
+              echo "⚠️ Some required YAML fields missing"
+            fi
+
+            # Store formatted output for consistency
+            echo "FORMATTED_REVIEW<<EOF" >> $GITHUB_ENV
+            cat review_output.yaml >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+
+            rm -f review_output.yaml
+          else
+            echo "⚠️ No output from Claude action"
+          fi
 
       # ---------- Load Coverage Configuration ----------
       - name: Load Coverage Configuration
