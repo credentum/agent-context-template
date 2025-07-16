@@ -151,190 +151,190 @@ jobs:
 
             # Process each automated issue using Python script
             python3 << 'EOF'
-import yaml
-import json
-import subprocess
-import sys
-import re
+          import yaml
+          import json
+          import subprocess
+          import sys
+          import re
 
-pr_number = $pr_number
-dry_run = "$dry_run_mode" == "true"
-max_issues = int("$max_issues")
-current_count = int("$issue_count")
+          pr_number = $pr_number
+          dry_run = "$dry_run_mode" == "true"
+          max_issues = int("$max_issues")
+          current_count = int("$issue_count")
 
-def run_gh_command(cmd):
-    """Run gh command and return output"""
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"Error running command: {cmd}")
-        print(f"Error: {result.stderr}")
-        return None
-    return result.stdout.strip()
+          def run_gh_command(cmd):
+              """Run gh command and return output"""
+              result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+              if result.returncode != 0:
+                  print(f"Error running command: {cmd}")
+                  print(f"Error: {result.stderr}")
+                  return None
+              return result.stdout.strip()
 
-def check_resolved_in_pr(pr_num, issue_title):
-    """Check if issue appears to be resolved in the PR"""
-    # Get PR details
-    pr_data = run_gh_command(f'gh pr view {pr_num} --json title,body,commits')
-    if not pr_data:
-        return False
+          def check_resolved_in_pr(pr_num, issue_title):
+              """Check if issue appears to be resolved in the PR"""
+              # Get PR details
+              pr_data = run_gh_command(f'gh pr view {pr_num} --json title,body,commits')
+              if not pr_data:
+                  return False
 
-    pr_info = json.loads(pr_data)
+              pr_info = json.loads(pr_data)
 
-    # Check PR title and body for resolution keywords
-    search_text = (pr_info.get('title', '') + ' ' + pr_info.get('body', '')).lower()
-    issue_keywords = issue_title.lower().split()
+              # Check PR title and body for resolution keywords
+              search_text = (pr_info.get('title', '') + ' ' + pr_info.get('body', '')).lower()
+              issue_keywords = issue_title.lower().split()
 
-    # If significant keywords from issue title appear in PR, likely resolved
-    keyword_matches = sum(1 for keyword in issue_keywords if len(keyword) > 3 and keyword in search_text)
-    if keyword_matches >= 2:
-        print(f"  🔗 Issue appears resolved in PR: {keyword_matches} keyword matches")
-        return True
+              # If significant keywords from issue title appear in PR, likely resolved
+              keyword_matches = sum(1 for keyword in issue_keywords if len(keyword) > 3 and keyword in search_text)
+              if keyword_matches >= 2:
+                  print(f"  🔗 Issue appears resolved in PR: {keyword_matches} keyword matches")
+                  return True
 
-    return False
+              return False
 
-def check_existing_issue(title):
-    """Check if an issue with similar title already exists"""
-    # Search for existing issues with similar title
-    escaped_title = title.replace('"', '\\"')
-    search_result = run_gh_command(f'gh issue list --search "{escaped_title}" --json number,title,state')
+          def check_existing_issue(title):
+              """Check if an issue with similar title already exists"""
+              # Search for existing issues with similar title
+              escaped_title = title.replace('"', '\\"')
+              search_result = run_gh_command(f'gh issue list --search "{escaped_title}" --json number,title,state')
 
-    if not search_result:
-        return None
+              if not search_result:
+                  return None
 
-    issues = json.loads(search_result)
+              issues = json.loads(search_result)
 
-    # Check for exact or very similar matches
-    for issue in issues:
-        if issue['state'] == 'open':
-            # Simple similarity check - if 80% of words match
-            issue_words = set(issue['title'].lower().split())
-            title_words = set(title.lower().split())
+              # Check for exact or very similar matches
+              for issue in issues:
+                  if issue['state'] == 'open':
+                      # Simple similarity check - if 80% of words match
+                      issue_words = set(issue['title'].lower().split())
+                      title_words = set(title.lower().split())
 
-            if len(title_words) > 0:
-                similarity = len(issue_words.intersection(title_words)) / len(title_words)
-                if similarity >= 0.8:
-                    print(f"  🔍 Similar existing issue found: #{issue['number']} - {issue['title']}")
-                    return issue['number']
+                      if len(title_words) > 0:
+                          similarity = len(issue_words.intersection(title_words)) / len(title_words)
+                          if similarity >= 0.8:
+                              print(f"  🔍 Similar existing issue found: #{issue['number']} - {issue['title']}")
+                              return issue['number']
 
-    return None
+              return None
 
-def create_github_issue(title, description, labels=None):
-    """Create a GitHub issue"""
-    global current_count, max_issues
+          def create_github_issue(title, description, labels=None):
+              """Create a GitHub issue"""
+              global current_count, max_issues
 
-    if current_count >= max_issues:
-        print(f"⚠️ Maximum issue limit reached ({max_issues})")
-        return None
+              if current_count >= max_issues:
+                  print(f"⚠️ Maximum issue limit reached ({max_issues})")
+                  return None
 
-    if dry_run:
-        print(f"  🧪 DRY RUN: Would create issue - {title}")
-        return "dry-run"
+              if dry_run:
+                  print(f"  🧪 DRY RUN: Would create issue - {title}")
+                  return "dry-run"
 
-    # Prepare labels
-    label_args = ""
-    if labels:
-        label_list = ",".join(labels)
-        label_args = f'--label "{label_list}"'
+              # Prepare labels
+              label_args = ""
+              if labels:
+                  label_list = ",".join(labels)
+                  label_args = f'--label "{label_list}"'
 
-    # Create issue
-    escaped_title = title.replace('"', '\\"')
-    escaped_body = description.replace('"', '\\"').replace('\n', '\\n')
+              # Create issue
+              escaped_title = title.replace('"', '\\"')
+              escaped_body = description.replace('"', '\\"').replace('\n', '\\n')
 
-    cmd = f'gh issue create --title "{escaped_title}" --body "{escaped_body}" {label_args} --json number'
-    result = run_gh_command(cmd)
+              cmd = f'gh issue create --title "{escaped_title}" --body "{escaped_body}" {label_args} --json number'
+              result = run_gh_command(cmd)
 
-    if result:
-        issue_data = json.loads(result)
-        current_count += 1
-        print(f"  ✅ Created issue #{issue_data['number']}: {title}")
-        return issue_data['number']
-    else:
-        print(f"  ❌ Failed to create issue: {title}")
-        return None
+              if result:
+                  issue_data = json.loads(result)
+                  current_count += 1
+                  print(f"  ✅ Created issue #{issue_data['number']}: {title}")
+                  return issue_data['number']
+              else:
+                  print(f"  ❌ Failed to create issue: {title}")
+                  return None
 
-# Load and process YAML
-try:
-    with open(f'/tmp/arc_issues_{pr_number}.yaml', 'r') as f:
-        data = yaml.safe_load(f)
+          # Load and process YAML
+          try:
+              with open(f'/tmp/arc_issues_{pr_number}.yaml', 'r') as f:
+                  data = yaml.safe_load(f)
 
-    if not data or 'automated_issues' not in data:
-        print("No automated_issues found in YAML")
-        sys.exit(0)
+              if not data or 'automated_issues' not in data:
+                  print("No automated_issues found in YAML")
+                  sys.exit(0)
 
-    issues_to_create = []
-    issues_skipped = []
+              issues_to_create = []
+              issues_skipped = []
 
-    for issue_data in data['automated_issues']:
-        title = issue_data.get('title', '').strip()
-        description = issue_data.get('description', '').strip()
-        labels = issue_data.get('labels', [])
+              for issue_data in data['automated_issues']:
+                  title = issue_data.get('title', '').strip()
+                  description = issue_data.get('description', '').strip()
+                  labels = issue_data.get('labels', [])
 
-        if not title:
-            print("Skipping issue with empty title")
-            continue
+                  if not title:
+                      print("Skipping issue with empty title")
+                      continue
 
-        print(f"\n📝 Analyzing: {title}")
+                  print(f"\n📝 Analyzing: {title}")
 
-        # Check 1: Is it resolved in the PR?
-        if check_resolved_in_pr(pr_number, title):
-            issues_skipped.append(f"  ⏭️ {title} (resolved in PR)")
-            continue
+                  # Check 1: Is it resolved in the PR?
+                  if check_resolved_in_pr(pr_number, title):
+                      issues_skipped.append(f"  ⏭️ {title} (resolved in PR)")
+                      continue
 
-        # Check 2: Does similar issue already exist?
-        existing_issue = check_existing_issue(title)
-        if existing_issue:
-            issues_skipped.append(f"  ⏭️ {title} (exists as #{existing_issue})")
-            continue
+                  # Check 2: Does similar issue already exist?
+                  existing_issue = check_existing_issue(title)
+                  if existing_issue:
+                      issues_skipped.append(f"  ⏭️ {title} (exists as #{existing_issue})")
+                      continue
 
-        # Check 3: All validations passed - queue for creation
-        issues_to_create.append({
-            'title': title,
-            'description': description,
-            'labels': labels
-        })
+                  # Check 3: All validations passed - queue for creation
+                  issues_to_create.append({
+                      'title': title,
+                      'description': description,
+                      'labels': labels
+                  })
 
-    print(f"\n📊 Analysis Results for PR #{pr_number}:")
-    print(f"  Issues to create: {len(issues_to_create)}")
-    print(f"  Issues skipped: {len(issues_skipped)}")
+              print(f"\n📊 Analysis Results for PR #{pr_number}:")
+              print(f"  Issues to create: {len(issues_to_create)}")
+              print(f"  Issues skipped: {len(issues_skipped)}")
 
-    if issues_skipped:
-        print("  Skipped issues:")
-        for skipped in issues_skipped:
-            print(skipped)
+              if issues_skipped:
+                  print("  Skipped issues:")
+                  for skipped in issues_skipped:
+                      print(skipped)
 
-    # Create issues
-    created_issues = []
-    for issue in issues_to_create:
-        issue_number = create_github_issue(
-            issue['title'],
-            issue['description'],
-            issue['labels']
-        )
-        if issue_number:
-            created_issues.append(f"#{issue_number}")
+              # Create issues
+              created_issues = []
+              for issue in issues_to_create:
+                  issue_number = create_github_issue(
+                      issue['title'],
+                      issue['description'],
+                      issue['labels']
+                  )
+                  if issue_number:
+                      created_issues.append(f"#{issue_number}")
 
-    # Update counter for shell script
-    print(f"\n# SHELL_VARS")
-    print(f"issue_count={current_count}")
-    print(f"created_count={len(created_issues)}")
-    print(f"skipped_count={len(issues_skipped)}")
+              # Update counter for shell script
+              print(f"\n# SHELL_VARS")
+              print(f"issue_count={current_count}")
+              print(f"created_count={len(created_issues)}")
+              print(f"skipped_count={len(issues_skipped)}")
 
-    # Post summary to PR
-    if created_issues and not dry_run:
-        summary = f"🤖 **ARC Follow-up Processor** - Processed automation items from latest ARC review\\n\\n"
-        if created_issues:
-            summary += f"**✅ Created Issues:** {', '.join(created_issues)}\\n"
-        if issues_skipped:
-            summary += f"**⏭️ Skipped:** {len(issues_skipped)} items (resolved or duplicate)\\n"
-        summary += f"\\n_Automated by ARC Follow-up Processor at {subprocess.run(['date', '-u'], capture_output=True, text=True).stdout.strip()}_"
+              # Post summary to PR
+              if created_issues and not dry_run:
+                  summary = f"🤖 **ARC Follow-up Processor** - Processed automation items from latest ARC review\\n\\n"
+                  if created_issues:
+                      summary += f"**✅ Created Issues:** {', '.join(created_issues)}\\n"
+                  if issues_skipped:
+                      summary += f"**⏭️ Skipped:** {len(issues_skipped)} items (resolved or duplicate)\\n"
+                  summary += f"\\n_Automated by ARC Follow-up Processor at {subprocess.run(['date', '-u'], capture_output=True, text=True).stdout.strip()}_"
 
-        cmd = f'gh pr comment {pr_number} --body "{summary}"'
-        run_gh_command(cmd)
+                  cmd = f'gh pr comment {pr_number} --body "{summary}"'
+                  run_gh_command(cmd)
 
-except Exception as e:
-    print(f"Error processing YAML: {e}")
-    sys.exit(1)
-EOF
+          except Exception as e:
+              print(f"Error processing YAML: {e}")
+              sys.exit(1)
+          EOF
 
             # Extract results from Python script
             shell_vars=$(python3 /tmp/process_result.py 2>/dev/null | grep "^# SHELL_VARS" -A 10 | tail -n +2)
