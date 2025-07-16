@@ -1,0 +1,109 @@
+{
+  "timestamp": "2025-07-16T03:25:45.408064",
+  "benchmarks": {
+    "legacy": {
+      "total_time": 208.95696878433228,
+      "components": [
+        {
+          "name": "Legacy Black formatting",
+          "command": "scripts/run-ci-docker.sh black",
+          "duration": 6.774991512298584,
+          "success": true,
+          "returncode": 0,
+          "stdout_lines": 1,
+          "stderr_lines": 3
+        },
+        {
+          "name": "Legacy MyPy type checking",
+          "command": "scripts/run-ci-docker.sh mypy",
+          "duration": 27.65969204902649,
+          "success": true,
+          "returncode": 0,
+          "stdout_lines": 2,
+          "stderr_lines": 1
+        },
+        {
+          "name": "Legacy Flake8 linting",
+          "command": "scripts/run-ci-docker.sh flake8",
+          "duration": 4.0000574588775635,
+          "success": true,
+          "returncode": 0,
+          "stdout_lines": 1,
+          "stderr_lines": 1
+        },
+        {
+          "name": "Legacy Unit tests",
+          "command": "scripts/run-ci-docker.sh unit",
+          "duration": 76.74441528320312,
+          "success": true,
+          "returncode": 0,
+          "stdout_lines": 783,
+          "stderr_lines": 2
+        },
+        {
+          "name": "Legacy Coverage analysis",
+          "command": "scripts/run-ci-docker.sh coverage",
+          "duration": 93.77717661857605,
+          "success": true,
+          "returncode": 0,
+          "stdout_lines": 950,
+          "stderr_lines": 64
+        }
+      ],
+      "success_rate": 1.0
+    },
+    "optimized": {
+      "total_time": 231.80059909820557,
+      "components": [
+        {
+          "name": "Optimized Fast Pipeline",
+          "command": "scripts/run-ci-optimized.sh fast",
+          "duration": 103.33789849281311,
+          "success": false,
+          "returncode": 1,
+          "stdout_lines": 794,
+          "stderr_lines": 33
+        },
+        {
+          "name": "Optimized Parallel Pipeline",
+          "command": "scripts/run-ci-optimized.sh parallel",
+          "duration": 128.46227502822876,
+          "success": false,
+          "returncode": 1,
+          "stdout_lines": 907,
+          "stderr_lines": 46
+        }
+      ],
+      "success_rate": 0.0
+    },
+    "components": [
+      {
+        "name": "Optimized Black",
+        "command": "docker-compose -f docker-compose.ci-optimized.yml run --rm ci-lint-black",
+        "duration": 6.351598262786865,
+        "success": true,
+        "returncode": 0,
+        "stdout_lines": 0,
+        "stderr_lines": 13
+      },
+      {
+        "name": "Optimized MyPy",
+        "command": "docker-compose -f docker-compose.ci-optimized.yml run --rm ci-lint-mypy",
+        "duration": 27.554713249206543,
+        "success": true,
+        "returncode": 0,
+        "stdout_lines": 1,
+        "stderr_lines": 11
+      },
+      {
+        "name": "Optimized Core Tests",
+        "command": "docker-compose -f docker-compose.ci-optimized.yml run --rm ci-test-core",
+        "duration": 75.18532109260559,
+        "success": false,
+        "returncode": 1,
+        "stdout_lines": 763,
+        "stderr_lines": 16
+      }
+    ]
+  }
+}
