@@ -267,8 +267,9 @@ jobs:
               console.log(`✅ ARC-Reviewer verdict: ${verdict}`);
 
               if (verdict === 'APPROVE') {
-                // Check for blocking issues in YAML
-                const blockingMatch = reviewBody.match(/blocking:\s*\[\s*\]/) ||
+                // Check for blocking issues in YAML (nested under issues:)
+                const blockingMatch = reviewBody.match(/issues:\s*\n\s*blocking:\s*\[\s*\]/) ||
+                                     reviewBody.match(/blocking:\s*\[\s*\]/) ||
                                      reviewBody.match(/blocking:\s*\[\]/);
 
                 if (blockingMatch) {
