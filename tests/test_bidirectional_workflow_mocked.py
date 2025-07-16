@@ -11,8 +11,8 @@ import os
 import sys
 import unittest
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from unittest.mock import MagicMock, Mock, patch
+from typing import Any, Dict, Optional
+from unittest.mock import Mock, patch
 
 import yaml
 
@@ -138,7 +138,8 @@ class MockedBidirectionalWorkflowTest(unittest.TestCase):
         # Create test task
         test_task = {
             "title": f"[Sprint 41] Phase {self.test_phase_number}: {self.test_task_title}",
-            "description": "Test task to validate bidirectional sync between sprint YAML and GitHub issues.",
+            "description": "Test task to validate bidirectional sync between sprint YAML and "
+            "GitHub issues.",
             "status": "pending",
             "priority": "high",
             "assignee": "@claude-ai",
@@ -219,7 +220,8 @@ class MockedBidirectionalWorkflowTest(unittest.TestCase):
                     existing_issue_numbers.append(task["github_issue"])
 
         print(
-            f"✓ Baseline verification passed. Found {len(existing_issue_numbers)} existing issues: {existing_issue_numbers}"
+            f"✓ Baseline verification passed. Found {len(existing_issue_numbers)} existing "
+            f"issues: {existing_issue_numbers}"
         )
 
     @patch("subprocess.run")
@@ -282,13 +284,12 @@ class MockedBidirectionalWorkflowTest(unittest.TestCase):
 
         # The subprocess.run is already mocked globally, so just call the method
         try:
-            updated_count = updater.update_from_github()
+            updater.update_from_github()
             # In mocked environment, we simulate successful update
-            updated_count = 1  # Mock successful update
+            print("Simulated successful update")
         except Exception as e:
             # If there's an error, we'll still simulate success for the test
             print(f"Note: Mocked update, original error: {e}")
-            updated_count = 1
 
         print("✓ GitHub → YAML sync test completed successfully")
 
