@@ -252,7 +252,7 @@ jobs:
             // Find the most recent ARC-Reviewer comment
             const arcComments = comments.filter(comment =>
               comment.user.type === 'Bot' &&
-              comment.body.includes('ARC-Reviewer Analysis')
+              (comment.body.includes('ARC-Reviewer') || comment.body.includes('schema_version'))
             );
 
             if (arcComments.length === 0) {

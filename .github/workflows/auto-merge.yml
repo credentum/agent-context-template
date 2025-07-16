@@ -199,7 +199,7 @@ jobs:
             // Look for ARC-Reviewer comment
             const arcComment = comments.find(comment =>
               comment.user.type === 'Bot' &&
-              comment.body.includes('ARC-Reviewer Analysis')
+              (comment.body.includes('ARC-Reviewer') || comment.body.includes('schema_version'))
             );
 
             if (!arcComment) {
@@ -210,26 +210,48 @@ jobs:
             const reviewBody = arcComment.body;
             console.log('ARC-Reviewer comment found');
 
-            // Check for APPROVE verdict
-            const approveMatch = reviewBody.match(/\*\*PR Verdict:\*\* APPROVE/);
-            if (approveMatch) {
-              console.log('✅ ARC-Reviewer verdict: APPROVE');
+            // Parse YAML content for verdict
+            const verdictMatch = reviewBody.match(/verdict:\s*['"]*([^'"\\n]+)['"]*/) ||
+                               reviewBody.match(/verdict:\s*"?(APPROVE|REQUEST_CHANGES)"?/);
 
-              // Check for blocking issues
-              const blockingMatch = reviewBody.match(/Blocking Issues \(❌\):/);
-              if (blockingMatch) {
-                console.log('❌ Blocking issues found');
-                return 'blocking-issues';
+            if (verdictMatch) {
+              const verdict = verdictMatch[1].trim();
+              console.log(`✅ ARC-Reviewer verdict: ${verdict}`);
+
+              if (verdict === 'APPROVE') {
+                // Check for blocking issues in YAML
+                const blockingMatch = reviewBody.match(/blocking:\s*\[\s*\]/) ||
+                                     reviewBody.match(/blocking:\s*\[\]/);
+
+                if (blockingMatch) {
+                  console.log('✅ No blocking issues found');
+                  return 'approved';
+                } else {
+                  // Check if there are actual blocking issues
+                  const hasBlockingIssues = reviewBody.match(/blocking:\s*\n\s*-/) ||
+                                          reviewBody.match(/blocking:\s*\[.*\S.*\]/);
+                  if (hasBlockingIssues) {
+                    console.log('❌ Blocking issues found in APPROVE verdict');
+                    // Extract and log blocking issues for visibility
+                    const blockingSection = reviewBody.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
+                    if (blockingSection) {
+                      console.log('📋 Blocking issues details:');
+                      console.log(blockingSection[1]);
+                    }
+                    return 'blocking-issues';
+                  }
+                  return 'approved';
+                }
+              } else if (verdict === 'REQUEST_CHANGES') {
+                console.log('❌ ARC-Reviewer verdict: REQUEST_CHANGES');
+                // Extract and log blocking issues for visibility
+                const blockingSection = reviewBody.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
+                if (blockingSection) {
+                  console.log('📋 Blocking issues details:');
+                  console.log(blockingSection[1]);
+                }
+                return 'changes-requested';
               }
-
-              return 'approved';
-            }
-
-            // Check for REQUEST CHANGES verdict
-            const changesMatch = reviewBody.match(/\*\*PR Verdict:\*\* REQUEST CHANGES/);
-            if (changesMatch) {
-              console.log('❌ ARC-Reviewer verdict: REQUEST CHANGES');
-              return 'changes-requested';
             }
 
             console.log('❓ ARC-Reviewer verdict unclear');
@@ -338,6 +360,28 @@ jobs:
 
             // Only comment if there's a meaningful reason
             if (arcResult === 'changes-requested' || arcResult === 'blocking-issues' || ciResult === 'failure') {
+              // Get blocking issues for display
+              let blockingIssuesText = '';
+              if (arcResult === 'changes-requested' || arcResult === 'blocking-issues') {
+                const { data: comments } = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr_number
+                });
+
+                const arcComment = comments.find(comment =>
+                  comment.user.type === 'Bot' &&
+                  (comment.body.includes('ARC-Reviewer') || comment.body.includes('schema_version'))
+                );
+
+                if (arcComment) {
+                  const blockingSection = arcComment.body.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
+                  if (blockingSection) {
+                    blockingIssuesText = '\n\n**🚨 Blocking Issues to Fix:**\n```yaml\n' + blockingSection[1] + '```';
+                  }
+                }
+              }
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -349,7 +393,7 @@ jobs:
                 **Status:**
                 - CI Result: ${ciResult}
                 - ARC-Reviewer: ${arcResult}
-                - Mergeable: ${mergeable}
+                - Mergeable: ${mergeable}${blockingIssuesText}
 
                 Please address the issues above and the auto-merge will be re-evaluated.
 
