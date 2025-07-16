@@ -1,6 +1,7 @@
+---
 name: Context Lint
 
-on:
+'on':
   push:
     paths:
       - 'context/**/*.yaml'
@@ -33,8 +34,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Check configuration
         run: python -m src.agents.context_lint check-config --verbose
@@ -47,11 +48,11 @@ jobs:
 
       - name: Check Python formatting with Black
         run: |
-        black --check --diff .
+          black --check --diff .
 
       - name: Run type checking with mypy
         run: |
-        mypy . --config-file mypy.ini || true  # Allow failures initially
+          mypy . --config-file mypy.ini || true  # Allow failures initially
 
       - name: Run cleanup agent (dry run)
         run: python -m src.agents.cleanup_agent --dry-run --verbose
