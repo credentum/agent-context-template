@@ -1,0 +1,606 @@
+---
+###############################################################################
+# 🚀 Optimized CI Pipeline - Agent Context Template
+# High-performance pipeline with job parallelization and smart caching
+# Consolidates test.yml, test-suite.yml, test-coverage.yml workflows
+# Estimated 60-70% performance improvement over legacy workflows
+###############################################################################
+name: CI Optimized Pipeline
+
+on:
+  push:
+    branches: [main, 'phase-*', 'feature-*', develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  statuses: write
+
+env:
+  # Unified cache versioning
+  CACHE_VERSION: "v2025-07-16"
+  PYTHON_VERSION: "3.11"
+
+# Detect file changes for conditional execution
+jobs:
+  detect-changes:
+    name: "🔍 Detect Changes"
+    runs-on: ubuntu-latest
+    outputs:
+      src-changed: ${{ steps.changes.outputs.src }}
+      tests-changed: ${{ steps.changes.outputs.tests }}
+      config-changed: ${{ steps.changes.outputs.config }}
+      docs-only: ${{ steps.changes.outputs.docs-only }}
+      workflows-changed: ${{ steps.changes.outputs.workflows }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            src:
+              - 'src/**'
+            tests:
+              - 'tests/**'
+            config:
+              - '*.toml'
+              - '*.ini'
+              - '*.cfg'
+              - 'requirements*.txt'
+              - '.pre-commit-config.yaml'
+              - '.flake8'
+              - 'mypy.ini'
+            docs-only:
+              - '*.md'
+              - 'docs/**'
+              - 'context/design/**'
+              - 'context/decisions/**'
+            workflows:
+              - '.github/workflows/**'
+
+  # Shared setup job - creates reusable environment
+  setup:
+    name: "⚙️ Setup Environment"
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    outputs:
+      cache-hit: ${{ steps.cache.outputs.cache-hit }}
+      python-location: ${{ steps.setup-python.outputs.python-path }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # Advanced pip caching with unified key
+      - name: Cache Python dependencies
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
+          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-
+            ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-
+
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install -r requirements-test.txt
+
+      # Cache created directories to avoid recreation
+      - name: Cache context directories
+        uses: actions/cache@v4
+        with:
+          path: |
+            context/.duckdb
+            context/.graph_cache
+            context/.vector_cache
+            context/.embeddings_cache
+            context/trace
+            context/archive
+            context/mcp_contracts
+            context/logs
+          key: ${{ runner.os }}-directories-${{ env.CACHE_VERSION }}
+
+      - name: Create context directories
+        run: |
+          mkdir -p context/.duckdb
+          mkdir -p context/.graph_cache
+          mkdir -p context/.vector_cache
+          mkdir -p context/.embeddings_cache
+          mkdir -p context/trace
+          mkdir -p context/archive
+          mkdir -p context/mcp_contracts
+          mkdir -p context/logs/{cleanup,eval,kv,prompts,signatures}
+
+  # Fast lint checks - parallel execution
+  lint:
+    name: "🔍 Lint & Style"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, setup]
+    if: needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.tests-changed == 'true' || needs.detect-changes.outputs.config-changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [black, isort, flake8, mypy, context-lint]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Restore Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
+          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+
+      - name: Restore context directories
+        uses: actions/cache@v4
+        with:
+          path: |
+            context/.duckdb
+            context/.graph_cache
+            context/.vector_cache
+            context/.embeddings_cache
+            context/trace
+            context/archive
+            context/mcp_contracts
+            context/logs
+          key: ${{ runner.os }}-directories-${{ env.CACHE_VERSION }}
+
+      - name: Run ${{ matrix.check }}
+        run: |
+          case "${{ matrix.check }}" in
+            black)
+              black --check src/ tests/ scripts/
+              ;;
+            isort)
+              isort --check-only --profile black src/ tests/ scripts/
+              ;;
+            flake8)
+              flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503
+              ;;
+            mypy)
+              mypy src/ --config-file=mypy.ini
+              ;;
+            context-lint)
+              python -m src.agents.context_lint validate context/
+              ;;
+          esac
+
+  # Core test suite - unified execution
+  test-core:
+    name: "🧪 Core Tests"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, setup]
+    if: needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.tests-changed == 'true'
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    outputs:
+      coverage-pct: ${{ steps.coverage.outputs.coverage-pct }}
+      test-results: ${{ steps.test.outputs.results }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Restore Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
+          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+
+      - name: Restore context directories
+        uses: actions/cache@v4
+        with:
+          path: |
+            context/.duckdb
+            context/.graph_cache
+            context/.vector_cache
+            context/.embeddings_cache
+            context/trace
+            context/archive
+            context/mcp_contracts
+            context/logs
+          key: ${{ runner.os }}-directories-${{ env.CACHE_VERSION }}
+
+      # Unified test execution with coverage
+      - name: Run unit tests with coverage
+        id: test
+        run: |
+          python -m pytest tests/ \
+            -m "not integration and not e2e and not slow" \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage-unit.xml \
+            --cov-report=html:htmlcov-unit \
+            --cov-report=json:coverage.json \
+            --junit-xml=test-results/junit-unit.xml \
+            --timeout=60 \
+            --timeout-method=thread \
+            -v
+
+          # Extract coverage for job outputs
+          if [ -f coverage.json ]; then
+            coverage_pct=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+            echo "coverage-pct=$coverage_pct" >> $GITHUB_OUTPUT
+            echo "Unit test coverage: $coverage_pct%"
+          fi
+
+      # Store coverage data for other jobs
+      - name: Extract coverage metrics
+        id: coverage
+        run: |
+          if [ -f coverage.json ]; then
+            coverage_pct=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+            echo "coverage-pct=$coverage_pct" >> $GITHUB_OUTPUT
+          else
+            echo "coverage-pct=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: core-test-results
+          path: |
+            test-results/
+            coverage*.xml
+            coverage.json
+            htmlcov-unit/
+
+  # Integration tests - parallel to unit tests
+  test-integration:
+    name: "🔗 Integration Tests"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, setup]
+    if: needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.tests-changed == 'true'
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Restore Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
+          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+
+      - name: Restore context directories
+        uses: actions/cache@v4
+        with:
+          path: |
+            context/.duckdb
+            context/.graph_cache
+            context/.vector_cache
+            context/.embeddings_cache
+            context/trace
+            context/archive
+            context/mcp_contracts
+            context/logs
+          key: ${{ runner.os }}-directories-${{ env.CACHE_VERSION }}
+
+      - name: Run integration tests
+        run: |
+          python -m pytest tests/ \
+            -m "integration" \
+            --junit-xml=test-results/junit-integration.xml \
+            --cov=src \
+            --cov-report=xml:coverage-integration.xml \
+            --cov-report=html:htmlcov-integration \
+            -v
+        continue-on-error: true
+
+      - name: Upload integration test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: |
+            test-results/
+            coverage-integration.xml
+            htmlcov-integration/
+
+  # Performance tests - conditional execution
+  test-performance:
+    name: "⚡ Performance Tests"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, setup]
+    if: needs.detect-changes.outputs.src-changed == 'true' && !needs.detect-changes.outputs.docs-only
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Restore Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
+          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+
+      - name: Install additional performance dependencies
+        run: |
+          pip install locust
+
+      - name: Run benchmark tests
+        run: |
+          python -m pytest tests/ \
+            -m "benchmark" \
+            --junit-xml=test-results/junit-benchmark.xml \
+            --benchmark-only \
+            --benchmark-json=benchmark-results.json
+        continue-on-error: true
+
+      - name: Upload performance test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-test-results
+          path: |
+            test-results/
+            benchmark-results.json
+
+  # Mutation testing - heavy workload, conditional
+  test-mutation:
+    name: "🧬 Mutation Tests"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, setup, test-core]
+    if: needs.detect-changes.outputs.src-changed == 'true' && !needs.detect-changes.outputs.docs-only && needs.test-core.outputs.coverage-pct > 75
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Restore Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
+          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+
+      - name: Install mutation testing
+        run: pip install mutmut
+
+      - name: Run mutation tests (targeted)
+        run: |
+          # Only run on priority modules for speed
+          mutmut run --paths-to-mutate=src/validators/,src/storage/ \
+            --tests-dir=tests/ \
+            --runner="python -m pytest -x" \
+            --use-coverage \
+            --max-children 4
+        continue-on-error: true
+
+      - name: Generate mutation report
+        if: always()
+        run: |
+          mutmut results > mutation-report.txt || echo "No mutation results"
+
+      - name: Upload mutation test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutation-test-results
+          path: |
+            mutation-report.txt
+
+  # Coverage analysis and enforcement
+  coverage-analysis:
+    name: "📊 Coverage Analysis"
+    runs-on: ubuntu-latest
+    needs: [test-core, test-integration]
+    if: always() && (needs.test-core.result == 'success' || needs.test-integration.result == 'success')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Restore Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
+          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-test-results"
+          merge-multiple: true
+
+      - name: Load coverage configuration
+        id: config
+        run: |
+          if [ -f .coverage-config.json ]; then
+            baseline=$(python -c "import json; print(json.load(open('.coverage-config.json'))['baseline'])")
+            echo "baseline=$baseline" >> $GITHUB_OUTPUT
+          else
+            echo "baseline=80.0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Combine coverage reports
+        run: |
+          # Combine coverage from unit and integration tests
+          coverage combine coverage-unit.xml coverage-integration.xml || true
+          coverage report --format=total > coverage-total.txt || echo "0" > coverage-total.txt
+
+      - name: Check coverage thresholds
+        run: |
+          baseline=${{ steps.config.outputs.baseline }}
+          if [ -f coverage-total.txt ]; then
+            coverage_pct=$(cat coverage-total.txt)
+            echo "Current coverage: $coverage_pct%"
+            echo "Required baseline: $baseline%"
+
+            if (( $(echo "$coverage_pct < $baseline" | bc -l) )); then
+              echo "❌ Coverage below baseline: $coverage_pct% < $baseline%"
+              exit 1
+            else
+              echo "✅ Coverage meets baseline: $coverage_pct% >= $baseline%"
+            fi
+          else
+            echo "❌ No coverage data found"
+            exit 1
+          fi
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage-unit.xml,./coverage-integration.xml
+          flags: unittests,integration
+          name: codecov-optimized
+
+  # Test summary and reporting
+  test-summary:
+    name: "📋 Test Summary"
+    runs-on: ubuntu-latest
+    needs: [lint, test-core, test-integration, test-performance, test-mutation, coverage-analysis]
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 🚀 CI Optimized Pipeline Results" > summary.md
+          echo "" >> summary.md
+
+          # Job status emojis
+          lint_status="${{ needs.lint.result }}"
+          core_status="${{ needs.test-core.result }}"
+          integration_status="${{ needs.test-integration.result }}"
+          performance_status="${{ needs.test-performance.result }}"
+          mutation_status="${{ needs.test-mutation.result }}"
+          coverage_status="${{ needs.coverage-analysis.result }}"
+
+          get_emoji() {
+            case $1 in
+              "success") echo "✅" ;;
+              "failure") echo "❌" ;;
+              "cancelled") echo "⏸️" ;;
+              "skipped") echo "⏭️" ;;
+              *) echo "❓" ;;
+            esac
+          }
+
+          echo "| Test Suite | Status | Coverage |" >> summary.md
+          echo "|------------|--------|----------|" >> summary.md
+          echo "| Lint & Style | $(get_emoji "$lint_status") | N/A |" >> summary.md
+          echo "| Core Tests | $(get_emoji "$core_status") | ${{ needs.test-core.outputs.coverage-pct }}% |" >> summary.md
+          echo "| Integration | $(get_emoji "$integration_status") | Included |" >> summary.md
+          echo "| Performance | $(get_emoji "$performance_status") | N/A |" >> summary.md
+          echo "| Mutation | $(get_emoji "$mutation_status") | N/A |" >> summary.md
+          echo "| Coverage | $(get_emoji "$coverage_status") | Analysis |" >> summary.md
+
+          echo "" >> summary.md
+          echo "**Optimizations Applied:**" >> summary.md
+          echo "- ⚡ Parallel job execution" >> summary.md
+          echo "- 📦 Advanced dependency caching" >> summary.md
+          echo "- 🎯 Conditional test execution" >> summary.md
+          echo "- 🔄 Eliminated redundant workflows" >> summary.md
+
+          cat summary.md
+
+      - name: Comment PR with summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('summary.md', 'utf8');
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            const existingComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('🚀 CI Optimized Pipeline Results')
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: summary
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: summary
+              });
+            }

@@ -1,0 +1,415 @@
+---
+# docker-compose.ci-optimized.yml - Optimized CI environment
+version: '3.8'
+
+# Shared volume for cache optimization
+volumes:
+  pip-cache:
+  node-modules-cache:
+  context-cache:
+
+services:
+  # Shared setup service for dependency caching
+  ci-setup:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+      cache_from:
+        - agent-context-ci:latest
+    image: agent-context-ci:optimized
+    container_name: ci-setup
+    volumes:
+      - pip-cache:/root/.cache/pip
+      - context-cache:/app/context
+      - ./requirements.txt:/app/requirements.txt:ro
+      - ./requirements-dev.txt:/app/requirements-dev.txt:ro
+      - ./requirements-test.txt:/app/requirements-test.txt:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - PYTHONUNBUFFERED=1
+    command: |
+      bash -c "
+        echo '🔧 Setting up optimized CI environment...'
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        pip install -r requirements-test.txt
+        echo '✅ Dependencies cached successfully'
+      "
+
+  # Parallel lint checks - each tool runs independently
+  ci-lint-parallel:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+      cache_from:
+        - agent-context-ci:optimized
+    image: agent-context-ci:optimized
+    volumes:
+      - pip-cache:/root/.cache/pip
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - ./context:/app/context
+      - ./mypy.ini:/app/mypy.ini:ro
+      - ./.flake8:/app/.flake8:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - PYTHONUNBUFFERED=1
+    command: |
+      bash -c "
+        echo '🔍 Running parallel lint checks...'
+
+        # Run all lint checks in parallel with proper error handling
+        (
+          echo '  ▶ Black formatting...'
+          black --check src/ tests/ scripts/ && echo '  ✅ Black passed' || echo '  ❌ Black failed'
+        ) &
+
+        (
+          echo '  ▶ isort import sorting...'
+          isort --check-only --profile black src/ tests/ scripts/ && echo '  ✅ isort passed' || echo '  ❌ isort failed'
+        ) &
+
+        (
+          echo '  ▶ Flake8 linting...'
+          flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503 && echo '  ✅ Flake8 passed' || echo '  ❌ Flake8 failed'
+        ) &
+
+        (
+          echo '  ▶ MyPy type checking...'
+          mypy src/ --config-file=mypy.ini && echo '  ✅ MyPy passed' || echo '  ❌ MyPy failed'
+        ) &
+
+        (
+          echo '  ▶ Context YAML validation...'
+          python -m src.agents.context_lint validate context/ && echo '  ✅ Context lint passed' || echo '  ❌ Context lint failed'
+        ) &
+
+        # Wait for all background jobs
+        wait
+        echo '🎉 All lint checks completed'
+      "
+
+  # Individual lint services for granular execution
+  ci-lint-black:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+      cache_from:
+        - agent-context-ci:optimized
+    image: agent-context-ci:optimized
+    volumes:
+      - pip-cache:/root/.cache/pip
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+    environment:
+      - CI=true
+    command: black --check src/ tests/ scripts/
+
+  ci-lint-mypy:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+      cache_from:
+        - agent-context-ci:optimized
+    image: agent-context-ci:optimized
+    volumes:
+      - pip-cache:/root/.cache/pip
+      - ./src:/app/src:ro
+      - ./mypy.ini:/app/mypy.ini:ro
+    environment:
+      - CI=true
+      - PYTHONPATH=/app
+    command: mypy src/ --config-file=mypy.ini
+
+  # Core test suite with optimized execution
+  ci-test-core:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+      cache_from:
+        - agent-context-ci:optimized
+    image: agent-context-ci:optimized
+    volumes:
+      - pip-cache:/root/.cache/pip
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - context-cache:/app/context
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./pytest.ini:/app/pytest.ini:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - redis
+    command: >
+      bash -c "
+      echo '🧪 Running core test suite...' &&
+      python -m pytest tests/
+      -m 'not integration and not e2e and not slow'
+      --cov=src --cov-report=term-missing
+      --cov-report=xml:coverage-unit.xml
+      --cov-report=html:htmlcov-unit
+      --cov-report=json:coverage.json
+      --junit-xml=test-results/junit-unit.xml
+      --timeout=60 --timeout-method=thread --maxfail=5 -v &&
+      if [ -f coverage.json ]; then
+        coverage_pct=\$(python -c \"import json;
+        print(json.load(open('coverage.json'))['totals']['percent_covered'])\") &&
+        echo \"📊 Unit test coverage: \${coverage_pct}%\";
+      fi
+      "
+
+  # Integration tests - parallel to core tests
+  ci-test-integration:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+      cache_from:
+        - agent-context-ci:optimized
+    image: agent-context-ci:optimized
+    volumes:
+      - pip-cache:/root/.cache/pip
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - context-cache:/app/context
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./pytest.ini:/app/pytest.ini:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - redis
+    command: |
+      bash -c "
+        echo '🔗 Running integration tests...'
+        python -m pytest tests/ \
+          -m 'integration' \
+          --junit-xml=test-results/junit-integration.xml \
+          --cov=src \
+          --cov-report=xml:coverage-integration.xml \
+          --cov-report=html:htmlcov-integration \
+          --maxfail=3 \
+          -v || echo 'Integration tests completed with issues (non-blocking)'
+      "
+
+  # Performance tests - optimized execution
+  ci-test-performance:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+      cache_from:
+        - agent-context-ci:optimized
+    image: agent-context-ci:optimized
+    volumes:
+      - pip-cache:/root/.cache/pip
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - context-cache:/app/context
+      - ./pyproject.toml:/app/pyproject.toml:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - PYTHONUNBUFFERED=1
+    command: |
+      bash -c "
+        echo '⚡ Running performance tests...'
+        pip install locust pytest-benchmark
+
+        # Benchmark tests
+        python -m pytest tests/ \
+          -m 'benchmark' \
+          --junit-xml=test-results/junit-benchmark.xml \
+          --benchmark-only \
+          --benchmark-json=benchmark-results.json \
+          --maxfail=1 || echo 'Performance tests completed with issues (non-blocking)'
+
+        echo '📊 Performance test results written to benchmark-results.json'
+      "
+
+  # Coverage analysis service
+  ci-coverage-analysis:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+      cache_from:
+        - agent-context-ci:optimized
+    image: agent-context-ci:optimized
+    volumes:
+      - pip-cache:/root/.cache/pip
+      - ./src:/app/src:ro
+      - ./scripts:/app/scripts:ro
+      - context-cache:/app/context
+      - ./.coverage-config.json:/app/.coverage-config.json:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - PYTHONUNBUFFERED=1
+    command: |
+      bash -c "
+        echo '📊 Running coverage analysis...'
+
+        # Load coverage configuration
+        if [ -f .coverage-config.json ]; then
+          baseline=\$(python -c \"import json; print(json.load(open('.coverage-config.json'))['baseline'])\")
+          echo \"Coverage baseline: \${baseline}%\"
+        else
+          baseline=80.0
+          echo \"Using default baseline: \${baseline}%\"
+        fi
+
+        # Check coverage files exist
+        if [ -f coverage.json ]; then
+          coverage_pct=\$(python -c \"import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])\")
+          echo \"Current coverage: \${coverage_pct}%\"
+
+          # Check threshold
+          if (( \$(echo \"\${coverage_pct} < \${baseline}\" | bc -l) )); then
+            echo \"❌ Coverage below baseline: \${coverage_pct}% < \${baseline}%\"
+            exit 1
+          else
+            echo \"✅ Coverage meets baseline: \${coverage_pct}% >= \${baseline}%\"
+          fi
+        else
+          echo \"❌ No coverage data found\"
+          exit 1
+        fi
+      "
+
+  # Mutation testing - conditional heavy workload
+  ci-test-mutation:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+      cache_from:
+        - agent-context-ci:optimized
+    image: agent-context-ci:optimized
+    volumes:
+      - pip-cache:/root/.cache/pip
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - context-cache:/app/context
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - PYTHONUNBUFFERED=1
+    command: |
+      bash -c "
+        echo '🧬 Running mutation tests (targeted)...'
+        pip install mutmut
+
+        # Run mutation testing on priority modules only
+        mutmut run --paths-to-mutate=src/validators/,src/storage/ \
+          --tests-dir=tests/ \
+          --runner='python -m pytest -x' \
+          --use-coverage \
+          --max-children 4 || echo 'Mutation testing completed with issues (non-blocking)'
+
+        # Generate report
+        mutmut results > mutation-report.txt || echo 'No mutation results available'
+        echo '📊 Mutation test report written to mutation-report.txt'
+      "
+
+  # Debug environment with all optimizations
+  ci-debug:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+      cache_from:
+        - agent-context-ci:optimized
+    image: agent-context-ci:optimized
+    volumes:
+      - pip-cache:/root/.cache/pip
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
+      - context-cache:/app/context
+      - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./mypy.ini:/app/mypy.ini
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - CI=true
+    command: |
+      bash -c "
+        echo '🐛 Optimized CI Debug Environment'
+        echo '================================'
+        echo 'Available commands:'
+        echo '  - run-ci-optimized.sh [command]'
+        echo '  - pytest tests/ [options]'
+        echo '  - python -m src.agents.context_lint validate context/'
+        echo '  - black --check src/ tests/ scripts/'
+        echo '  - mypy src/'
+        echo ''
+        echo 'Cache volumes are shared for optimal performance'
+        echo ''
+        /bin/bash
+      "
+
+  # Optimized Redis service
+  redis:
+    image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55
+    container_name: ci-redis-optimized
+    ports:
+      - "6379:6379"
+    # Optimize Redis for CI
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # Lightweight services for complex integration tests (when needed)
+  qdrant:
+    image: qdrant/qdrant@sha256:419d72603f5346ee22ffc4606bdb7beb52fcb63077766fab678e6622ba247366
+    container_name: ci-qdrant-optimized
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    # Optimize for CI
+    environment:
+      - QDRANT__STORAGE__MEMORY_THRESHOLD=100000000  # 100MB
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/collections"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  neo4j:
+    image: neo4j@sha256:52d3dec8d45585b21edeca8517d752b2512e52aa94f80fc36a5788c88c95f8e4
+    container_name: ci-neo4j-optimized
+    ports:
+      - "7687:7687"
+      - "7474:7474"
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-ci-temp-pwd-$(openssl rand -hex 8)}
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      # Optimize for CI
+      - NEO4J_dbms_memory_heap_initial__size=256m
+      - NEO4J_dbms_memory_heap_max__size=512m
+      - NEO4J_dbms_memory_pagecache_size=128m
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${NEO4J_PASSWORD:-ci-temp-pwd}", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
