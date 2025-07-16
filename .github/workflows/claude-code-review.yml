@@ -165,7 +165,7 @@ jobs:
           else
             # Run coverage and capture output (exclude integration/e2e tests like main test workflow)
             echo "Running coverage analysis..."
-            pytest tests/ --cov=src --cov-report=term --cov-report=json --cov-report=html -m "not integration and not e2e" || true
+            pytest tests/ --cov=src --cov-report=term --cov-report=json -m "not integration and not e2e" || true
 
             # Debug: Check if coverage.json was created
             if [ -f coverage.json ]; then

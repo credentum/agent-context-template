@@ -13,16 +13,16 @@ jobs:
     steps:
       - name: Check if push was from PR merge
         run: |
-        # This job will only run on direct pushes to main
-        # If branch protection is properly set up, this should never happen
-        echo "⚠️ WARNING: Direct push to main branch detected!"
-        echo "Actor: ${{ github.actor }}"
-        echo "Commit: ${{ github.sha }}"
-        echo ""
-        echo "Please ensure branch protection rules are enabled:"
-        echo "1. Go to Settings → Branches"
-        echo "2. Add protection rule for 'main'"
-        echo "3. Enable 'Require pull request reviews'"
-        echo ""
-        echo "All changes should go through pull requests!"
-        exit 1
+          # This job will only run on direct pushes to main
+          # If branch protection is properly set up, this should never happen
+          echo "⚠️ WARNING: Direct push to main branch detected!"
+          echo "Actor: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+          echo ""
+          echo "Please ensure branch protection rules are enabled:"
+          echo "1. Go to Settings → Branches"
+          echo "2. Add protection rule for 'main'"
+          echo "3. Enable 'Require pull request reviews'"
+          echo ""
+          echo "All changes should go through pull requests!"
+          exit 1

@@ -334,7 +334,6 @@ jobs:
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml:coverage-unit.xml \
-            --cov-report=html:htmlcov-unit \
             --cov-report=json:coverage.json \
             --junit-xml=test-results/junit-unit.xml \
             --timeout=60 \
@@ -450,7 +449,6 @@ jobs:
             --junit-xml=test-results/junit-integration.xml \
             --cov=src \
             --cov-report=xml:coverage-integration.xml \
-            --cov-report=html:htmlcov-integration \
             -v
         continue-on-error: true
 

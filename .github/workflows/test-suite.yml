@@ -63,7 +63,6 @@ jobs:
             --junit-xml=test-results/junit-unit.xml \
             --cov=src --cov-branch \
             --cov-report=xml:coverage-unit.xml \
-            --cov-report=html:htmlcov-unit \
             --cov-report=term
         continue-on-error: true
 
@@ -73,7 +72,6 @@ jobs:
             --junit-xml=test-results/junit-integration.xml \
             --cov=src --cov-branch --cov-append \
             --cov-report=xml:coverage-integration.xml \
-            --cov-report=html:htmlcov-integration \
             --cov-report=term
         continue-on-error: true
 
