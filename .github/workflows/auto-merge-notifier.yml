@@ -1,0 +1,284 @@
+---
+name: Auto-Merge Notifier & Restart
+
+on:
+  # Trigger when ARC-Reviewer completes
+  workflow_run:
+    workflows: ["Claude Code Review"]
+    types: [completed]
+    
+  # Trigger when issues are updated (for restart capability)
+  issue_comment:
+    types: [created]
+    
+  # Manual restart trigger
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to restart auto-merge for'
+        required: true
+        type: string
+
+jobs:
+  check-blocking-issues:
+    name: "🔔 Check for Blocking Issues & Notify"
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'issue_comment'
+    
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      
+    steps:
+      - name: Find PR for workflow run
+        id: find-pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let prNumber = null;
+            
+            if (context.eventName === 'workflow_dispatch') {
+              prNumber = parseInt('${{ inputs.pr_number }}');
+            } else if (context.eventName === 'issue_comment') {
+              // Check if comment is restart trigger
+              const comment = context.payload.comment.body;
+              if (comment.includes('/restart-auto-merge') || comment.includes('/retry-merge')) {
+                prNumber = context.payload.issue.number;
+              } else {
+                console.log('Comment does not contain restart trigger');
+                return { found: false, restart: false };
+              }
+            } else {
+              // Workflow run trigger
+              const headSha = context.payload.workflow_run.head_sha;
+              
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                sort: 'updated',
+                direction: 'desc'
+              });
+              
+              const pr = prs.find(pr => pr.head.sha === headSha);
+              if (pr) {
+                prNumber = pr.number;
+              }
+            }
+            
+            if (!prNumber) {
+              console.log('No PR found for notification');
+              return { found: false, restart: false };
+            }
+            
+            const restart = context.eventName === 'issue_comment' || context.eventName === 'workflow_dispatch';
+            
+            return { 
+              found: true, 
+              pr_number: prNumber,
+              restart: restart
+            };
+      
+      - name: Check ARC-Reviewer status
+        id: check-arc-status
+        if: fromJson(steps.find-pr.outputs.result).found
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ fromJson(steps.find-pr.outputs.result).pr_number }};
+            
+            // Get comments from the PR
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100
+            });
+            
+            // Find the most recent ARC-Reviewer comment
+            const arcComments = comments.filter(comment =>
+              comment.user.type === 'Bot' &&
+              (comment.body.includes('ARC-Reviewer') || comment.body.includes('schema_version'))
+            );
+            
+            if (arcComments.length === 0) {
+              console.log('No ARC-Reviewer comment found');
+              return { 
+                status: 'no-review',
+                blocking_issues: [],
+                warnings: [],
+                verdict: 'UNKNOWN'
+              };
+            }
+            
+            // Get the most recent ARC-Reviewer comment
+            const latestComment = arcComments[arcComments.length - 1];
+            const reviewBody = latestComment.body;
+            
+            // Parse verdict
+            const verdictMatch = reviewBody.match(/verdict:\s*['"]*([^'"\\n]+)['"]*/) || 
+                               reviewBody.match(/verdict:\s*"?(APPROVE|REQUEST_CHANGES)"?/);
+            
+            let verdict = 'UNKNOWN';
+            if (verdictMatch) {
+              verdict = verdictMatch[1].trim();
+            }
+            
+            // Extract blocking issues
+            const blockingIssues = [];
+            const blockingSection = reviewBody.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
+            if (blockingSection && blockingSection[1].trim()) {
+              const lines = blockingSection[1].split('\n').filter(line => line.trim().startsWith('-'));
+              for (const line of lines) {
+                const match = line.match(/description:\s*['"]*([^'"\\n]+)['"]*/) || 
+                             line.match(/-\s*description:\s*['"]*([^'"\\n]+)['"]*/) ||
+                             line.match(/-\s*([^\\n]+)/);
+                if (match) {
+                  blockingIssues.push(match[1].trim());
+                }
+              }
+            }
+            
+            // Extract warnings
+            const warnings = [];
+            const warningSection = reviewBody.match(/warnings:\s*\n((?:\s*-.*\n?)*)/);
+            if (warningSection && warningSection[1].trim()) {
+              const lines = warningSection[1].split('\n').filter(line => line.trim().startsWith('-'));
+              for (const line of lines) {
+                const match = line.match(/description:\s*['"]*([^'"\\n]+)['"]*/) || 
+                             line.match(/-\s*description:\s*['"]*([^'"\\n]+)['"]*/) ||
+                             line.match(/-\s*([^\\n]+)/);
+                if (match) {
+                  warnings.push(match[1].trim());
+                }
+              }
+            }
+            
+            return {
+              status: verdict === 'APPROVE' ? 'approved' : 'blocked',
+              verdict: verdict,
+              blocking_issues: blockingIssues,
+              warnings: warnings,
+              comment_url: latestComment.html_url
+            };
+      
+      - name: Notify about blocking issues
+        if: >
+          fromJson(steps.find-pr.outputs.result).found &&
+          fromJson(steps.check-arc-status.outputs.result).status == 'blocked' &&
+          !fromJson(steps.find-pr.outputs.result).restart
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ fromJson(steps.find-pr.outputs.result).pr_number }};
+            const arcResult = ${{ steps.check-arc-status.outputs.result }};
+            
+            let issuesList = '';
+            if (arcResult.blocking_issues && arcResult.blocking_issues.length > 0) {
+              issuesList = arcResult.blocking_issues.map(issue => `- ${issue}`).join('\n');
+            }
+            
+            let warningsList = '';
+            if (arcResult.warnings && arcResult.warnings.length > 0) {
+              warningsList = arcResult.warnings.map(warning => `- ${warning}`).join('\n');
+            }
+            
+            const body = `🚨 **Auto-merge blocked by ARC-Reviewer**
+            
+            **Verdict**: ${arcResult.verdict}
+            
+            ${issuesList ? `**🚫 Blocking Issues:**\n${issuesList}\n` : ''}
+            ${warningsList ? `**⚠️ Warnings:**\n${warningsList}\n` : ''}
+            
+            ## 🔄 How to Restart Auto-Merge
+            
+            After fixing the issues above:
+            1. **Push your fixes** to the PR branch
+            2. **Comment** \`/restart-auto-merge\` or \`/retry-merge\` to restart the process
+            3. **Or wait** for the next push to automatically trigger re-evaluation
+            
+            [📋 View full ARC-Reviewer comment](${arcResult.comment_url})
+            
+            ---
+            *🤖 Automated notification from Auto-Merge Notifier*`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: body
+            });
+            
+            console.log('📢 Blocking issues notification posted');
+      
+      - name: Restart auto-merge process
+        if: >
+          fromJson(steps.find-pr.outputs.result).found &&
+          fromJson(steps.find-pr.outputs.result).restart &&
+          fromJson(steps.check-arc-status.outputs.result).status == 'approved'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ fromJson(steps.find-pr.outputs.result).pr_number }};
+            
+            // Trigger the smart auto-merge workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'smart-auto-merge.yml',
+              ref: 'main',
+              inputs: {
+                pr_number: prNumber.toString()
+              }
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `🔄 **Auto-merge restarted**
+              
+              ARC-Reviewer shows **APPROVED** status - restarting auto-merge process.
+              
+              The Smart Auto-Merge workflow has been triggered to re-evaluate this PR.
+              
+              ---
+              *🤖 Automated restart from Auto-Merge Notifier*`
+            });
+            
+            console.log('🚀 Auto-merge process restarted');
+      
+      - name: Handle restart with blocking issues
+        if: >
+          fromJson(steps.find-pr.outputs.result).found &&
+          fromJson(steps.find-pr.outputs.result).restart &&
+          fromJson(steps.check-arc-status.outputs.result).status == 'blocked'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ fromJson(steps.find-pr.outputs.result).pr_number }};
+            const arcResult = ${{ steps.check-arc-status.outputs.result }};
+            
+            let issuesList = '';
+            if (arcResult.blocking_issues && arcResult.blocking_issues.length > 0) {
+              issuesList = arcResult.blocking_issues.map(issue => `- ${issue}`).join('\n');
+            }
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `❌ **Cannot restart auto-merge**
+              
+              ARC-Reviewer still shows **${arcResult.verdict}** with blocking issues:
+              
+              ${issuesList}
+              
+              Please fix these issues first, then comment \`/restart-auto-merge\` again.
+              
+              ---
+              *🤖 Automated response from Auto-Merge Notifier*`
+            });
+            
+            console.log('❌ Restart blocked - issues still present');

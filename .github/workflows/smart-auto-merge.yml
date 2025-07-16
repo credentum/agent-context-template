@@ -11,6 +11,10 @@ on:
     workflows: ["Claude Code Review", "CI Optimized Pipeline"]
     types: [completed]
 
+  # Trigger when PR is updated (for restart capability)
+  pull_request:
+    types: [synchronize]
+
   # Manual trigger for testing
   workflow_dispatch:
     inputs:
@@ -52,6 +56,12 @@ jobs:
               });
 
               headSha = pr.head.sha;
+            } else if (context.eventName === 'pull_request') {
+              // PR synchronize trigger (restart capability)
+              prNumber = context.payload.pull_request.number;
+              headSha = context.payload.pull_request.head.sha;
+              
+              console.log(`🔄 PR updated: #${prNumber} - checking for auto-merge restart`);
             } else {
               // Workflow run trigger
               headSha = context.payload.workflow_run.head_sha;
