@@ -51,8 +51,8 @@ jobs:
               return { valid: false, error: 'Empty PR description' };
             }
 
-            // Extract YAML frontmatter
-            const yamlMatch = prBody.match(/^---\s*\n([\s\S]*?)\n---/);
+            // Extract YAML frontmatter (may not be at the start due to ARC-Reviewer content)
+            const yamlMatch = prBody.match(/---\s*\n([\s\S]*?)\n---/);
 
             if (!yamlMatch) {
               core.setFailed('No YAML frontmatter found. Please use the PR template with machine-readable metadata.');
