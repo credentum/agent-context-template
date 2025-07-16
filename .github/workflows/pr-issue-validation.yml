@@ -17,8 +17,8 @@ jobs:
 
     steps:
       - name: Validate PR has issue links or exemption
-      uses: actions/github-script@v7
-      with:
+        uses: actions/github-script@v7
+        with:
         script: |
           const { owner, repo } = context.repo;
           const prNumber = context.payload.pull_request.number;
@@ -85,7 +85,9 @@ jobs:
             message = `❌ **Invalid Issue References** - Issue(s) not found: ${invalidIssues.map(n => `#${n}`).join(', ')}`;
           } else if (validIssues.length === 0 && !isExempt) {
             status = 'failure';
-            message = `⚠️ **Missing Issue Links** - PR should either:\n- Reference issues with closing keywords (closes #123, fixes #456)\n- Check the exemption box if no issues are closed`;
+            message = `⚠️ **Missing Issue Links** - PR should either:\n` +
+                      `- Reference issues with closing keywords (closes #123, fixes #456)\n` +
+                      `- Check the exemption box if no issues are closed`;
           }
 
           // Create/update status check

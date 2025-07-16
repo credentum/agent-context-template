@@ -185,7 +185,17 @@ Debug | reproduce issue → add logging → isolate → fix → add regression t
 1. Run `./scripts/run-ci-docker.sh` (or `make lint`) to match GitHub CI exactly
 2. Run `pre-commit run --all-files`
 3. Run `pytest --cov=src --cov-report=term-missing`
-4. Fix any issues before proceeding
+4. **Fix any issues before proceeding** - This includes:
+   - YAML syntax errors (missing colons, indentation issues)
+   - Line length violations (> 80 characters)
+   - Missing document start markers (`---`)
+   - Trailing spaces and whitespace issues
+
+**NEW: Automated Validation (with git hooks):**
+- Git hooks automatically run CI checks before push
+- Branch sync validation prevents merge conflicts
+- Can be bypassed for emergencies but not recommended
+- Run `./scripts/setup-git-hooks.sh` once to enable
 
 **NEW: Automated Validation (with git hooks):**
 - Git hooks automatically run CI checks before push

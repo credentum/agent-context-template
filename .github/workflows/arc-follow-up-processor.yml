@@ -9,10 +9,10 @@ name: ARC Follow-up Issue Processor
 on:
   schedule:
     # Run every 15 minutes during business hours (UTC)
-      - cron: '*/15 6-22 * * 1-5'
+    - cron: '*/15 6-22 * * 1-5'
     # Run every 30 minutes during off-hours
-      - cron: '*/30 22-6 * * *'
-      - cron: '*/30 * * * 0,6'
+    - cron: '*/30 22-6 * * *'
+    - cron: '*/30 * * * 0,6'
   workflow_dispatch:
     inputs:
       pr_number:
@@ -149,7 +149,7 @@ jobs:
               continue
             fi
 
-            # Process each automated issue
+            # Process each automated issue using Python script
             python3 << 'EOF'
 import yaml
 import json
