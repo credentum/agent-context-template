@@ -1,5 +1,5 @@
 # docker-compose.ci.yml - Run CI environment locally exactly like GitHub Actions
-version: '3.8'
+---
 
 services:
   # Run all CI lint checks (default)
@@ -17,12 +17,15 @@ services:
       - ./context:/app/context
       # Mount config files
       - ./mypy.ini:/app/mypy.ini:ro
-      - ./.flake8:/app/.flake8:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml:ro
+      - ./.yamllint-workflows.yml:/app/.yamllint-workflows.yml:ro
     environment:
       - PYTHONPATH=/app
       - CI=true
       - PYTHONUNBUFFERED=1
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
     command: /bin/bash scripts/test-like-ci.sh
 
   # Run specific checks individually
@@ -37,6 +40,10 @@ services:
       - ./scripts:/app/scripts:ro
     environment:
       - CI=true
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
     command: black --check src/ tests/ scripts/
 
   ci-isort:
@@ -50,6 +57,10 @@ services:
       - ./scripts:/app/scripts:ro
     environment:
       - CI=true
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
     command: isort --check-only --profile black src/ tests/ scripts/
 
   ci-flake8:
@@ -61,10 +72,15 @@ services:
       - ./src:/app/src:ro
       - ./tests:/app/tests:ro
       - ./scripts:/app/scripts:ro
-      - ./.flake8:/app/.flake8:ro
     environment:
       - CI=true
-    command: flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
+    command: >
+      flake8 src/ tests/ scripts/ --max-line-length=100
+      --extend-ignore=E203,W503
 
   ci-mypy:
     build:
@@ -76,6 +92,10 @@ services:
       - ./mypy.ini:/app/mypy.ini:ro
     environment:
       - CI=true
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
     command: mypy src/ --config-file=mypy.ini
 
   ci-context-lint:
@@ -89,6 +109,9 @@ services:
     environment:
       - CI=true
       - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
     command: python -m src.agents.context_lint validate context/
 
   ci-import-check:
@@ -102,6 +125,9 @@ services:
     environment:
       - CI=true
       - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
     command: python -m pytest --collect-only -q
 
   # Service for interactive debugging
@@ -121,6 +147,9 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app
+      - CI=true
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
     command: /bin/bash
     stdin_open: true
     tty: true
@@ -141,6 +170,9 @@ services:
     environment:
       - PYTHONPATH=/app
       - CI=true
+      - PYTHONUNBUFFERED=1
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
     command: /bin/bash scripts/test-workflow-simple.sh
 
   # Test coverage like GitHub Actions
@@ -160,8 +192,11 @@ services:
     environment:
       - PYTHONPATH=/app
       - CI=true
+      - PYTHONUNBUFFERED=1
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
     depends_on:
       - redis
     command: /bin/bash scripts/test-coverage-like-ci.sh
@@ -182,8 +217,11 @@ services:
     environment:
       - PYTHONPATH=/app
       - CI=true
+      - PYTHONUNBUFFERED=1
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
     depends_on:
       - redis
     command: /bin/bash scripts/test-unit-like-ci.sh
@@ -204,15 +242,18 @@ services:
     environment:
       - PYTHONPATH=/app
       - CI=true
+      - PYTHONUNBUFFERED=1
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
     depends_on:
       - redis
     command: /bin/bash scripts/test-suite-like-ci.sh
 
   # Qdrant service for workflow tests
   qdrant:
-    image: qdrant/qdrant:v1.14.1
+    image: qdrant/qdrant@sha256:9d1eefc5f6fb4f20ba1b9de8862c85ce5b12b47c75ed2abac5e6c2c8bb2b6a92  # yamllint disable-line rule:line-length
     ports:
       - "6335:6333"
       - "6336:6334"
@@ -224,7 +265,7 @@ services:
 
   # Neo4j service for workflow tests
   neo4j:
-    image: neo4j:5.20.0
+    image: neo4j@sha256:b98e15a2b3c5b1b8e6e5f7e20a4a8b8c9d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5  # yamllint disable-line rule:line-length
     ports:
       - "7688:7687"
       - "7475:7474"
@@ -233,17 +274,25 @@ services:
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
       - NEO4J_PLUGINS=["apoc"]
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      # Memory optimization for CI
       - NEO4J_dbms_memory_heap_initial__size=512m
       - NEO4J_dbms_memory_heap_max__size=1G
     healthcheck:
-      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "testpassword", "RETURN 1"]
+      test:
+        - "CMD"
+        - "cypher-shell"
+        - "-u"
+        - "neo4j"
+        - "-p"
+        - "testpassword"
+        - "RETURN 1"
       interval: 10s
       timeout: 5s
       retries: 5
 
   # Redis service for tests that need it
   redis:
-    image: redis:7-alpine
+    image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55  # yamllint disable-line rule:line-length
     ports:
       - "6379:6379"
     healthcheck:

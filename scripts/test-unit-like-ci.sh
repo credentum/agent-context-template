@@ -51,10 +51,11 @@ mkdir -p context/logs/eval
 mkdir -p context/logs/kv
 mkdir -p context/logs/prompts
 mkdir -p context/logs/signatures
+mkdir -p test-results
 echo -e "  ${GREEN}✓ PASSED${NC}"
 
-# From test.yml lines 67-71
-run_check "Unit tests with coverage" "python -m pytest tests/ -v --tb=short -m \"not integration and not e2e\" --cov=src --cov-report=term-missing --cov-report=xml --timeout=60 --timeout-method=thread -x"
+# From test.yml lines 67-71 (UPDATED to match ci-optimized.yml exactly)
+run_check "Unit tests with coverage" "python -m pytest tests/ -m \"not integration and not e2e and not slow\" --cov=src --cov-report=term-missing --cov-report=xml:coverage-unit.xml --cov-report=html:htmlcov-unit --cov-report=json:coverage.json --junit-xml=test-results/junit-unit.xml --timeout=60 --timeout-method=thread -v"
 
 # Summary
 echo -e "\n========================================"

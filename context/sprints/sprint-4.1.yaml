@@ -67,12 +67,12 @@ phases:
   tasks:
   - title: Add infra/healthcheck.sh smoke test
     description: "Create a bash script verifying Qdrant and Neo4j are healthy after\
-      \ `make up`.\n\n## Acceptance Criteria\n- [ ] `infra/healthcheck.sh` exits 0\
-      \ on healthy stack.\n- [ ] Script checks:\n      curl localhost:6333/collections\
-      \ \u21D2 `[]`\n      python -c \"from neo4j import GraphDatabase; GraphDatabase.driver('bolt://localhost:7687').verify_connectivity()\"\
-      \n- [ ] Neo4j driver added to `requirements-dev.txt`.\n- [ ] CONTRIBUTING updated\
-      \ with run instructions.\n\n## Implementation Notes\n- chmod +x infra/healthcheck.sh\n\
-      - add to Makefile: make health\n"
+      \ `make up`.\n## Acceptance Criteria - [ ] `infra/healthcheck.sh` exits 0 on\
+      \ healthy stack. - [ ] Script checks: curl localhost:6333/collections \u21D2\
+      \ `[]` python -c \"from neo4j import GraphDatabase; GraphDatabase.driver('bolt://localhost:7687').\
+      \ verify_connectivity()\" - [ ] Neo4j driver added to `requirements-dev.txt`.\
+      \ - [ ] CONTRIBUTING updated with run instructions.\n## Implementation Notes\
+      \ - chmod +x infra/healthcheck.sh - add to Makefile: make health "
     labels:
     - sprint-current
     - phase:4.1
@@ -109,6 +109,8 @@ phases:
 
       - Ensure ports match compose stack.
 
+      ''
+
       '
     labels:
     - sprint-current
@@ -128,10 +130,10 @@ phases:
   tasks:
   - title: Embedder sanity test with README.md
     description: "Index README.md via embed pipeline and confirm both vector and graph\
-      \ entries exist.\n\n## Acceptance Criteria\n- [ ] New test `tests/smoke/test_embed_readme.py`\
-      \ passes.\n- [ ] Qdrant vector count \u2265 1; corresponding Neo4j node present.\n\
-      \n## Implementation Notes\n- pytest -k test_embed_readme\n- use qdrant_client\
-      \ & neo4j driver inside test.\n"
+      \ entries exist.\n## Acceptance Criteria - [ ] New test `tests/smoke/test_embed_readme.py`\
+      \ passes. - [ ] Qdrant vector count \u2265 1; corresponding Neo4j node present.\n\
+      ## Implementation Notes - pytest -k test_embed_readme - use qdrant_client &\
+      \ neo4j driver inside test. "
     labels:
     - sprint-current
     - phase:4.1
@@ -183,23 +185,11 @@ phases:
   description: Implement supply-chain security for infrastructure
   tasks:
   - title: Sigstore sign compose & images
-    description: 'Begin supply-chain integrity chain for infra artefacts using Sigstore/cosign.
-
-
-      ## Acceptance Criteria
-
-      - [ ] cosign signatures committed under `context/logs/signatures/infra/`.
-
-      - [ ] CI step verifies signatures before tests execute.
-
-
-      ## Implementation Notes
-
-      - cosign sign --key k.json docker.io/qdrant/qdrant@sha256:...
-
-      - cosign verify ...
-
-      '
+    description: "Begin supply-chain integrity chain for infra artefacts using Sigstore/cosign.\n\
+      \n## Acceptance Criteria\n- [ ] cosign signatures committed under\n      `context/logs/signatures/infra/`.\n\
+      \n- [ ] CI step verifies signatures before tests execute.\n\n## Implementation\
+      \ Notes\n- cosign sign --key k.json docker.io/qdrant/qdrant@sha256:...\n- cosign\
+      \ verify ...\n'\n"
     labels:
     - sprint-current
     - phase:4.1
@@ -215,59 +205,29 @@ phases:
   component: agents
   description: Fix critical bugs affecting user experience
   tasks:
-  - title: Fix Sprint Issue Linker Label Batching to Prevent Multiple Comments
-    description: 'Fix the sprint issue linker''s `_sync_issue_labels()` method that
-      currently makes individual GitHub API calls for each label operation, causing
-      multiple comments when creating/updating issues with many labels.
-
-
-      ## Problem Analysis
-
-      The current implementation calls `gh issue edit` separately for each label:
-
-      - One subprocess call per label to add (lines 527-530)
-
-      - One subprocess call per label to remove (lines 532-535)
-
-      - With 8-12+ labels per task, this creates 8-12+ GitHub API calls
-
-      - Each call can trigger comment creation, leading to comment spam
-
-
-      ## Acceptance Criteria
-
-      - [ ] Batch all label additions into single `gh issue edit --add-label label1,label2,label3`
-      call
-
-      - [ ] Batch all label removals into single `gh issue edit --remove-label label1,label2,label3`
-      call
-
-      - [ ] Reduce API calls from ~10+ per issue to maximum 2 per issue
-
-      - [ ] Add exponential backoff retry logic for GitHub API failures
-
-      - [ ] Add label count warnings when approaching GitHub limits
-
-      - [ ] Test with high-label-count scenarios (sprint 4.1 tasks)
-
-      - [ ] Verify no duplicate comments are created
-
-      - [ ] Ensure bidirectional sync still works correctly
-
-      - [ ] Preserve existing dry-run and verbose logging functionality
-
-
-      ## Implementation Notes
-
-      - Modify `_sync_issue_labels()` method in `src/agents/sprint_issue_linker.py`
-
-      - GitHub CLI supports comma-separated labels: `--add-label label1,label2,label3`
-
-      - Add comprehensive unit tests for batching behavior
-
-      - Test with current sprint-4.1 tasks that have extensive labels
+  - title: 'Fix Sprint Issue Linker Label Batching to Prevent Multiple Comments
 
       '
+    description: "Fix the sprint issue linker's `_sync_issue_labels()` method that\
+      \ currently makes individual GitHub API calls for each label operation, causing\
+      \ multiple comments when creating/updating issues with many labels.\n\n## Problem\
+      \ Analysis\nThe current implementation calls `gh issue edit` separately for\
+      \ each label:\n- One subprocess call per label to add (lines 527-530)\n- One\
+      \ subprocess call per label to remove (lines 532-535)\n- With 8-12+ labels per\
+      \ task, this creates 8-12+ GitHub API calls\n- Each call can trigger comment\
+      \ creation, leading to comment spam\n\n## Acceptance Criteria\n- [ ] Batch all\
+      \ label additions into single `gh issue edit\n      --add-label label1,label2,label3`\
+      \ call\n\n- [ ] Batch all label removals into single `gh issue edit\n      --remove-label\
+      \ label1,label2,label3` call\n\n- [ ] Reduce API calls from ~10+ per issue to\
+      \ maximum 2 per issue\n- [ ] Add exponential backoff retry logic for GitHub\
+      \ API failures\n- [ ] Add label count warnings when approaching GitHub limits\n\
+      - [ ] Test with high-label-count scenarios (sprint 4.1 tasks)\n- [ ] Verify\
+      \ no duplicate comments are created\n- [ ] Ensure bidirectional sync still works\
+      \ correctly\n- [ ] Preserve existing dry-run and verbose logging functionality\n\
+      \n## Implementation Notes\n- Modify `_sync_issue_labels()` method in\n  `src/agents/sprint_issue_linker.py`\n\
+      \n- GitHub CLI supports comma-separated labels:\n  `--add-label label1,label2,label3`\n\
+      \n- Add comprehensive unit tests for batching behavior\n- Test with current\
+      \ sprint-4.1 tasks that have extensive labels\n'\n"
     labels:
     - sprint-current
     - phase:4.1
@@ -283,34 +243,56 @@ phases:
   status: pending
   priority: high
   component: testing
-  description: Test and validate bidirectional sync between sprint YAML and GitHub issues
+  description: Test and validate bidirectional sync between sprint YAML and GitHub
+    issues
   tasks:
-  - title: "Bidirectional Workflow Validation Test"
-    description: |
-      Test task to validate bidirectional sync between sprint YAML and GitHub issues.
-      This task should be automatically created as a GitHub issue and then sync back.
+  - title: Bidirectional Workflow Validation Test
+    description: 'Test task to validate bidirectional sync between sprint YAML and
+
+      GitHub issues. This task should be automatically created as a GitHub
+
+      issue and then sync back.
+
 
       ## Test Scenarios
+
       - [x] Task created in YAML generates GitHub issue
+
       - [ ] GitHub issue status updates reflect in YAML
+
       - [ ] Task completion in YAML closes GitHub issue
+
       - [ ] Label changes sync bidirectionally
+
       - [ ] Task removal from YAML closes GitHub issue
 
+
       ## Validation Steps
+
       1. Add this task to sprint YAML
+
       2. Run sprint issue linker to create GitHub issue
+
       3. Verify issue creation and YAML update with issue number
+
       4. Test status changes in both directions
+
       5. Test label synchronization
+
       6. Test orphan handling when task is removed
 
+
       ## Implementation Notes
+
       - This is a temporary test task for issue #93
+
       - Will be removed after validation
+
       - Should not affect production workflows
+
       - Tests complete bidirectional workflow as requested
 
+      '
     labels:
     - sprint-current
     - phase:4.1
@@ -320,7 +302,6 @@ phases:
     - automation
     dependencies: []
     estimate: 2 hours
-    # github_issue: Will be populated automatically by sprint issue linker
 team:
 - role: lead
   agent: pm_agent

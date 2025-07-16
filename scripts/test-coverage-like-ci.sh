@@ -15,6 +15,20 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Debug environment details
+echo -e "\n${YELLOW}🔍 Environment debugging information:${NC}"
+echo "Python version: $(python --version)"
+echo "pip version: $(pip --version)"
+echo "Working directory: $(pwd)"
+echo "Python path: $PYTHONPATH"
+echo "CI environment: $CI"
+echo "Cache version: $CACHE_VERSION"
+echo "Redis host: $REDIS_HOST"
+echo "Redis port: $REDIS_PORT"
+echo "Available tools:"
+which python pip pytest coverage mutmut || echo "Some tools not found"
+echo -e "${GREEN}✅ Environment debugging complete${NC}\n"
+
 # Track failures
 FAILED=0
 
@@ -36,6 +50,18 @@ run_check() {
 
 echo "📋 COVERAGE ANALYSIS WORKFLOW"
 echo "----------------------------"
+
+# Verify all required tools are available
+echo -e "${YELLOW}🔍 Verifying all required tools are available:${NC}"
+for tool in python pytest coverage mutmut; do
+    if which $tool > /dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ $tool: $(which $tool)${NC}"
+    else
+        echo -e "  ${RED}✗ $tool: NOT FOUND${NC}"
+        FAILED=$((FAILED + 1))
+    fi
+done
+echo
 
 # From test-coverage.yml lines 62-74
 export REDIS_HOST=localhost

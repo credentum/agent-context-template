@@ -1,0 +1,42 @@
+---
+# MCP Tool Contract: Optimized CI Runner
+schema_version: "1.0.0"
+document_type: "log"
+id: "mcp-run-ci-optimized"
+title: "MCP Contract: Optimized CI Runner Script"
+status: "active"
+created_date: "2025-07-16"
+last_modified: "2025-07-16"
+last_referenced: "2025-07-16"
+authors: ["claude"]
+tags: ["mcp", "tools", "ci", "automation", "optimization"]
+
+log_type: "contract"
+source: "scripts/run-ci-optimized.sh"
+data:
+  tool_name: "run-ci-optimized"
+  contract_type: "ci_automation"
+  description: "Local CI execution with parallel processing, smart caching,
+    and performance optimization"
+  executable: "scripts/run-ci-optimized.sh"
+  language: "bash"
+  capabilities:
+    - "parallel_test_execution"
+    - "smart_dependency_caching"
+    - "conditional_test_execution"
+    - "performance_monitoring"
+    - "legacy_compatibility_mode"
+  commands:
+    - "fast: Run fast checks only (lint + unit tests)"
+    - "full: Run complete optimized pipeline with all tests"
+    - "parallel: Run all tests in parallel (recommended)"
+    - "benchmark: Compare performance against legacy CI"
+  security:
+    - "input_sanitization: true"
+    - "command_injection_protection: true"
+    - "timeout_enforcement: true"
+    - "error_propagation: set -e"
+  usage_examples:
+    - "./scripts/run-ci-optimized.sh fast"
+    - "./scripts/run-ci-optimized.sh parallel"
+    - "./scripts/run-ci-optimized.sh benchmark"

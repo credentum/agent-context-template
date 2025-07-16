@@ -3,7 +3,6 @@
 
 import json
 import subprocess
-import sys
 from typing import Dict, Tuple
 
 
@@ -235,6 +234,26 @@ class CoverageSummary:
 
 def main():
     """Main entry point"""
+    import sys
+
+    # Handle --help flag
+    if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h"]:
+        print("Usage: python scripts/coverage_summary.py")
+        print("")
+        print("Generate comprehensive test coverage summary with all metrics.")
+        print("")
+        print("This script:")
+        print("  - Loads coverage configuration from .coverage-config.json")
+        print("  - Analyzes coverage.json for line and branch coverage")
+        print("  - Runs mutation testing to get mutation score")
+        print("  - Checks critical function coverage")
+        print("  - Generates a detailed report with recommendations")
+        print("  - Creates coverage badge if coverage-badge is available")
+        print("")
+        print("Output: Detailed coverage report to stdout")
+        print("Exit code: 0 if all targets met, 1 otherwise")
+        return
+
     summary = CoverageSummary()
     passed = summary.generate_report()
 

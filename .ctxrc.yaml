@@ -1,3 +1,4 @@
+---
 # Context System Configuration
 # This file defines configuration defaults for the agent-context system
 
@@ -6,8 +7,10 @@ system:
   created_date: "2025-07-11"
 
 linter:
-  warning_days_old: 90          # Warn if document not modified for this many days
-  warning_days_until_expire: 7  # Warn if document expires within this many days
+  # Warn if document not modified for this many days
+  warning_days_old: 90
+  # Warn if document expires within this many days
+  warning_days_until_expire: 7
 
 qdrant:
   version: "1.14.x"

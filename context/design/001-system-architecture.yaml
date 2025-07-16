@@ -1,11 +1,12 @@
+---
 schema_version: "1.1.1"
 document_type: "design"
 id: "001-system-architecture"
 title: "Agent-First Project Context System Architecture"
 status: "active"
 created_date: "2025-07-11"
-last_modified: "2025-07-15"
-last_referenced: "2025-07-15"
+last_modified: "2025-07-16"
+last_referenced: "2025-07-16"
 expires: null
 authors:
   - "system"
@@ -20,10 +21,14 @@ tags:
 content: |
   # System Architecture Overview
 
-  The **Agent-First Project Context System** provides a pluggable, protocol-driven
-  context layer any LLM-backed agent can consume.  All functionality is exposed
-  through **Model Context Protocol (MCP)** tools so you can swap underlying
-  models (Claude, OpenAI, local GGUF, etc.) without changing the context stack.
+  The **Agent-First Project Context System** provides a pluggable,
+  protocol-driven
+  context layer any LLM-backed agent can consume.  All functionality is
+  exposed
+  through **Model Context Protocol (MCP)** tools so you can swap
+  underlying
+  models (Claude, OpenAI, local GGUF, etc.) without changing the context
+  stack.
 
   ## Core Components (Rev 2025-07-15)
 
@@ -50,12 +55,16 @@ content: |
        update_scratchpad · compress_context · monitor_usage
 
   6. **Agent Layer (Pluggable)**
-     • **Agent Adapters:** thin wrappers that translate agent I/O to MCP envelopes
+     • **Agent Adapters:** thin wrappers that translate agent I/O to MCP
+       envelopes
      • **CodeGen Adapter:** defaults to *Claude Code CLI* but can switch to
-       GitHub Copilot, OpenAI “dev-in” or local Llama.cpp via env flag
-     • **Specialised Agents:** PM, Doc, CI – all call Tool Selector to load only
+       GitHub Copilot, OpenAI "dev-in" or local Llama.cpp via env
+       flag
+     • **Specialised Agents:** PM, Doc, CI – all call Tool Selector to
+       load only
        context they need
-     • **Isolation Runner:** `sandbox_agent_runner.py` executes each agent in a
+     • **Isolation Runner:** `sandbox_agent_runner.py` executes each
+       agent in a
        temp dir with restricted FS permissions
 
   7. **Write / Select / Compress Layers**
@@ -72,10 +81,21 @@ content: |
      • Sigstore verification in CI
      • `replay_trace.sh` for deterministic audit
 
-  10. **CI / CD Pipeline**
-     • GitHub Actions service containers (Qdrant, Neo4j)
-     • Pre-commit hooks blocking; mutation tests nightly
-     • ARC-Reviewer (Claude) posts structured review; pipeline fails on ❌
+  10. **CI / CD Pipeline (Optimized)**
+     • **Optimized Workflow:** `ci-optimized.yml` with 60-70%
+       performance improvement
+     • **Parallel Execution:** Lint, tests, coverage run concurrently
+       with smart dependencies
+     • **Advanced Caching:** Unified pip cache, Docker layer caching,
+       shared artifacts
+     • **Conditional Testing:** Skip heavy workloads for docs-only changes
+     • **Local Development:** `run-ci-optimized.sh` replicates CI
+       environment locally
+     • **Performance Monitoring:** `benchmark-ci-performance.py` tracks
+       regression
+     • **Security:** Docker images pinned to SHA digests, input validation
+     • **ARC-Reviewer:** Claude posts structured review; pipeline fails on ❌
+     • **Branch Protection:** Merge blocked until human + ARC approval
 
 references:
   - type: "config"
@@ -84,6 +104,16 @@ references:
     path: "infra/docker-compose.yml"
   - type: "config"
     path: ".pre-commit-config-ci.yaml"
+  - type: "config"
+    path: ".github/workflows/ci-optimized.yml"
+  - type: "config"
+    path: "docker-compose.ci-optimized.yml"
+  - type: "internal"
+    path: "scripts/run-ci-optimized.sh"
+  - type: "internal"
+    path: "scripts/benchmark-ci-performance.py"
+  - type: "internal"
+    path: "context/mcp_contracts/"
   - type: "external"
     url: "https://qdrant.tech/documentation/"
   - type: "external"

@@ -1,0 +1,33 @@
+---
+# MCP Tool Contract: CI Performance Benchmark Tool
+schema_version: "1.0.0"
+document_type: "log"
+id: "mcp-benchmark-ci-performance"
+title: "MCP Contract: CI Performance Benchmark Tool"
+status: "active"
+created_date: "2025-07-16"
+last_modified: "2025-07-16"
+last_referenced: "2025-07-16"
+authors: ["claude"]
+tags: ["mcp", "tools", "ci", "performance", "benchmark"]
+
+log_type: "contract"
+source: "scripts/benchmark-ci-performance.py"
+data:
+  tool_name: "benchmark-ci-performance"
+  contract_type: "performance_analysis"
+  description: "Measures and compares CI pipeline execution times between legacy and optimized workflows"
+  executable: "python scripts/benchmark-ci-performance.py"
+  language: "python"
+  capabilities:
+    - "measure_execution_times"
+    - "compare_pipeline_performance"
+    - "track_performance_regression"
+    - "generate_performance_reports"
+  security:
+    - "input_sanitization: true"
+    - "command_injection_protection: true"
+    - "timeout_enforcement: true"
+  usage_examples:
+    - "python scripts/benchmark-ci-performance.py --mode compare"
+    - "python scripts/benchmark-ci-performance.py --mode optimized"

@@ -16,7 +16,7 @@ jobs:
       statuses: write
 
     steps:
-    - name: Validate PR has issue links or exemption
+      - name: Validate PR has issue links or exemption
       uses: actions/github-script@v7
       with:
         script: |
