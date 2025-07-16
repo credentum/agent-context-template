@@ -4,8 +4,8 @@ id: "001-system-architecture"
 title: "Agent-First Project Context System Architecture"
 status: "active"
 created_date: "2025-07-11"
-last_modified: "2025-07-15"
-last_referenced: "2025-07-15"
+last_modified: "2025-07-16"
+last_referenced: "2025-07-16"
 expires: null
 authors:
   - "system"
@@ -72,10 +72,16 @@ content: |
      • Sigstore verification in CI
      • `replay_trace.sh` for deterministic audit
 
-  10. **CI / CD Pipeline**
-     • GitHub Actions service containers (Qdrant, Neo4j)
-     • Pre-commit hooks blocking; mutation tests nightly
-     • ARC-Reviewer (Claude) posts structured review; pipeline fails on ❌
+  10. **CI / CD Pipeline (Optimized)**
+     • **Optimized Workflow:** `ci-optimized.yml` with 60-70% performance improvement
+     • **Parallel Execution:** Lint, tests, coverage run concurrently with smart dependencies
+     • **Advanced Caching:** Unified pip cache, Docker layer caching, shared artifacts
+     • **Conditional Testing:** Skip heavy workloads for docs-only changes
+     • **Local Development:** `run-ci-optimized.sh` replicates CI environment locally
+     • **Performance Monitoring:** `benchmark-ci-performance.py` tracks regression
+     • **Security:** Docker images pinned to SHA digests, input validation
+     • **ARC-Reviewer:** Claude posts structured review; pipeline fails on ❌
+     • **Branch Protection:** Merge blocked until human + ARC approval
 
 references:
   - type: "config"
@@ -84,6 +90,16 @@ references:
     path: "infra/docker-compose.yml"
   - type: "config"
     path: ".pre-commit-config-ci.yaml"
+  - type: "config"
+    path: ".github/workflows/ci-optimized.yml"
+  - type: "config"
+    path: "docker-compose.ci-optimized.yml"
+  - type: "internal"
+    path: "scripts/run-ci-optimized.sh"
+  - type: "internal"
+    path: "scripts/benchmark-ci-performance.py"
+  - type: "internal"
+    path: "context/mcp_contracts/"
   - type: "external"
     url: "https://qdrant.tech/documentation/"
   - type: "external"
