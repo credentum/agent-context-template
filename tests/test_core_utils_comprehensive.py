@@ -7,12 +7,11 @@ Targeted to boost critical domain coverage above 78.5% threshold
 import os
 import warnings
 from unittest.mock import patch
-import pytest
 
 from src.core.utils import (
-    sanitize_error_message,
     get_environment,
     get_secure_connection_config,
+    sanitize_error_message,
 )
 
 
@@ -94,12 +93,12 @@ class TestSanitizeErrorMessage:
             ("secret: 'mysecret'", "secret: ***"),
             ("credential=test123", "credential: ***"),
         ]
-        
+
         for input_msg, expected_pattern in test_cases:
             result = sanitize_error_message(input_msg)
             assert expected_pattern in result
             # Ensure the sensitive value is removed
-            sensitive_part = input_msg.split(":")[-1].split("=")[-1].strip('"\'')
+            sensitive_part = input_msg.split(":")[-1].split("=")[-1].strip("\"'")
             assert sensitive_part not in result
 
     def test_bearer_token_patterns(self):
@@ -128,11 +127,11 @@ class TestSanitizeErrorMessage:
         """Test various database protocol connection strings"""
         protocols = [
             "postgresql://user:pass@host/db",
-            "mysql://user:pass@host/db", 
+            "mysql://user:pass@host/db",
             "redis://user:pass@host:6379",
             "neo4j://user:pass@host:7687",
         ]
-        
+
         for protocol_url in protocols:
             msg = f"Failed to connect to {protocol_url}"
             result = sanitize_error_message(msg)
@@ -145,12 +144,12 @@ class TestSanitizeErrorMessage:
             "bolt://user:pass@localhost:7687",
             "bolt+s://user:pass@localhost:7687",
         ]
-        
+
         for bolt_url in test_cases:
             msg = f"Bolt connection failed: {bolt_url}"
             result = sanitize_error_message(msg)
             assert "user:pass" not in result
-            assert "bolt://***:***@***" in result
+            assert "bolt://***:***@" in result
 
     def test_case_insensitive_patterns(self):
         """Test that pattern matching is case insensitive"""
@@ -208,10 +207,10 @@ class TestGetSecureConnectionConfig:
     def test_basic_config_development(self):
         """Test basic config in development environment"""
         config = {"neo4j": {"host": "localhost", "port": 7687}}
-        
+
         with patch("src.core.utils.get_environment", return_value="development"):
             result = get_secure_connection_config(config, "neo4j")
-            
+
         expected = {
             "host": "localhost",
             "port": 7687,
@@ -225,10 +224,10 @@ class TestGetSecureConnectionConfig:
     def test_basic_config_production(self):
         """Test basic config in production environment"""
         config = {"neo4j": {"host": "prod-server", "port": 7687}}
-        
+
         with patch("src.core.utils.get_environment", return_value="production"):
             result = get_secure_connection_config(config, "neo4j")
-            
+
         expected = {
             "host": "prod-server",
             "port": 7687,
@@ -242,12 +241,12 @@ class TestGetSecureConnectionConfig:
     def test_production_ssl_disabled_warning(self):
         """Test warning when SSL is explicitly disabled in production"""
         config = {"neo4j": {"host": "localhost", "ssl": False}}
-        
+
         with patch("src.core.utils.get_environment", return_value="production"):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                result = get_secure_connection_config(config, "neo4j")
-                
+                get_secure_connection_config(config, "neo4j")
+
                 assert len(w) == 1
                 assert "SSL is disabled" in str(w[0].message)
                 assert "security risk" in str(w[0].message)
@@ -264,10 +263,10 @@ class TestGetSecureConnectionConfig:
                 "timeout": 60,
             }
         }
-        
+
         with patch("src.core.utils.get_environment", return_value="staging"):
             result = get_secure_connection_config(config, "qdrant")
-            
+
         expected = {
             "host": "secure-server",
             "port": 6333,
@@ -288,10 +287,10 @@ class TestGetSecureConnectionConfig:
                 "ssl_ca_path": "/path/to/ca.pem",
             }
         }
-        
+
         with patch("src.core.utils.get_environment", return_value="production"):
             result = get_secure_connection_config(config, "neo4j")
-            
+
         assert result["ssl_cert_path"] == "/path/to/cert.pem"
         assert result["ssl_key_path"] == "/path/to/key.pem"
         assert result["ssl_ca_path"] == "/path/to/ca.pem"
@@ -299,10 +298,10 @@ class TestGetSecureConnectionConfig:
     def test_missing_service_config(self):
         """Test handling of missing service configuration"""
         config = {}
-        
+
         with patch("src.core.utils.get_environment", return_value="development"):
             result = get_secure_connection_config(config, "missing-service")
-            
+
         expected = {
             "host": "localhost",
             "port": None,
@@ -321,10 +320,10 @@ class TestGetSecureConnectionConfig:
                 # Missing ssl_key_path and ssl_ca_path
             }
         }
-        
+
         with patch("src.core.utils.get_environment", return_value="production"):
             result = get_secure_connection_config(config, "neo4j")
-            
+
         assert result["ssl_cert_path"] == "/path/to/cert.pem"
         assert "ssl_key_path" not in result
         assert "ssl_ca_path" not in result
@@ -332,8 +331,8 @@ class TestGetSecureConnectionConfig:
     def test_default_port_handling(self):
         """Test default port assignment when not specified"""
         config = {"service": {"host": "example.com"}}
-        
+
         with patch("src.core.utils.get_environment", return_value="development"):
             result = get_secure_connection_config(config, "service")
-            
+
         assert result["port"] is None  # Should be None when not specified

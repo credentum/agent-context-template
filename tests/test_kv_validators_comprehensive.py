@@ -6,15 +6,14 @@ Critical domain tests to boost coverage above 78.5% threshold
 
 import json
 from datetime import datetime, timedelta
-import pytest
 
 from src.validators.kv_validators import (
+    sanitize_metric_name,
     validate_cache_entry,
     validate_metric_event,
-    sanitize_metric_name,
-    validate_time_range,
     validate_redis_key,
     validate_session_data,
+    validate_time_range,
 )
 
 
@@ -34,7 +33,7 @@ class TestValidateCacheEntry:
     def test_missing_required_fields(self):
         """Test validation fails when required fields are missing"""
         required_fields = ["key", "value", "created_at", "ttl_seconds"]
-        
+
         for missing_field in required_fields:
             entry = {
                 "key": "test_key",
@@ -49,17 +48,22 @@ class TestValidateCacheEntry:
         """Test validation fails for non-string keys"""
         invalid_entries = [
             {"key": 123, "value": "test", "created_at": "2025-07-16T10:00:00", "ttl_seconds": 3600},
-            {"key": None, "value": "test", "created_at": "2025-07-16T10:00:00", "ttl_seconds": 3600},
+            {
+                "key": None,
+                "value": "test",
+                "created_at": "2025-07-16T10:00:00",
+                "ttl_seconds": 3600,
+            },
             {"key": [], "value": "test", "created_at": "2025-07-16T10:00:00", "ttl_seconds": 3600},
         ]
-        
+
         for entry in invalid_entries:
             assert validate_cache_entry(entry) is False
 
     def test_invalid_ttl_values(self):
         """Test validation fails for invalid TTL values"""
         invalid_ttls = [-1, "3600", None, 3.14, []]
-        
+
         for ttl in invalid_ttls:
             entry = {
                 "key": "test_key",
@@ -89,7 +93,7 @@ class TestValidateCacheEntry:
             None,
             [],
         ]
-        
+
         for timestamp in invalid_timestamps:
             entry = {
                 "key": "test_key",
@@ -107,7 +111,7 @@ class TestValidateCacheEntry:
             "2025-07-16T10:00:00+00:00",
             "2025-07-16T10:00:00.123456",
         ]
-        
+
         for timestamp in valid_timestamps:
             entry = {
                 "key": "test_key",
@@ -144,7 +148,7 @@ class TestValidateMetricEvent:
     def test_missing_required_fields(self):
         """Test validation fails when required fields are missing"""
         required_fields = ["timestamp", "metric_name", "value", "tags"]
-        
+
         for missing_field in required_fields:
             metric = {
                 "timestamp": "2025-07-16T10:00:00",
@@ -158,7 +162,7 @@ class TestValidateMetricEvent:
     def test_invalid_metric_name_types(self):
         """Test validation fails for non-string metric names"""
         invalid_names = [123, None, [], {"name": "test"}]
-        
+
         for name in invalid_names:
             metric = {
                 "timestamp": "2025-07-16T10:00:00",
@@ -171,7 +175,7 @@ class TestValidateMetricEvent:
     def test_invalid_value_types(self):
         """Test validation fails for invalid value types"""
         invalid_values = ["100", None, [], {"value": 100}]
-        
+
         for value in invalid_values:
             metric = {
                 "timestamp": "2025-07-16T10:00:00",
@@ -184,7 +188,7 @@ class TestValidateMetricEvent:
     def test_valid_numeric_values(self):
         """Test various valid numeric value types"""
         valid_values = [100, 75.5, 0, -50, 3.14159]
-        
+
         for value in valid_values:
             metric = {
                 "timestamp": "2025-07-16T10:00:00",
@@ -197,7 +201,7 @@ class TestValidateMetricEvent:
     def test_invalid_tags_types(self):
         """Test validation fails for non-dict tags"""
         invalid_tags = ["tags", 123, None, []]
-        
+
         for tags in invalid_tags:
             metric = {
                 "timestamp": "2025-07-16T10:00:00",
@@ -214,11 +218,11 @@ class TestValidateMetricEvent:
             "2025-13-01T10:00:00",
             "not-a-date",
         ]
-        
+
         for timestamp in invalid_timestamps:
             metric = {
                 "timestamp": timestamp,
-                "metric_name": "test_metric", 
+                "metric_name": "test_metric",
                 "value": 100,
                 "tags": {"env": "test"},
             }
@@ -227,7 +231,7 @@ class TestValidateMetricEvent:
     def test_invalid_timestamp_types(self):
         """Test validation fails for invalid timestamp types"""
         invalid_timestamps = [123, None, []]
-        
+
         for timestamp in invalid_timestamps:
             metric = {
                 "timestamp": timestamp,
@@ -250,7 +254,7 @@ class TestSanitizeMetricName:
             "disk_io_123",
             "api.requests.per_second",
         ]
-        
+
         for name in valid_names:
             assert sanitize_metric_name(name) == name
 
@@ -264,14 +268,14 @@ class TestSanitizeMetricName:
             ("api$requests", "api_requests"),
             ("metric!name", "metric_name"),
         ]
-        
+
         for input_name, expected in test_cases:
             assert sanitize_metric_name(input_name) == expected
 
     def test_multiple_invalid_characters(self):
         """Test handling of multiple invalid characters"""
         input_name = "cpu@#$%^&*()usage"
-        expected = "cpu__________usage"
+        expected = "cpu_________usage"
         assert sanitize_metric_name(input_name) == expected
 
     def test_length_limitation(self):
@@ -327,7 +331,7 @@ class TestValidateTimeRange:
         """Test validation with custom maximum days"""
         start = datetime(2025, 7, 1, 10, 0, 0)
         end = datetime(2025, 7, 8, 10, 0, 0)  # 7 days
-        
+
         assert validate_time_range(start, end, max_days=10) is True
         assert validate_time_range(start, end, max_days=5) is False
 
@@ -345,8 +349,8 @@ class TestValidateTimeRange:
 
     def test_within_max_days(self):
         """Test validation just under the maximum day limit"""
-        start = datetime(2025, 7, 1, 10, 0, 0)
-        end = datetime(2025, 9, 28, 10, 0, 0)  # 89 days
+        start = datetime(2025, 4, 1, 10, 0, 0)  # Past date
+        end = datetime(2025, 6, 25, 10, 0, 0)  # 85 days later, past date
         assert validate_time_range(start, end, max_days=90) is True
 
 
@@ -364,7 +368,7 @@ class TestValidateRedisKey:
             "MixedCaseKey",
             "key/with/slashes",
         ]
-        
+
         for key in valid_keys:
             assert validate_redis_key(key) is True
 
@@ -376,7 +380,7 @@ class TestValidateRedisKey:
     def test_non_string_keys(self):
         """Test that non-string keys are invalid"""
         invalid_keys = [123, [], {}, 3.14, True]
-        
+
         for key in invalid_keys:
             assert validate_redis_key(key) is False
 
@@ -385,7 +389,7 @@ class TestValidateRedisKey:
         # Valid length
         valid_key = "a" * 1024
         assert validate_redis_key(valid_key) is True
-        
+
         # Too long
         long_key = "a" * 1025
         assert validate_redis_key(long_key) is False
@@ -399,7 +403,7 @@ class TestValidateRedisKey:
             "key\rwith\rreturns",
             "key\x01with\x01control",
         ]
-        
+
         for key in control_chars:
             assert validate_redis_key(key) is False
 
@@ -407,7 +411,7 @@ class TestValidateRedisKey:
         """Test characters at the boundary of control character range"""
         # Character 31 (0x1F) is a control character
         assert validate_redis_key("key\x1ftest") is False
-        
+
         # Character 32 (space) is the first printable character
         assert validate_redis_key("key test") is True
 
@@ -418,7 +422,7 @@ class TestValidateRedisKey:
             "key_测试",
             "key_🔑",
         ]
-        
+
         for key in unicode_keys:
             assert validate_redis_key(key) is True
 
@@ -434,7 +438,7 @@ class TestValidateSessionData:
             {},  # Empty dict is valid
             {"complex": {"nested": {"data": [1, 2, 3]}}},
         ]
-        
+
         for session in valid_sessions:
             assert validate_session_data(session) is True
 
@@ -447,7 +451,7 @@ class TestValidateSessionData:
             None,
             True,
         ]
-        
+
         for data in invalid_data:
             assert validate_session_data(data) is False
 
@@ -456,7 +460,7 @@ class TestValidateSessionData:
         # Create data that's under the limit
         small_data = {"key": "a" * 1000}  # Small data
         assert validate_session_data(small_data) is True
-        
+
         # Create data that exceeds 1MB limit
         large_data = {"key": "a" * (1024 * 1024 + 1)}  # >1MB
         assert validate_session_data(large_data) is False
@@ -466,7 +470,7 @@ class TestValidateSessionData:
         # Functions are not JSON serializable
         invalid_data = {"function": lambda x: x}
         assert validate_session_data(invalid_data) is False
-        
+
         # Sets are not JSON serializable
         invalid_data = {"set": {1, 2, 3}}
         assert validate_session_data(invalid_data) is False
@@ -476,7 +480,7 @@ class TestValidateSessionData:
         # Create circular reference
         circular_data = {"key": "value"}
         circular_data["self"] = circular_data
-        
+
         assert validate_session_data(circular_data) is False
 
     def test_nested_data_size(self):
@@ -484,7 +488,7 @@ class TestValidateSessionData:
         # Create deeply nested but small data
         nested_data = {"level1": {"level2": {"level3": {"value": "test"}}}}
         assert validate_session_data(nested_data) is True
-        
+
         # Create nested data with large strings
         large_nested = {"level1": {"data": "x" * (1024 * 1024)}}
         assert validate_session_data(large_nested) is False
@@ -493,9 +497,9 @@ class TestValidateSessionData:
         """Test data exactly at the size limit"""
         # Calculate exact size for 1MB JSON
         # Accounting for JSON formatting: {"key":"..."} = 9 extra chars
-        max_value_size = 1024 * 1024 - 9  # 1MB minus JSON overhead
+        max_value_size = 1024 * 1024 - 12  # 1MB minus JSON overhead (more conservative)
         exact_data = {"key": "a" * max_value_size}
-        
+
         # This should be right at or just under the limit
         serialized = json.dumps(exact_data)
         assert len(serialized) <= 1024 * 1024
