@@ -35,13 +35,14 @@ class SprintIssueLinker:
         if not isinstance(text, str):
             raise ValueError("Input must be a string")
 
-        # Remove or escape potentially dangerous characters
-        # Allow alphanumeric, spaces, punctuation, and common markdown
-        sanitized = re.sub(r"[`$\\;|&<>(){}[\]]", "", str(text))
+        # Remove only the most dangerous characters that could cause command injection
+        # Keep common markdown characters like [], (), {}, <>, etc.
+        # Only remove: backticks, dollar signs, backslashes, semicolons, pipes, ampersands
+        sanitized = re.sub(r"[`$\\;|&]", "", str(text))
 
         # Limit length to prevent excessively long inputs
-        if len(sanitized) > 1000:
-            sanitized = sanitized[:997] + "..."
+        if len(sanitized) > 2000:
+            sanitized = sanitized[:1997] + "..."
 
         return sanitized.strip()
 
