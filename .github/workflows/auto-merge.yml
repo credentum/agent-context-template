@@ -248,7 +248,7 @@ jobs:
 
             // Look for ARC-Reviewer comment
             const arcComment = comments.find(comment =>
-              comment.user.type === 'Bot' &&
+              (comment.user.type === 'Bot' || comment.user.login === 'claude') &&
               (comment.body.includes('ARC-Reviewer') || comment.body.includes('schema_version'))
             );
 

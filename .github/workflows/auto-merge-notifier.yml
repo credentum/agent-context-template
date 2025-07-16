@@ -98,7 +98,7 @@ jobs:
 
             // Find the most recent ARC-Reviewer comment
             const arcComments = comments.filter(comment =>
-              comment.user.type === 'Bot' &&
+              (comment.user.type === 'Bot' || comment.user.login === 'claude') &&
               (comment.body.includes('ARC-Reviewer') || comment.body.includes('schema_version'))
             );
 
