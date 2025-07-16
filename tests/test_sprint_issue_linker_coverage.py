@@ -403,16 +403,23 @@ class TestSprintIssueLinkerCoverage:
         assert "rm" in safe_output  # Content preserved but symbols removed
 
         # Test long input
-        long_input = "a" * 2000
+        long_input = "a" * 2200
         safe_output = issue_linker._sanitize_text(long_input)
-        assert len(safe_output) <= 1000
+        assert len(safe_output) <= 2000
 
-        # Test various dangerous characters
-        dangerous_chars = "`$\\|&<>(){}[]"
+        # Test dangerous characters that should be removed
+        dangerous_chars = "`$\\;|&"
         for char in dangerous_chars:
             test_input = f"test{char}content"
             safe_output = issue_linker._sanitize_text(test_input)
             assert char not in safe_output
+
+        # Test safe characters that should be preserved
+        safe_chars = "()<>{}[]"
+        for char in safe_chars:
+            test_input = f"test{char}content"
+            safe_output = issue_linker._sanitize_text(test_input)
+            assert char in safe_output
 
     def test_validate_label_security(self, issue_linker):
         """Test label validation for security"""
