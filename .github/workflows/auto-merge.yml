@@ -58,24 +58,38 @@ jobs:
       - name: Parse PR info
         id: pr-parsed
         run: |
-          PR_JSON='${{ steps.pr-info.outputs.result }}'
-          echo "pr_number=$(echo "$PR_JSON" | jq -r '.number')" >> $GITHUB_OUTPUT
-          echo "head_sha=$(echo "$PR_JSON" | jq -r '.head_sha')" >> $GITHUB_OUTPUT
-          echo "base_ref=$(echo "$PR_JSON" | jq -r '.base_ref')" >> $GITHUB_OUTPUT
-          echo "mergeable=$(echo "$PR_JSON" | jq -r '.mergeable')" >> $GITHUB_OUTPUT
-          echo "mergeable_state=$(echo "$PR_JSON" | jq -r '.mergeable_state')" >> $GITHUB_OUTPUT
-          echo "auto_merge=$(echo "$PR_JSON" | jq -r '.auto_merge')" >> $GITHUB_OUTPUT
-          echo "pr_title=$(echo "$PR_JSON" | jq -r '.title')" >> $GITHUB_OUTPUT
-          echo "pr_user=$(echo "$PR_JSON" | jq -r '.user')" >> $GITHUB_OUTPUT
+          # Write PR JSON to a temporary file to avoid shell parsing issues
+          cat > /tmp/pr_info.json << 'EOF'
+          ${{ steps.pr-info.outputs.result }}
+          EOF
+
+          echo "pr_number=$(cat /tmp/pr_info.json | jq -r '.number')" >> $GITHUB_OUTPUT
+          echo "head_sha=$(cat /tmp/pr_info.json | jq -r '.head_sha')" >> $GITHUB_OUTPUT
+          echo "base_ref=$(cat /tmp/pr_info.json | jq -r '.base_ref')" >> $GITHUB_OUTPUT
+          echo "mergeable=$(cat /tmp/pr_info.json | jq -r '.mergeable')" >> $GITHUB_OUTPUT
+          echo "mergeable_state=$(cat /tmp/pr_info.json | jq -r '.mergeable_state')" >> $GITHUB_OUTPUT
+          echo "auto_merge=$(cat /tmp/pr_info.json | jq -r '.auto_merge')" >> $GITHUB_OUTPUT
+          echo "pr_title=$(cat /tmp/pr_info.json | jq -r '.title')" >> $GITHUB_OUTPUT
+          echo "pr_user=$(cat /tmp/pr_info.json | jq -r '.user')" >> $GITHUB_OUTPUT
 
           # Check if PR has auto-merge label or commit message indicator
-          LABELS=$(echo "$PR_JSON" | jq -r '.labels[]' 2>/dev/null || echo "")
-          if echo "$LABELS" | grep -q "auto-merge" || \
-             echo "$PR_JSON" | jq -r '.body' | grep -q "auto.*merge\|Auto.*merge"; then
+          LABELS=$(cat /tmp/pr_info.json | jq -r '.labels[]' 2>/dev/null || echo "")
+
+          # Check for auto-merge label
+          if echo "$LABELS" | grep -q "auto-merge"; then
             echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
           else
-            echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
+            # Use jq to safely check for auto-merge keywords in PR body
+            AUTO_MERGE_IN_BODY=$(cat /tmp/pr_info.json | jq -r '.body' | grep -i "auto.*merge" || echo "")
+            if [ -n "$AUTO_MERGE_IN_BODY" ]; then
+              echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+            else
+              echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
+            fi
           fi
+
+          # Clean up temporary file
+          rm -f /tmp/pr_info.json
 
       - name: Auto-update branch to prevent conflicts
         id: auto-update
