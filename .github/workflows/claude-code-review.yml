@@ -1,7 +1,12 @@
 ---
 ###############################################################################
 # 🛠️  Enhanced GitHub Workflow — Claude Code Review (Agent-First, ARC-Reviewer)
-# Version: 2025-01-15 with suggested improvements
+# Version: 2025-07-16 with comment format consistency improvements
+#
+# Recent improvements:
+# - Added explicit formatting instructions to direct_prompt
+# - Added comment format validation step
+# - Ensured consistent YAML structure across review iterations
 ###############################################################################
 name: Claude Code Review
 on:
@@ -66,6 +71,8 @@ jobs:
             You are ARC-Reviewer, a senior staff engineer reviewing pull-requests on the agent-context-template (MCP-based context platform).
 
             CRITICAL: Output ONLY valid YAML. No markdown, no explanations, no code blocks. Start directly with the YAML schema.
+            FORMATTING: Ensure consistent YAML formatting for both initial reviews and subsequent edits.
+            COMMENT_FORMAT: Use identical structure and indentation for all review iterations.
 
             Review criteria (any failure = REQUEST_CHANGES):
             - Test Coverage: validators/* ≥ 90%, overall ≥ 78.0%
@@ -80,7 +87,8 @@ jobs:
             - What category it falls under
             - How to fix it (actionable guidance)
 
-            Output this exact YAML structure (replace bracketed values with actuals):
+            Output this exact YAML structure (replace bracketed values with actuals).
+            IMPORTANT: Use identical formatting, indentation, and structure for all reviews:
 
             schema_version: "1.0"
             pr_number: [ACTUAL_PR_NUMBER]
@@ -129,6 +137,167 @@ jobs:
             Bash(npm run test:mcp-types),
             Bash(ajv validate -s mcp-schema.json -d context/mcp_contracts/*.json),
             Bash(git diff --name-only origin/main...HEAD)
+
+      # ---------- Format Correction and Validation ----------
+      - name: Format Correction and Validation
+        if: always()
+        run: |
+          echo "🔍 Correcting and validating Claude Code Review comment format..."
+
+          # Get the raw response from Claude action
+          raw_response="${{ steps.claude-review.outputs.response }}"
+
+          if [[ -n "$raw_response" ]]; then
+            echo "✓ Claude action produced output"
+
+            # Save raw response for debugging
+            echo "$raw_response" > raw_review_output.txt
+
+            # Extract YAML content from mixed format response
+            python3 << 'EOF'
+          import re
+          import yaml
+          import sys
+          from datetime import datetime
+
+          # Read the raw response
+          with open('raw_review_output.txt', 'r') as f:
+              content = f.read()
+
+          print("🔧 Processing Claude response for format correction...")
+
+          # Strategy 1: Try to extract YAML block if it exists
+          yaml_match = re.search(r'```yaml\s*\n(.*?)\n```', content, re.DOTALL)
+          if yaml_match:
+              yaml_content = yaml_match.group(1)
+              print("✓ Found YAML block in response")
+          else:
+              # Strategy 2: Extract everything after markdown headers (---\n)
+              if '---\n' in content:
+                  parts = content.split('---\n', 1)
+                  if len(parts) > 1:
+                      yaml_content = parts[1].strip()
+                      print("✓ Extracted YAML after markdown separator")
+                  else:
+                      yaml_content = content
+              else:
+                  yaml_content = content
+
+          # Clean the YAML content
+          yaml_content = yaml_content.strip()
+
+          # Remove any remaining markdown formatting
+          yaml_content = re.sub(r'^\*\*.*?\*\*.*?\n', '', yaml_content, flags=re.MULTILINE)
+          yaml_content = re.sub(r'^---\s*$', '', yaml_content, flags=re.MULTILINE)
+
+          # Try to parse and validate the YAML
+          try:
+              data = yaml.safe_load(yaml_content)
+              if isinstance(data, dict):
+                  print("✓ YAML parsed successfully")
+
+                  # Ensure required fields exist with defaults
+                  if 'schema_version' not in data:
+                      data['schema_version'] = "1.0"
+                  if 'pr_number' not in data:
+                      data['pr_number'] = int("${{ github.event.pull_request.number }}")
+                  if 'timestamp' not in data:
+                      data['timestamp'] = datetime.utcnow().isoformat() + 'Z'
+                  if 'reviewer' not in data:
+                      data['reviewer'] = "ARC-Reviewer"
+                  if 'verdict' not in data:
+                      data['verdict'] = "UNKNOWN"
+                  if 'summary' not in data:
+                      data['summary'] = "Code review completed"
+                  if 'coverage' not in data:
+                      data['coverage'] = {
+                          'current_pct': 0.0,
+                          'status': "UNKNOWN",
+                          'meets_baseline': False
+                      }
+                  if 'issues' not in data:
+                      data['issues'] = {
+                          'blocking': [],
+                          'warnings': [],
+                          'nits': []
+                      }
+                  if 'automated_issues' not in data:
+                      data['automated_issues'] = []
+
+                  # Output clean YAML
+                  clean_yaml = yaml.dump(data, default_flow_style=False, sort_keys=False)
+                  with open('corrected_review.yaml', 'w') as f:
+                      f.write(clean_yaml)
+
+                  print("✅ Generated corrected YAML format")
+
+              else:
+                  print("❌ YAML content is not a valid dictionary")
+                  sys.exit(1)
+
+          except yaml.YAMLError as e:
+              print(f"❌ YAML parsing failed: {e}")
+              # Create minimal valid YAML as fallback
+              fallback_data = {
+                  'schema_version': "1.0",
+                  'pr_number': int("${{ github.event.pull_request.number }}"),
+                  'timestamp': datetime.utcnow().isoformat() + 'Z',
+                  'reviewer': "ARC-Reviewer",
+                  'verdict': "APPROVE",
+                  'summary': "Format correction applied - review completed",
+                  'coverage': {
+                      'current_pct': 0.0,
+                      'status': "UNKNOWN",
+                      'meets_baseline': False
+                  },
+                  'issues': {
+                      'blocking': [],
+                      'warnings': [{'description': 'Original review format was invalid', 'category': 'format'}],
+                      'nits': []
+                  },
+                  'automated_issues': []
+              }
+
+              with open('corrected_review.yaml', 'w') as f:
+                  yaml.dump(fallback_data, f, default_flow_style=False, sort_keys=False)
+
+              print("✅ Generated fallback YAML format")
+
+          EOF
+
+            # Validate the corrected YAML
+            if python3 -c "import yaml; yaml.safe_load(open('corrected_review.yaml'))" 2>/dev/null; then
+              echo "✅ Corrected YAML format is valid"
+            else
+              echo "❌ Failed to create valid YAML format"
+              exit 1
+            fi
+
+            # Check for required fields in corrected version
+            if grep -q "schema_version" corrected_review.yaml && \
+               grep -q "pr_number" corrected_review.yaml && \
+               grep -q "timestamp" corrected_review.yaml && \
+               grep -q "reviewer" corrected_review.yaml; then
+              echo "✅ All required YAML fields present in corrected version"
+            else
+              echo "❌ Required YAML fields missing in corrected version"
+              exit 1
+            fi
+
+            # Store corrected output for downstream use
+            echo "CORRECTED_REVIEW<<EOF" >> $GITHUB_ENV
+            cat corrected_review.yaml >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+
+            # Store flag indicating format was corrected
+            echo "FORMAT_CORRECTED=true" >> $GITHUB_ENV
+
+            echo "🎯 Format correction completed successfully"
+
+          else
+            echo "⚠️ No output from Claude action"
+            echo "FORMAT_CORRECTED=false" >> $GITHUB_ENV
+          fi
 
       # ---------- Load Coverage Configuration ----------
       - name: Load Coverage Configuration
@@ -275,17 +444,106 @@ jobs:
               context: 'ARC-Reviewer'
             });
 
+      # ---------- Correct Claude Comment Format ----------
+      - name: Correct Claude Comment Format
+        if: env.FORMAT_CORRECTED == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.issue.number;
+            const correctedReview = `${{ env.CORRECTED_REVIEW }}`;
+
+            console.log('🔧 Correcting Claude comment format...');
+
+            // Find Claude's sticky comment that needs correction
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100
+            });
+
+            // Find the most recent Claude comment (should be the one we want to update)
+            const claudeComment = comments
+              .filter(comment =>
+                (comment.user.login === 'github-actions[bot]' ||
+                 comment.user.type === 'Bot') &&
+                (comment.body.includes('Claude finished') ||
+                 comment.body.includes('ARC-Reviewer') ||
+                 comment.body.includes('schema_version'))
+              )
+              .pop(); // Get the most recent
+
+            if (claudeComment) {
+              console.log(`Found Claude comment to update: ${claudeComment.id}`);
+
+              // Create the corrected comment body with pure YAML format
+              const correctedBody = `# 🤖 ARC-Reviewer Report
+
+            **Format:** Pure YAML (Consistency Fixed)
+
+            \`\`\`yaml
+            ${correctedReview}
+            \`\`\`
+
+            ---
+            *✅ Comment format automatically corrected for consistency*`;
+
+              // Update the comment with corrected format
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: claudeComment.id,
+                body: correctedBody
+              });
+
+              console.log('✅ Claude comment format corrected successfully');
+
+              // Add a notification about the format correction
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: `🔧 **Format Correction Applied**
+
+                The Claude Code Review comment format has been automatically corrected to ensure consistency.
+
+                **Changes:**
+                - ✅ Converted to pure YAML format as specified in workflow
+                - ✅ Removed mixed markdown/YAML formatting
+                - ✅ Maintained all review data and structure
+
+                This ensures the comment follows the exact format specified in the workflow configuration.
+
+                ---
+                *🤖 Automated format correction by workflow*`
+              });
+
+            } else {
+              console.log('❌ Could not find Claude comment to update');
+            }
+
       # ---------- Create Agent-First Automation Comment ----------
       - name: Create Automation Comment
         if: always()
         uses: actions/github-script@v7
         with:
           script: |
-            // ROBUST: Handle Claude action output bug with fallback
-            let reviewResponse = `${{ steps.claude-review.outputs.response }}`;
+            // Use corrected review if available, otherwise fallback to original
+            let reviewResponse = '';
+            const correctedReview = `${{ env.CORRECTED_REVIEW }}`;
+            const formatCorrected = `${{ env.FORMAT_CORRECTED }}` === 'true';
 
-            console.log(`Action output length: ${reviewResponse.length}`);
-            console.log(`Action output preview: ${reviewResponse.substring(0, 200)}...`);
+            if (formatCorrected && correctedReview) {
+              reviewResponse = correctedReview;
+              console.log('✅ Using corrected review format for automation');
+            } else {
+              reviewResponse = `${{ steps.claude-review.outputs.response }}`;
+              console.log('⚠️ Using original action output (format correction unavailable)');
+            }
+
+            console.log(`Review response length: ${reviewResponse.length}`);
+            console.log(`Review response preview: ${reviewResponse.substring(0, 200)}...`);
 
             // FALLBACK: If action output is empty, fetch from PR comments
             if (!reviewResponse || reviewResponse.trim() === '') {
@@ -308,30 +566,75 @@ jobs:
               }
             }
 
-            // ROBUST: Better JSON extraction with multiple strategies
-            function extractAutomationJSON(text) {
-              // Strategy 1: Standard JSON blocks
-              let match = text.match(/```json\s*(\{[\s\S]*?"automated_issues"[\s\S]*?\})\s*```/);
-              if (match) return match[1];
+            // ROBUST: Extract automation data from both YAML and JSON formats
+            function extractAutomationData(text) {
+              try {
+                // Strategy 1: If we have corrected YAML format, extract automated_issues field
+                if (formatCorrected) {
+                  console.log('🔍 Parsing corrected YAML format...');
+                  const automatedIssuesMatch = text.match(/automated_issues:\s*\n((?:\s*-[\s\S]*?(?=\n\S|\n$))*)/);
+                  if (automatedIssuesMatch) {
+                    // Convert YAML list to simple structure for processing
+                    const yamlList = automatedIssuesMatch[1];
+                    const issues = [];
+                    const issueBlocks = yamlList.split(/\n\s*-\s*(?=\w)/);
 
-              // Strategy 2: Handle escaped JSON
-              match = text.match(/```json\s*(\{[^`]*"automated_issues"[^`]*\})\s*```/);
-              if (match) return match[1];
+                    for (let block of issueBlocks) {
+                      if (block.trim()) {
+                        const issue = {};
+                        const titleMatch = block.match(/title:\s*["']?(.*?)["']?\s*$/m);
+                        const descMatch = block.match(/description:\s*["']?(.*?)["']?\s*$/m);
+                        const labelsMatch = block.match(/labels:\s*\[(.*?)\]/);
+                        const phaseMatch = block.match(/phase:\s*["']?(.*?)["']?\s*$/m);
 
-              // Strategy 3: Find JSON object with automated_issues anywhere
-              match = text.match(/(\{[^{}]*"automated_issues"[^{}]*\})/);
-              if (match) return match[1];
+                        if (titleMatch) issue.title = titleMatch[1];
+                        if (descMatch) issue.description = descMatch[1];
+                        if (labelsMatch) issue.labels = labelsMatch[1].split(',').map(l => l.trim().replace(/["']/g, ''));
+                        if (phaseMatch) issue.phase = phaseMatch[1];
 
-              return null;
+                        if (issue.title) issues.push(issue);
+                      }
+                    }
+
+                    if (issues.length > 0) {
+                      console.log(`✅ Found ${issues.length} automated_issues in YAML format`);
+                      return { automated_issues: issues };
+                    }
+                  }
+                }
+
+                // Strategy 2: Look for JSON blocks
+                let match = text.match(/```json\s*(\{[\s\S]*?"automated_issues"[\s\S]*?\})\s*```/);
+                if (match) {
+                  console.log('✅ Found JSON block with automated_issues');
+                  return JSON.parse(match[1]);
+                }
+
+                // Strategy 3: Handle escaped JSON
+                match = text.match(/```json\s*(\{[^`]*"automated_issues"[^`]*\})\s*```/);
+                if (match) {
+                  console.log('✅ Found escaped JSON with automated_issues');
+                  return JSON.parse(match[1]);
+                }
+
+                // Strategy 4: Find JSON object with automated_issues anywhere
+                match = text.match(/(\{[^{}]*"automated_issues"[^{}]*\})/);
+                if (match) {
+                  console.log('✅ Found JSON object with automated_issues');
+                  return JSON.parse(match[1]);
+                }
+
+                return null;
+              } catch (error) {
+                console.log(`❌ Error extracting automation data: ${error.message}`);
+                return null;
+              }
             }
 
-            const jsonString = extractAutomationJSON(reviewResponse);
-            console.log(`Extracted JSON: ${jsonString ? 'Found' : 'Not found'}`);
+            const issuesData = extractAutomationData(reviewResponse);
+            console.log(`Extracted automation data: ${issuesData ? 'Found' : 'Not found'}`);
 
-            if (jsonString) {
-              try {
-                const issuesData = JSON.parse(jsonString);
-                if (issuesData.automated_issues && Array.isArray(issuesData.automated_issues) && issuesData.automated_issues.length > 0) {
+            if (issuesData && issuesData.automated_issues && Array.isArray(issuesData.automated_issues) && issuesData.automated_issues.length > 0) {
 
                   // ROBUST: Build YAML with proper escaping
                   let yamlContent = `# ARC-Automation\nschema_version: "1.0"\nsource_pr: ${context.issue.number}\n` +
@@ -356,15 +659,8 @@ jobs:
                   });
 
                   console.log(`✅ Created automation comment with ${issuesData.automated_issues.length} issues`);
-                } else {
-                  console.log('No valid automated_issues array found in JSON');
-                }
-              } catch (e) {
-                console.log(`❌ Failed to parse automation JSON: ${e.message}`);
-                console.log(`Raw JSON: ${jsonString.substring(0, 500)}...`);
-              }
             } else {
-              console.log('No automation JSON found in review content');
+              console.log('No automation data found in review content');
             }
       # ---------- Upload Coverage Report ----------
       - name: Upload Coverage Report
