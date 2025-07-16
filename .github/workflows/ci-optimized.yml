@@ -82,26 +82,54 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Advanced pip caching with unified key
+      - name: Debug environment details
+        run: |
+          echo "🔍 Environment debugging information:"
+          echo "Python version: $(python --version)"
+          echo "pip version: $(pip --version)"
+          echo "Working directory: $(pwd)"
+          echo "Python path: $PYTHONPATH"
+          echo "PATH: $PATH"
+          echo "CI environment: $CI"
+          echo "Cache version: ${{ env.CACHE_VERSION }}"
+          echo "Python install location: $(python -c 'import sys; print(sys.executable)')"
+          echo "Site packages: $(python -c 'import site; print(site.getsitepackages())')"
+          echo "Available disk space: $(df -h . | tail -1)"
+          echo "Memory usage: $(free -h | head -2)"
+          echo "Environment variables:"
+          env | grep -E "(PYTHON|PIP|CI|CACHE)" | sort
+          echo "✅ Environment debugging complete"
+
+      # Robust pip caching with fallback installation
       - name: Cache Python dependencies
         id: cache
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
         with:
-          path: |
-            ~/.cache/pip
-            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
-          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-
-            ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-
+            ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-
+            ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-
 
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Install dependencies with fallback
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+
+      - name: Verify critical tools are available
+        run: |
+          echo "🔍 Verifying required tools are available..."
+          python -c "import black, isort, flake8, mypy" || {
+            echo "❌ Some tools missing, reinstalling..."
+            pip install --force-reinstall black isort flake8 mypy
+          }
+          which black || pip install --force-reinstall black
+          which isort || pip install --force-reinstall isort
+          which flake8 || pip install --force-reinstall flake8
+          which mypy || pip install --force-reinstall mypy
+          echo "✅ All tools verified"
 
       # Cache created directories to avoid recreation
       - name: Cache context directories
@@ -147,22 +175,44 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Restore Python dependencies
+      - name: Debug lint environment for ${{ matrix.check }}
+        run: |
+          echo "🔍 Environment debugging for lint job (${{ matrix.check }}):"
+          echo "Python version: $(python --version)"
+          echo "Working directory: $(pwd)"
+          echo "Tool check: ${{ matrix.check }}"
+          echo "Available tools:"
+          which python pip black isort flake8 mypy || echo "Some tools not found"
+          echo "✅ Lint environment debugging complete"
+
+      - name: Cache Python dependencies
         id: cache-restore-lint
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
         with:
-          path: |
-            ~/.cache/pip
-            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
-          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-
+            ${{ runner.os }}-pip-
 
-      - name: Install dependencies (fallback)
-        if: steps.cache-restore-lint.outputs.cache-hit != 'true'
+      - name: Install dependencies with verification
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+
+      - name: Verify lint tools are available
+        run: |
+          echo "🔍 Verifying lint tools for ${{ matrix.check }}..."
+          case "${{ matrix.check }}" in
+            black) which black || pip install --force-reinstall black ;;
+            isort) which isort || pip install --force-reinstall isort ;;
+            flake8) which flake8 || pip install --force-reinstall flake8 ;;
+            mypy) which mypy || pip install --force-reinstall mypy ;;
+            *) echo "Tool verification for ${{ matrix.check }} not needed" ;;
+          esac
+          echo "✅ Tool verified"
 
       - name: Restore context directories
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
@@ -228,22 +278,38 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Restore Python dependencies
-        id: cache-restore-core
+      - name: Debug lint environment for ${{ matrix.check }}
+        run: |
+          echo "🔍 Environment debugging for lint job (${{ matrix.check }}):"
+          echo "Python version: $(python --version)"
+          echo "Working directory: $(pwd)"
+          echo "Tool check: ${{ matrix.check }}"
+          echo "Available tools:"
+          which python pip black isort flake8 mypy || echo "Some tools not found"
+          echo "✅ Lint environment debugging complete"
+
+      - name: Cache Python dependencies
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
         with:
-          path: |
-            ~/.cache/pip
-            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
-          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-
+            ${{ runner.os }}-pip-
 
-      - name: Install dependencies (fallback)
-        if: steps.cache-restore-core.outputs.cache-hit != 'true'
+      - name: Install dependencies with verification
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+
+      - name: Verify test tools are available
+        run: |
+          echo "🔍 Verifying test tools..."
+          which pytest || pip install --force-reinstall pytest
+          which coverage || pip install --force-reinstall coverage
+          echo "✅ Test tools verified"
 
       - name: Restore context directories
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
@@ -330,22 +396,38 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Restore Python dependencies
-        id: cache-restore-integration
+      - name: Debug lint environment for ${{ matrix.check }}
+        run: |
+          echo "🔍 Environment debugging for lint job (${{ matrix.check }}):"
+          echo "Python version: $(python --version)"
+          echo "Working directory: $(pwd)"
+          echo "Tool check: ${{ matrix.check }}"
+          echo "Available tools:"
+          which python pip black isort flake8 mypy || echo "Some tools not found"
+          echo "✅ Lint environment debugging complete"
+
+      - name: Cache Python dependencies
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
         with:
-          path: |
-            ~/.cache/pip
-            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
-          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-
+            ${{ runner.os }}-pip-
 
-      - name: Install dependencies (fallback)
-        if: steps.cache-restore-integration.outputs.cache-hit != 'true'
+      - name: Install dependencies with verification
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+
+      - name: Verify integration test tools
+        run: |
+          echo "🔍 Verifying integration test tools..."
+          which pytest || pip install --force-reinstall pytest
+          which coverage || pip install --force-reinstall coverage
+          echo "✅ Integration test tools verified"
 
       - name: Restore context directories
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
@@ -397,17 +479,26 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Restore Python dependencies
-        id: cache-restore-performance
+      - name: Debug lint environment for ${{ matrix.check }}
+        run: |
+          echo "🔍 Environment debugging for lint job (${{ matrix.check }}):"
+          echo "Python version: $(python --version)"
+          echo "Working directory: $(pwd)"
+          echo "Tool check: ${{ matrix.check }}"
+          echo "Available tools:"
+          which python pip black isort flake8 mypy || echo "Some tools not found"
+          echo "✅ Lint environment debugging complete"
+
+      - name: Cache Python dependencies
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
         with:
-          path: |
-            ~/.cache/pip
-            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
-          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-
+            ${{ runner.os }}-pip-
 
-      - name: Install dependencies (fallback)
-        if: steps.cache-restore-performance.outputs.cache-hit != 'true'
+      - name: Install dependencies with verification
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -417,6 +508,13 @@ jobs:
       - name: Install additional performance dependencies
         run: |
           pip install locust==2.31.7
+
+      - name: Verify performance test tools
+        run: |
+          echo "🔍 Verifying performance test tools..."
+          which pytest || pip install --force-reinstall pytest
+          which locust || pip install --force-reinstall locust==2.31.7
+          echo "✅ Performance test tools verified"
 
       - name: Run benchmark tests
         run: |
@@ -451,17 +549,26 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Restore Python dependencies
-        id: cache-restore-mutation
+      - name: Debug lint environment for ${{ matrix.check }}
+        run: |
+          echo "🔍 Environment debugging for lint job (${{ matrix.check }}):"
+          echo "Python version: $(python --version)"
+          echo "Working directory: $(pwd)"
+          echo "Tool check: ${{ matrix.check }}"
+          echo "Available tools:"
+          which python pip black isort flake8 mypy || echo "Some tools not found"
+          echo "✅ Lint environment debugging complete"
+
+      - name: Cache Python dependencies
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
         with:
-          path: |
-            ~/.cache/pip
-            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
-          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-
+            ${{ runner.os }}-pip-
 
-      - name: Install dependencies (fallback)
-        if: steps.cache-restore-mutation.outputs.cache-hit != 'true'
+      - name: Install dependencies with verification
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -470,6 +577,13 @@ jobs:
 
       - name: Install mutation testing
         run: pip install mutmut
+
+      - name: Verify mutation test tools
+        run: |
+          echo "🔍 Verifying mutation test tools..."
+          which pytest || pip install --force-reinstall pytest
+          which mutmut || pip install --force-reinstall mutmut
+          echo "✅ Mutation test tools verified"
 
       - name: Run mutation tests (targeted)
         run: |
@@ -509,22 +623,38 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Restore Python dependencies
-        id: cache-restore-coverage
+      - name: Debug lint environment for ${{ matrix.check }}
+        run: |
+          echo "🔍 Environment debugging for lint job (${{ matrix.check }}):"
+          echo "Python version: $(python --version)"
+          echo "Working directory: $(pwd)"
+          echo "Tool check: ${{ matrix.check }}"
+          echo "Available tools:"
+          which python pip black isort flake8 mypy || echo "Some tools not found"
+          echo "✅ Lint environment debugging complete"
+
+      - name: Cache Python dependencies
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
         with:
-          path: |
-            ~/.cache/pip
-            ~/.local/lib/python${{ env.PYTHON_VERSION }}/site-packages
-          key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-
+            ${{ runner.os }}-pip-
 
-      - name: Install dependencies (fallback)
-        if: steps.cache-restore-coverage.outputs.cache-hit != 'true'
+      - name: Install dependencies with verification
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+
+      - name: Verify coverage analysis tools
+        run: |
+          echo "🔍 Verifying coverage analysis tools..."
+          which coverage || pip install --force-reinstall coverage
+          which bc || { echo "bc not available, installing..." && apt-get update && apt-get install -y bc; }
+          echo "✅ Coverage analysis tools verified"
 
       - name: Download test artifacts
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
@@ -567,12 +697,6 @@ jobs:
             exit 1
           fi
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@5c47607acb93fed5485fdbf7232e4a31bf08305c
-        with:
-          files: ./coverage-unit.xml,./coverage-integration.xml
-          flags: unittests,integration
-          name: codecov-optimized
 
   # Test summary and reporting
   test-summary:

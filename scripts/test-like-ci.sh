@@ -15,6 +15,25 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Debug environment details
+echo -e "\n${YELLOW}🔍 Environment debugging information:${NC}"
+echo "Python version: $(python --version)"
+echo "pip version: $(pip --version)"
+echo "Working directory: $(pwd)"
+echo "Python path: $PYTHONPATH"
+echo "PATH: $PATH"
+echo "CI environment: $CI"
+echo "Cache version: $CACHE_VERSION"
+echo "Python install location: $(python -c 'import sys; print(sys.executable)')"
+echo "Site packages: $(python -c 'import site; print(site.getsitepackages())')"
+echo "Available disk space: $(df -h . | tail -1)"
+echo "Memory usage: $(free -h | head -2)"
+echo "Environment variables:"
+env | grep -E "(PYTHON|PIP|CI|CACHE)" | sort
+echo "Available tools:"
+which python pip black isort flake8 mypy || echo "Some tools not found"
+echo -e "${GREEN}✅ Environment debugging complete${NC}\n"
+
 # Track failures
 FAILED=0
 
@@ -36,6 +55,18 @@ run_check() {
 
 echo "📋 LINT VERIFICATION WORKFLOW"
 echo "----------------------------"
+
+# Verify all required tools are available
+echo -e "${YELLOW}🔍 Verifying all required tools are available:${NC}"
+for tool in black isort flake8 mypy python; do
+    if which $tool > /dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ $tool: $(which $tool)${NC}"
+    else
+        echo -e "  ${RED}✗ $tool: NOT FOUND${NC}"
+        FAILED=$((FAILED + 1))
+    fi
+done
+echo
 
 # From lint-verification.yml lines 43-45
 run_check "Black formatting" "black --check src/ tests/ scripts/"

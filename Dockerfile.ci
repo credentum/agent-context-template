@@ -2,11 +2,12 @@
 # Using pinned digest for supply-chain security
 FROM python:3.11-slim@sha256:139020233cc412efe4c8135b0efe1c7569dc8b28ddd88bddb109b764f8977e30
 
-# Install system dependencies
+# Install system dependencies (matching GitHub CI environment)
 RUN apt-get update && apt-get install -y \
     git \
     curl \
     redis-tools \
+    bc \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -15,19 +16,31 @@ WORKDIR /app
 # Copy requirements files
 COPY requirements*.txt ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir -r requirements-dev.txt && \
-    pip install --no-cache-dir -r requirements-test.txt
+# Install Python dependencies (matching GitHub CI approach)
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip install -r requirements-dev.txt && \
+    pip install -r requirements-test.txt
+
+# Verify critical tools are available (matching GitHub CI verification)
+RUN echo "🔍 Verifying required tools are available..." && \
+    python -c "import black, isort, flake8, mypy" && \
+    which black && \
+    which isort && \
+    which flake8 && \
+    which mypy && \
+    which pytest && \
+    which coverage && \
+    echo "✅ All tools verified"
 
 # Copy the rest of the application
 COPY . .
 
-# Create necessary directories (like CI does)
+# Create necessary directories (matching GitHub CI)
 RUN mkdir -p context/.duckdb \
     context/.graph_cache \
     context/.vector_cache \
+    context/.embeddings_cache \
     context/trace \
     context/archive \
     context/mcp_contracts \
@@ -36,6 +49,11 @@ RUN mkdir -p context/.duckdb \
     context/logs/kv \
     context/logs/prompts \
     context/logs/signatures
+
+# Set environment variables (matching GitHub CI)
+ENV CI=true
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
 # Default command runs all CI checks
 CMD ["/bin/bash", "scripts/test-like-ci.sh"]
