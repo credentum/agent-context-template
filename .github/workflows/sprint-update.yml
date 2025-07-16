@@ -51,12 +51,14 @@ jobs:
 
           # Extract PR body and commit messages to find issue references
           pr_number="${{ github.event.pull_request.number }}"
-          pr_body="${{ github.event.pull_request.body }}"
-          pr_title="${{ github.event.pull_request.title }}"
 
           echo "Checking PR #$pr_number for issue closing keywords..."
 
           issues_to_close=""
+
+          # Use GitHub CLI to get PR details safely (avoids bash injection from PR body)
+          pr_body=$(gh pr view "$pr_number" --json body --jq '.body // ""')
+          pr_title=$(gh pr view "$pr_number" --json title --jq '.title // ""')
 
           # Check PR body and title for closing patterns
           combined_text="$pr_body $pr_title"
@@ -178,12 +180,38 @@ jobs:
 
       - name: Enable Auto-Merge
         if: steps.create-pr.outputs.pull-request-operation == 'created'
-        uses: peter-evans/enable-pull-request-automerge@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request-number: >-
-            ${{ steps.create-pr.outputs.pull-request-number }}
-          merge-method: squash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pr_number="${{ steps.create-pr.outputs.pull-request-number }}"
+          echo "Enabling auto-merge for PR #$pr_number"
+
+          # Wait a moment for PR to be fully created
+          sleep 3
+
+          # Enable auto-merge with error handling
+          if gh pr merge "$pr_number" --auto --squash; then
+            echo "✓ Auto-merge enabled successfully for PR #$pr_number"
+          else
+            echo "⚠️ Auto-merge failed, checking if PR is ready for manual merge"
+
+            # Check PR status
+            pr_state=$(gh pr view "$pr_number" --json state --jq '.state')
+            pr_mergeable=$(gh pr view "$pr_number" --json mergeable --jq '.mergeable')
+
+            echo "PR state: $pr_state, mergeable: $pr_mergeable"
+
+            if [ "$pr_state" = "OPEN" ] && [ "$pr_mergeable" = "MERGEABLE" ]; then
+              echo "PR is ready, attempting direct merge"
+              if gh pr merge "$pr_number" --squash; then
+                echo "✓ Successfully merged PR #$pr_number directly"
+              else
+                echo "⚠️ Direct merge also failed - PR will remain open for manual review"
+              fi
+            else
+              echo "⚠️ PR not ready for merge - will remain open"
+            fi
+          fi
 
       - name: Create issue comment with report
         if: github.event_name == 'issues' && success()
