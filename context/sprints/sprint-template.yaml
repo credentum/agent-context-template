@@ -1,5 +1,7 @@
+---
 # Sprint YAML Template for Agent-First Context System
-# This template provides the structure for creating sprint files that agents can use
+# This template provides the structure for creating sprint files that
+# agents can use
 # to automatically generate GitHub issues and track progress
 #
 # Usage:
@@ -32,11 +34,13 @@ phases:
     name: "Replace with Phase Name (e.g., Infrastructure Setup)"
     status: pending  # pending | in_progress | completed | blocked
     priority: high   # high | medium | low | blocking
-    component: template # Replace with actual component
-    description: "Replace with detailed description of what this phase accomplishes"
+    component: template  # Replace with actual component
+    description: "Replace with detailed description of what this phase
+      accomplishes"
     duration_days: 7  # Optional - number of days for this phase
 
-    # Tasks can be simple strings OR detailed objects (demonstrates both formats)
+    # Tasks can be simple strings OR detailed objects (demonstrates both
+    # formats)
     tasks:
       # Simple format (string)
       - "Replace with simple task description"
@@ -44,7 +48,8 @@ phases:
       # Advanced format (object) - demonstrates all supported fields
       - title: "Replace with Task Title"
         description: |
-          Replace with detailed task description that will become the GitHub issue body.
+          Replace with detailed task description that will become the
+          GitHub issue body.
 
           ## Acceptance Criteria
           - [ ] Replace with specific requirement 1

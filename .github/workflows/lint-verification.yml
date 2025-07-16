@@ -19,14 +19,14 @@ jobs:
         python-version: ['3.11']
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache pip packages
+      - name: Cache pip packages
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
@@ -34,47 +34,47 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Install dependencies
+      - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
 
-    - name: Run Black
+      - name: Run Black
       run: |
         black --check src/ tests/ scripts/
 
-    - name: Run isort
+      - name: Run isort
       run: |
         isort --check-only --profile black src/ tests/ scripts/
 
-    - name: Run Flake8
+      - name: Run Flake8
       run: |
         flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503
 
-    - name: Run MyPy on src/
+      - name: Run MyPy on src/
       run: |
         mypy src/ --config-file=mypy.ini
 
-    - name: Run MyPy on tests/ (allow failures)
+      - name: Run MyPy on tests/ (allow failures)
       continue-on-error: true
       run: |
         mypy tests/ --config-file=mypy.ini || echo "MyPy tests check failed but continuing"
 
-    - name: Check YAML files
+      - name: Check YAML files
       continue-on-error: true
       run: |
         yamllint context/ -d "{extends: default, rules: {line-length: {max: 120}}, ignore: 'context/schemas/'" || echo "YAML lint failed but continuing"
 
-    - name: Run Context Lint
+      - name: Run Context Lint
       run: |
         python -m src.agents.context_lint validate context/
 
-    - name: Check imports
+      - name: Check imports
       run: |
         python -m pytest --collect-only -q
 
-    - name: Generate lint report
+      - name: Generate lint report
       if: always()
       run: |
         echo "## Lint Report" > lint-report.md
@@ -91,7 +91,7 @@ jobs:
         echo "### Flake8" >> lint-report.md
         flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503 2>&1 | tee -a lint-report.md || echo "Failed" >> lint-report.md
 
-    - name: Upload lint report
+      - name: Upload lint report
       if: always()
       uses: actions/upload-artifact@v4
       with:

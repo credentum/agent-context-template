@@ -66,27 +66,33 @@ services:
         # Run all lint checks in parallel with proper error handling
         (
           echo '  ▶ Black formatting...'
-          black --check src/ tests/ scripts/ && echo '  ✅ Black passed' || echo '  ❌ Black failed'
+          black --check src/ tests/ scripts/ && \
+            echo '  ✅ Black passed' || echo '  ❌ Black failed'
         ) &
 
         (
           echo '  ▶ isort import sorting...'
-          isort --check-only --profile black src/ tests/ scripts/ && echo '  ✅ isort passed' || echo '  ❌ isort failed'
+          isort --check-only --profile black src/ tests/ scripts/ && \
+            echo '  ✅ isort passed' || echo '  ❌ isort failed'
         ) &
 
         (
           echo '  ▶ Flake8 linting...'
-          flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503 && echo '  ✅ Flake8 passed' || echo '  ❌ Flake8 failed'
+          flake8 src/ tests/ scripts/ --max-line-length=100 \
+            --extend-ignore=E203,W503 && \
+            echo '  ✅ Flake8 passed' || echo '  ❌ Flake8 failed'
         ) &
 
         (
           echo '  ▶ MyPy type checking...'
-          mypy src/ --config-file=mypy.ini && echo '  ✅ MyPy passed' || echo '  ❌ MyPy failed'
+          mypy src/ --config-file=mypy.ini && \
+            echo '  ✅ MyPy passed' || echo '  ❌ MyPy failed'
         ) &
 
         (
           echo '  ▶ Context YAML validation...'
-          python -m src.agents.context_lint validate context/ && echo '  ✅ Context lint passed' || echo '  ❌ Context lint failed'
+          python -m src.agents.context_lint validate context/ && \
+            echo '  ✅ Context lint passed' || echo '  ❌ Context lint failed'
         ) &
 
         # Wait for all background jobs
@@ -163,8 +169,8 @@ services:
       --junit-xml=test-results/junit-unit.xml
       --timeout=60 --timeout-method=thread --maxfail=5 -v &&
       if [ -f coverage.json ]; then
-        coverage_pct=\$(python -c \"import json;
-        print(json.load(open('coverage.json'))['totals']['percent_covered'])\") &&
+        coverage_pct=\$(python -c \"import json; \
+          print(json.load(open('coverage.json'))['totals']['percent_covered'])\") &&
         echo \"📊 Unit test coverage: \${coverage_pct}%\";
       fi
       "
@@ -236,7 +242,8 @@ services:
           --junit-xml=test-results/junit-benchmark.xml \
           --benchmark-only \
           --benchmark-json=benchmark-results.json \
-          --maxfail=1 || echo 'Performance tests completed with issues (non-blocking)'
+          --maxfail=1 || \
+          echo 'Performance tests completed with issues (non-blocking)'
 
         echo '📊 Performance test results written to benchmark-results.json'
       "
@@ -266,7 +273,8 @@ services:
 
         # Load coverage configuration
         if [ -f .coverage-config.json ]; then
-          baseline=\$(python -c \"import json; print(json.load(open('.coverage-config.json'))['baseline'])\")
+          baseline=\$(python -c \"import json; \
+            print(json.load(open('.coverage-config.json'))['baseline'])\")
           echo \"Coverage baseline: \${baseline}%\"
         else
           baseline=80.0
@@ -275,15 +283,18 @@ services:
 
         # Check coverage files exist
         if [ -f coverage.json ]; then
-          coverage_pct=\$(python -c \"import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])\")
+          coverage_pct=\$(python -c \"import json; \
+            print(json.load(open('coverage.json'))['totals']['percent_covered'])\")
           echo \"Current coverage: \${coverage_pct}%\"
 
           # Check threshold
           if (( \$(echo \"\${coverage_pct} < \${baseline}\" | bc -l) )); then
-            echo \"❌ Coverage below baseline: \${coverage_pct}% < \${baseline}%\"
+            echo \"❌ Coverage below baseline: \
+              \${coverage_pct}% < \${baseline}%\"
             exit 1
           else
-            echo \"✅ Coverage meets baseline: \${coverage_pct}% >= \${baseline}%\"
+            echo \"✅ Coverage meets baseline: \
+              \${coverage_pct}% >= \${baseline}%\"
           fi
         else
           echo \"❌ No coverage data found\"
@@ -318,10 +329,12 @@ services:
           --tests-dir=tests/ \
           --runner='python -m pytest -x' \
           --use-coverage \
-          --max-children 4 || echo 'Mutation testing completed with issues (non-blocking)'
+          --max-children 4 || \
+          echo 'Mutation testing completed with issues (non-blocking)'
 
         # Generate report
-        mutmut results > mutation-report.txt || echo 'No mutation results available'
+        mutmut results > mutation-report.txt || \
+          echo 'No mutation results available'
         echo '📊 Mutation test report written to mutation-report.txt'
       "
 
@@ -364,6 +377,7 @@ services:
 
   # Optimized Redis service
   redis:
+    # Note: Docker image SHA hashes are long by design for security pinning
     image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55
     container_name: ci-redis-optimized
     ports:
@@ -379,6 +393,7 @@ services:
 
   # Lightweight services for complex integration tests (when needed)
   qdrant:
+    # Note: Docker image SHA hashes are long by design for security pinning
     image: qdrant/qdrant@sha256:419d72603f5346ee22ffc4606bdb7beb52fcb63077766fab678e6622ba247366
     container_name: ci-qdrant-optimized
     ports:
@@ -395,6 +410,7 @@ services:
       start_period: 10s
 
   neo4j:
+    # Note: Docker image SHA hashes are long by design for security pinning
     image: neo4j@sha256:52d3dec8d45585b21edeca8517d752b2512e52aa94f80fc36a5788c88c95f8e4
     container_name: ci-neo4j-optimized
     ports:
@@ -408,7 +424,8 @@ services:
       - NEO4J_dbms_memory_heap_max__size=512m
       - NEO4J_dbms_memory_pagecache_size=128m
     healthcheck:
-      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${NEO4J_PASSWORD:-ci-temp-pwd}", "RETURN 1"]
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p",
+        "${NEO4J_PASSWORD:-ci-temp-pwd}", "RETURN 1"]
       interval: 10s
       timeout: 5s
       retries: 3

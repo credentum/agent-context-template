@@ -16,7 +16,8 @@ source: "scripts/run-ci-optimized.sh"
 data:
   tool_name: "run-ci-optimized"
   contract_type: "ci_automation"
-  description: "Local CI execution with parallel processing, smart caching, and performance optimization"
+  description: "Local CI execution with parallel processing, smart caching,
+    and performance optimization"
   executable: "scripts/run-ci-optimized.sh"
   language: "bash"
   capabilities:

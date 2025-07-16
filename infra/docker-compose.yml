@@ -1,3 +1,4 @@
+---
 services:
   qdrant:
     image: qdrant/qdrant:v1.14.1@sha256:419d72603f5346ee22ffc4606bdb7beb52fcb63077766fab678e6622ba247366

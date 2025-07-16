@@ -11,8 +11,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'dependabot[bot]'
 
     steps:
-    - name: Check if push was from PR merge
-      run: |
+      - name: Check if push was from PR merge
+        run: |
         # This job will only run on direct pushes to main
         # If branch protection is properly set up, this should never happen
         echo "⚠️ WARNING: Direct push to main branch detected!"

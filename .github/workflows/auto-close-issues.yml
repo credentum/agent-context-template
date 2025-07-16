@@ -16,7 +16,7 @@ jobs:
       pull-requests: read
 
     steps:
-    - name: Auto-close issues with comprehensive keyword detection
+      - name: Auto-close issues with comprehensive keyword detection
       uses: actions/github-script@v7
       with:
         script: |
