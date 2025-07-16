@@ -1,0 +1,131 @@
+---
+# MCP Tool Contract: CI Performance Benchmark Tool
+schema_version: "1.0"
+document_type: "mcp_contract"
+tool_name: "benchmark-ci-performance"
+contract_type: "performance_analysis"
+created_date: "2025-07-16"
+
+metadata:
+  title: "CI Performance Benchmark Tool"
+  description: >-
+    Measures and compares CI pipeline execution times 
+    between legacy and optimized workflows
+  category: "development-tools"
+  subcategory: "performance-analysis"
+  version: "1.0.0"
+
+tool_spec:
+  executable: "python scripts/benchmark-ci-performance.py"
+  language: "python"
+  python_version: ">=3.11"
+
+  arguments:
+    - name: "mode"
+      type: "choice"
+      choices: ["legacy", "optimized", "compare", "components"]
+      default: "compare"
+      description: "Benchmark execution mode"
+
+    - name: "output"
+      type: "string"
+      default: "ci-benchmark-results.json"
+      description: "Output file for benchmark results"
+
+    - name: "compare-with"
+      type: "string"
+      optional: true
+      description: "Compare with previous results file"
+
+inputs:
+  requires:
+    - docker_compose_available: true
+    - docker_daemon_running: true
+    - write_permissions: true
+
+  dependencies:
+    - "docker-compose.ci-optimized.yml"
+    - "scripts/run-ci-optimized.sh"
+    - "Python 3.11+"
+    - "Docker & Docker Compose"
+
+outputs:
+  artifacts:
+    - name: "benchmark_results"
+      type: "json"
+      path: "ci-benchmark-results.json"
+      description: "Detailed timing and performance metrics"
+
+    - name: "performance_report"
+      type: "console"
+      description: "Human-readable performance comparison report"
+
+capabilities:
+  - measure_execution_times
+  - compare_pipeline_performance
+  - track_performance_regression
+  - generate_performance_reports
+  - validate_optimization_effectiveness
+
+security:
+  permissions:
+    - read: ["scripts/", "docker-compose*.yml"]
+    - write: ["ci-benchmark-results.json", "benchmark-*.json"]
+    - execute: ["docker-compose", "docker", "subprocess.run"]
+
+  isolation:
+    - runs_in_container: false
+    - network_access: false
+    - file_system_access: "limited"
+
+  validation:
+    - input_sanitization: true
+    - command_injection_protection: true
+    - timeout_enforcement: true
+
+usage:
+  examples:
+    - description: "Compare legacy vs optimized pipeline performance"
+      command: "python scripts/benchmark-ci-performance.py --mode compare"
+
+    - description: "Benchmark only optimized pipeline"
+      command: "python scripts/benchmark-ci-performance.py --mode optimized"
+
+    - description: "Compare with previous benchmark results"
+      command: >-
+        python scripts/benchmark-ci-performance.py 
+        --compare-with previous-results.json
+
+integration:
+  ci_workflows:
+    - ".github/workflows/ci-optimized.yml"
+
+  related_tools:
+    - "scripts/run-ci-optimized.sh"
+    - "docker-compose.ci-optimized.yml"
+
+  metrics:
+    - execution_time_seconds
+    - performance_improvement_percentage
+    - success_rate_percentage
+    - cache_hit_rate
+
+maintenance:
+  update_frequency: "as_needed"
+  compatibility: "docker_compose_3.8+"
+  monitoring: "performance_regression_detection"
+
+validation:
+  test_cases:
+    - name: "basic_benchmark"
+      command: "python scripts/benchmark-ci-performance.py --mode components"
+      expected_exit_code: 0
+
+    - name: "invalid_mode"
+      command: "python scripts/benchmark-ci-performance.py --mode invalid"
+      expected_exit_code: 2
+
+  quality_gates:
+    - performance_improvement_threshold: ">= 20%"
+    - execution_time_limit: "< 1800s"
+    - success_rate_requirement: ">= 90%"

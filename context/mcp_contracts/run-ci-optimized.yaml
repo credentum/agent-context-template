@@ -1,0 +1,177 @@
+---
+# MCP Tool Contract: Optimized CI Runner
+schema_version: "1.0"
+document_type: "mcp_contract"
+tool_name: "run-ci-optimized"
+contract_type: "ci_automation"
+created_date: "2025-07-16"
+
+metadata:
+  title: "Optimized CI Runner Script"
+  description: >-
+    Local CI execution with parallel processing, 
+    smart caching, and performance optimization
+  category: "development-tools"
+  subcategory: "ci-automation"
+  version: "1.0.0"
+
+tool_spec:
+  executable: "scripts/run-ci-optimized.sh"
+  language: "bash"
+  shell: "bash"
+
+  arguments:
+    - name: "command"
+      type: "choice"
+      choices: [
+        "fast", "full", "parallel", "benchmark", "legacy", 
+        "compare", "build", "clean", "debug", "profile", "cache", "help"
+      ]
+      default: "fast"
+      description: "CI execution mode"
+
+  command_descriptions:
+    fast: "Run fast checks only (lint + unit tests) - 2-3 minutes"
+    full: "Run complete optimized pipeline with all tests"
+    parallel: "Run all tests in parallel (recommended) - 5-8 minutes"
+    benchmark: "Compare performance against legacy CI"
+    legacy: "Run legacy CI pipeline for comparison"
+    compare: "Run both optimized and legacy, show timing"
+    build: "Build optimized Docker images"
+    clean: "Clean up containers and cache"
+    debug: "Interactive debug shell"
+    profile: "Profile execution times by component"
+    cache: "Show cache status and hit rates"
+
+inputs:
+  requires:
+    - docker_compose_available: true
+    - docker_daemon_running: true
+    - bash_shell: ">=4.0"
+
+  dependencies:
+    - "docker-compose.ci-optimized.yml"
+    - "docker-compose.ci.yml"
+    - "Docker & Docker Compose"
+    - "Unix-like environment"
+
+outputs:
+  artifacts:
+    - name: "test_results"
+      type: "junit_xml"
+      path: "test-results/*.xml"
+      description: "Test execution results"
+
+    - name: "coverage_reports"
+      type: "coverage"
+      path: "coverage*.xml"
+      description: "Code coverage analysis"
+
+    - name: "performance_metrics"
+      type: "console"
+      description: "Execution timing and performance data"
+
+capabilities:
+  - parallel_test_execution
+  - smart_dependency_caching
+  - conditional_test_execution
+  - performance_monitoring
+  - legacy_compatibility_mode
+  - interactive_debugging
+
+security:
+  permissions:
+    - read: ["src/", "tests/", "scripts/", "docker-compose*.yml", "context/"]
+    - write: ["test-results/", "coverage*.xml", "htmlcov*/", "benchmark-*.json"]
+    - execute: ["docker-compose", "docker", "bash"]
+
+  isolation:
+    - runs_in_container: true
+    - network_access: "docker_networks_only"
+    - file_system_access: "project_directory"
+
+  validation:
+    - input_sanitization: true
+    - command_injection_protection: true
+    - timeout_enforcement: true
+    - error_propagation: "set -e"
+
+usage:
+  examples:
+    - description: "Quick feedback for development"
+      command: "./scripts/run-ci-optimized.sh fast"
+      estimated_time: "2-3 minutes"
+
+    - description: "Full pipeline with maximum parallelization"
+      command: "./scripts/run-ci-optimized.sh parallel"
+      estimated_time: "5-8 minutes"
+
+    - description: "Performance comparison analysis"
+      command: "./scripts/run-ci-optimized.sh benchmark"
+      estimated_time: "10-15 minutes"
+
+    - description: "Interactive debugging environment"
+      command: "./scripts/run-ci-optimized.sh debug"
+
+integration:
+  ci_workflows:
+    - ".github/workflows/ci-optimized.yml"
+
+  related_tools:
+    - "scripts/benchmark-ci-performance.py"
+    - "docker-compose.ci-optimized.yml"
+
+  local_development:
+    - pre_commit_replacement: true
+    - development_feedback_loop: true
+    - ci_environment_replication: true
+
+performance:
+  optimizations:
+    - parallel_job_execution: true
+    - shared_volume_caching: true
+    - conditional_test_execution: true
+    - docker_layer_caching: true
+
+  metrics:
+    - execution_time_tracking: true
+    - cache_hit_rate_monitoring: true
+    - resource_usage_reporting: true
+    - success_rate_tracking: true
+
+  targets:
+    - fast_mode_time: "< 180s"
+    - parallel_mode_time: "< 480s"
+    - cache_hit_rate: "> 80%"
+    - success_rate: "> 95%"
+
+maintenance:
+  update_frequency: "as_needed"
+  compatibility: "docker_compose_3.8+"
+  monitoring: "execution_time_regression"
+
+  dependencies_tracking:
+    - docker_version: ">=20.10"
+    - docker_compose_version: ">=2.0"
+    - bash_version: ">=4.0"
+
+validation:
+  test_cases:
+    - name: "fast_execution"
+      command: "./scripts/run-ci-optimized.sh fast"
+      expected_exit_code: 0
+      timeout: 300
+
+    - name: "help_display"
+      command: "./scripts/run-ci-optimized.sh help"
+      expected_exit_code: 0
+      expected_output_contains: "Usage:"
+
+    - name: "invalid_command"
+      command: "./scripts/run-ci-optimized.sh invalid"
+      expected_exit_code: 1
+
+  quality_gates:
+    - execution_time_regression: "< 20%"
+    - success_rate_threshold: ">= 95%"
+    - docker_resource_efficiency: "optimized"

@@ -16,11 +16,48 @@ from typing import Any, Dict, List
 class CIBenchmark:
     def __init__(self) -> None:
         self.results: Dict[str, Any] = {"timestamp": datetime.now().isoformat(), "benchmarks": {}}
+        # Allowed commands for security validation
+        self.allowed_commands = {
+            "scripts/run-ci-docker.sh",
+            "scripts/run-ci-optimized.sh",
+            "docker-compose",
+            "pytest",
+            "python",
+        }
+
+    def _validate_command(self, command: List[str]) -> bool:
+        """Validate command for security - only allow whitelisted commands"""
+        if not command:
+            return False
+
+        # Check if the base command is in our allowlist
+        base_cmd = command[0]
+
+        # Allow relative paths to our scripts
+        if base_cmd.startswith("./"):
+            base_cmd = base_cmd[2:]
+
+        # Check against allowed commands
+        for allowed in self.allowed_commands:
+            if base_cmd == allowed or base_cmd.endswith(f"/{allowed}"):
+                return True
+
+        return False
 
     def run_command(
         self, command: List[str], description: str, timeout: int = 1800
     ) -> Dict[str, Any]:
-        """Run a command and measure execution time"""
+        """Run a command and measure execution time with security validation"""
+        # Security validation
+        if not self._validate_command(command):
+            print(f"❌ {description} blocked: Command not allowed for security reasons")
+            return {
+                "duration": 0,
+                "success": False,
+                "returncode": -3,
+                "error": "Command blocked by security policy",
+            }
+
         print(f"🔄 Running: {description}")
         print(f"   Command: {' '.join(command)}")
 
