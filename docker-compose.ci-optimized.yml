@@ -228,7 +228,7 @@ services:
     command: |
       bash -c "
         echo '⚡ Running performance tests...'
-        pip install locust pytest-benchmark
+        pip install locust==2.31.7 pytest-benchmark==4.0.0
 
         # Benchmark tests
         python -m pytest tests/ \

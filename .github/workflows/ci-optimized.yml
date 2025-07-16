@@ -380,7 +380,7 @@ jobs:
 
       - name: Install additional performance dependencies
         run: |
-          pip install locust
+          pip install locust==2.31.7
 
       - name: Run benchmark tests
         run: |
