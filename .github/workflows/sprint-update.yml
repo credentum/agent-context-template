@@ -29,6 +29,34 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check for duplicate runs
+        id: check-duplicates
+        run: |
+          # Get the current workflow run ID
+          CURRENT_RUN_ID="${{ github.run_id }}"
+
+          # Get all recent workflow runs for this workflow
+          gh run list --workflow=sprint-update.yml --limit 20 --json id,createdAt,status | \
+            jq -r '.[] | select(.status == "in_progress" or .status == "queued") | .id' | \
+            while read run_id; do
+              if [ "$run_id" != "$CURRENT_RUN_ID" ] && [ "$run_id" -lt "$CURRENT_RUN_ID" ]; then
+                echo "found_duplicate=true" >> $GITHUB_OUTPUT
+                echo "duplicate_run_id=$run_id" >> $GITHUB_OUTPUT
+                exit 0
+              fi
+            done
+
+          echo "found_duplicate=false" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cancel if duplicate
+        if: steps.check-duplicates.outputs.found_duplicate == 'true'
+        run: |
+          echo "⏭️ Skipping this run - duplicate detected"
+          echo "Another sprint update workflow is already running or queued"
+          exit 0
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
