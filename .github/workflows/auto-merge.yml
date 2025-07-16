@@ -1,0 +1,368 @@
+---
+###############################################################################
+# 🚀 Auto-Merge Workflow - Intelligent PR Merging
+# Automatically merges PRs after CI passes and ARC-Reviewer shows APPROVE
+###############################################################################
+name: Auto-Merge PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  check_suite:
+    types: [completed]
+  status: {}
+
+jobs:
+  auto-merge:
+    name: "🔄 Auto-Merge Controller"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+      statuses: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR information
+        id: pr-info
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number || context.payload.pull_request.number
+            });
+
+            return JSON.stringify({
+              number: pr.number,
+              head_sha: pr.head.sha,
+              base_ref: pr.base.ref,
+              mergeable: pr.mergeable,
+              mergeable_state: pr.mergeable_state,
+              auto_merge: pr.auto_merge,
+              title: pr.title,
+              body: pr.body,
+              user: pr.user.login,
+              labels: pr.labels.map(l => l.name)
+            });
+
+      - name: Parse PR info
+        id: pr-parsed
+        run: |
+          PR_JSON='${{ steps.pr-info.outputs.result }}'
+          echo "pr_number=$(echo $PR_JSON | jq -r '.number')" >> $GITHUB_OUTPUT
+          echo "head_sha=$(echo $PR_JSON | jq -r '.head_sha')" >> $GITHUB_OUTPUT
+          echo "base_ref=$(echo $PR_JSON | jq -r '.base_ref')" >> $GITHUB_OUTPUT
+          echo "mergeable=$(echo $PR_JSON | jq -r '.mergeable')" >> $GITHUB_OUTPUT
+          echo "mergeable_state=$(echo $PR_JSON | jq -r '.mergeable_state')" >> $GITHUB_OUTPUT
+          echo "auto_merge=$(echo $PR_JSON | jq -r '.auto_merge')" >> $GITHUB_OUTPUT
+          echo "pr_title=$(echo $PR_JSON | jq -r '.title')" >> $GITHUB_OUTPUT
+          echo "pr_user=$(echo $PR_JSON | jq -r '.user')" >> $GITHUB_OUTPUT
+
+          # Check if PR has auto-merge label or commit message indicator
+          LABELS=$(echo $PR_JSON | jq -r '.labels[]' 2>/dev/null || echo "")
+          if echo "$LABELS" | grep -q "auto-merge" || \
+             echo '${{ steps.pr-info.outputs.result }}' | jq -r '.body' | grep -q "auto.*merge\|Auto.*merge"; then
+            echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+          else
+            echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Wait for CI completion
+        id: wait-ci
+        uses: actions/github-script@v7
+        with:
+          timeout-minutes: 30
+          script: |
+            const pr_number = ${{ steps.pr-parsed.outputs.pr_number }};
+            const head_sha = "${{ steps.pr-parsed.outputs.head_sha }}";
+
+            // Required checks that must pass
+            const requiredChecks = [
+              'claude-pr-review',
+              'ARC-Reviewer',
+              '📊 Coverage Analysis',
+              '🔍 Lint & Style (black)',
+              '🔍 Lint & Style (isort)',
+              '🔍 Lint & Style (flake8)',
+              '🔍 Lint & Style (mypy)',
+              '🧪 Core Tests',
+              '🔗 Integration Tests'
+            ];
+
+            console.log(`Waiting for CI completion on PR #${pr_number} (SHA: ${head_sha})`);
+
+            let attempts = 0;
+            const maxAttempts = 60; // 30 minutes with 30-second intervals
+
+            while (attempts < maxAttempts) {
+              // Get check runs for the commit
+              const { data: checkRuns } = await github.rest.checks.listForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: head_sha,
+                per_page: 100
+              });
+
+              // Get status checks for the commit
+              const { data: statusChecks } = await github.rest.repos.getCombinedStatusForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: head_sha
+              });
+
+              console.log(`Attempt ${attempts + 1}/${maxAttempts}: ` +
+                         `Found ${checkRuns.check_runs.length} check runs, ` +
+                         `${statusChecks.statuses.length} status checks`);
+
+              // Check if all required checks are present and completed
+              const allChecks = [
+                ...checkRuns.check_runs.map(run => ({
+                  name: run.name,
+                  status: run.status,
+                  conclusion: run.conclusion
+                })),
+                ...statusChecks.statuses.map(status => ({
+                  name: status.context,
+                  status: status.state === 'pending' ? 'in_progress' : 'completed',
+                  conclusion: status.state
+                }))
+              ];
+
+              console.log('Current checks:', allChecks.map(c => `${c.name}: ${c.status}/${c.conclusion}`));
+
+              // Check if all required checks are completed
+              let allCompleted = true;
+              let allPassed = true;
+              const missingChecks = [];
+
+              for (const requiredCheck of requiredChecks) {
+                const check = allChecks.find(c => c.name === requiredCheck || c.name.includes(requiredCheck));
+                if (!check) {
+                  missingChecks.push(requiredCheck);
+                  allCompleted = false;
+                } else if (check.status !== 'completed') {
+                  allCompleted = false;
+                  console.log(`${requiredCheck} is still ${check.status}`);
+                } else if (check.conclusion !== 'success' && check.conclusion !== 'SUCCESS') {
+                  allPassed = false;
+                  console.log(`${requiredCheck} failed with conclusion: ${check.conclusion}`);
+                }
+              }
+
+              if (missingChecks.length > 0) {
+                console.log(`Missing checks: ${missingChecks.join(', ')}`);
+              }
+
+              if (allCompleted) {
+                if (allPassed) {
+                  console.log('✅ All required checks passed!');
+                  return 'success';
+                } else {
+                  console.log('❌ Some checks failed');
+                  return 'failure';
+                }
+              }
+
+              // Wait 30 seconds before next check
+              await new Promise(resolve => setTimeout(resolve, 30000));
+              attempts++;
+            }
+
+            console.log('⏰ Timeout waiting for CI completion');
+            return 'timeout';
+
+      - name: Check ARC-Reviewer verdict
+        id: arc-verdict
+        if: steps.wait-ci.outputs.result == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = ${{ steps.pr-parsed.outputs.pr_number }};
+
+            // Get comments from the PR
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr_number
+            });
+
+            // Look for ARC-Reviewer comment
+            const arcComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('ARC-Reviewer Analysis')
+            );
+
+            if (!arcComment) {
+              console.log('No ARC-Reviewer comment found');
+              return 'no-review';
+            }
+
+            const reviewBody = arcComment.body;
+            console.log('ARC-Reviewer comment found');
+
+            // Check for APPROVE verdict
+            const approveMatch = reviewBody.match(/\*\*PR Verdict:\*\* APPROVE/);
+            if (approveMatch) {
+              console.log('✅ ARC-Reviewer verdict: APPROVE');
+
+              // Check for blocking issues
+              const blockingMatch = reviewBody.match(/Blocking Issues \(❌\):/);
+              if (blockingMatch) {
+                console.log('❌ Blocking issues found');
+                return 'blocking-issues';
+              }
+
+              return 'approved';
+            }
+
+            // Check for REQUEST CHANGES verdict
+            const changesMatch = reviewBody.match(/\*\*PR Verdict:\*\* REQUEST CHANGES/);
+            if (changesMatch) {
+              console.log('❌ ARC-Reviewer verdict: REQUEST CHANGES');
+              return 'changes-requested';
+            }
+
+            console.log('❓ ARC-Reviewer verdict unclear');
+            return 'unclear';
+
+      - name: Auto-merge decision
+        id: merge-decision
+        if: steps.wait-ci.outputs.result == 'success' && steps.arc-verdict.outputs.result == 'approved'
+        run: |
+          echo "🎯 Auto-merge conditions met:"
+          echo "- CI Status: ✅ PASSED"
+          echo "- ARC-Reviewer: ✅ APPROVED"
+          echo "- No blocking issues: ✅ CONFIRMED"
+          echo "- PR is mergeable: ${{ steps.pr-parsed.outputs.mergeable }}"
+          echo "- Base branch: ${{ steps.pr-parsed.outputs.base_ref }}"
+
+          if [ "${{ steps.pr-parsed.outputs.mergeable }}" = "true" ]; then
+            echo "ready_to_merge=true" >> $GITHUB_OUTPUT
+          else
+            echo "ready_to_merge=false" >> $GITHUB_OUTPUT
+            echo "❌ PR is not mergeable"
+          fi
+
+      - name: Enable auto-merge
+        id: enable-auto-merge
+        if: steps.merge-decision.outputs.ready_to_merge == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = ${{ steps.pr-parsed.outputs.pr_number }};
+
+            try {
+              // Enable auto-merge with squash
+              await github.rest.pulls.enableAutoMerge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr_number,
+                merge_method: 'squash'
+              });
+
+              console.log('✅ Auto-merge enabled successfully');
+
+              // Add comment to PR
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr_number,
+                body: `🚀 **Auto-merge enabled!**
+
+                ✅ All conditions met:
+                - CI checks passed
+                - ARC-Reviewer approved (no blocking issues)
+                - PR is mergeable
+
+                The PR will be automatically merged when all required status checks pass.
+
+                _This is an automated message from the auto-merge workflow._`
+              });
+
+              return 'enabled';
+            } catch (error) {
+              console.error('Failed to enable auto-merge:', error);
+              return 'failed';
+            }
+
+      - name: Handle auto-merge failure
+        if: >
+          steps.wait-ci.outputs.result != 'success' ||
+          steps.arc-verdict.outputs.result != 'approved' ||
+          steps.merge-decision.outputs.ready_to_merge != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = ${{ steps.pr-parsed.outputs.pr_number }};
+            const ciResult = '${{ steps.wait-ci.outputs.result }}';
+            const arcResult = '${{ steps.arc-verdict.outputs.result }}';
+            const mergeable = '${{ steps.pr-parsed.outputs.mergeable }}';
+
+            let reason = 'Unknown reason';
+            let emoji = '❓';
+
+            if (ciResult === 'timeout') {
+              reason = 'CI checks timed out after 30 minutes';
+              emoji = '⏰';
+            } else if (ciResult === 'failure') {
+              reason = 'CI checks failed';
+              emoji = '❌';
+            } else if (arcResult === 'no-review') {
+              reason = 'ARC-Reviewer has not completed review';
+              emoji = '⏳';
+            } else if (arcResult === 'changes-requested') {
+              reason = 'ARC-Reviewer requested changes';
+              emoji = '🔄';
+            } else if (arcResult === 'blocking-issues') {
+              reason = 'ARC-Reviewer found blocking issues';
+              emoji = '🚫';
+            } else if (arcResult === 'unclear') {
+              reason = 'ARC-Reviewer verdict is unclear';
+              emoji = '❓';
+            } else if (mergeable === 'false') {
+              reason = 'PR is not mergeable (conflicts or branch protection)';
+              emoji = '⚠️';
+            }
+
+            console.log(`${emoji} Auto-merge blocked: ${reason}`);
+
+            // Only comment if there's a meaningful reason
+            if (arcResult === 'changes-requested' || arcResult === 'blocking-issues' || ciResult === 'failure') {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr_number,
+                body: `${emoji} **Auto-merge blocked**
+
+                **Reason:** ${reason}
+
+                **Status:**
+                - CI Result: ${ciResult}
+                - ARC-Reviewer: ${arcResult}
+                - Mergeable: ${mergeable}
+
+                Please address the issues above and the auto-merge will be re-evaluated.
+
+                _This is an automated message from the auto-merge workflow._`
+              });
+            }
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "🔍 Auto-merge workflow summary:"
+          echo "- PR Number: ${{ steps.pr-parsed.outputs.pr_number }}"
+          echo "- CI Result: ${{ steps.wait-ci.outputs.result }}"
+          echo "- ARC-Reviewer: ${{ steps.arc-verdict.outputs.result }}"
+          echo "- Mergeable: ${{ steps.pr-parsed.outputs.mergeable }}"
+          echo "- Auto-merge enabled: ${{ steps.enable-auto-merge.outputs.result }}"
