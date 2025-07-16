@@ -17,129 +17,129 @@ jobs:
 
     steps:
       - name: Validate PR has issue links or exemption
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const { owner, repo } = context.repo;
-          const prNumber = context.payload.pull_request.number;
-          const prBody = context.payload.pull_request.body || '';
-          const prTitle = context.payload.pull_request.title || '';
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+            const prBody = context.payload.pull_request.body || '';
+            const prTitle = context.payload.pull_request.title || '';
 
-          console.log('Validating PR issue links...');
+            console.log('Validating PR issue links...');
 
-          // Check for closing keywords
-          const closingKeywords = [
-            'closes?', 'close', 'closed', 'closing',
-            'fixes?', 'fix', 'fixed', 'fixing',
-            'resolves?', 'resolve', 'resolved', 'resolving',
-            'implements?', 'implement', 'implemented', 'implementing',
-            'addresses?', 'address', 'addressed', 'addressing',
-            'completes?', 'complete', 'completed', 'completing'
-          ];
+            // Check for closing keywords
+            const closingKeywords = [
+              'closes?', 'close', 'closed', 'closing',
+              'fixes?', 'fix', 'fixed', 'fixing',
+              'resolves?', 'resolve', 'resolved', 'resolving',
+              'implements?', 'implement', 'implemented', 'implementing',
+              'addresses?', 'address', 'addressed', 'addressing',
+              'completes?', 'complete', 'completed', 'completing'
+            ];
 
-          const keywordPattern = `(${closingKeywords.join('|')})`;
-          const issuePattern = `${keywordPattern}\\s+#(\\d+)`;
-          const globalRegex = new RegExp(issuePattern, 'gi');
+            const keywordPattern = `(${closingKeywords.join('|')})`;
+            const issuePattern = `${keywordPattern}\\s+#(\\d+)`;
+            const globalRegex = new RegExp(issuePattern, 'gi');
 
-          const combinedText = `${prBody} ${prTitle}`;
-          const matches = [...combinedText.matchAll(globalRegex)];
-          const issueNumbers = [...new Set(matches.map(match => parseInt(match[2])))];
+            const combinedText = `${prBody} ${prTitle}`;
+            const matches = [...combinedText.matchAll(globalRegex)];
+            const issueNumbers = [...new Set(matches.map(match => parseInt(match[2])))];
 
-          // Check for exemption checkbox
-          const exemptionPattern = /- \[x\].*doesn't close any.*issues/i;
-          const isExempt = exemptionPattern.test(prBody);
+            // Check for exemption checkbox
+            const exemptionPattern = /- \[x\].*doesn't close any.*issues/i;
+            const isExempt = exemptionPattern.test(prBody);
 
-          // Validate each referenced issue exists
-          const validIssues = [];
-          const invalidIssues = [];
+            // Validate each referenced issue exists
+            const validIssues = [];
+            const invalidIssues = [];
 
-          for (const issueNumber of issueNumbers) {
-            try {
-              const { data: issue } = await github.rest.issues.get({
-                owner,
-                repo,
-                issue_number: issueNumber
-              });
-              validIssues.push(issueNumber);
-              console.log(`✅ Issue #${issueNumber} exists: "${issue.title}"`);
-            } catch (error) {
-              if (error.status === 404) {
-                invalidIssues.push(issueNumber);
-                console.log(`❌ Issue #${issueNumber} not found`);
+            for (const issueNumber of issueNumbers) {
+              try {
+                const { data: issue } = await github.rest.issues.get({
+                  owner,
+                  repo,
+                  issue_number: issueNumber
+                });
+                validIssues.push(issueNumber);
+                console.log(`✅ Issue #${issueNumber} exists: "${issue.title}"`);
+              } catch (error) {
+                if (error.status === 404) {
+                  invalidIssues.push(issueNumber);
+                  console.log(`❌ Issue #${issueNumber} not found`);
+                }
               }
             }
-          }
 
-          // Determine validation result
-          let status = 'success';
-          let message = '';
+            // Determine validation result
+            let status = 'success';
+            let message = '';
 
-          if (validIssues.length > 0 && invalidIssues.length === 0) {
-            status = 'success';
-            message = `✅ **Issue Links Valid** - Found ${validIssues.length} valid issue reference(s): ${validIssues.map(n => `#${n}`).join(', ')}`;
-          } else if (isExempt && issueNumbers.length === 0) {
-            status = 'success';
-            message = `✅ **Exemption Applied** - PR marked as not closing any issues`;
-          } else if (invalidIssues.length > 0) {
-            status = 'failure';
-            message = `❌ **Invalid Issue References** - Issue(s) not found: ${invalidIssues.map(n => `#${n}`).join(', ')}`;
-          } else if (validIssues.length === 0 && !isExempt) {
-            status = 'failure';
-            message = `⚠️ **Missing Issue Links** - PR should either:\n- Reference issues with closing keywords (closes #123, fixes #456)\n- Check the exemption box if no issues are closed`;
-          }
+            if (validIssues.length > 0 && invalidIssues.length === 0) {
+              status = 'success';
+              message = `✅ **Issue Links Valid** - Found ${validIssues.length} valid issue reference(s): ${validIssues.map(n => `#${n}`).join(', ')}`;
+            } else if (isExempt && issueNumbers.length === 0) {
+              status = 'success';
+              message = `✅ **Exemption Applied** - PR marked as not closing any issues`;
+            } else if (invalidIssues.length > 0) {
+              status = 'failure';
+              message = `❌ **Invalid Issue References** - Issue(s) not found: ${invalidIssues.map(n => `#${n}`).join(', ')}`;
+            } else if (validIssues.length === 0 && !isExempt) {
+              status = 'failure';
+              message = `⚠️ **Missing Issue Links** - PR should either:\n- Reference issues with closing keywords (closes #123, fixes #456)\n- Check the exemption box if no issues are closed`;
+            }
 
-          // Create/update status check
-          await github.rest.repos.createCommitStatus({
-            owner,
-            repo,
-            sha: context.payload.pull_request.head.sha,
-            state: status,
-            context: 'pr-validation/issue-links',
-            description: message.length > 140 ? message.substring(0, 137) + '...' : message
-          });
-
-          // Create/update PR comment
-          const commentBody = `## 📋 Issue Link Validation
-
-          ${message}
-
-          ### Guidelines:
-          - Use closing keywords: \`closes #123\`, \`fixes #456\`, \`resolves #789\`
-          - Check exemption box if PR doesn't close any issues
-          - Ensure all referenced issues exist
-          - Keywords work in PR title, body, or commit messages
-
-          **Status:** ${status === 'success' ? '✅ Valid' : '❌ Invalid'}`;
-
-          // Find existing comment
-          const { data: comments } = await github.rest.issues.listComments({
-            owner,
-            repo,
-            issue_number: prNumber
-          });
-
-          const existingComment = comments.find(comment =>
-            comment.user.type === 'Bot' &&
-            comment.body.includes('📋 Issue Link Validation')
-          );
-
-          if (existingComment) {
-            await github.rest.issues.updateComment({
+            // Create/update status check
+            await github.rest.repos.createCommitStatus({
               owner,
               repo,
-              comment_id: existingComment.id,
-              body: commentBody
+              sha: context.payload.pull_request.head.sha,
+              state: status,
+              context: 'pr-validation/issue-links',
+              description: message.length > 140 ? message.substring(0, 137) + '...' : message
             });
-          } else {
-            await github.rest.issues.createComment({
+
+            // Create/update PR comment
+            const commentBody = `## 📋 Issue Link Validation
+
+            ${message}
+
+            ### Guidelines:
+            - Use closing keywords: \`closes #123\`, \`fixes #456\`, \`resolves #789\`
+            - Check exemption box if PR doesn't close any issues
+            - Ensure all referenced issues exist
+            - Keywords work in PR title, body, or commit messages
+
+            **Status:** ${status === 'success' ? '✅ Valid' : '❌ Invalid'}`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
               owner,
               repo,
-              issue_number: prNumber,
-              body: commentBody
+              issue_number: prNumber
             });
-          }
 
-          // Exit with appropriate code
-          if (status === 'failure') {
-            core.setFailed(message);
-          }
+            const existingComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('📋 Issue Link Validation')
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existingComment.id,
+                body: commentBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body: commentBody
+              });
+            }
+
+            // Exit with appropriate code
+            if (status === 'failure') {
+              core.setFailed(message);
+            }

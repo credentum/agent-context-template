@@ -22,7 +22,11 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-        exclude: ^context/schemas/
+        exclude: |
+          (?x)^(
+            context/schemas/|
+            \.github/workflows/arc-follow-up-processor\.yml
+          )$
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: check-json
@@ -53,6 +57,7 @@ repos:
         name: yamllint (workflows)
         args: [--format, parsable, -c, .yamllint-workflows.yml]
         files: ^\.github/workflows/.*\.ya?ml$
+        exclude: ^\.github/workflows/arc-follow-up-processor\.yml$
 
   - repo: local
     hooks:

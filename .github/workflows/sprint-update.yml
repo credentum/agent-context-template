@@ -7,7 +7,7 @@ name: Sprint Update
   pull_request:
     types: [closed]
   schedule:
-      - cron: '0 9 * * 1-5'  # 9 AM UTC on weekdays
+    - cron: '0 9 * * 1-5'  # 9 AM UTC on weekdays
   workflow_dispatch:
     inputs:
       sprint_id:
