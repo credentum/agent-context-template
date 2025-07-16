@@ -1,0 +1,298 @@
+---
+###############################################################################
+# 📋 PR Format Validation - Machine-Readable Metadata Checker
+# Validates YAML frontmatter in PR descriptions for automation reliability
+###############################################################################
+name: PR Format Validation
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  validate-pr-format:
+    name: "🔍 Validate PR Format"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml jsonschema
+          npm install js-yaml
+
+      - name: Validate PR format
+        id: validate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+            const prBody = context.payload.pull_request.body || '';
+
+            console.log('Validating PR format...');
+            console.log(`PR #${prNumber}: ${prBody.length} characters`);
+
+            // Check if PR body exists
+            if (!prBody.trim()) {
+              core.setFailed('PR description is empty. Please add a description with metadata.');
+              return { valid: false, error: 'Empty PR description' };
+            }
+
+            // Extract YAML frontmatter (may not be at the start due to ARC-Reviewer content)
+            const yamlMatch = prBody.match(/---\s*\n([\s\S]*?)\n---/);
+
+            if (!yamlMatch) {
+              core.setFailed('No YAML frontmatter found. Please use the PR template with machine-readable metadata.');
+              return { valid: false, error: 'Missing YAML frontmatter' };
+            }
+
+            const yamlContent = yamlMatch[1];
+            console.log('Found YAML frontmatter:', yamlContent.substring(0, 200) + '...');
+
+            // Write YAML content to file for validation
+            const fs = require('fs');
+            fs.writeFileSync('pr_metadata.yaml', yamlContent);
+
+            return { valid: true, yaml_content: yamlContent };
+
+      - name: Validate YAML syntax and schema
+        if: steps.validate.outputs.result != 'undefined'
+        run: |
+          echo "🔍 Validating YAML syntax and schema..."
+
+          # Create Python validation script
+          cat > validate_pr_metadata.py << 'EOF'
+          import yaml
+          import json
+          import jsonschema
+          import sys
+          from pathlib import Path
+
+          def load_schema():
+              """Load the PR metadata schema"""
+              schema_path = Path('.github/pr-metadata-schema.yaml')
+              if not schema_path.exists():
+                  print(f"❌ Schema file not found: {schema_path}")
+                  return None
+
+              with open(schema_path, 'r') as f:
+                  # Remove the $schema line and load as YAML
+                  content = f.read()
+                  # Skip the $schema line if present
+                  lines = content.split('\n')
+                  yaml_content = '\n'.join(line for line in lines if not line.strip().startswith('$schema:'))
+                  return yaml.safe_load(yaml_content)
+
+          def validate_metadata():
+              """Validate PR metadata against schema"""
+              try:
+                  # Load PR metadata
+                  with open('pr_metadata.yaml', 'r') as f:
+                      metadata = yaml.safe_load(f)
+
+                  print("✅ YAML syntax is valid")
+                  print(f"📋 Loaded metadata: {json.dumps(metadata, indent=2)}")
+
+                  # Load and validate against schema
+                  schema = load_schema()
+                  if not schema:
+                      print("⚠️ Schema validation skipped (schema not found)")
+                      return True
+
+                  # Validate against schema
+                  try:
+                      jsonschema.validate(metadata, schema)
+                      print("✅ Schema validation passed")
+                  except jsonschema.ValidationError as e:
+                      print(f"❌ Schema validation failed: {e.message}")
+                      print(f"   Path: {' -> '.join(str(p) for p in e.path)}")
+                      return False
+
+                  # Additional business logic validation
+                  pr_metadata = metadata.get('pr_metadata', {})
+
+                  # Check required fields
+                  required_fields = ['type', 'closes_issues', 'breaking_change']
+                  for field in required_fields:
+                      if field not in pr_metadata:
+                          print(f"❌ Missing required field: pr_metadata.{field}")
+                          return False
+
+                  # Validate type
+                  valid_types = ['feature', 'fix', 'docs', 'refactor', 'test', 'chore']
+                  if pr_metadata['type'] not in valid_types:
+                      print(f"❌ Invalid type: {pr_metadata['type']}. Must be one of: {valid_types}")
+                      return False
+
+                  # Validate closes_issues is a list of integers
+                  closes_issues = pr_metadata['closes_issues']
+                  if not isinstance(closes_issues, list):
+                      print(f"❌ closes_issues must be a list, got: {type(closes_issues)}")
+                      return False
+
+                  for issue_num in closes_issues:
+                      if not isinstance(issue_num, int) or issue_num < 1:
+                          print(f"❌ Invalid issue number: {issue_num}. Must be a positive integer.")
+                          return False
+
+                  print("✅ All validation checks passed")
+
+                  # Output metadata for use in other steps
+                  print(f"::set-output name=pr_type::{pr_metadata['type']}")
+                  print(f"::set-output name=closes_issues::{json.dumps(closes_issues)}")
+                  print(f"::set-output name=breaking_change::{pr_metadata.get('breaking_change', False)}")
+                  print(f"::set-output name=priority::{pr_metadata.get('priority', 'medium')}")
+                  print(f"::set-output name=auto_merge::{pr_metadata.get('automation_flags', {}).get('auto_merge', False)}")
+
+                  return True
+
+              except yaml.YAMLError as e:
+                  print(f"❌ YAML syntax error: {e}")
+                  return False
+              except Exception as e:
+                  print(f"❌ Validation error: {e}")
+                  return False
+
+          if __name__ == "__main__":
+              success = validate_metadata()
+              sys.exit(0 if success else 1)
+          EOF
+
+          # Run validation
+          if python validate_pr_metadata.py; then
+            echo "✅ PR metadata validation passed"
+          else
+            echo "❌ PR metadata validation failed"
+            exit 1
+          fi
+
+      - name: Check issue references
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const yaml = require('js-yaml');
+
+            // Load metadata
+            const yamlContent = fs.readFileSync('pr_metadata.yaml', 'utf8');
+            const metadata = yaml.load(yamlContent);
+            const closesIssues = metadata.pr_metadata?.closes_issues || [];
+
+            console.log(`Checking ${closesIssues.length} issue references...`);
+
+            const invalidIssues = [];
+            const validIssues = [];
+
+            // Validate each referenced issue exists
+            for (const issueNumber of closesIssues) {
+              try {
+                const { data: issue } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber
+                });
+                validIssues.push(issueNumber);
+                console.log(`✅ Issue #${issueNumber} exists: "${issue.title}"`);
+              } catch (error) {
+                if (error.status === 404) {
+                  invalidIssues.push(issueNumber);
+                  console.log(`❌ Issue #${issueNumber} not found`);
+                }
+              }
+            }
+
+            // Set outputs for other steps
+            core.setOutput('valid_issues', JSON.stringify(validIssues));
+            core.setOutput('invalid_issues', JSON.stringify(invalidIssues));
+
+            if (invalidIssues.length > 0) {
+              core.setFailed(`Invalid issue references: ${invalidIssues.join(', ')}`);
+            }
+
+      - name: Create status check
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const success = '${{ job.status }}' === 'success';
+            const prNumber = context.payload.pull_request.number;
+
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: success ? 'success' : 'failure',
+              context: 'pr-format/validation',
+              description: success ? 'PR format validation passed' : 'PR format validation failed'
+            });
+
+      - name: Add comment with validation results
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+
+            const commentBody = `## 📋 PR Format Validation Failed
+
+            The PR description format validation failed. Please ensure your PR follows the required format.
+
+            ### Requirements:
+            - Use the PR template with YAML frontmatter
+            - Include required metadata fields: \`type\`, \`closes_issues\`, \`breaking_change\`
+            - Ensure all referenced issue numbers exist
+            - Follow the schema defined in \`.github/pr-metadata-schema.yaml\`
+
+            ### How to fix:
+            1. Edit your PR description
+            2. Ensure it starts with YAML frontmatter between \`---\` markers
+            3. Fill in all required fields according to the template
+            4. Verify issue numbers are correct
+
+            ### Example format:
+            \`\`\`yaml
+            ---
+            pr_metadata:
+              type: "feature"
+              closes_issues: [150]
+              breaking_change: false
+              priority: "high"
+            ---
+            \`\`\`
+
+            For more information, see the [PR Format Guide](docs/pr-format-guide.md).
+
+            ---
+            *🤖 Automated validation by PR Format Validation workflow*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: commentBody
+            });
+
+      - name: Success message
+        if: success()
+        run: |
+          echo "✅ PR format validation passed!"
+          echo "- YAML frontmatter is valid"
+          echo "- Schema validation passed"
+          echo "- All issue references are valid"
+          echo "- Ready for automated processing"
+# Force re-run of CI checks

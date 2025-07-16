@@ -50,3 +50,6 @@ locust>=2.0.0
 
 # Performance benchmarking
 pytest-benchmark>=4.0.0
+
+# Schema validation (needed for workflow tests)
+jsonschema>=4.0.0

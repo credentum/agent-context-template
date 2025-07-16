@@ -1,0 +1,209 @@
+---
+###############################################################################
+# 🚨 PR Conflict Validator - Prevent Conflicting PRs from Being Merged
+# Runs comprehensive conflict detection before any merge attempt
+###############################################################################
+name: PR Conflict Validator
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate-conflicts:
+    name: "🔍 Conflict Detection"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          fetch-depth: 0
+
+      - name: Fetch PR branch
+        run: |
+          git fetch origin ${{ github.event.pull_request.head.ref }}:pr-branch
+          git fetch origin ${{ github.event.pull_request.base.ref }}:base-branch
+
+      - name: Comprehensive conflict detection
+        id: conflict-check
+        run: |
+          echo "🔍 Running comprehensive conflict detection..."
+
+          PR_HEAD="${{ github.event.pull_request.head.sha }}"
+          BASE_HEAD="${{ github.event.pull_request.base.sha }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          echo "PR HEAD: $PR_HEAD"
+          echo "BASE HEAD: $BASE_HEAD"
+          echo "PR NUMBER: $PR_NUMBER"
+
+          # Get current merge status from GitHub API
+          MERGEABLE_STATE=$(gh pr view $PR_NUMBER --json mergeable,mergeStateStatus --jq '{mergeable: .mergeable, state: .mergeStateStatus}')
+          echo "GitHub merge status: $MERGEABLE_STATE"
+
+          MERGEABLE=$(echo "$MERGEABLE_STATE" | jq -r '.mergeable')
+          MERGE_STATE=$(echo "$MERGEABLE_STATE" | jq -r '.state')
+
+          echo "mergeable=$MERGEABLE" >> $GITHUB_OUTPUT
+          echo "merge_state_status=$MERGE_STATE" >> $GITHUB_OUTPUT
+
+          # Test 1: GitHub's built-in mergeable check
+          if [ "$MERGEABLE" = "CONFLICTING" ]; then
+            echo "❌ GitHub reports PR has conflicts"
+            echo "has_conflicts=true" >> $GITHUB_OUTPUT
+            echo "conflict_type=github_api" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Test 2: Check merge state status
+          if [ "$MERGE_STATE" = "DIRTY" ] || [ "$MERGE_STATE" = "BLOCKED" ]; then
+            echo "❌ Merge state is $MERGE_STATE"
+            echo "has_conflicts=true" >> $GITHUB_OUTPUT
+            echo "conflict_type=merge_state" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Test 3: Manual merge simulation
+          echo "🧪 Simulating merge to detect conflicts..."
+
+          git checkout base-branch
+          git checkout -b merge-test
+
+          if git merge pr-branch --no-commit --no-ff; then
+            echo "✅ Merge simulation successful - no conflicts detected"
+            git merge --abort 2>/dev/null || true
+            echo "has_conflicts=false" >> $GITHUB_OUTPUT
+            echo "conflict_type=none" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Merge simulation failed - conflicts detected"
+            git merge --abort 2>/dev/null || true
+            echo "has_conflicts=true" >> $GITHUB_OUTPUT
+            echo "conflict_type=merge_simulation" >> $GITHUB_OUTPUT
+          fi
+
+          # Test 4: Check for divergent history
+          COMMITS_BEHIND=$(git rev-list --count pr-branch..base-branch)
+          COMMITS_AHEAD=$(git rev-list --count base-branch..pr-branch)
+
+          echo "Commits behind base: $COMMITS_BEHIND"
+          echo "Commits ahead of base: $COMMITS_AHEAD"
+
+          echo "commits_behind=$COMMITS_BEHIND" >> $GITHUB_OUTPUT
+          echo "commits_ahead=$COMMITS_AHEAD" >> $GITHUB_OUTPUT
+
+          # If branch is significantly behind, flag for update
+          if [ "$COMMITS_BEHIND" -gt 10 ]; then
+            echo "⚠️ Branch is significantly behind base ($COMMITS_BEHIND commits)"
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update PR status check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const hasConflicts = '${{ steps.conflict-check.outputs.has_conflicts }}' === 'true';
+            const conflictType = '${{ steps.conflict-check.outputs.conflict_type }}';
+            const mergeableState = '${{ steps.conflict-check.outputs.mergeable }}';
+            const mergeStateStatus = '${{ steps.conflict-check.outputs.merge_state_status }}';
+            const needsUpdate = '${{ steps.conflict-check.outputs.needs_update }}' === 'true';
+            const commitsBehind = '${{ steps.conflict-check.outputs.commits_behind }}';
+
+            let conclusion = 'success';
+            let title = '✅ No conflicts detected';
+            let summary = 'PR can be safely merged.';
+
+            if (hasConflicts) {
+              conclusion = 'failure';
+              title = '❌ Conflicts detected';
+              summary = `Conflicts found via ${conflictType}. Manual resolution required.`;
+            } else if (needsUpdate) {
+              conclusion = 'neutral';
+              title = '⚠️ Branch needs update';
+              summary = `Branch is ${commitsBehind} commits behind. Consider updating before merge.`;
+            }
+
+            // Create check run
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Conflict Detection',
+              head_sha: context.payload.pull_request.head.sha,
+              status: 'completed',
+              conclusion: conclusion,
+              output: {
+                title: title,
+                summary: summary,
+                text: `
+            ## Conflict Detection Results
+
+            **GitHub Mergeable**: ${mergeableState}
+            **Merge State Status**: ${mergeStateStatus}
+            **Conflict Type**: ${conflictType}
+            **Commits Behind**: ${commitsBehind}
+            **Needs Update**: ${needsUpdate}
+
+            ${hasConflicts ?
+              '### ❌ Action Required\nThis PR has conflicts that must be resolved before merging.' :
+              '### ✅ Safe to Merge\nNo conflicts detected. PR is ready for review and merge.'
+            }
+            `
+              }
+            });
+
+      - name: Comment on PR if conflicts detected
+        if: steps.conflict-check.outputs.has_conflicts == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const conflictType = '${{ steps.conflict-check.outputs.conflict_type }}';
+            const commitsBehind = '${{ steps.conflict-check.outputs.commits_behind }}';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `## ❌ Conflicts Detected
+
+            **Detection Method**: ${conflictType}
+            **Branch Status**: ${commitsBehind} commits behind base branch
+
+            ### 🔧 Resolution Steps:
+
+            1. **Update your branch**:
+               \`\`\`bash
+               git checkout ${{ github.event.pull_request.head.ref }}
+               git fetch origin
+               git merge origin/${{ github.event.pull_request.base.ref }}
+               # Resolve any conflicts
+               git push origin ${{ github.event.pull_request.head.ref }}
+               \`\`\`
+
+            2. **Or rebase your branch**:
+               \`\`\`bash
+               git checkout ${{ github.event.pull_request.head.ref }}
+               git fetch origin
+               git rebase origin/${{ github.event.pull_request.base.ref }}
+               # Resolve any conflicts
+               git push origin ${{ github.event.pull_request.head.ref }} --force-with-lease
+               \`\`\`
+
+            ### 🚨 Auto-merge Blocked
+            This PR will not be auto-merged until conflicts are resolved.
+
+            _This is an automated message from the PR Conflict Validator._`
+            });
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

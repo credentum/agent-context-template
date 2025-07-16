@@ -48,6 +48,7 @@ jobs:
               base_ref: pr.base.ref,
               mergeable: pr.mergeable,
               mergeable_state: pr.mergeable_state,
+              merge_state_status: pr.mergeStateStatus,
               auto_merge: pr.auto_merge,
               title: pr.title,
               body: pr.body,
@@ -68,28 +69,125 @@ jobs:
           echo "base_ref=$(cat /tmp/pr_info.json | jq -r '.base_ref')" >> $GITHUB_OUTPUT
           echo "mergeable=$(cat /tmp/pr_info.json | jq -r '.mergeable')" >> $GITHUB_OUTPUT
           echo "mergeable_state=$(cat /tmp/pr_info.json | jq -r '.mergeable_state')" >> $GITHUB_OUTPUT
-          echo "auto_merge=$(cat /tmp/pr_info.json | jq -r '.auto_merge')" >> $GITHUB_OUTPUT
+          echo "merge_state_status=$(cat /tmp/pr_info.json | jq -r '.merge_state_status')" >> $GITHUB_OUTPUT
+          echo "github_auto_merge_enabled=$(cat /tmp/pr_info.json | jq -r '.auto_merge != null')" >> $GITHUB_OUTPUT
           echo "pr_title=$(cat /tmp/pr_info.json | jq -r '.title')" >> $GITHUB_OUTPUT
           echo "pr_user=$(cat /tmp/pr_info.json | jq -r '.user')" >> $GITHUB_OUTPUT
 
-          # Check if PR has auto-merge label or commit message indicator
+          # Check if PR has auto-merge enabled via multiple methods
           LABELS=$(cat /tmp/pr_info.json | jq -r '.labels[]' 2>/dev/null || echo "")
+          PR_BODY=$(cat /tmp/pr_info.json | jq -r '.body // ""')
 
-          # Check for auto-merge label
+          # Method 1: Check for auto-merge label (legacy method)
           if echo "$LABELS" | grep -q "auto-merge"; then
             echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+            echo "auto_merge_method=label" >> $GITHUB_OUTPUT
           else
-            # Use jq to safely check for auto-merge keywords in PR body
-            AUTO_MERGE_IN_BODY=$(cat /tmp/pr_info.json | jq -r '.body' | grep -i "auto.*merge" || echo "")
-            if [ -n "$AUTO_MERGE_IN_BODY" ]; then
-              echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+            # Method 2: Parse YAML frontmatter for structured metadata (preferred)
+            # Clean PR body content to remove shell artifacts that can corrupt YAML parsing
+            echo "$PR_BODY" | sed 's/< \/dev\/null |//g' > /tmp/pr_body.txt
+
+            # Extract YAML frontmatter
+            if grep -q "^---" /tmp/pr_body.txt; then
+              echo "🔍 Found YAML frontmatter, parsing structured metadata..."
+
+              # Extract YAML content between --- markers
+              YAML_CONTENT=$(sed -n '/^---$/,/^---$/p' /tmp/pr_body.txt | sed '1d;$d')
+
+              if [ -n "$YAML_CONTENT" ]; then
+                echo "$YAML_CONTENT" > /tmp/pr_metadata.yaml
+
+                # Use Python to safely parse YAML and extract auto_merge flag
+                AUTO_MERGE_FLAG=$(python3 -c "
+                import yaml; f=open('/tmp/pr_metadata.yaml','r');
+                metadata=yaml.safe_load(f); f.close();
+                pr_metadata=metadata.get('pr_metadata',{}) if isinstance(metadata,dict) else {};
+                automation_flags=pr_metadata.get('automation_flags',{});
+                auto_merge=automation_flags.get('auto_merge',False);
+                print('true' if auto_merge else 'false')
+                " 2>/dev/null || echo "false")
+
+                if [ "$AUTO_MERGE_FLAG" = "true" ]; then
+                  echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+                  echo "auto_merge_method=yaml_metadata" >> $GITHUB_OUTPUT
+                  echo "✅ Auto-merge enabled via YAML metadata"
+                else
+                  echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
+                  echo "auto_merge_method=yaml_metadata_disabled" >> $GITHUB_OUTPUT
+                fi
+
+                # Clean up
+                rm -f /tmp/pr_metadata.yaml
+              else
+                echo "⚠️ Empty YAML frontmatter, falling back to text parsing"
+                # Fallback to legacy text parsing
+                AUTO_MERGE_IN_BODY=$(echo "$PR_BODY" | grep -i "auto.*merge" || echo "")
+                if [ -n "$AUTO_MERGE_IN_BODY" ]; then
+                  echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+                  echo "auto_merge_method=text_search" >> $GITHUB_OUTPUT
+                else
+                  echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
+                  echo "auto_merge_method=none" >> $GITHUB_OUTPUT
+                fi
+              fi
             else
-              echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
+              echo "📋 No YAML frontmatter found, using legacy text parsing"
+              # Fallback to legacy text parsing for backward compatibility
+              AUTO_MERGE_IN_BODY=$(echo "$PR_BODY" | grep -i "auto.*merge" || echo "")
+              if [ -n "$AUTO_MERGE_IN_BODY" ]; then
+                echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+                echo "auto_merge_method=text_search_legacy" >> $GITHUB_OUTPUT
+              else
+                echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
+                echo "auto_merge_method=none" >> $GITHUB_OUTPUT
+              fi
             fi
+
+            # Clean up
+            rm -f /tmp/pr_body.txt
           fi
 
           # Clean up temporary file
           rm -f /tmp/pr_info.json
+
+      - name: Check for test coverage
+        id: test-coverage
+        run: |
+          echo "🧪 Checking test coverage for new functionality..."
+
+          # Get list of changed files
+          git fetch origin ${{ steps.pr-parsed.outputs.base_ref }}
+          CHANGED_FILES=$(git diff --name-only origin/${{ steps.pr-parsed.outputs.base_ref }}...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if workflow files were modified (indicating new functionality)
+          WORKFLOW_CHANGES=$(echo "$CHANGED_FILES" | grep "\.github/workflows/" || echo "")
+          TEST_FILES=$(echo "$CHANGED_FILES" | grep "^tests/test_.*\.py$" || echo "")
+
+          if [ -n "$WORKFLOW_CHANGES" ]; then
+            echo "📋 Workflow changes detected:"
+            echo "$WORKFLOW_CHANGES"
+
+            # Count test files added/modified
+            TEST_COUNT=$(echo "$TEST_FILES" | grep -v "^$" | wc -l)
+            echo "🧪 Test files found: $TEST_COUNT"
+            echo "$TEST_FILES"
+
+            if [ "$TEST_COUNT" -gt 0 ]; then
+              echo "tests_found=true" >> $GITHUB_OUTPUT
+              echo "test_count=$TEST_COUNT" >> $GITHUB_OUTPUT
+              echo "✅ Found $TEST_COUNT test files for workflow changes"
+            else
+              echo "tests_found=false" >> $GITHUB_OUTPUT
+              echo "test_count=0" >> $GITHUB_OUTPUT
+              echo "⚠️ No test files found for workflow changes"
+            fi
+          else
+            echo "tests_found=true" >> $GITHUB_OUTPUT
+            echo "test_count=0" >> $GITHUB_OUTPUT
+            echo "✅ No workflow changes detected - test coverage check passed"
+          fi
 
       - name: Auto-update branch to prevent conflicts
         id: auto-update
@@ -362,28 +460,87 @@ jobs:
             console.log('❓ ARC-Reviewer verdict unclear');
             return 'unclear';
 
+      - name: Final conflict validation
+        id: final-conflict-check
+        if: steps.wait-ci.outputs.result == 'success' && steps.arc-verdict.outputs.result == 'approved'
+        run: |
+          echo "🔍 Performing final conflict validation..."
+
+          # Get current PR merge status from GitHub API
+          CURRENT_PR_STATUS=$(gh pr view ${{ steps.pr-parsed.outputs.pr_number }} --json mergeable,mergeStateStatus --jq '{mergeable: .mergeable, state: .mergeStateStatus}')
+          echo "Current PR status: $CURRENT_PR_STATUS"
+
+          CURRENT_MERGEABLE=$(echo "$CURRENT_PR_STATUS" | jq -r '.mergeable')
+          CURRENT_MERGE_STATE=$(echo "$CURRENT_PR_STATUS" | jq -r '.state')
+
+          echo "current_mergeable=$CURRENT_MERGEABLE" >> $GITHUB_OUTPUT
+          echo "current_merge_state=$CURRENT_MERGE_STATE" >> $GITHUB_OUTPUT
+
+          # Check GitHub's definitive merge status
+          if [ "$CURRENT_MERGEABLE" = "CONFLICTING" ]; then
+            echo "❌ GitHub reports PR has conflicts (CONFLICTING)"
+            echo "conflicts_exist=true" >> $GITHUB_OUTPUT
+            echo "conflict_reason=github_conflicting" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_MERGE_STATE" = "DIRTY" ]; then
+            echo "❌ Merge state is DIRTY - conflicts or issues exist"
+            echo "conflicts_exist=true" >> $GITHUB_OUTPUT
+            echo "conflict_reason=dirty_state" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_MERGE_STATE" = "BLOCKED" ]; then
+            echo "❌ Merge state is BLOCKED - branch protection or other issues"
+            echo "conflicts_exist=true" >> $GITHUB_OUTPUT
+            echo "conflict_reason=blocked_state" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_MERGE_STATE" = "BEHIND" ]; then
+            echo "⚠️ Merge state is BEHIND - branch needs updating"
+            echo "conflicts_exist=false" >> $GITHUB_OUTPUT
+            echo "conflict_reason=behind_state" >> $GITHUB_OUTPUT
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_MERGEABLE" = "MERGEABLE" ] && [ "$CURRENT_MERGE_STATE" = "CLEAN" ]; then
+            echo "✅ PR is clean and mergeable"
+            echo "conflicts_exist=false" >> $GITHUB_OUTPUT
+            echo "conflict_reason=none" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Unexpected merge status: mergeable=$CURRENT_MERGEABLE, state=$CURRENT_MERGE_STATE"
+            echo "conflicts_exist=true" >> $GITHUB_OUTPUT
+            echo "conflict_reason=unexpected_status" >> $GITHUB_OUTPUT
+          fi
+
       - name: Auto-merge decision
         id: merge-decision
         if: steps.wait-ci.outputs.result == 'success' && steps.arc-verdict.outputs.result == 'approved'
         run: |
-          echo "🎯 Auto-merge conditions met:"
+          echo "🎯 Auto-merge conditions evaluation:"
           echo "- CI Status: ✅ PASSED"
           echo "- ARC-Reviewer: ✅ APPROVED"
           echo "- No blocking issues: ✅ CONFIRMED"
-          echo "- PR is mergeable: ${{ steps.pr-parsed.outputs.mergeable }}"
+          echo "- Test Coverage: ${{ steps.test-coverage.outputs.tests_found }}"
+          echo "- Original mergeable: ${{ steps.pr-parsed.outputs.mergeable }}"
+          echo "- Original merge state: ${{ steps.pr-parsed.outputs.mergeable_state }}"
+          echo "- Original merge state status: ${{ steps.pr-parsed.outputs.merge_state_status }}"
+          echo "- Current mergeable: ${{ steps.final-conflict-check.outputs.current_mergeable }}"
+          echo "- Current merge state: ${{ steps.final-conflict-check.outputs.current_merge_state }}"
           echo "- Base branch: ${{ steps.pr-parsed.outputs.base_ref }}"
           echo "- Branch updated: ${{ steps.auto-update.outputs.branch_updated }}"
-          echo "- Conflicts detected: ${{ steps.auto-update.outputs.conflicts_detected }}"
+          echo "- Auto-update conflicts: ${{ steps.auto-update.outputs.conflicts_detected }}"
+          echo "- Final conflicts exist: ${{ steps.final-conflict-check.outputs.conflicts_exist }}"
+          echo "- Conflict reason: ${{ steps.final-conflict-check.outputs.conflict_reason }}"
 
-          # Check if conflicts were detected during auto-update
+          # Primary conflict checks (hard blockers)
           if [ "${{ steps.auto-update.outputs.conflicts_detected }}" = "true" ]; then
             echo "ready_to_merge=false" >> $GITHUB_OUTPUT
-            echo "❌ Conflicts detected during auto-update - manual intervention required"
-          elif [ "${{ steps.pr-parsed.outputs.mergeable }}" = "true" ]; then
-            echo "ready_to_merge=true" >> $GITHUB_OUTPUT
-          else
+            echo "block_reason=auto_update_conflicts" >> $GITHUB_OUTPUT
+            echo "❌ BLOCKED: Conflicts detected during auto-update - manual intervention required"
+          elif [ "${{ steps.final-conflict-check.outputs.conflicts_exist }}" = "true" ]; then
             echo "ready_to_merge=false" >> $GITHUB_OUTPUT
-            echo "❌ PR is not mergeable"
+            echo "block_reason=${{ steps.final-conflict-check.outputs.conflict_reason }}" >> $GITHUB_OUTPUT
+            echo "❌ BLOCKED: Final conflict check failed - ${{ steps.final-conflict-check.outputs.conflict_reason }}"
+          elif [ "${{ steps.test-coverage.outputs.tests_found }}" = "false" ]; then
+            echo "ready_to_merge=false" >> $GITHUB_OUTPUT
+            echo "block_reason=missing_test_coverage" >> $GITHUB_OUTPUT
+            echo "❌ BLOCKED: Test coverage required for workflow changes"
+          else
+            echo "ready_to_merge=true" >> $GITHUB_OUTPUT
+            echo "block_reason=none" >> $GITHUB_OUTPUT
+            echo "✅ APPROVED: All safety checks passed"
           fi
 
       - name: Enable auto-merge
@@ -460,7 +617,11 @@ jobs:
             const pr_number = ${{ steps.pr-parsed.outputs.pr_number }};
             const ciResult = '${{ steps.wait-ci.outputs.result }}';
             const arcResult = '${{ steps.arc-verdict.outputs.result }}';
-            const mergeable = '${{ steps.pr-parsed.outputs.mergeable }}';
+            const blockReason = '${{ steps.merge-decision.outputs.block_reason }}';
+            const conflictsExist = '${{ steps.final-conflict-check.outputs.conflicts_exist }}';
+            const conflictReason = '${{ steps.final-conflict-check.outputs.conflict_reason }}';
+            const currentMergeable = '${{ steps.final-conflict-check.outputs.current_mergeable }}';
+            const currentMergeState = '${{ steps.final-conflict-check.outputs.current_merge_state }}';
 
             let reason = 'Unknown reason';
             let emoji = '❓';
@@ -483,18 +644,30 @@ jobs:
             } else if (arcResult === 'unclear') {
               reason = 'ARC-Reviewer verdict is unclear';
               emoji = '❓';
-            } else if (mergeable === 'false') {
-              reason = 'PR is not mergeable (conflicts or branch protection)';
-              emoji = '⚠️';
-            } else if ('${{ steps.auto-update.outputs.conflicts_detected }}' === 'true') {
-              reason = 'Conflicts detected during auto-update - manual resolution required';
+            } else if (blockReason === 'auto_update_conflicts') {
+              reason = 'Conflicts detected during branch auto-update - manual resolution required';
               emoji = '🔄';
+            } else if (blockReason === 'github_conflicting') {
+              reason = 'GitHub reports PR has conflicts (CONFLICTING state)';
+              emoji = '⚠️';
+            } else if (blockReason === 'dirty_state') {
+              reason = 'PR merge state is DIRTY - conflicts or issues exist';
+              emoji = '⚠️';
+            } else if (blockReason === 'blocked_state') {
+              reason = 'PR merge state is BLOCKED - branch protection or requirements not met';
+              emoji = '🚫';
+            } else if (blockReason === 'unexpected_status') {
+              reason = `Unexpected merge status: mergeable=${currentMergeable}, state=${currentMergeState}`;
+              emoji = '❓';
+            } else if (blockReason === 'missing_test_coverage') {
+              reason = 'Test coverage required for workflow changes';
+              emoji = '🧪';
             }
 
             console.log(`${emoji} Auto-merge blocked: ${reason}`);
 
             // Only comment if there's a meaningful reason
-            if (arcResult === 'changes-requested' || arcResult === 'blocking-issues' || ciResult === 'failure') {
+            if (arcResult === 'changes-requested' || arcResult === 'blocking-issues' || ciResult === 'failure' || conflictsExist === 'true') {
               // Get blocking issues for display
               let blockingIssuesText = '';
               if (arcResult === 'changes-requested' || arcResult === 'blocking-issues') {
@@ -517,6 +690,17 @@ jobs:
                 }
               }
 
+              // Add conflict resolution guidance for conflict-related blocks
+              let conflictGuidance = '';
+              if (conflictsExist === 'true') {
+                const headRef = context.payload.pull_request?.head?.ref || 'your-branch';
+                const baseRef = context.payload.pull_request?.base?.ref || 'main';
+                conflictGuidance = '\n\nConflict Resolution Steps:\n' +
+                  `1. Update your branch: git checkout ${headRef} && git fetch origin && git merge origin/${baseRef}\n` +
+                  `2. Or rebase your branch: git checkout ${headRef} && git fetch origin && git rebase origin/${baseRef}\n` +
+                  '3. After resolving conflicts: git add . && git commit && git push';
+              }
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -525,10 +709,13 @@ jobs:
 
                 **Reason:** ${reason}
 
-                **Status:**
+                **Detailed Status:**
                 - CI Result: ${ciResult}
                 - ARC-Reviewer: ${arcResult}
-                - Mergeable: ${mergeable}${blockingIssuesText}
+                - Current Mergeable: ${currentMergeable}
+                - Current Merge State: ${currentMergeState}
+                - Conflicts Detected: ${conflictsExist}
+                - Block Reason: ${blockReason}${blockingIssuesText}${conflictGuidance}
 
                 Please address the issues above and the auto-merge will be re-evaluated.
 
@@ -543,5 +730,6 @@ jobs:
           echo "- PR Number: ${{ steps.pr-parsed.outputs.pr_number }}"
           echo "- CI Result: ${{ steps.wait-ci.outputs.result }}"
           echo "- ARC-Reviewer: ${{ steps.arc-verdict.outputs.result }}"
+          echo "- Test Coverage: ${{ steps.test-coverage.outputs.tests_found }}"
           echo "- Mergeable: ${{ steps.pr-parsed.outputs.mergeable }}"
           echo "- Auto-merge enabled: ${{ steps.enable-auto-merge.outputs.result }}"
