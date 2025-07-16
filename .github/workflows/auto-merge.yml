@@ -147,6 +147,45 @@ jobs:
           # Clean up temporary file
           rm -f /tmp/pr_info.json
 
+      - name: Check for test coverage
+        id: test-coverage
+        run: |
+          echo "🧪 Checking test coverage for new functionality..."
+
+          # Get list of changed files
+          git fetch origin ${{ steps.pr-parsed.outputs.base_ref }}
+          CHANGED_FILES=$(git diff --name-only origin/${{ steps.pr-parsed.outputs.base_ref }}...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if workflow files were modified (indicating new functionality)
+          WORKFLOW_CHANGES=$(echo "$CHANGED_FILES" | grep "\.github/workflows/" || echo "")
+          TEST_FILES=$(echo "$CHANGED_FILES" | grep "^tests/test_.*\.py$" || echo "")
+
+          if [ -n "$WORKFLOW_CHANGES" ]; then
+            echo "📋 Workflow changes detected:"
+            echo "$WORKFLOW_CHANGES"
+
+            # Count test files added/modified
+            TEST_COUNT=$(echo "$TEST_FILES" | grep -v "^$" | wc -l)
+            echo "🧪 Test files found: $TEST_COUNT"
+            echo "$TEST_FILES"
+
+            if [ "$TEST_COUNT" -gt 0 ]; then
+              echo "tests_found=true" >> $GITHUB_OUTPUT
+              echo "test_count=$TEST_COUNT" >> $GITHUB_OUTPUT
+              echo "✅ Found $TEST_COUNT test files for workflow changes"
+            else
+              echo "tests_found=false" >> $GITHUB_OUTPUT
+              echo "test_count=0" >> $GITHUB_OUTPUT
+              echo "⚠️ No test files found for workflow changes"
+            fi
+          else
+            echo "tests_found=true" >> $GITHUB_OUTPUT
+            echo "test_count=0" >> $GITHUB_OUTPUT
+            echo "✅ No workflow changes detected - test coverage check passed"
+          fi
+
       - name: Auto-update branch to prevent conflicts
         id: auto-update
         run: |
@@ -426,6 +465,7 @@ jobs:
           echo "- CI Status: ✅ PASSED"
           echo "- ARC-Reviewer: ✅ APPROVED"
           echo "- No blocking issues: ✅ CONFIRMED"
+          echo "- Test Coverage: ${{ steps.test-coverage.outputs.tests_found }}"
           echo "- PR is mergeable: ${{ steps.pr-parsed.outputs.mergeable }}"
           echo "- Base branch: ${{ steps.pr-parsed.outputs.base_ref }}"
           echo "- Branch updated: ${{ steps.auto-update.outputs.branch_updated }}"
@@ -435,6 +475,9 @@ jobs:
           if [ "${{ steps.auto-update.outputs.conflicts_detected }}" = "true" ]; then
             echo "ready_to_merge=false" >> $GITHUB_OUTPUT
             echo "❌ Conflicts detected during auto-update - manual intervention required"
+          elif [ "${{ steps.test-coverage.outputs.tests_found }}" = "false" ]; then
+            echo "ready_to_merge=false" >> $GITHUB_OUTPUT
+            echo "❌ Test coverage required for workflow changes"
           elif [ "${{ steps.pr-parsed.outputs.mergeable }}" = "true" ]; then
             echo "ready_to_merge=true" >> $GITHUB_OUTPUT
           else
@@ -599,5 +642,6 @@ jobs:
           echo "- PR Number: ${{ steps.pr-parsed.outputs.pr_number }}"
           echo "- CI Result: ${{ steps.wait-ci.outputs.result }}"
           echo "- ARC-Reviewer: ${{ steps.arc-verdict.outputs.result }}"
+          echo "- Test Coverage: ${{ steps.test-coverage.outputs.tests_found }}"
           echo "- Mergeable: ${{ steps.pr-parsed.outputs.mergeable }}"
           echo "- Auto-merge enabled: ${{ steps.enable-auto-merge.outputs.result }}"
