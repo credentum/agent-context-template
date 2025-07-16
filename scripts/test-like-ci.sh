@@ -64,6 +64,16 @@ run_check "Context YAML validation" "python -m src.agents.context_lint validate 
 # From lint-verification.yml lines 73-75
 run_check "Import check" "python -m pytest --collect-only -q"
 
+# CRITICAL: Run the SAME pre-commit checks that GitHub CI runs
+echo -e "\n${YELLOW}▶ Pre-commit checks (yamllint + additional)${NC}"
+echo "  Command: pre-commit run --all-files"
+if pre-commit run --all-files; then
+    echo -e "  ${GREEN}✓ PASSED${NC}"
+else
+    echo -e "  ${RED}✗ FAILED (this matches what GitHub CI checks!)${NC}"
+    FAILED=$((FAILED + 1))
+fi
+
 # Additional: GitHub Actions workflow validation
 echo -e "\n${YELLOW}▶ GitHub Actions workflow validation${NC}"
 echo "  Command: yamllint -c .yamllint-workflows.yml .github/workflows/"
