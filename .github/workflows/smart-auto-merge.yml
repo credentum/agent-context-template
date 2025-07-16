@@ -60,7 +60,7 @@ jobs:
               // PR synchronize trigger (restart capability)
               prNumber = context.payload.pull_request.number;
               headSha = context.payload.pull_request.head.sha;
-              
+
               console.log(`🔄 PR updated: #${prNumber} - checking for auto-merge restart`);
             } else {
               // Workflow run trigger
@@ -163,42 +163,42 @@ jobs:
         if: steps.check-eligibility.outputs.eligible == 'true'
         run: |
           echo "🔄 Checking if branch needs updating..."
-          
+
           # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           # Get current branch info
           HEAD_SHA="${{ steps.check-eligibility.outputs.head_sha }}"
           BASE_REF="main"  # Smart auto-merge typically targets main
           PR_NUMBER="${{ steps.check-eligibility.outputs.pr_number }}"
-          
+
           echo "HEAD_SHA: $HEAD_SHA"
           echo "BASE_REF: $BASE_REF"
-          
+
           # Fetch latest changes
           git fetch origin $BASE_REF
-          
+
           # Check if branch is behind base
           if ! git merge-base --is-ancestor origin/$BASE_REF $HEAD_SHA; then
             echo "⚠️ Branch is behind $BASE_REF, attempting auto-update..."
-            
+
             # Switch to PR branch
             git checkout $HEAD_SHA
-            
+
             # Check if clean rebase is possible
             if git rebase origin/$BASE_REF --dry-run 2>/dev/null; then
               echo "✅ Clean rebase possible, updating branch..."
-              
+
               # Perform the rebase
               git rebase origin/$BASE_REF
-              
+
               # Get PR head ref name
               PR_HEAD_REF=$(gh pr view $PR_NUMBER --json headRefName --jq '.headRefName')
-              
+
               # Push the updated branch
               git push origin HEAD:refs/heads/$PR_HEAD_REF --force-with-lease
-              
+
               echo "✅ Branch successfully updated"
               echo "branch_updated=true" >> $GITHUB_OUTPUT
               echo "conflicts_detected=false" >> $GITHUB_OUTPUT
@@ -229,10 +229,7 @@ jobs:
               'claude-pr-review',
               'ARC-Reviewer',
               '📊 Coverage Analysis',
-              '🔍 Lint & Style (black)',
-              '🔍 Lint & Style (isort)',
-              '🔍 Lint & Style (flake8)',
-              '🔍 Lint & Style (mypy)',
+              '🔍 Lint & Style',
               '🧪 Core Tests',
               '🔗 Integration Tests'
             ];
