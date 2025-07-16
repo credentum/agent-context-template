@@ -276,7 +276,7 @@ jobs:
           fi
 
       - name: Upload test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029
         if: always()
         with:
           name: core-test-results
@@ -346,7 +346,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload integration test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029
         if: always()
         with:
           name: integration-test-results
@@ -392,7 +392,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload performance test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029
         if: always()
         with:
           name: performance-test-results
@@ -442,7 +442,7 @@ jobs:
           mutmut results > mutation-report.txt || echo "No mutation results"
 
       - name: Upload mutation test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029
         if: always()
         with:
           name: mutation-test-results
@@ -473,7 +473,7 @@ jobs:
           key: ${{ runner.os }}-python-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
 
       - name: Download test artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
         with:
           pattern: "*-test-results"
           merge-multiple: true
@@ -514,7 +514,7 @@ jobs:
           fi
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@5c47607acb93fed5485fdbf7232e4a31bf08305c
         with:
           files: ./coverage-unit.xml,./coverage-integration.xml
           flags: unittests,integration
@@ -571,7 +571,7 @@ jobs:
 
       - name: Comment PR with summary
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         with:
           script: |
             const fs = require('fs');
