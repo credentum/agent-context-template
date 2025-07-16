@@ -72,20 +72,76 @@ jobs:
           echo "pr_title=$(cat /tmp/pr_info.json | jq -r '.title')" >> $GITHUB_OUTPUT
           echo "pr_user=$(cat /tmp/pr_info.json | jq -r '.user')" >> $GITHUB_OUTPUT
 
-          # Check if PR has auto-merge label or commit message indicator
+          # Check if PR has auto-merge enabled via multiple methods
           LABELS=$(cat /tmp/pr_info.json | jq -r '.labels[]' 2>/dev/null || echo "")
+          PR_BODY=$(cat /tmp/pr_info.json | jq -r '.body // ""')
 
-          # Check for auto-merge label
+          # Method 1: Check for auto-merge label (legacy method)
           if echo "$LABELS" | grep -q "auto-merge"; then
             echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+            echo "auto_merge_method=label" >> $GITHUB_OUTPUT
           else
-            # Use jq to safely check for auto-merge keywords in PR body
-            AUTO_MERGE_IN_BODY=$(cat /tmp/pr_info.json | jq -r '.body' | grep -i "auto.*merge" || echo "")
-            if [ -n "$AUTO_MERGE_IN_BODY" ]; then
-              echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+            # Method 2: Parse YAML frontmatter for structured metadata (preferred)
+            echo "$PR_BODY" > /tmp/pr_body.txt
+
+            # Extract YAML frontmatter
+            if grep -q "^---" /tmp/pr_body.txt; then
+              echo "🔍 Found YAML frontmatter, parsing structured metadata..."
+
+              # Extract YAML content between --- markers
+              YAML_CONTENT=$(sed -n '/^---$/,/^---$/p' /tmp/pr_body.txt | sed '1d;$d')
+
+              if [ -n "$YAML_CONTENT" ]; then
+                echo "$YAML_CONTENT" > /tmp/pr_metadata.yaml
+
+                # Use Python to safely parse YAML and extract auto_merge flag
+                AUTO_MERGE_FLAG=$(python3 -c "
+                import yaml; f=open('/tmp/pr_metadata.yaml','r');
+                metadata=yaml.safe_load(f); f.close();
+                pr_metadata=metadata.get('pr_metadata',{}) if isinstance(metadata,dict) else {};
+                automation_flags=pr_metadata.get('automation_flags',{});
+                auto_merge=automation_flags.get('auto_merge',False);
+                print('true' if auto_merge else 'false')
+                " 2>/dev/null || echo "false")
+
+                if [ "$AUTO_MERGE_FLAG" = "true" ]; then
+                  echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+                  echo "auto_merge_method=yaml_metadata" >> $GITHUB_OUTPUT
+                  echo "✅ Auto-merge enabled via YAML metadata"
+                else
+                  echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
+                  echo "auto_merge_method=yaml_metadata_disabled" >> $GITHUB_OUTPUT
+                fi
+
+                # Clean up
+                rm -f /tmp/pr_metadata.yaml
+              else
+                echo "⚠️ Empty YAML frontmatter, falling back to text parsing"
+                # Fallback to legacy text parsing
+                AUTO_MERGE_IN_BODY=$(echo "$PR_BODY" | grep -i "auto.*merge" || echo "")
+                if [ -n "$AUTO_MERGE_IN_BODY" ]; then
+                  echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+                  echo "auto_merge_method=text_search" >> $GITHUB_OUTPUT
+                else
+                  echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
+                  echo "auto_merge_method=none" >> $GITHUB_OUTPUT
+                fi
+              fi
             else
-              echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
+              echo "📋 No YAML frontmatter found, using legacy text parsing"
+              # Fallback to legacy text parsing for backward compatibility
+              AUTO_MERGE_IN_BODY=$(echo "$PR_BODY" | grep -i "auto.*merge" || echo "")
+              if [ -n "$AUTO_MERGE_IN_BODY" ]; then
+                echo "auto_merge_enabled=true" >> $GITHUB_OUTPUT
+                echo "auto_merge_method=text_search_legacy" >> $GITHUB_OUTPUT
+              else
+                echo "auto_merge_enabled=false" >> $GITHUB_OUTPUT
+                echo "auto_merge_method=none" >> $GITHUB_OUTPUT
+              fi
             fi
+
+            # Clean up
+            rm -f /tmp/pr_body.txt
           fi
 
           # Clean up temporary file
