@@ -278,6 +278,49 @@ phases:
     dependencies: []
     estimate: 3 hours
     github_issue: 79
+- phase: 8
+  name: Bidirectional Workflow Testing
+  status: pending
+  priority: high
+  component: testing
+  description: Test and validate bidirectional sync between sprint YAML and GitHub issues
+  tasks:
+  - title: "Bidirectional Workflow Validation Test"
+    description: |
+      Test task to validate bidirectional sync between sprint YAML and GitHub issues.
+      This task should be automatically created as a GitHub issue and then sync back.
+
+      ## Test Scenarios
+      - [x] Task created in YAML generates GitHub issue
+      - [ ] GitHub issue status updates reflect in YAML
+      - [ ] Task completion in YAML closes GitHub issue
+      - [ ] Label changes sync bidirectionally
+      - [ ] Task removal from YAML closes GitHub issue
+
+      ## Validation Steps
+      1. Add this task to sprint YAML
+      2. Run sprint issue linker to create GitHub issue
+      3. Verify issue creation and YAML update with issue number
+      4. Test status changes in both directions
+      5. Test label synchronization
+      6. Test orphan handling when task is removed
+
+      ## Implementation Notes
+      - This is a temporary test task for issue #93
+      - Will be removed after validation
+      - Should not affect production workflows
+      - Tests complete bidirectional workflow as requested
+
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:testing
+    - priority:high
+    - type:test
+    - automation
+    dependencies: []
+    estimate: 2 hours
+    # github_issue: Will be populated automatically by sprint issue linker
 team:
 - role: lead
   agent: pm_agent

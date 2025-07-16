@@ -143,8 +143,10 @@ class SprintIssueLinker:
 
         try:
             cmd = ["gh", "issue", "create", "--title", safe_title, "--body", safe_body]
-            for label in safe_labels:
-                cmd.extend(["--label", label])
+            # Batch all labels in a single --label argument to reduce API calls
+            if safe_labels:
+                labels_str = ",".join(safe_labels)
+                cmd.extend(["--label", labels_str])
 
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             # Extract issue number from output
