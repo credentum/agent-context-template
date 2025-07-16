@@ -217,7 +217,7 @@ services:
 
   # Qdrant service for workflow tests
   qdrant:
-    image: qdrant/qdrant:v1.14.1
+    image: qdrant/qdrant@sha256:9d1eefc5f6fb4f20ba1b9de8862c85ce5b12b47c75ed2abac5e6c2c8bb2b6a92  # yamllint disable-line rule:line-length
     ports:
       - "6335:6333"
       - "6336:6334"
@@ -229,7 +229,7 @@ services:
 
   # Neo4j service for workflow tests
   neo4j:
-    image: neo4j:5.20.0
+    image: neo4j@sha256:b98e15a2b3c5b1b8e6e5f7e20a4a8b8c9d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5  # yamllint disable-line rule:line-length
     ports:
       - "7688:7687"
       - "7475:7474"
@@ -242,15 +242,21 @@ services:
       - NEO4J_dbms_memory_heap_initial__size=512m
       - NEO4J_dbms_memory_heap_max__size=1G
     healthcheck:
-      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", 
-        "testpassword", "RETURN 1"]
+      test:
+        - "CMD"
+        - "cypher-shell"
+        - "-u"
+        - "neo4j"
+        - "-p"
+        - "testpassword"
+        - "RETURN 1"
       interval: 10s
       timeout: 5s
       retries: 5
 
   # Redis service for tests that need it
   redis:
-    image: redis:7-alpine
+    image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55  # yamllint disable-line rule:line-length
     ports:
       - "6379:6379"
     healthcheck:
