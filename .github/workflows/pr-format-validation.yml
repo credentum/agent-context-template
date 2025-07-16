@@ -294,3 +294,4 @@ jobs:
           echo "- Schema validation passed"
           echo "- All issue references are valid"
           echo "- Ready for automated processing"
+# Force re-run of CI checks
