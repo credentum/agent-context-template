@@ -7,8 +7,8 @@ created_date: '2025-07-14'
 sprint_number: 41
 start_date: '2025-07-14'
 end_date: '2025-07-21'
-last_modified: '2025-07-15'
-last_referenced: '2025-07-15'
+last_modified: '2025-07-16'
+last_referenced: '2025-07-16'
 goals:
 - Establish reproducible local development infrastructure
 - Set up CI service containers for reliable testing
@@ -215,34 +215,59 @@ phases:
   component: agents
   description: Fix critical bugs affecting user experience
   tasks:
-  - title: "Fix Sprint Issue Linker Label Batching to Prevent Multiple Comments"
-    description: |
-      Fix the sprint issue linker's `_sync_issue_labels()` method that currently makes individual GitHub API calls for each label operation, causing multiple comments when creating/updating issues with many labels.
+  - title: Fix Sprint Issue Linker Label Batching to Prevent Multiple Comments
+    description: 'Fix the sprint issue linker''s `_sync_issue_labels()` method that
+      currently makes individual GitHub API calls for each label operation, causing
+      multiple comments when creating/updating issues with many labels.
+
 
       ## Problem Analysis
+
       The current implementation calls `gh issue edit` separately for each label:
+
       - One subprocess call per label to add (lines 527-530)
+
       - One subprocess call per label to remove (lines 532-535)
+
       - With 8-12+ labels per task, this creates 8-12+ GitHub API calls
+
       - Each call can trigger comment creation, leading to comment spam
 
+
       ## Acceptance Criteria
-      - [ ] Batch all label additions into single `gh issue edit --add-label label1,label2,label3` call
-      - [ ] Batch all label removals into single `gh issue edit --remove-label label1,label2,label3` call
+
+      - [ ] Batch all label additions into single `gh issue edit --add-label label1,label2,label3`
+      call
+
+      - [ ] Batch all label removals into single `gh issue edit --remove-label label1,label2,label3`
+      call
+
       - [ ] Reduce API calls from ~10+ per issue to maximum 2 per issue
+
       - [ ] Add exponential backoff retry logic for GitHub API failures
+
       - [ ] Add label count warnings when approaching GitHub limits
+
       - [ ] Test with high-label-count scenarios (sprint 4.1 tasks)
+
       - [ ] Verify no duplicate comments are created
+
       - [ ] Ensure bidirectional sync still works correctly
+
       - [ ] Preserve existing dry-run and verbose logging functionality
 
+
       ## Implementation Notes
+
       - Modify `_sync_issue_labels()` method in `src/agents/sprint_issue_linker.py`
+
       - GitHub CLI supports comma-separated labels: `--add-label label1,label2,label3`
+
       - Add comprehensive unit tests for batching behavior
+
       - Test with current sprint-4.1 tasks that have extensive labels
 
+      '
     labels:
     - sprint-current
     - phase:4.1
