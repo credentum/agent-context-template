@@ -32,6 +32,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pyyaml jsonschema
+          npm install js-yaml
 
       - name: Validate PR format
         id: validate
