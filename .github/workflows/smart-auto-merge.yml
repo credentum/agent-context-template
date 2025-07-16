@@ -331,18 +331,22 @@ jobs:
 
             console.log(`Found ARC-Reviewer comment from ${latestComment.created_at}`);
 
-            // Parse YAML content from the review
-            const yamlMatch = reviewBody.match(/```yaml\s*([\s\S]*?)```/) ||
-                            reviewBody.match(/schema_version:\s*"1\.0"[\s\S]*?automated_issues:/);
-
-            if (!yamlMatch) {
+            // Extract YAML content (handle both code block and plain text formats)
+            let yamlContent = reviewBody;
+            const yamlMatch = reviewBody.match(/```yaml\s*\n([\s\S]*?)\n```/) ||
+                            reviewBody.match(/```\s*\n([\s\S]*?)\n```/);
+            if (yamlMatch) {
+              yamlContent = yamlMatch[1];
+              console.log('Found YAML in code block');
+            } else if (reviewBody.includes('schema_version')) {
+              console.log('Processing plain text YAML format');
+            } else {
               console.log('❌ No YAML content found in ARC-Reviewer comment');
               return 'no-yaml';
             }
 
             try {
               // Simple YAML parsing for key fields (avoiding full YAML parser dependency)
-              const yamlContent = yamlMatch[1] || yamlMatch[0];
 
               // Extract verdict
               const verdictMatch = yamlContent.match(/verdict:\s*"?(APPROVE|REQUEST_CHANGES)"?/);

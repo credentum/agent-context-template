@@ -258,9 +258,20 @@ jobs:
             const reviewBody = arcComment.body;
             console.log('ARC-Reviewer comment found');
 
+            // Extract YAML content (handle both code block and plain text formats)
+            let yamlContent = reviewBody;
+            const yamlMatch = reviewBody.match(/```yaml\s*\n([\s\S]*?)\n```/) ||
+                            reviewBody.match(/```\s*\n([\s\S]*?)\n```/);
+            if (yamlMatch) {
+              yamlContent = yamlMatch[1];
+              console.log('Found YAML in code block');
+            } else {
+              console.log('Processing plain text format');
+            }
+
             // Parse YAML content for verdict
-            const verdictMatch = reviewBody.match(/verdict:\s*['"]*([^'"\\n]+)['"]*/) ||
-                               reviewBody.match(/verdict:\s*"?(APPROVE|REQUEST_CHANGES)"?/);
+            const verdictMatch = yamlContent.match(/verdict:\s*['"]*([^'"\\n]+)['"]*/) ||
+                               yamlContent.match(/verdict:\s*"?(APPROVE|REQUEST_CHANGES)"?/);
 
             if (verdictMatch) {
               const verdict = verdictMatch[1].trim();
@@ -268,21 +279,21 @@ jobs:
 
               if (verdict === 'APPROVE') {
                 // Check for blocking issues in YAML (nested under issues:)
-                const blockingMatch = reviewBody.match(/issues:\s*\n\s*blocking:\s*\[\s*\]/) ||
-                                     reviewBody.match(/blocking:\s*\[\s*\]/) ||
-                                     reviewBody.match(/blocking:\s*\[\]/);
+                const blockingMatch = yamlContent.match(/issues:\s*\n\s*blocking:\s*\[\s*\]/) ||
+                                     yamlContent.match(/blocking:\s*\[\s*\]/) ||
+                                     yamlContent.match(/blocking:\s*\[\]/);
 
                 if (blockingMatch) {
                   console.log('✅ No blocking issues found');
                   return 'approved';
                 } else {
                   // Check if there are actual blocking issues
-                  const hasBlockingIssues = reviewBody.match(/blocking:\s*\n\s*-/) ||
-                                          reviewBody.match(/blocking:\s*\[.*\S.*\]/);
+                  const hasBlockingIssues = yamlContent.match(/blocking:\s*\n\s*-/) ||
+                                          yamlContent.match(/blocking:\s*\[.*\S.*\]/);
                   if (hasBlockingIssues) {
                     console.log('❌ Blocking issues found in APPROVE verdict');
                     // Extract and log blocking issues for visibility
-                    const blockingSection = reviewBody.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
+                    const blockingSection = yamlContent.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
                     if (blockingSection) {
                       console.log('📋 Blocking issues details:');
                       console.log(blockingSection[1]);
@@ -294,7 +305,7 @@ jobs:
               } else if (verdict === 'REQUEST_CHANGES') {
                 console.log('❌ ARC-Reviewer verdict: REQUEST_CHANGES');
                 // Extract and log blocking issues for visibility
-                const blockingSection = reviewBody.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
+                const blockingSection = yamlContent.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
                 if (blockingSection) {
                   console.log('📋 Blocking issues details:');
                   console.log(blockingSection[1]);
