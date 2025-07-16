@@ -355,12 +355,32 @@ jobs:
             const pr_number = ${{ steps.pr-parsed.outputs.pr_number }};
 
             try {
-              // Enable auto-merge with squash
-              await github.rest.pulls.enableAutoMerge({
+              // Enable auto-merge with squash using GraphQL API
+              const mutation = `
+                mutation EnableAutoMerge($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+                  enablePullRequestAutoMerge(input: {
+                    pullRequestId: $pullRequestId
+                    mergeMethod: $mergeMethod
+                  }) {
+                    pullRequest {
+                      autoMergeRequest {
+                        enabledAt
+                      }
+                    }
+                  }
+                }
+              `;
+
+              // First get the PR node ID
+              const { data: pr } = await github.rest.pulls.get({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                pull_number: pr_number,
-                merge_method: 'squash'
+                pull_number: pr_number
+              });
+
+              const result = await github.graphql(mutation, {
+                pullRequestId: pr.node_id,
+                mergeMethod: 'SQUASH'
               });
 
               console.log('✅ Auto-merge enabled successfully');
