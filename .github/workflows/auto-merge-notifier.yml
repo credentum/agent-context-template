@@ -80,6 +80,9 @@ jobs:
               restart: restart
             };
 
+      - name: Install js-yaml for ARC-Reviewer parsing
+        run: npm install js-yaml
+
       - name: Check ARC-Reviewer status
         id: check-arc-status
         if: fromJson(steps.find-pr.outputs.result).found
@@ -116,45 +119,57 @@ jobs:
             const latestComment = arcComments[arcComments.length - 1];
             const reviewBody = latestComment.body;
 
-            // Parse verdict
-            const verdictMatch = reviewBody.match(/verdict:\s*['"]*([^'"\\n]+)['"]*/) ||
-                               reviewBody.match(/verdict:\s*"?(APPROVE|REQUEST_CHANGES)"?/);
-
-            let verdict = 'UNKNOWN';
-            if (verdictMatch) {
-              verdict = verdictMatch[1].trim();
+            // Extract YAML frontmatter between --- markers
+            const yamlMatch = reviewBody.match(/---\s*\n([\s\S]*?)\n---/);
+            if (!yamlMatch) {
+              console.log('No YAML frontmatter found in ARC-Reviewer comment');
+              return {
+                status: 'no-review',
+                blocking_issues: [],
+                warnings: [],
+                verdict: 'UNKNOWN'
+              };
             }
 
-            // Extract blocking issues (nested under issues:)
+            // Parse YAML using js-yaml
+            const yaml = require('js-yaml');
+            let arcData;
+            try {
+              arcData = yaml.load(yamlMatch[1]);
+            } catch (error) {
+              console.log('Failed to parse ARC-Reviewer YAML:', error.message);
+              return {
+                status: 'error',
+                blocking_issues: [],
+                warnings: [],
+                verdict: 'UNKNOWN'
+              };
+            }
+
+            // Extract data from parsed YAML
+            const verdict = arcData.verdict || 'UNKNOWN';
+
+            // Extract blocking issues
             const blockingIssues = [];
-            const blockingSection = reviewBody.match(/issues:\s*\n\s*blocking:\s*\n((?:\s*-.*\n?)*)/) ||
-                                  reviewBody.match(/blocking:\s*\n((?:\s*-.*\n?)*)/);
-            if (blockingSection && blockingSection[1].trim()) {
-              const lines = blockingSection[1].split('\n').filter(line => line.trim().startsWith('-'));
-              for (const line of lines) {
-                const match = line.match(/description:\s*['"]*([^'"\\n]+)['"]*/) ||
-                             line.match(/-\s*description:\s*['"]*([^'"\\n]+)['"]*/) ||
-                             line.match(/-\s*([^\\n]+)/);
-                if (match) {
-                  blockingIssues.push(match[1].trim());
+            if (arcData.issues && arcData.issues.blocking && Array.isArray(arcData.issues.blocking)) {
+              for (const issue of arcData.issues.blocking) {
+                if (issue.description) {
+                  blockingIssues.push(issue.description);
                 }
               }
             }
 
             // Extract warnings
             const warnings = [];
-            const warningSection = reviewBody.match(/warnings:\s*\n((?:\s*-.*\n?)*)/);
-            if (warningSection && warningSection[1].trim()) {
-              const lines = warningSection[1].split('\n').filter(line => line.trim().startsWith('-'));
-              for (const line of lines) {
-                const match = line.match(/description:\s*['"]*([^'"\\n]+)['"]*/) ||
-                             line.match(/-\s*description:\s*['"]*([^'"\\n]+)['"]*/) ||
-                             line.match(/-\s*([^\\n]+)/);
-                if (match) {
-                  warnings.push(match[1].trim());
+            if (arcData.issues && arcData.issues.warnings && Array.isArray(arcData.issues.warnings)) {
+              for (const warning of arcData.issues.warnings) {
+                if (warning.description) {
+                  warnings.push(warning.description);
                 }
               }
             }
+
+            console.log(`Parsed ARC-Reviewer result: verdict=${verdict}, blocking=${blockingIssues.length}, warnings=${warnings.length}`);
 
             return {
               status: verdict === 'APPROVE' ? 'approved' : 'blocked',

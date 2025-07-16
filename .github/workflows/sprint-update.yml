@@ -88,13 +88,58 @@ jobs:
           pr_body=$(gh pr view "$pr_number" --json body --jq '.body // ""')
           pr_title=$(gh pr view "$pr_number" --json title --jq '.title // ""')
 
-          # Check PR body and title for closing patterns
-          combined_text="$pr_body $pr_title"
+          # Method 1: Parse YAML frontmatter for structured metadata (preferred)
+          echo "$pr_body" > /tmp/pr_body.txt
 
-          # Extract issue numbers after closing keywords (improved regex)
-          issue_nums=$(echo "$combined_text" | \
-            grep -ioE "(closes?|fixes?|resolves?|implements?)\s+#[0-9]+" | \
-            grep -oE "#[0-9]+" | sed 's/#//')
+          if grep -q "^---" /tmp/pr_body.txt; then
+            echo "🔍 Found YAML frontmatter, parsing structured metadata..."
+
+            # Extract YAML content between --- markers
+            YAML_CONTENT=$(sed -n '/^---$/,/^---$/p' /tmp/pr_body.txt | sed '1d;$d')
+
+            if [ -n "$YAML_CONTENT" ]; then
+              echo "$YAML_CONTENT" > /tmp/pr_metadata.yaml
+
+              # Use Python to safely parse YAML and extract closes_issues
+              issue_nums=$(python3 -c "
+              import yaml; f=open('/tmp/pr_metadata.yaml','r');
+              metadata=yaml.safe_load(f); f.close();
+              pr_metadata=metadata.get('pr_metadata',{}) if isinstance(metadata,dict) else {};
+              closes_issues=pr_metadata.get('closes_issues',[]);
+              [print(issue_num) for issue_num in closes_issues]
+              " 2>/dev/null)
+
+              if [ -n "$issue_nums" ]; then
+                echo "✅ Found issues to close via YAML metadata: $issue_nums"
+                # Clean up
+                rm -f /tmp/pr_metadata.yaml
+              else
+                echo "⚠️ No issues found in YAML metadata, falling back to text parsing"
+                # Fallback to legacy text parsing
+                combined_text="$pr_body $pr_title"
+                issue_nums=$(echo "$combined_text" | \
+                  grep -ioE "(closes?|fixes?|resolves?|implements?)\s+#[0-9]+" | \
+                  grep -oE "#[0-9]+" | sed 's/#//')
+              fi
+            else
+              echo "⚠️ Empty YAML frontmatter, falling back to text parsing"
+              # Fallback to legacy text parsing
+              combined_text="$pr_body $pr_title"
+              issue_nums=$(echo "$combined_text" | \
+                grep -ioE "(closes?|fixes?|resolves?|implements?)\s+#[0-9]+" | \
+                grep -oE "#[0-9]+" | sed 's/#//')
+            fi
+          else
+            echo "📋 No YAML frontmatter found, using legacy text parsing"
+            # Fallback to legacy text parsing for backward compatibility
+            combined_text="$pr_body $pr_title"
+            issue_nums=$(echo "$combined_text" | \
+              grep -ioE "(closes?|fixes?|resolves?|implements?)\s+#[0-9]+" | \
+              grep -oE "#[0-9]+" | sed 's/#//')
+          fi
+
+          # Clean up
+          rm -f /tmp/pr_body.txt
 
           # Also check commit messages for closing keywords
           commit_messages=$(gh pr view $pr_number --json commits \
