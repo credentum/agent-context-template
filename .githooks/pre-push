@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Pre-push git hook
+# Runs before git push to ensure code quality and branch sync
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}🪝 Git pre-push hook activated${NC}"
+
+# Get the current branch being pushed
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+# Skip hook for main branch
+if [ "$current_branch" = "main" ]; then
+    echo -e "${GREEN}✅ Pushing to main branch - hook skipped${NC}"
+    exit 0
+fi
+
+# Check if user wants to skip the hook
+if [ "$SKIP_HOOKS" = "1" ] || [ "$NO_VERIFY" = "1" ]; then
+    echo -e "${YELLOW}⚠️  Pre-push hook skipped by user${NC}"
+    exit 0
+fi
+
+# Check if we're in emergency mode
+if [ "$EMERGENCY_PUSH" = "1" ]; then
+    echo -e "${RED}🚨 Emergency push detected - skipping all checks${NC}"
+    exit 0
+fi
+
+echo -e "${YELLOW}🔍 Running pre-push validation for branch: $current_branch${NC}"
+
+# Run the pre-push CI check script
+if ./scripts/pre-push-ci-check.sh; then
+    echo -e "${GREEN}✅ Pre-push validation passed!${NC}"
+    echo -e "${GREEN}🚀 Proceeding with push...${NC}"
+    exit 0
+else
+    echo -e "${RED}❌ Pre-push validation failed!${NC}"
+    echo -e "${RED}Push blocked to prevent CI failures.${NC}"
+    echo -e "${YELLOW}💡 To skip this check (not recommended):${NC}"
+    echo -e "${YELLOW}  SKIP_HOOKS=1 git push${NC}"
+    echo -e "${YELLOW}  # or${NC}"
+    echo -e "${YELLOW}  git push --no-verify${NC}"
+    echo -e "${YELLOW}💡 For emergency pushes:${NC}"
+    echo -e "${YELLOW}  EMERGENCY_PUSH=1 git push${NC}"
+    exit 1
+fi
