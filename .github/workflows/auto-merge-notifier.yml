@@ -211,6 +211,25 @@ jobs:
             });
             
             console.log('📢 Blocking issues notification posted');
+            
+            // Also notify Claude by mentioning in a separate comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `@claude 🚨 **Auto-merge blocked**
+              
+              ARC-Reviewer found **${arcResult.blocking_issues.length} blocking issue(s)** that need your attention:
+              
+              ${issuesList}
+              
+              Please review and fix these issues to proceed with auto-merge.
+              
+              ---
+              *🤖 Automated Claude notification from Auto-Merge system*`
+            });
+            
+            console.log('📢 Claude notification posted');
       
       - name: Restart auto-merge process
         if: >
@@ -248,6 +267,21 @@ jobs:
             });
             
             console.log('🚀 Auto-merge process restarted');
+            
+            // Notify Claude about successful restart
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `@claude ✅ **Auto-merge restarted successfully**
+              
+              Issues have been resolved and auto-merge is now active.
+              
+              ---
+              *🤖 Automated Claude notification from Auto-Merge system*`
+            });
+            
+            console.log('📢 Claude restart notification posted');
       
       - name: Handle restart with blocking issues
         if: >

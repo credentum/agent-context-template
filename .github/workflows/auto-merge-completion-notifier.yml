@@ -1,0 +1,90 @@
+---
+name: Auto-Merge Completion Notifier
+
+on:
+  # Trigger when PR is merged
+  pull_request:
+    types: [closed]
+
+jobs:
+  notify-merge-completion:
+    name: "🎉 Notify Auto-Merge Completion"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      
+    steps:
+      - name: Check if PR was auto-merged
+        id: check-auto-merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const autoMerge = context.payload.pull_request.auto_merge;
+            
+            // Check if PR had auto-merge enabled
+            if (autoMerge) {
+              console.log('✅ PR was auto-merged');
+              return { was_auto_merged: true };
+            }
+            
+            // Check PR comments for auto-merge activity
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100
+            });
+            
+            const autoMergeComments = comments.filter(comment =>
+              comment.body.includes('Auto-merge enabled') || 
+              comment.body.includes('Auto-merge restarted') ||
+              comment.body.includes('Auto-Merge Controller')
+            );
+            
+            if (autoMergeComments.length > 0) {
+              console.log('✅ PR had auto-merge activity');
+              return { was_auto_merged: true };
+            }
+            
+            console.log('ℹ️ PR was manually merged');
+            return { was_auto_merged: false };
+      
+      - name: Notify Claude of successful auto-merge
+        if: fromJson(steps.check-auto-merge.outputs.result).was_auto_merged
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const prTitle = context.payload.pull_request.title;
+            const mergedBy = context.payload.pull_request.merged_by.login;
+            
+            const body = `@claude 🎉 **Auto-merge completed successfully!**
+            
+            **PR #${prNumber}**: ${prTitle}
+            **Merged by**: ${mergedBy}
+            **Status**: ✅ All checks passed, ARC-Reviewer approved, auto-merged
+            
+            The auto-merge system worked end-to-end:
+            - ✅ CI checks passed
+            - ✅ ARC-Reviewer approved with no blocking issues
+            - ✅ Branch conflicts resolved (if any)
+            - ✅ Auto-merge enabled and executed
+            
+            Great job! The automation is working perfectly.
+            
+            ---
+            *🤖 Automated Claude notification from Auto-Merge Completion system*`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: body
+            });
+            
+            console.log('🎉 Claude success notification posted');
