@@ -67,7 +67,7 @@ class BidirectionalWorkflowTest(unittest.TestCase):
         # Skip GitHub API tests in CI environments
         if os.getenv("CI") or os.getenv("GITHUB_ACTIONS"):
             self.skipTest("Skipping GitHub API tests in CI environment")
-            
+
         try:
             subprocess.run(["gh", "auth", "status"], capture_output=True, text=True, check=True)
             return True
