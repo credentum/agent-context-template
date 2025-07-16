@@ -186,7 +186,8 @@ jobs:
           echo "### Database Statistics" >> sync_report.md
           python -m src.analytics.sum_scores_api stats || echo "- Vector stats unavailable"
           echo "" >> sync_report.md
-          python -m src.storage.graph_builder context/ --stats --username neo4j --password "${NEO4J_TEST_PASSWORD:-testpassword}" || echo "- Graph stats unavailable"
+          python -m src.storage.graph_builder context/ --stats --username neo4j \
+            --password "${NEO4J_TEST_PASSWORD:-testpassword}" || echo "- Graph stats unavailable"
 
       - name: Upload sync report
         if: always()

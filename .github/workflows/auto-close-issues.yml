@@ -83,7 +83,9 @@ jobs:
                     owner,
                     repo,
                     issue_number: issueNumber,
-                    body: `🎉 Automatically closed by merged PR #${prNumber}\n\n**Auto-Close Detection:**\n- Detected closing keywords in PR content\n- Issue closure automated via GitHub Actions`
+                    body: `🎉 Automatically closed by merged PR #${prNumber}\n\n` +
+                          `**Auto-Close Detection:**\n- Detected closing keywords in PR content\n` +
+                          `- Issue closure automated via GitHub Actions`
                   });
 
                   console.log(`✅ Closed issue #${issueNumber}`);

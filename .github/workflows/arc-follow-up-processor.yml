@@ -149,7 +149,7 @@ jobs:
               continue
             fi
 
-            # Process each automated issue
+            # Process each automated issue using Python script
             python3 << 'EOF'
 import yaml
 import json
