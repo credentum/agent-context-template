@@ -267,6 +267,8 @@ class TestPRConflictDetection:
             (temp_path / "file.txt").write_text("initial content")
             subprocess.run(["git", "add", "file.txt"], cwd=temp_path, check=True)
             subprocess.run(["git", "commit", "-m", "initial"], cwd=temp_path, check=True)
+            # Rename default branch to main for consistency
+            subprocess.run(["git", "branch", "-M", "main"], cwd=temp_path, check=True)
 
             # Create a branch that will have conflicts
             subprocess.run(["git", "checkout", "-b", "feature"], cwd=temp_path, check=True)
@@ -312,6 +314,8 @@ class TestPRConflictDetection:
             (temp_path / "file.txt").write_text("base")
             subprocess.run(["git", "add", "file.txt"], cwd=temp_path, check=True)
             subprocess.run(["git", "commit", "-m", "base"], cwd=temp_path, check=True)
+            # Rename default branch to main for consistency
+            subprocess.run(["git", "branch", "-M", "main"], cwd=temp_path, check=True)
 
             # Create feature branch
             subprocess.run(["git", "checkout", "-b", "feature"], cwd=temp_path, check=True)
