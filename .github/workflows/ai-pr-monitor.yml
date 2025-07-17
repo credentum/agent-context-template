@@ -52,8 +52,13 @@ jobs:
     name: "🤖 AI PR Monitor"
     runs-on: ubuntu-latest
 
-    # Only run on non-draft PRs or when @claude is mentioned
-    if: github.event.pull_request.draft == false
+    # Run on all non-draft PRs - simplified condition
+    if: |
+      github.event_name == 'pull_request' ||
+      github.event_name == 'pull_request_review' ||
+      github.event_name == 'check_suite' ||
+      github.event_name == 'status' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
 
     permissions:
       contents: write       # Allow Claude to commit changes and update branches
