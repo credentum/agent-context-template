@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     redis-tools \
     bc \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

@@ -95,6 +95,16 @@ run_check "Context YAML validation" "python -m src.agents.context_lint validate 
 # From lint-verification.yml lines 73-75
 run_check "Import check" "python -m pytest --collect-only -q"
 
+# CRITICAL: Run the SAME TESTS that GitHub Actions runs
+echo -e "\n${YELLOW}▶ Unit Tests (like GitHub Actions)${NC}"
+echo "  Command: python -m pytest tests/ -v --tb=short -m 'not integration and not e2e'"
+if python -m pytest tests/ -v --tb=short -m "not integration and not e2e"; then
+    echo -e "  ${GREEN}✓ PASSED${NC}"
+else
+    echo -e "  ${RED}✗ FAILED${NC}"
+    FAILED=$((FAILED + 1))
+fi
+
 # CRITICAL: Run the SAME pre-commit checks that GitHub CI runs
 echo -e "\n${YELLOW}▶ Pre-commit checks (yamllint + additional)${NC}"
 echo "  Command: pre-commit run --all-files"

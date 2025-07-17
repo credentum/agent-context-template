@@ -48,6 +48,7 @@ jobs:
               base_ref: pr.base.ref,
               mergeable: pr.mergeable,
               mergeable_state: pr.mergeable_state,
+              merge_state_status: pr.mergeStateStatus,
               auto_merge: pr.auto_merge,
               title: pr.title,
               body: pr.body,
@@ -68,7 +69,8 @@ jobs:
           echo "base_ref=$(cat /tmp/pr_info.json | jq -r '.base_ref')" >> $GITHUB_OUTPUT
           echo "mergeable=$(cat /tmp/pr_info.json | jq -r '.mergeable')" >> $GITHUB_OUTPUT
           echo "mergeable_state=$(cat /tmp/pr_info.json | jq -r '.mergeable_state')" >> $GITHUB_OUTPUT
-          echo "auto_merge=$(cat /tmp/pr_info.json | jq -r '.auto_merge')" >> $GITHUB_OUTPUT
+          echo "merge_state_status=$(cat /tmp/pr_info.json | jq -r '.merge_state_status')" >> $GITHUB_OUTPUT
+          echo "github_auto_merge_enabled=$(cat /tmp/pr_info.json | jq -r '.auto_merge != null')" >> $GITHUB_OUTPUT
           echo "pr_title=$(cat /tmp/pr_info.json | jq -r '.title')" >> $GITHUB_OUTPUT
           echo "pr_user=$(cat /tmp/pr_info.json | jq -r '.user')" >> $GITHUB_OUTPUT
 
@@ -82,7 +84,8 @@ jobs:
             echo "auto_merge_method=label" >> $GITHUB_OUTPUT
           else
             # Method 2: Parse YAML frontmatter for structured metadata (preferred)
-            echo "$PR_BODY" > /tmp/pr_body.txt
+            # Clean PR body content to remove shell artifacts that can corrupt YAML parsing
+            echo "$PR_BODY" | sed 's/< \/dev\/null |//g' > /tmp/pr_body.txt
 
             # Extract YAML frontmatter
             if grep -q "^---" /tmp/pr_body.txt; then
@@ -457,32 +460,89 @@ jobs:
             console.log('❓ ARC-Reviewer verdict unclear');
             return 'unclear';
 
+      - name: Final conflict validation
+        id: final-conflict-check
+        if: steps.wait-ci.outputs.result == 'success' && steps.arc-verdict.outputs.result == 'approved'
+        run: |
+          echo "🔍 Performing final conflict validation..."
+
+          # Get current PR merge status from GitHub API
+          CURRENT_PR_STATUS=$(gh pr view ${{ steps.pr-parsed.outputs.pr_number }} \
+            --json mergeable,mergeStateStatus \
+            --jq '{mergeable: .mergeable, state: .mergeStateStatus}')
+          echo "Current PR status: $CURRENT_PR_STATUS"
+
+          CURRENT_MERGEABLE=$(echo "$CURRENT_PR_STATUS" | jq -r '.mergeable')
+          CURRENT_MERGE_STATE=$(echo "$CURRENT_PR_STATUS" | jq -r '.state')
+
+          echo "current_mergeable=$CURRENT_MERGEABLE" >> $GITHUB_OUTPUT
+          echo "current_merge_state=$CURRENT_MERGE_STATE" >> $GITHUB_OUTPUT
+
+          # Check GitHub's definitive merge status
+          if [ "$CURRENT_MERGEABLE" = "CONFLICTING" ]; then
+            echo "❌ GitHub reports PR has conflicts (CONFLICTING)"
+            echo "conflicts_exist=true" >> $GITHUB_OUTPUT
+            echo "conflict_reason=github_conflicting" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_MERGE_STATE" = "DIRTY" ]; then
+            echo "❌ Merge state is DIRTY - conflicts or issues exist"
+            echo "conflicts_exist=true" >> $GITHUB_OUTPUT
+            echo "conflict_reason=dirty_state" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_MERGE_STATE" = "BLOCKED" ]; then
+            echo "❌ Merge state is BLOCKED - branch protection or other issues"
+            echo "conflicts_exist=true" >> $GITHUB_OUTPUT
+            echo "conflict_reason=blocked_state" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_MERGE_STATE" = "BEHIND" ]; then
+            echo "⚠️ Merge state is BEHIND - branch needs updating"
+            echo "conflicts_exist=false" >> $GITHUB_OUTPUT
+            echo "conflict_reason=behind_state" >> $GITHUB_OUTPUT
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_MERGEABLE" = "MERGEABLE" ] && [ "$CURRENT_MERGE_STATE" = "CLEAN" ]; then
+            echo "✅ PR is clean and mergeable"
+            echo "conflicts_exist=false" >> $GITHUB_OUTPUT
+            echo "conflict_reason=none" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Unexpected merge status: mergeable=$CURRENT_MERGEABLE, state=$CURRENT_MERGE_STATE"
+            echo "conflicts_exist=true" >> $GITHUB_OUTPUT
+            echo "conflict_reason=unexpected_status" >> $GITHUB_OUTPUT
+          fi
+
       - name: Auto-merge decision
         id: merge-decision
         if: steps.wait-ci.outputs.result == 'success' && steps.arc-verdict.outputs.result == 'approved'
         run: |
-          echo "🎯 Auto-merge conditions met:"
+          echo "🎯 Auto-merge conditions evaluation:"
           echo "- CI Status: ✅ PASSED"
           echo "- ARC-Reviewer: ✅ APPROVED"
           echo "- No blocking issues: ✅ CONFIRMED"
           echo "- Test Coverage: ${{ steps.test-coverage.outputs.tests_found }}"
-          echo "- PR is mergeable: ${{ steps.pr-parsed.outputs.mergeable }}"
+          echo "- Original mergeable: ${{ steps.pr-parsed.outputs.mergeable }}"
+          echo "- Original merge state: ${{ steps.pr-parsed.outputs.mergeable_state }}"
+          echo "- Original merge state status: ${{ steps.pr-parsed.outputs.merge_state_status }}"
+          echo "- Current mergeable: ${{ steps.final-conflict-check.outputs.current_mergeable }}"
+          echo "- Current merge state: ${{ steps.final-conflict-check.outputs.current_merge_state }}"
           echo "- Base branch: ${{ steps.pr-parsed.outputs.base_ref }}"
           echo "- Branch updated: ${{ steps.auto-update.outputs.branch_updated }}"
-          echo "- Conflicts detected: ${{ steps.auto-update.outputs.conflicts_detected }}"
+          echo "- Auto-update conflicts: ${{ steps.auto-update.outputs.conflicts_detected }}"
+          echo "- Final conflicts exist: ${{ steps.final-conflict-check.outputs.conflicts_exist }}"
+          echo "- Conflict reason: ${{ steps.final-conflict-check.outputs.conflict_reason }}"
 
-          # Check if conflicts were detected during auto-update
+          # Primary conflict checks (hard blockers)
           if [ "${{ steps.auto-update.outputs.conflicts_detected }}" = "true" ]; then
             echo "ready_to_merge=false" >> $GITHUB_OUTPUT
-            echo "❌ Conflicts detected during auto-update - manual intervention required"
+            echo "block_reason=auto_update_conflicts" >> $GITHUB_OUTPUT
+            echo "❌ BLOCKED: Conflicts detected during auto-update - manual intervention required"
+          elif [ "${{ steps.final-conflict-check.outputs.conflicts_exist }}" = "true" ]; then
+            echo "ready_to_merge=false" >> $GITHUB_OUTPUT
+            echo "block_reason=${{ steps.final-conflict-check.outputs.conflict_reason }}" >> $GITHUB_OUTPUT
+            echo "❌ BLOCKED: Final conflict check failed - ${{ steps.final-conflict-check.outputs.conflict_reason }}"
           elif [ "${{ steps.test-coverage.outputs.tests_found }}" = "false" ]; then
             echo "ready_to_merge=false" >> $GITHUB_OUTPUT
-            echo "❌ Test coverage required for workflow changes"
-          elif [ "${{ steps.pr-parsed.outputs.mergeable }}" = "true" ]; then
-            echo "ready_to_merge=true" >> $GITHUB_OUTPUT
+            echo "block_reason=missing_test_coverage" >> $GITHUB_OUTPUT
+            echo "❌ BLOCKED: Test coverage required for workflow changes"
           else
-            echo "ready_to_merge=false" >> $GITHUB_OUTPUT
-            echo "❌ PR is not mergeable"
+            echo "ready_to_merge=true" >> $GITHUB_OUTPUT
+            echo "block_reason=none" >> $GITHUB_OUTPUT
+            echo "✅ APPROVED: All safety checks passed"
           fi
 
       - name: Enable auto-merge
@@ -559,7 +619,11 @@ jobs:
             const pr_number = ${{ steps.pr-parsed.outputs.pr_number }};
             const ciResult = '${{ steps.wait-ci.outputs.result }}';
             const arcResult = '${{ steps.arc-verdict.outputs.result }}';
-            const mergeable = '${{ steps.pr-parsed.outputs.mergeable }}';
+            const blockReason = '${{ steps.merge-decision.outputs.block_reason }}';
+            const conflictsExist = '${{ steps.final-conflict-check.outputs.conflicts_exist }}';
+            const conflictReason = '${{ steps.final-conflict-check.outputs.conflict_reason }}';
+            const currentMergeable = '${{ steps.final-conflict-check.outputs.current_mergeable }}';
+            const currentMergeState = '${{ steps.final-conflict-check.outputs.current_merge_state }}';
 
             let reason = 'Unknown reason';
             let emoji = '❓';
@@ -582,18 +646,30 @@ jobs:
             } else if (arcResult === 'unclear') {
               reason = 'ARC-Reviewer verdict is unclear';
               emoji = '❓';
-            } else if (mergeable === 'false') {
-              reason = 'PR is not mergeable (conflicts or branch protection)';
-              emoji = '⚠️';
-            } else if ('${{ steps.auto-update.outputs.conflicts_detected }}' === 'true') {
-              reason = 'Conflicts detected during auto-update - manual resolution required';
+            } else if (blockReason === 'auto_update_conflicts') {
+              reason = 'Conflicts detected during branch auto-update - manual resolution required';
               emoji = '🔄';
+            } else if (blockReason === 'github_conflicting') {
+              reason = 'GitHub reports PR has conflicts (CONFLICTING state)';
+              emoji = '⚠️';
+            } else if (blockReason === 'dirty_state') {
+              reason = 'PR merge state is DIRTY - conflicts or issues exist';
+              emoji = '⚠️';
+            } else if (blockReason === 'blocked_state') {
+              reason = 'PR merge state is BLOCKED - branch protection or requirements not met';
+              emoji = '🚫';
+            } else if (blockReason === 'unexpected_status') {
+              reason = `Unexpected merge status: mergeable=${currentMergeable}, state=${currentMergeState}`;
+              emoji = '❓';
+            } else if (blockReason === 'missing_test_coverage') {
+              reason = 'Test coverage required for workflow changes';
+              emoji = '🧪';
             }
 
             console.log(`${emoji} Auto-merge blocked: ${reason}`);
 
             // Only comment if there's a meaningful reason
-            if (arcResult === 'changes-requested' || arcResult === 'blocking-issues' || ciResult === 'failure') {
+            if (arcResult === 'changes-requested' || arcResult === 'blocking-issues' || ciResult === 'failure' || conflictsExist === 'true') {
               // Get blocking issues for display
               let blockingIssuesText = '';
               if (arcResult === 'changes-requested' || arcResult === 'blocking-issues') {
@@ -616,6 +692,17 @@ jobs:
                 }
               }
 
+              // Add conflict resolution guidance for conflict-related blocks
+              let conflictGuidance = '';
+              if (conflictsExist === 'true') {
+                const headRef = context.payload.pull_request?.head?.ref || 'your-branch';
+                const baseRef = context.payload.pull_request?.base?.ref || 'main';
+                conflictGuidance = '\n\nConflict Resolution Steps:\n' +
+                  `1. Update your branch: git checkout ${headRef} && git fetch origin && git merge origin/${baseRef}\n` +
+                  `2. Or rebase your branch: git checkout ${headRef} && git fetch origin && git rebase origin/${baseRef}\n` +
+                  '3. After resolving conflicts: git add . && git commit && git push';
+              }
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -624,10 +711,13 @@ jobs:
 
                 **Reason:** ${reason}
 
-                **Status:**
+                **Detailed Status:**
                 - CI Result: ${ciResult}
                 - ARC-Reviewer: ${arcResult}
-                - Mergeable: ${mergeable}${blockingIssuesText}
+                - Current Mergeable: ${currentMergeable}
+                - Current Merge State: ${currentMergeState}
+                - Conflicts Detected: ${conflictsExist}
+                - Block Reason: ${blockReason}${blockingIssuesText}${conflictGuidance}
 
                 Please address the issues above and the auto-merge will be re-evaluated.
 
