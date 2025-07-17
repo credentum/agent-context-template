@@ -7,8 +7,8 @@ created_date: '2025-07-14'
 sprint_number: 41
 start_date: '2025-07-14'
 end_date: '2025-07-21'
-last_modified: '2025-07-16'
-last_referenced: '2025-07-16'
+last_modified: '2025-07-17'
+last_referenced: '2025-07-17'
 goals:
 - Establish reproducible local development infrastructure
 - Set up CI service containers for reliable testing
@@ -283,34 +283,55 @@ phases:
   status: pending
   priority: high
   component: testing
-  description: Test and validate bidirectional sync between sprint YAML and GitHub issues
+  description: Test and validate bidirectional sync between sprint YAML and GitHub
+    issues
   tasks:
-  - title: "Bidirectional Workflow Validation Test"
-    description: |
-      Test task to validate bidirectional sync between sprint YAML and GitHub issues.
+  - title: Bidirectional Workflow Validation Test
+    description: 'Test task to validate bidirectional sync between sprint YAML and
+      GitHub issues.
+
       This task should be automatically created as a GitHub issue and then sync back.
 
+
       ## Test Scenarios
+
       - [x] Task created in YAML generates GitHub issue
+
       - [ ] GitHub issue status updates reflect in YAML
+
       - [ ] Task completion in YAML closes GitHub issue
+
       - [ ] Label changes sync bidirectionally
+
       - [ ] Task removal from YAML closes GitHub issue
 
+
       ## Validation Steps
+
       1. Add this task to sprint YAML
+
       2. Run sprint issue linker to create GitHub issue
+
       3. Verify issue creation and YAML update with issue number
+
       4. Test status changes in both directions
+
       5. Test label synchronization
+
       6. Test orphan handling when task is removed
 
+
       ## Implementation Notes
+
       - This is a temporary test task for issue #93
+
       - Will be removed after validation
+
       - Should not affect production workflows
+
       - Tests complete bidirectional workflow as requested
 
+      '
     labels:
     - sprint-current
     - phase:4.1
@@ -320,7 +341,6 @@ phases:
     - automation
     dependencies: []
     estimate: 2 hours
-    # github_issue: Will be populated automatically by sprint issue linker
 - phase: 9
   name: Sprint Update Workflow Testing
   status: pending
@@ -328,43 +348,27 @@ phases:
   component: ci
   description: Test and validate Sprint Update workflow duplicate prevention
   tasks:
-  - title: "Test Sprint Update Workflow Duplicate Prevention"
-    description: |
-      Test task to validate that the Sprint Update workflow no longer creates duplicate PRs
-      when both pull_request.closed and issues.closed events fire simultaneously.
-
-      ## Problem Being Fixed
-      - Sprint Update workflow previously created duplicate PRs when:
-        1. A PR is merged (pull_request.closed event)
-        2. An issue is auto-closed by the PR (issues.closed event)
-      - This caused PRs #106 and #107 to be created simultaneously
-
-      ## Test Scenarios
-      - [ ] Create PR that closes an issue (using "Closes #XXX")
-      - [ ] Merge PR and verify only one Sprint Update PR is created
-      - [ ] Verify duplicate detection logic works correctly
-      - [ ] Confirm no duplicate PRs are generated
-      - [ ] Test workflow timing and race conditions
-
-      ## Validation Steps
-      1. Add this task to sprint YAML (triggers issue creation)
-      2. Create PR that closes this issue
-      3. Merge PR and observe Sprint Update workflow behavior
-      4. Verify only one Sprint Update PR is created
-      5. Confirm duplicate prevention logic activates correctly
-
-      ## Implementation Notes
-      - This task validates the fix in .github/workflows/sprint-update.yml
-      - Tests the duplicate run detection logic added to prevent race conditions
-      - Confirms GitHub Actions workflow concurrency handling
-      - Will be removed after successful validation
-
-      ## Success Criteria
-      - [ ] No duplicate Sprint Update PRs created
-      - [ ] Workflow logs show duplicate detection working
-      - [ ] Sprint status updates work correctly
-      - [ ] No race conditions or timing issues
-
+  - title: Test Sprint Update Workflow Duplicate Prevention
+    description: "Test task to validate that the Sprint Update workflow no longer\
+      \ creates duplicate PRs\nwhen both pull_request.closed and issues.closed events\
+      \ fire simultaneously.\n\n## Problem Being Fixed\n- Sprint Update workflow previously\
+      \ created duplicate PRs when:\n  1. A PR is merged (pull_request.closed event)\n\
+      \  2. An issue is auto-closed by the PR (issues.closed event)\n- This caused\
+      \ PRs #106 and #107 to be created simultaneously\n\n## Test Scenarios\n- [ ]\
+      \ Create PR that closes an issue (using \"Closes #XXX\")\n- [ ] Merge PR and\
+      \ verify only one Sprint Update PR is created\n- [ ] Verify duplicate detection\
+      \ logic works correctly\n- [ ] Confirm no duplicate PRs are generated\n- [ ]\
+      \ Test workflow timing and race conditions\n\n## Validation Steps\n1. Add this\
+      \ task to sprint YAML (triggers issue creation)\n2. Create PR that closes this\
+      \ issue\n3. Merge PR and observe Sprint Update workflow behavior\n4. Verify\
+      \ only one Sprint Update PR is created\n5. Confirm duplicate prevention logic\
+      \ activates correctly\n\n## Implementation Notes\n- This task validates the\
+      \ fix in .github/workflows/sprint-update.yml\n- Tests the duplicate run detection\
+      \ logic added to prevent race conditions\n- Confirms GitHub Actions workflow\
+      \ concurrency handling\n- Will be removed after successful validation\n\n##\
+      \ Success Criteria\n- [ ] No duplicate Sprint Update PRs created\n- [ ] Workflow\
+      \ logs show duplicate detection working\n- [ ] Sprint status updates work correctly\n\
+      - [ ] No race conditions or timing issues\n"
     labels:
     - sprint-current
     - phase:4.1
@@ -375,7 +379,6 @@ phases:
     - automation
     dependencies: []
     estimate: 1 hour
-    # github_issue: Will be populated automatically by sprint issue linker
 team:
 - role: lead
   agent: pm_agent
