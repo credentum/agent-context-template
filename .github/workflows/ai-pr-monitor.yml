@@ -1,0 +1,215 @@
+---
+###############################################################################
+# 🤖 AI-Monitored PR Process - Intelligent PR Lifecycle Management
+#
+# Replaces brittle multi-workflow coordination with single AI agent that:
+# - Monitors PR lifecycle events continuously
+# - Responds immediately to reviewer feedback
+# - Handles conflicts, CI failures, and validation issues in real-time
+# - Maintains all current functionality with improved reliability
+#
+# This is a PROOF OF CONCEPT for Issue #173
+###############################################################################
+name: AI-Monitored PR Process
+
+on:
+  # PR lifecycle events
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+  # Review events
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+
+  # CI completion events
+  check_suite:
+    types: [completed]
+  status: {}
+
+  # Issue comments for manual triggering
+  issue_comment:
+    types: [created]
+
+jobs:
+  ai-monitor:
+    name: "🤖 AI PR Monitor"
+    runs-on: ubuntu-latest
+
+    # Only run on non-draft PRs or when @claude is mentioned
+    if: |
+      (github.event.pull_request.draft == false) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+
+    permissions:
+      contents: write       # Allow Claude to commit changes and update branches
+      pull-requests: write  # Allow Claude to update PRs and enable auto-merge
+      issues: write        # Allow Claude to update issues
+      workflows: write     # Allow Claude to modify workflow files if needed
+      checks: read         # Allow Claude to read CI results
+      statuses: read       # Allow Claude to read status checks
+      actions: read        # Allow Claude to read workflow runs
+      id-token: write      # Required for GitHub CLI authentication
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for conflict detection
+
+      - name: Get PR Context
+        id: pr-context
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            let pr_number, pr_data;
+
+            // Get PR number from various event types
+            if (context.payload.pull_request) {
+              pr_number = context.payload.pull_request.number;
+            } else if (context.issue && context.issue.pull_request) {
+              pr_number = context.issue.number;
+            } else {
+              console.log('No PR found in event context');
+              return JSON.stringify({});
+            }
+
+            // Get detailed PR information
+            try {
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr_number
+              });
+
+              pr_data = {
+                number: pr.number,
+                title: pr.title,
+                body: pr.body || '',
+                head_sha: pr.head.sha,
+                head_ref: pr.head.ref,
+                base_ref: pr.base.ref,
+                mergeable: pr.mergeable,
+                mergeable_state: pr.mergeable_state,
+                state: pr.state,
+                draft: pr.draft,
+                auto_merge: pr.auto_merge,
+                user: pr.user.login,
+                created_at: pr.created_at,
+                updated_at: pr.updated_at
+              };
+
+              console.log(`Found PR #${pr_number}: ${pr.title}`);
+              return JSON.stringify(pr_data);
+
+            } catch (error) {
+              console.log(`Error fetching PR: ${error.message}`);
+              return JSON.stringify({});
+            }
+
+      - name: AI PR Analysis & Action
+        id: ai-action
+        uses: anthropics/claude-code-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          auto_commit: true
+
+          # Enhanced permissions for full PR lifecycle management
+          additional_permissions: |
+            actions: read
+            workflows: write
+            contents: write
+            pull-requests: write
+            checks: read
+            statuses: read
+
+          # Model configuration - use Claude Sonnet 4 for faster response
+          model: "claude-sonnet-4-20250514"
+
+          # Custom instructions for AI-monitored PR process
+          custom_instructions: |
+            You are monitoring PR lifecycle for automated handling. Your role is to:
+
+            ## PR Lifecycle Management
+            1. **Immediate Response**: Analyze PR status and take action within 30 seconds
+            2. **Conflict Resolution**: Detect and resolve merge conflicts automatically
+            3. **CI Monitoring**: Track CI status and respond to failures immediately
+            4. **Review Processing**: Handle reviewer feedback (human or AI) in real-time
+            5. **Auto-merge Coordination**: Enable auto-merge when all conditions are met
+
+            ## Current PR Context
+            Event Type: ${{ github.event_name }}
+            PR Data: ${{ steps.pr-context.outputs.result }}
+
+            ## Auto-Merge Conditions (replace complex workflow logic)
+            Enable auto-merge when ALL conditions are met:
+            - [ ] PR is not draft
+            - [ ] All CI checks pass (claude-pr-review, ARC-Reviewer, tests, lint)
+            - [ ] No merge conflicts (mergeable_state: clean)
+            - [ ] Auto-merge requested (in PR body/metadata or explicitly requested)
+            - [ ] No blocking reviews or unresolved review feedback
+
+            ## Actions to Take Based on Event
+
+            ### On PR opened/synchronized:
+            1. Check for conflicts and auto-update branch if needed
+            2. Validate that CI will run correctly
+            3. Parse PR body for auto-merge flags
+            4. Set appropriate labels and status
+
+            ### On review submitted:
+            1. If changes requested: analyze feedback and fix immediately
+            2. If approved: check if ready for auto-merge
+            3. If ARC-Reviewer feedback: process and respond
+
+            ### On CI completion:
+            1. If CI failed: analyze failures and fix or request help
+            2. If CI passed: check auto-merge readiness
+            3. If all conditions met: enable auto-merge
+
+            ### On status/check updates:
+            1. Monitor for completion of required checks
+            2. Respond immediately to any failures
+            3. Enable auto-merge when ready
+
+            ## Key Improvements Over Multi-Workflow System
+            - **No coordination delays**: Act immediately on events
+            - **Intelligent conflict resolution**: Handle conflicts contextually
+            - **Real-time CI monitoring**: Respond to failures within seconds
+            - **Transparent communication**: Document all actions taken
+            - **Fail-safe operation**: Never break existing functionality
+
+            ## Current Complex Workflows Being Replaced
+            This replaces coordination between:
+            - auto-merge.yml (738 lines of complex coordination)
+            - smart-auto-merge.yml (524 lines of event coordination)
+            - arc-follow-up-processor.yml (375 lines of parsing logic)
+            - Complex polling and state management across multiple workflows
+
+            ## Response Format
+            Always start your response with a status summary:
+            ```
+            ## AI PR Monitor Status
+            Event: [event type]
+            PR: #[number] - [title]
+            Action: [what you're doing]
+            Status: [current state]
+            ```
+
+            Then take appropriate action based on the current PR state and event.
+
+            Remember: You are replacing brittle multi-workflow coordination with intelligent single-agent management.
+
+      - name: Log AI Action Results
+        if: always()
+        run: |
+          echo "## AI PR Monitor Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Event**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "- **PR Context**: Available in previous step" >> $GITHUB_STEP_SUMMARY
+          echo "- **AI Action**: Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This workflow replaces complex multi-workflow coordination with single AI agent monitoring." >> $GITHUB_STEP_SUMMARY
+          echo "See issue #173 for full context and implementation plan." >> $GITHUB_STEP_SUMMARY
