@@ -2,12 +2,13 @@
 name: Sprint Update
 
 "on":
-  issues:
-    types: [opened, closed, reopened, labeled, unlabeled]
-  pull_request:
-    types: [closed]
-  schedule:
-    - cron: '0 9 * * 1-5'  # 9 AM UTC on weekdays
+  # EMERGENCY DISABLE - Sprint workflow creating runaway PRs (342+ created)
+  # issues:
+  #   types: [opened, closed, reopened, labeled, unlabeled]
+  # pull_request:
+  #   types: [closed]
+  # schedule:
+  #   - cron: '0 9 * * 1-5'  # 9 AM UTC on weekdays
   workflow_dispatch:
     inputs:
       sprint_id:
