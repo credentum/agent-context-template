@@ -53,9 +53,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Only run on non-draft PRs or when @claude is mentioned
-    if: >-
-      (github.event.pull_request.draft == false) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+    if: github.event.pull_request.draft == false
 
     permissions:
       contents: write       # Allow Claude to commit changes and update branches
