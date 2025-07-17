@@ -467,7 +467,9 @@ jobs:
           echo "🔍 Performing final conflict validation..."
 
           # Get current PR merge status from GitHub API
-          CURRENT_PR_STATUS=$(gh pr view ${{ steps.pr-parsed.outputs.pr_number }} --json mergeable,mergeStateStatus --jq '{mergeable: .mergeable, state: .mergeStateStatus}')
+          CURRENT_PR_STATUS=$(gh pr view ${{ steps.pr-parsed.outputs.pr_number }} \
+            --json mergeable,mergeStateStatus \
+            --jq '{mergeable: .mergeable, state: .mergeStateStatus}')
           echo "Current PR status: $CURRENT_PR_STATUS"
 
           CURRENT_MERGEABLE=$(echo "$CURRENT_PR_STATUS" | jq -r '.mergeable')
