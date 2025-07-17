@@ -8,8 +8,8 @@
 name: CI Optimized Pipeline
 
 on:
-  push:
-    branches: [main, 'phase-*', 'feature-*', develop]
+  # push:
+  #   branches: [main, 'phase-*', 'feature-*', develop]  # Disabled for faster development
   pull_request:
     branches: [main]
   workflow_dispatch:

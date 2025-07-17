@@ -2,8 +2,8 @@
 name: Test Suite
 
 on:
-  push:
-    branches: [main, develop]
+  # push:
+  #   branches: [main, develop]  # Disabled for faster development
   pull_request:
     branches: [main]
   workflow_dispatch:

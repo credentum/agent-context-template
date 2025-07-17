@@ -1,10 +1,11 @@
 name: Unit Tests (Fast)
 
 on:
-  push:
-    branches: [main, 'phase-*', 'feature-*']
+  # push:
+  #   branches: [main, 'phase-*', 'feature-*']  # Disabled for faster development
   pull_request:
     branches: [main]
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   test:
