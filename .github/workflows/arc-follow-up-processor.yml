@@ -7,12 +7,13 @@
 name: ARC Follow-up Issue Processor
 
 on:
-  schedule:
-    # Run every 15 minutes during business hours (UTC)
-    - cron: '*/15 6-22 * * 1-5'
-    # Run every 30 minutes during off-hours
-    - cron: '*/30 22-6 * * *'
-    - cron: '*/30 * * * 0,6'
+  # TEMPORARILY DISABLED - being replaced by ai-pr-monitor.yml (Issue #173)
+  # schedule:
+  #   # Run every 15 minutes during business hours (UTC)
+  #   - cron: '*/15 6-22 * * 1-5'
+  #   # Run every 30 minutes during off-hours
+  #   - cron: '*/30 22-6 * * *'
+  #   - cron: '*/30 * * * 0,6'
   workflow_dispatch:
     inputs:
       pr_number:
