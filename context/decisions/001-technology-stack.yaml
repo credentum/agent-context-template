@@ -1,90 +1,68 @@
-schema_version: "1.1.0"
-document_type: "decision"
-id: "001-technology-stack"
-title: "Technology Stack Selection"
-status: "active"
-created_date: "2025-07-11"
-decision_date: "2025-07-15"
-last_modified: "2025-07-15"
-last_referenced: "2025-07-15"
+---
+schema_version: 1.1.0
+document_type: decision
+id: 001-technology-stack
+title: Technology Stack Selection
+status: active
+created_date: '2025-07-11'
+decision_date: '2025-07-15'
+last_modified: '2025-07-15'
+last_referenced: '2025-07-15'
 expires: null
 authors:
-  - "system"
-  - "assistant"
+- system
+- assistant
 tags:
-  - "decision"
-  - "technology"
-  - "infrastructure"
-  - "mcp"
-
-decision: |
-  # Technology Stack Decisions  (Rev 2025-07-15)
-
-  ## Datastores
-  ### • Vector DB – **Qdrant v1.14.x**
-  Rationale: native hybrid search, self-host, hash-diff re-embed, gRPC + REST.
-
-  ### • Graph DB – **Neo4j 5.20 Community**
-  Rationale: mature Cypher, strong Python driver, proven GraphRAG patterns.
-
-  ### • KV Store – **Redis 7**  (fallback **DuckDB 0.10** for file-based dev)
-  Rationale: <1 ms latency for sprint state; optional persistence; DuckDB enables
-  offline CI runs without Redis daemon.
-
-  ## Embeddings
-  ### • **OpenAI text-embedding-ada-002**  (1536-d)
-  Rationale: best $/quality; plan to support **hosted models** via env flag
-  (`EMBED_PROVIDER={openai,ollama}`) to avoid lock-in.
-
-  ## API Layer
-  ### • **FastAPI + Uvicorn (Python 3.11)** – MCP Gateway
-  Rationale: async, OpenAPI auto-docs, easy JSON-RPC shim.
-
-  ## Agent Runtime
-  ### • **Claude Code CLI (Anthropic Opus)** – default code-gen adapter
-  Rationale: higher context window & code reasoning than Copilot; adapters can
-  swap to Copilot, GPT-4o, or local Llama.cpp via env flag.
-
-  ## CI / CD
-  ### • **GitHub Actions** with service containers
-  ### • **Sigstore / cosign** for image & artefact signing
-  ### • **semantic-release** for version/tag automation
-
-  ## Tooling & Quality Gates
-  * **Pre-commit** (black 23.12.1, isort 5.13.2, flake8 7, mypy 1.8)
-  * **Yamale** for YAML schema validation
-  * **PromptLayer** for LLM regression metrics
-  * **pytest-cov + cosmic-ray** for coverage & mutation testing
-
+- decision
+- technology
+- infrastructure
+- mcp
+decision: "# Technology Stack Decisions  (Rev 2025-07-15)\n\n## Datastores\n### \u2022\
+  \ Vector DB \u2013 **Qdrant v1.14.x**\nRationale: native hybrid search, self-host,\
+  \ hash-diff re-embed, gRPC + REST.\n\n### \u2022 Graph DB \u2013 **Neo4j 5.20 Community**\n\
+  Rationale: mature Cypher, strong Python driver, proven GraphRAG patterns.\n\n###\
+  \ \u2022 KV Store \u2013 **Redis 7**  (fallback **DuckDB 0.10** for file-based dev)\n\
+  Rationale: <1 ms latency for sprint state; optional persistence; DuckDB enables\n\
+  offline CI runs without Redis daemon.\n\n## Embeddings\n### \u2022 **OpenAI text-embedding-ada-002**\
+  \  (1536-d)\nRationale: best $/quality; plan to support **hosted models** via env\
+  \ flag\n(`EMBED_PROVIDER={openai,ollama}`) to avoid lock-in.\n\n## API Layer\n###\
+  \ \u2022 **FastAPI + Uvicorn (Python 3.11)** \u2013 MCP Gateway\nRationale: async,\
+  \ OpenAPI auto-docs, easy JSON-RPC shim.\n\n## Agent Runtime\n### \u2022 **Claude\
+  \ Code CLI (Anthropic Opus)** \u2013 default code-gen adapter\nRationale: higher\
+  \ context window & code reasoning than Copilot; adapters can\nswap to Copilot, GPT-4o,\
+  \ or local Llama.cpp via env flag.\n\n## CI / CD\n### \u2022 **GitHub Actions**\
+  \ with service containers\n### \u2022 **Sigstore / cosign** for image & artefact\
+  \ signing\n### \u2022 **semantic-release** for version/tag automation\n\n## Tooling\
+  \ & Quality Gates\n* **Pre-commit** (black 23.12.1, isort 5.13.2, flake8 7, mypy\
+  \ 1.8)\n* **Yamale** for YAML schema validation\n* **PromptLayer** for LLM regression\
+  \ metrics\n* **pytest-cov + cosmic-ray** for coverage & mutation testing\n"
 alternatives_considered:
   pinecone:
-    name: "Pinecone"
-    reason_rejected: "Cloud-only, vendor lock-in"
+    name: Pinecone
+    reason_rejected: Cloud-only, vendor lock-in
   weaviate:
-    name: "Weaviate"
-    reason_rejected: "Complex op-chain; no need for built-in modules"
+    name: Weaviate
+    reason_rejected: Complex op-chain; no need for built-in modules
   arangodb:
-    name: "ArangoDB"
-    reason_rejected: "Graph features solid but GraphRAG ecosystem immature"
+    name: ArangoDB
+    reason_rejected: Graph features solid but GraphRAG ecosystem immature
   amazon_neptune:
-    name: "Amazon Neptune"
-    reason_rejected: "Vendor lock-in; higher latency for local dev"
+    name: Amazon Neptune
+    reason_rejected: Vendor lock-in; higher latency for local dev
   chromadb:
-    name: "Chroma"
-    reason_rejected: "Less stable persistence layer, no native Graph hooks"
-
+    name: Chroma
+    reason_rejected: Less stable persistence layer, no native Graph hooks
 impacts:
-  - "Requires Docker/Compose for local setup (Qdrant, Neo4j, Redis)."
-  - "Multiple client libraries: qdrant-client, neo4j-python, redis-py."
-  - "OpenAI key prerequisite; mitigation: env-driven provider plug-in."
-  - "Supply-chain signing step lengthens CI by ~30 s per job."
-
+- Requires Docker/Compose for local setup (Qdrant, Neo4j, Redis).
+- 'Multiple client libraries: qdrant-client, neo4j-python, redis-py.'
+- 'OpenAI key prerequisite; mitigation: env-driven provider plug-in.'
+- Supply-chain signing step lengthens CI by ~30 s per job.
 graph_metadata:
-  node_type: "decision_document"
+  node_type: decision_document
   relationships:
-    - type: "influences"
-      target: "system_architecture"
-    - type: "constrains"
-      target: "deployment_options"
-    - type: "provides"
-      target: "mcp_contracts"
+  - type: influences
+    target: system_architecture
+  - type: constrains
+    target: deployment_options
+  - type: provides
+    target: mcp_contracts
