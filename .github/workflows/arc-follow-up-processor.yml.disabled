@@ -344,11 +344,10 @@ jobs:
               sys.exit(1)
           EOF
 
-            # Extract results from Python script
-            shell_vars=$(python3 /tmp/process_result.py 2>/dev/null | grep "^# SHELL_VARS" -A 10 | tail -n +2)
-            if [ -n "$shell_vars" ]; then
-              eval "$shell_vars"
-            fi
+            # Extract results from Python script (SECURITY FIX: Remove eval command)
+            # REMOVED: eval "$shell_vars" - command injection vulnerability
+            # This workflow is disabled and scheduled for removal
+            echo "⚠️ Security vulnerability fixed: eval command removed"
 
             # Clean up temp file
             rm -f /tmp/arc_issues_$pr_number.yaml

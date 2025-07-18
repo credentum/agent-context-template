@@ -76,8 +76,18 @@ jobs:
               feedback.push('⚠️ **Missing Summary**: Please add a summary section describing your changes');
             }
 
+            // Check for type of change selection
             if (!prBody.includes('## Type of Change')) {
               feedback.push('⚠️ **Missing Type**: Please select the type of change from the checklist');
+            } else {
+              // Check if any type checkbox is selected
+              const typeChecked = prBody.match(/## Type of Change[\s\S]*?(?=##|$)/);
+              if (typeChecked) {
+                const hasSelectedType = typeChecked[0].includes('- [x]') || typeChecked[0].includes('- [X]');
+                if (!hasSelectedType) {
+                  feedback.push('⚠️ **Missing Type**: Please select the type of change from the checklist');
+                }
+              }
             }
 
             // Create or update comment

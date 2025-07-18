@@ -245,12 +245,14 @@ jobs:
                           created_at: comment.created_at
                         };
 
-                        // Check for blocking issues
-                        const blockingMatch = yamlContent.match(/blocking:\s*\[\s*\]/) ||
-                                            yamlContent.match(/blocking:\s*$/m);
-                        const hasBlockingContent = yamlContent.match(/blocking:\s*\n\s*-/);
+                        // Check for blocking issues - improved detection
+                        const emptyBlockingMatch = yamlContent.match(/blocking:\s*\[\s*\]/) ||
+                                                 yamlContent.match(/blocking:\s*$/m);
+                        const hasBlockingContent = yamlContent.match(/blocking:\s*\n\s*-/) ||
+                                                 yamlContent.match(/blocking:\s*\[\s*\{/) ||
+                                                 yamlContent.match(/blocking:\s*\n\s*-\s*description:/);
 
-                        arcReviewerStatus.has_blocking_issues = !blockingMatch && hasBlockingContent;
+                        arcReviewerStatus.has_blocking_issues = !emptyBlockingMatch && hasBlockingContent;
                         break;
                       }
                     }
