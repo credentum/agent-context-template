@@ -1,38 +1,47 @@
 ---
-name: Sprint Task
-about: Create a task tracked by the sprint system
-title: ''
-labels: ['sprint-current', 'phase:?', 'component:?', 'priority:?']
+name: Sprint Task (Claude Code Ready)
+about: Create a task optimized for Claude Code execution
+title: '[SPRINT-X.Y] Task Title'
+labels: ['sprint-current', 'claude-ready', 'phase:?', 'component:?']
 assignees: ''
-
 ---
 
-## Task Description
-<!-- Provide a clear description of the task -->
-
-## Sprint Information
-- **Sprint**: <!-- e.g., sprint-001 -->
-- **Phase**: <!-- e.g., Phase 2 -->
-- **Related Task**: <!-- Task name from sprint YAML -->
-
-## Labels
-<!-- Add relevant labels for filtering and reporting -->
-- `sprint-current`
-- `phase:<number>` (e.g., `phase:5`)
-- `component:<area>` (e.g., `component:infra`, `component:lint`, `component:mcp`)
-- `priority:<level>` (e.g., `priority:high`, `priority:medium`)
+## Task Context
+**Sprint**: <!-- e.g., sprint-4-1 -->
+**Phase**: <!-- e.g., Phase 2: Implementation -->
+**Component**: <!-- e.g., api-middleware -->
 
 ## Acceptance Criteria
-<!-- List what needs to be done for this task to be considered complete -->
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [ ] Criterion 3
+<!-- From sprint planning -->
+- [ ] Specific functional requirement
+- [ ] Performance requirement  
+- [ ] Quality gate requirement
+
+## Claude Code Readiness Checklist
+<!-- Complete before starting Claude Code -->
+- [ ] **Context URLs identified** (docs, specs, related PRs)
+- [ ] **File scope estimated** (< 4 files, < 400 LoC expected)
+- [ ] **Dependencies mapped** (external APIs, config, other services)
+- [ ] **Test strategy defined** (unit, integration, edge cases)
+- [ ] **Breaking change assessment** (backward compatibility)
+
+## Pre-Execution Context
+<!-- Gather these details for Claude Code -->
+**Key Files**: `src/path/to/files`, `tests/path/`
+**External Dependencies**: 
+**Configuration**: Environment variables, feature flags
+**Related Issues/PRs**: #xyz, #abc
 
 ## Implementation Notes
-<!-- Any technical details or considerations -->
-
-## Dependencies
-<!-- List any dependencies or blockers -->
+<!-- Technical guidance for Claude Code session -->
 
 ---
-_This issue is tracked by the automated sprint system. Updates to this issue will be reflected in the sprint status._
+
+## Claude Code Execution
+<!-- Fill this section when starting Claude Code -->
+**Session Started**: <!-- timestamp -->
+**Task Template Created**: <!-- link to generated template -->
+**Token Budget**: <!-- estimated after analysis -->
+**Completion Target**: <!-- time estimate -->
+
+_This issue will be updated during Claude Code execution with progress and results._
