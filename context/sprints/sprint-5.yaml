@@ -1,0 +1,499 @@
+---
+# Sprint 5: Context Store Refactoring
+# This sprint focuses on extracting the context storage infrastructure
+# into a standalone MCP-based service
+
+schema_version: 1.0.0
+document_type: sprint
+id: "sprint-5-context-store-refactor"
+title: "Sprint 5 - Extract Context Store as Standalone MCP Service"
+status: planning
+created_date: "2025-01-15"
+sprint_number: 5
+start_date: "2025-01-16"
+end_date: "2025-02-06"
+last_modified: "2025-01-15"
+last_referenced: "2025-01-15"
+
+# High-level goals for this sprint
+goals:
+  - "Extract context storage infrastructure into standalone context-store repository"
+  - "Implement MCP server interface for all context operations"
+  - "Refactor agent-context-template to use context-store as external service"
+  - "Achieve clean separation between infrastructure and implementation examples"
+
+# Phases represent major work areas
+phases:
+  - phase: 1
+    name: "Repository Setup and Core Extraction"
+    status: pending
+    priority: blocking
+    component: infrastructure
+    description: "Create context-store repository and extract core storage components"
+    duration_days: 3
+    tasks:
+      - title: "Create context-store repository"
+        description: |
+          Initialize the new context-store repository with proper structure
+
+          ## Acceptance Criteria
+          - [ ] Create new GitHub repository: context-store
+          - [ ] Initialize with README, LICENSE (MIT), .gitignore
+          - [ ] Set up Python project structure (pyproject.toml, requirements.txt)
+          - [ ] Set up TypeScript project structure (package.json, tsconfig.json)
+          - [ ] Create directory structure as per refactoring plan
+
+          ## Implementation Notes
+          - Use Python 3.8+ for compatibility
+          - TypeScript for MCP server implementation
+          - Include GitHub Actions templates for CI
+        labels:
+          - "sprint-5"
+          - "phase-1"
+          - "infrastructure"
+          - "priority-blocking"
+        dependencies: []
+        estimate: "4 hours"
+        assignee: "engineering-lead"
+
+      - title: "Extract storage components"
+        description: |
+          Move storage implementation from agent-context-template to context-store
+
+          ## Acceptance Criteria
+          - [ ] Move src/storage/hash_diff_embedder_async.py → context-store/src/storage/hash_diff_embedder.py
+          - [ ] Move src/storage/neo4j_init.py → context-store/src/storage/neo4j_client.py
+          - [ ] Move src/storage/vector_db_init.py → context-store/src/storage/qdrant_client.py
+          - [ ] Move context_kv.py functionality to context-store/src/storage/kv_store.py
+          - [ ] Move all associated tests to context-store/src/storage/tests/
+          - [ ] Update imports and remove async where not needed for simplicity
+
+          ## Implementation Notes
+          - Simplify async code to sync where possible
+          - Remove agent-specific logic
+          - Ensure all tests pass after move
+        labels:
+          - "sprint-5"
+          - "phase-1"
+          - "storage"
+          - "priority-high"
+        dependencies:
+          - "Create context-store repository"
+        estimate: "6 hours"
+        assignee: "backend-engineer"
+
+      - title: "Extract validators and core utilities"
+        description: |
+          Move validation logic and core utilities to context-store
+
+          ## Acceptance Criteria
+          - [ ] Move src/validators/* to context-store/src/validators/
+          - [ ] Move src/core/utils.py to context-store/src/core/
+          - [ ] Move YAML schemas to context-store/schemas/
+          - [ ] Create clean interfaces without agent dependencies
+          - [ ] Ensure 90%+ test coverage for validators
+
+          ## Implementation Notes
+          - Validators are critical - maintain high test coverage
+          - Remove any GitHub or agent-specific validation
+          - Focus on pure data validation
+        labels:
+          - "sprint-5"
+          - "phase-1"
+          - "validators"
+          - "priority-high"
+        dependencies:
+          - "Create context-store repository"
+        estimate: "4 hours"
+        assignee: "backend-engineer"
+
+  - phase: 2
+    name: "MCP Server Implementation"
+    status: pending
+    priority: high
+    component: mcp-server
+    description: "Build the MCP server interface for context operations"
+    duration_days: 5
+    tasks:
+      - title: "Implement core MCP server"
+        description: |
+          Create the TypeScript MCP server with basic tool support
+
+          ## Acceptance Criteria
+          - [ ] Implement MCP server in context-store/src/mcp_server/server.ts
+          - [ ] Create health check endpoint
+          - [ ] Set up proper error handling and logging
+          - [ ] Configure for Docker deployment
+          - [ ] Add TypeScript tests
+
+          ## Implementation Notes
+          - Follow MCP protocol specification
+          - Use latest MCP SDK
+          - Ensure graceful shutdown
+          - Environment variable configuration
+        labels:
+          - "sprint-5"
+          - "phase-2"
+          - "mcp-server"
+          - "priority-high"
+        dependencies:
+          - "Extract storage components"
+          - "Extract validators and core utilities"
+        estimate: "8 hours"
+        assignee: "fullstack-engineer"
+
+      - title: "Implement store_context MCP tool"
+        description: |
+          Create the store_context tool for saving context data
+
+          ## Acceptance Criteria
+          - [ ] Define tool contract in contracts/store_context.json
+          - [ ] Implement tool handler with proper validation
+          - [ ] Support all context types (design, decisions, trace, sprints)
+          - [ ] Add vector embedding and graph storage
+          - [ ] Write comprehensive tests
+
+          ## Implementation Notes
+          - Validate against YAML schemas
+          - Handle both vector and graph storage
+          - Return storage confirmation with IDs
+        labels:
+          - "sprint-5"
+          - "phase-2"
+          - "mcp-tools"
+          - "priority-high"
+        dependencies:
+          - "Implement core MCP server"
+        estimate: "6 hours"
+        assignee: "fullstack-engineer"
+
+      - title: "Implement retrieve_context MCP tool"
+        description: |
+          Create the retrieve_context tool for hybrid retrieval
+
+          ## Acceptance Criteria
+          - [ ] Define tool contract in contracts/retrieve_context.json
+          - [ ] Implement vector similarity search via Qdrant
+          - [ ] Implement graph traversal via Neo4j
+          - [ ] Support hybrid retrieval modes
+          - [ ] Add relevance scoring
+
+          ## Implementation Notes
+          - Support filters by type, date, status
+          - Implement pagination
+          - Return relevance scores
+        labels:
+          - "sprint-5"
+          - "phase-2"
+          - "mcp-tools"
+          - "priority-high"
+        dependencies:
+          - "Implement core MCP server"
+        estimate: "8 hours"
+        assignee: "fullstack-engineer"
+
+      - title: "Implement remaining MCP tools"
+        description: |
+          Implement query_graph, update_scratchpad, and get_agent_state tools
+
+          ## Acceptance Criteria
+          - [ ] Implement query_graph for direct Cypher queries
+          - [ ] Implement update_scratchpad for transient storage
+          - [ ] Implement get_agent_state for memory retrieval
+          - [ ] Create contracts for all tools
+          - [ ] Add comprehensive tests
+
+          ## Implementation Notes
+          - Ensure proper access control for Cypher queries
+          - Scratchpad should support TTL
+          - Agent state should be namespaced
+        labels:
+          - "sprint-5"
+          - "phase-2"
+          - "mcp-tools"
+          - "priority-medium"
+        dependencies:
+          - "Implement store_context MCP tool"
+          - "Implement retrieve_context MCP tool"
+        estimate: "6 hours"
+        assignee: "fullstack-engineer"
+
+  - phase: 3
+    name: "Docker and Deployment"
+    status: pending
+    priority: high
+    component: deployment
+    description: "Create Docker deployment for standalone context-store"
+    duration_days: 2
+    tasks:
+      - title: "Create Docker configuration"
+        description: |
+          Build Docker setup for easy deployment
+
+          ## Acceptance Criteria
+          - [ ] Create multi-stage Dockerfile for small image size
+          - [ ] Create docker-compose.yml with all services
+          - [ ] Include Qdrant v1.14.x container
+          - [ ] Include Neo4j community container
+          - [ ] Add health checks for all services
+          - [ ] Create .env.example with all configuration options
+
+          ## Implementation Notes
+          - Use Alpine images where possible
+          - Implement proper volume mounts
+          - Network isolation between services
+          - Support both local and cloud deployment
+        labels:
+          - "sprint-5"
+          - "phase-3"
+          - "deployment"
+          - "priority-high"
+        dependencies:
+          - "Implement core MCP server"
+        estimate: "4 hours"
+        assignee: "devops-engineer"
+
+      - title: "Create deployment documentation"
+        description: |
+          Write clear deployment instructions
+
+          ## Acceptance Criteria
+          - [ ] Document one-line Docker deployment
+          - [ ] Create quick-start guide
+          - [ ] Document all environment variables
+          - [ ] Add troubleshooting section
+          - [ ] Include examples for different deployment scenarios
+
+          ## Implementation Notes
+          - Focus on simplicity
+          - Include cloud deployment options
+          - Add performance tuning guide
+        labels:
+          - "sprint-5"
+          - "phase-3"
+          - "documentation"
+          - "priority-medium"
+        dependencies:
+          - "Create Docker configuration"
+        estimate: "3 hours"
+        assignee: "doc-engineer"
+
+  - phase: 4
+    name: "Refactor agent-context-template"
+    status: pending
+    priority: medium
+    component: agent-template
+    description: "Update agent-context-template to use external context-store"
+    duration_days: 3
+    tasks:
+      - title: "Remove extracted code from agent-template"
+        description: |
+          Clean up agent-context-template after extraction
+
+          ## Acceptance Criteria
+          - [ ] Remove src/storage/* (except agent-specific code)
+          - [ ] Remove src/validators/*
+          - [ ] Remove src/core/* that was moved
+          - [ ] Update all imports
+          - [ ] Ensure tests still pass
+
+          ## Implementation Notes
+          - Keep agent-specific analytics
+          - Keep GitHub integrations
+          - Update CI/CD workflows
+        labels:
+          - "sprint-5"
+          - "phase-4"
+          - "cleanup"
+          - "priority-medium"
+        dependencies:
+          - "Extract storage components"
+          - "Extract validators and core utilities"
+        estimate: "3 hours"
+        assignee: "backend-engineer"
+
+      - title: "Add context-store as dependency"
+        description: |
+          Configure agent-template to use context-store service
+
+          ## Acceptance Criteria
+          - [ ] Add context-store as git submodule for examples
+          - [ ] Update docker-compose.yml to include context-store service
+          - [ ] Configure MCP client connection
+          - [ ] Update .env.example with MCP_SERVER_URL
+          - [ ] Test end-to-end integration
+
+          ## Implementation Notes
+          - Use environment variables for configuration
+          - Document connection setup
+          - Include health check integration
+        labels:
+          - "sprint-5"
+          - "phase-4"
+          - "integration"
+          - "priority-high"
+        dependencies:
+          - "Remove extracted code from agent-template"
+          - "Create Docker configuration"
+        estimate: "4 hours"
+        assignee: "fullstack-engineer"
+
+      - title: "Update documentation and examples"
+        description: |
+          Update all documentation to reflect new architecture
+
+          ## Acceptance Criteria
+          - [ ] Update README.md with new architecture diagram
+          - [ ] Update CLAUDE.md with MCP connection examples
+          - [ ] Create migration guide for existing users
+          - [ ] Update all agent examples to use MCP
+          - [ ] Add troubleshooting guide
+
+          ## Implementation Notes
+          - Clear before/after architecture
+          - Include code examples
+          - Update all references to direct storage access
+        labels:
+          - "sprint-5"
+          - "phase-4"
+          - "documentation"
+          - "priority-high"
+        dependencies:
+          - "Add context-store as dependency"
+        estimate: "4 hours"
+        assignee: "doc-engineer"
+
+  - phase: 5
+    name: "Testing and Validation"
+    status: pending
+    priority: high
+    component: testing
+    description: "Comprehensive testing of the refactored architecture"
+    duration_days: 2
+    tasks:
+      - title: "Integration testing suite"
+        description: |
+          Create comprehensive integration tests
+
+          ## Acceptance Criteria
+          - [ ] Test MCP tools end-to-end
+          - [ ] Test agent-template with external context-store
+          - [ ] Test multi-instance deployment
+          - [ ] Test failure scenarios
+          - [ ] Achieve 85% overall coverage
+
+          ## Implementation Notes
+          - Use Docker for integration tests
+          - Test network failures
+          - Test data persistence
+        labels:
+          - "sprint-5"
+          - "phase-5"
+          - "testing"
+          - "priority-high"
+        dependencies:
+          - "Update documentation and examples"
+        estimate: "6 hours"
+        assignee: "qa-engineer"
+
+      - title: "Performance benchmarking"
+        description: |
+          Benchmark the MCP-based architecture
+
+          ## Acceptance Criteria
+          - [ ] Measure MCP tool response times
+          - [ ] Compare with direct database access
+          - [ ] Test concurrent agent connections
+          - [ ] Document performance characteristics
+          - [ ] Create performance tuning guide
+
+          ## Implementation Notes
+          - Target <50ms MCP response time
+          - Test with 100+ concurrent connections
+          - Profile memory usage
+        labels:
+          - "sprint-5"
+          - "phase-5"
+          - "performance"
+          - "priority-medium"
+        dependencies:
+          - "Integration testing suite"
+        estimate: "4 hours"
+        assignee: "performance-engineer"
+
+# Team members and their roles
+team:
+  - role: lead
+    agent: pm_agent
+    responsibilities:
+      - "Sprint coordination"
+      - "Repository setup"
+      - "Stakeholder communication"
+  - role: implementation
+    agent: code_agent
+    responsibilities:
+      - "Code extraction and refactoring"
+      - "MCP server implementation"
+      - "Integration work"
+  - role: documentation
+    agent: doc_agent
+    responsibilities:
+      - "Documentation updates"
+      - "Migration guides"
+      - "API documentation"
+  - role: validation
+    agent: ci_agent
+    responsibilities:
+      - "Test suite updates"
+      - "CI/CD pipeline changes"
+      - "Coverage reporting"
+
+# Success metrics for this sprint
+success_metrics:
+  - metric: repository_separation
+    target: 100
+    unit: percent
+    description: "Complete separation of context-store and agent-template"
+  - metric: mcp_tools_implemented
+    target: 5
+    unit: count
+    description: "Number of MCP tools implemented"
+  - metric: test_coverage
+    target: 85
+    unit: percent
+    description: "Overall test coverage for context-store"
+  - metric: docker_deployment
+    target: 1
+    unit: boolean
+    description: "One-command Docker deployment working"
+  - metric: integration_tests
+    target: 100
+    unit: percent
+    description: "All integration tests passing"
+
+# Metadata for graph relationships
+graph_metadata:
+  node_type: sprint_document
+  relationships:
+    - type: refactors
+      target: system_architecture
+    - type: creates
+      target: context_store_repository
+    - type: follows
+      target: sprint-4-kv-store
+
+# Sprint-specific configuration
+config:
+  # Automatically create GitHub issues from tasks
+  auto_create_issues: true
+  # Issue template to use
+  issue_template: "sprint-task.md"
+  # Default labels for all issues in this sprint
+  default_labels:
+    - "sprint-5"
+    - "refactoring"
+    - "context-store"
+  # Milestone to create/assign issues to
+  milestone: "Context Store Extraction"
+  # Project board to add issues to
+  project_board: "Sprint Board"
