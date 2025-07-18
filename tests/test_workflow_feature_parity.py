@@ -23,7 +23,9 @@ class TestWorkflowFeatureParity:
 
     def setup_method(self):
         """Setup workflow paths"""
-        self.workflows_dir = Path(".github/workflows")
+        # Use absolute paths to work correctly in different contexts
+        project_root = Path(__file__).parent.parent
+        self.workflows_dir = project_root / ".github/workflows"
         self.new_workflow = self.workflows_dir / "ai-pr-monitor.yml"
         self.legacy_workflows = [
             self.workflows_dir / "auto-merge.yml.disabled",
