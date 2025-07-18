@@ -3,17 +3,18 @@ name: Sprint Update
 
 "on":
   # EMERGENCY DISABLE - Sprint workflow creating runaway PRs (342+ created)
+  # FULLY DISABLED - All triggers removed to prevent duplicate PR creation
   # issues:
   #   types: [opened, closed, reopened, labeled, unlabeled]
   # pull_request:
   #   types: [closed]
   # schedule:
   #   - cron: '0 9 * * 1-5'  # 9 AM UTC on weekdays
-  workflow_dispatch:
-    inputs:
-      sprint_id:
-        description: 'Specific sprint ID to update'
-        required: false
+  # workflow_dispatch:
+  #   inputs:
+  #     sprint_id:
+  #       description: 'Specific sprint ID to update'
+  #       required: false
 
 jobs:
   update:
