@@ -320,6 +320,8 @@ jobs:
       - name: AI PR Analysis & Action
         id: ai-action
         uses: anthropics/claude-code-action@beta
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           auto_commit: true
@@ -486,6 +488,8 @@ jobs:
         if: |
           github.event_name == 'pull_request' &&
           contains(fromJson(steps.pr-context.outputs.result || '{}').mergeable_state || '', 'behind')
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           echo "🔄 Checking if branch needs updating to prevent conflicts..."
 
