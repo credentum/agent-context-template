@@ -87,7 +87,10 @@ jobs:
               message = `❌ **Invalid Issue References** - Issue(s) not found: ${invalidIssues.map(n => `#${n}`).join(', ')}`;
             } else if (validIssues.length === 0 && !isExempt) {
               status = 'failure';
-              message = `⚠️ **Missing Issue Links** - PR should either:\n- Reference issues with closing keywords (closes #123, fixes #456)\n- Check the exemption box if no issues are closed`;
+              const warningText = '⚠️ **Missing Issue Links** - PR should either:';
+              const options = '\n- Reference issues with closing keywords (closes #123, fixes #456)' +
+                         '\n- Check the exemption box if no issues are closed';
+              message = warningText + options;
             }
 
             // Create/update status check

@@ -65,7 +65,8 @@ jobs:
       - name: Check YAML files
         continue-on-error: true
         run: |
-          yamllint context/ -d "{extends: default, rules: {line-length: {max: 120}}, ignore: 'context/schemas/'" || echo "YAML lint failed but continuing"
+          YAML_CONFIG="{extends: default, rules: {line-length: {max: 120}}, ignore: 'context/schemas/'}"
+          yamllint context/ -d "$YAML_CONFIG" || echo "YAML lint failed but continuing"
 
       - name: Run Context Lint
         run: |

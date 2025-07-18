@@ -338,7 +338,8 @@ jobs:
 
           # Enhanced custom instructions with comprehensive auto-merge logic
           custom_instructions: |
-            You are an AI-powered PR lifecycle manager replacing 2,063 lines of brittle multi-workflow coordination. Your role is to intelligently handle the complete PR process from opening to merge.
+            You are an AI-powered PR lifecycle manager replacing 2,063 lines of brittle multi-workflow coordination.
+            Your role is to intelligently handle the complete PR process from opening to merge.
 
             ## Current Event & PR Context
             **Event Type**: ${{ github.event_name }}
@@ -479,7 +480,8 @@ jobs:
             - ✅ **Transparent communication** (detailed status vs. scattered workflow logs)
             - ✅ **Fail-safe operation** (intelligent fallbacks vs. brittle state management)
 
-            **Remember**: You are replacing 2,063 lines of complex coordination logic with intelligent single-agent management. Use the comprehensive context provided to make informed decisions quickly and safely.
+            **Remember**: You are replacing 2,063 lines of complex coordination logic with intelligent single-agent management.
+            Use the comprehensive context provided to make informed decisions quickly and safely.
 
       - name: Branch Auto-Update (Conflict Prevention)
         id: branch-update
@@ -594,12 +596,20 @@ jobs:
           echo "## 🤖 AI PR Monitor Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Event**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Timestamp**: $(date)" >> $GITHUB_STEP_SUMMARY
-          echo "- **PR Number**: $(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.number // "N/A"')" >> $GITHUB_STEP_SUMMARY
-          echo "- **Auto-merge Requested**: $(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.auto_merge_requested // false') via $(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.auto_merge_method // "none"')" >> $GITHUB_STEP_SUMMARY
-          echo "- **CI Ready**: $(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.ci_ready // false')" >> $GITHUB_STEP_SUMMARY
-          echo "- **ARC-Reviewer Status**: $(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.arc_reviewer_status.verdict // "pending"')" >> $GITHUB_STEP_SUMMARY
-          echo "- **Ready for Auto-merge**: $(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.ready_for_auto_merge // false')" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch Update**: ${{ steps.branch-update.outputs.branch_updated || 'not_needed' }} (${{ steps.branch-update.outputs.update_method || 'none' }})" >> $GITHUB_STEP_SUMMARY
+          PR_NUM=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.number // "N/A"')
+          echo "- **PR Number**: $PR_NUM" >> $GITHUB_STEP_SUMMARY
+          AUTO_MERGE_REQ=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.auto_merge_requested // false')
+          AUTO_MERGE_METHOD=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.auto_merge_method // "none"')
+          echo "- **Auto-merge Requested**: $AUTO_MERGE_REQ via $AUTO_MERGE_METHOD" >> $GITHUB_STEP_SUMMARY
+          CI_READY=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.ci_ready // false')
+          echo "- **CI Ready**: $CI_READY" >> $GITHUB_STEP_SUMMARY
+          ARC_STATUS=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.arc_reviewer_status.verdict // "pending"')
+          echo "- **ARC-Reviewer Status**: $ARC_STATUS" >> $GITHUB_STEP_SUMMARY
+          READY_FOR_MERGE=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.ready_for_auto_merge // false')
+          echo "- **Ready for Auto-merge**: $READY_FOR_MERGE" >> $GITHUB_STEP_SUMMARY
+          BRANCH_UPDATED="${{ steps.branch-update.outputs.branch_updated || 'not_needed' }}"
+          UPDATE_METHOD="${{ steps.branch-update.outputs.update_method || 'none' }}"
+          echo "- **Branch Update**: $BRANCH_UPDATED ($UPDATE_METHOD)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🎯 Enhanced AI-Monitored PR Process" >> $GITHUB_STEP_SUMMARY
           echo "This workflow replaces **2,063 lines** of brittle multi-workflow coordination:" >> $GITHUB_STEP_SUMMARY

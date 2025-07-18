@@ -81,7 +81,11 @@ jobs:
             }
 
             // Create or update comment
-            const commentBody = `## 🤖 PR Validation Results\n\n${feedback.join('\n')}\n\n${isValid ? '✅ **All validations passed!** This PR is ready for review.' : '❌ **Please address the issues above** before this PR can be merged.'}\n\n---\n*This comment is automatically updated when the PR description changes.*`;
+            const validMessage = '✅ **All validations passed!** This PR is ready for review.';
+            const invalidMessage = '❌ **Please address the issues above** before this PR can be merged.';
+            const statusLine = isValid ? validMessage : invalidMessage;
+            const footerText = '*This comment is automatically updated when the PR description changes.*';
+            const commentBody = `## 🤖 PR Validation Results\n\n${feedback.join('\n')}\n\n${statusLine}\n\n---\n${footerText}`;
 
             // Find existing bot comment
             const comments = await github.rest.issues.listComments({

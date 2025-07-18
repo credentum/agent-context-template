@@ -139,6 +139,9 @@ pre-commit run --all-files
 # Run exact CI checks locally (Docker - matches GitHub Actions exactly!)
 ./scripts/run-ci-docker.sh
 
+# Alternative: Quick pre-push validation (essential checks only - 30 seconds)
+./scripts/quick-pre-push.sh
+
 # Alternative: Run CI checks with Make (uses local Python)
 make lint
 
@@ -191,17 +194,16 @@ Debug | reproduce issue → add logging → isolate → fix → add regression t
    - Missing document start markers (`---`)
    - Trailing spaces and whitespace issues
 
-**NEW: Automated Validation (with git hooks):**
-- Git hooks automatically run CI checks before push
-- Branch sync validation prevents merge conflicts
-- Can be bypassed for emergencies but not recommended
-- Run `./scripts/setup-git-hooks.sh` once to enable
-
-**NEW: Automated Validation (with git hooks):**
-- Git hooks automatically run CI checks before push
-- Branch sync validation prevents merge conflicts
-- Can be bypassed for emergencies but not recommended
-- Run `./scripts/setup-git-hooks.sh` once to enable
+**NEW: Enhanced Pre-Push Hook System:**
+- **Automatic validation**: Pre-push hooks run CI checks before push
+- **Fast alternative**: `./scripts/quick-pre-push.sh` (30 seconds vs 5 minutes)
+- **Timeout protection**: Hooks timeout after 5 minutes to prevent hanging
+- **Better error messages**: Detailed troubleshooting guidance
+- **Multiple bypass options**:
+  - `SKIP_HOOKS=1 git push` (for debugging)
+  - `EMERGENCY_PUSH=1 git push` (for emergencies)
+  - `git push --no-verify` (standard bypass)
+- **Robust failure handling**: Distinguishes between timeouts and real failures
 
 Use /clear between distinct tasks to avoid context bleed.
 
@@ -723,3 +725,19 @@ All documents include `graph_metadata` defining relationships:
    - Check for proper async/await usage
    - Ensure validators handle edge cases
    - Look for potential security issues
+
+## 🔧 Recently Resolved Issues
+
+**Issue #171: Local Docker CI Environment & Dependencies (RESOLVED)**
+- ✅ **Docker CI Environment**: Rebuilt images with latest dependencies
+- ✅ **jsonschema Dependency**: Confirmed working in Docker environment
+- ✅ **YAML Workflow Issues**: Fixed line length, indentation, and formatting
+- ✅ **Pre-push Hook Reliability**: Enhanced with timeout protection and better error handling
+- ✅ **Quick Alternative**: Added `./scripts/quick-pre-push.sh` for fast validation (30s vs 5min)
+- ✅ **Documentation**: Updated CLAUDE.md with correct commands and troubleshooting
+
+**Key Improvements:**
+- Pre-push hooks now timeout after 5 minutes instead of hanging
+- Better error messages with specific troubleshooting guidance
+- Multiple bypass options for different scenarios
+- Fast validation script for quick iteration

@@ -8,7 +8,7 @@ name: PR Conflict Validator
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  # Removed pull_request_target to prevent duplicate jobs
+    # Removed pull_request_target to prevent duplicate jobs
 
 jobs:
   validate-conflicts:
