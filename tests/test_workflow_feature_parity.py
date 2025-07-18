@@ -26,9 +26,9 @@ class TestWorkflowFeatureParity:
         self.workflows_dir = Path(".github/workflows")
         self.new_workflow = self.workflows_dir / "ai-pr-monitor.yml"
         self.legacy_workflows = [
-            self.workflows_dir / "auto-merge.yml",
-            self.workflows_dir / "smart-auto-merge.yml",
-            self.workflows_dir / "auto-merge-notifier.yml",
+            self.workflows_dir / "auto-merge.yml.disabled",
+            self.workflows_dir / "smart-auto-merge.yml.disabled",
+            self.workflows_dir / "auto-merge-notifier.yml.disabled",
         ]
 
     def test_workflow_files_exist(self):
