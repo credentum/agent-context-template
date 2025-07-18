@@ -162,7 +162,10 @@ jobs:
     name: "🔍 Lint & Style"
     runs-on: ubuntu-latest
     needs: [detect-changes, setup]
-    if: needs.detect-changes.outputs.src-changed == 'true' || needs.detect-changes.outputs.tests-changed == 'true' || needs.detect-changes.outputs.config-changed == 'true'
+    if: |
+      needs.detect-changes.outputs.src-changed == 'true' ||
+      needs.detect-changes.outputs.tests-changed == 'true' ||
+      needs.detect-changes.outputs.config-changed == 'true'
     strategy:
       fail-fast: false
       matrix:
