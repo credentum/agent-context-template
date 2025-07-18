@@ -25,7 +25,15 @@ class TestWorkflowFeatureParity:
         """Setup workflow paths"""
         # Use absolute paths to work correctly in different contexts
         project_root = Path(__file__).parent.parent
-        self.workflows_dir = project_root / ".github/workflows"
+
+        # Handle Docker environment vs local environment
+        if Path("/app/.github").exists():
+            # Docker environment
+            self.workflows_dir = Path("/app/.github/workflows")
+        else:
+            # Local environment
+            self.workflows_dir = project_root / ".github/workflows"
+
         self.new_workflow = self.workflows_dir / "ai-pr-monitor.yml"
         self.legacy_workflows = [
             self.workflows_dir / "auto-merge.yml.disabled",
