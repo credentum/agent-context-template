@@ -52,7 +52,7 @@ run_timed() {
 
     echo -e "${BLUE}▶ Starting: $description${NC}"
 
-    if docker-compose -f docker-compose.ci-optimized.yml run --rm $service; then
+    if docker-compose -f docker-compose.ci.yml run --rm $service; then
         local end_time=$(date +%s)
         local duration=$((end_time - start_time))
         echo -e "${GREEN}✅ Completed: $description (${duration}s)${NC}"
@@ -75,7 +75,7 @@ run_parallel() {
 
     for service in "${services[@]}"; do
         echo -e "${BLUE}▶ Starting: $service${NC}"
-        docker-compose -f docker-compose.ci-optimized.yml run --rm $service &
+        docker-compose -f docker-compose.ci.yml run --rm $service &
         pids+=($!)
     done
 
@@ -222,14 +222,14 @@ case $COMMAND in
 
     build)
         echo -e "${BLUE}▶ Building optimized CI Docker images...${NC}"
-        docker-compose -f docker-compose.ci-optimized.yml build
+        docker-compose -f docker-compose.ci.yml build
         echo -e "${GREEN}✓ Build complete${NC}"
         ;;
 
     clean)
         echo -e "${BLUE}▶ Cleaning up Docker containers and cache...${NC}"
-        docker-compose -f docker-compose.ci-optimized.yml down
         docker-compose -f docker-compose.ci.yml down
+        docker-compose down
         docker system prune -f
         echo -e "${GREEN}✓ Cleanup complete${NC}"
         ;;
@@ -237,7 +237,7 @@ case $COMMAND in
     debug)
         echo -e "${BLUE}▶ Starting interactive debug shell...${NC}"
         echo "You can run optimized CI commands manually inside the container"
-        docker-compose -f docker-compose.ci-optimized.yml run --rm ci-debug
+        docker-compose -f docker-compose.ci.yml run --rm ci-debug
         ;;
 
     profile)
@@ -248,7 +248,7 @@ case $COMMAND in
 
         for component in "ci-lint-black" "ci-lint-mypy" "ci-test-core" "ci-test-integration"; do
             local start_time=$(date +%s)
-            docker-compose -f docker-compose.ci-optimized.yml run --rm $component >/dev/null 2>&1
+            docker-compose -f docker-compose.ci.yml run --rm $component >/dev/null 2>&1
             local duration=$(($(date +%s) - start_time))
             echo -e "  $component: ${YELLOW}${duration}s${NC}"
         done

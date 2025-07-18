@@ -49,7 +49,9 @@ run_service() {
     local description=$2
 
     echo -e "${BLUE}▶ Running $description...${NC}"
-    docker-compose -f docker-compose.ci.yml run --rm $service
+
+    # Always use both compose files since CI file has dependencies on base services
+    docker-compose -f docker-compose.yml -f docker-compose.ci.yml run --rm $service
 }
 
 # Main logic
@@ -104,11 +106,11 @@ case $COMMAND in
     debug)
         echo -e "${BLUE}▶ Starting interactive debug shell...${NC}"
         echo "You can run CI commands manually inside the container"
-        docker-compose -f docker-compose.ci.yml run --rm ci-debug
+        docker-compose -f docker-compose.yml -f docker-compose.ci.yml run --rm ci-debug
         ;;
     build)
         echo -e "${BLUE}▶ Building CI Docker image...${NC}"
-        docker-compose -f docker-compose.ci.yml build
+        docker-compose -f docker-compose.yml -f docker-compose.ci.yml build
         echo -e "${GREEN}✓ Build complete${NC}"
         ;;
     clean)
