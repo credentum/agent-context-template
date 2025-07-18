@@ -15,6 +15,11 @@ name: Sprint Update
         description: 'Specific sprint ID to update'
         required: false
 
+# Prevent duplicate runs when both events fire simultaneously
+concurrency:
+  group: sprint-update-${{ github.event.issue.number || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -33,21 +38,50 @@ jobs:
       - name: Check for duplicate runs
         id: check-duplicates
         run: |
-          # Get the current workflow run ID
+          # Get the current workflow run ID and start time
           CURRENT_RUN_ID="${{ github.run_id }}"
+          CURRENT_EVENT="${{ github.event_name }}"
+          CURRENT_NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
 
-          # Get all recent workflow runs for this workflow
-          gh run list --workflow=sprint-update.yml --limit 20 --json id,createdAt,status | \
-            jq -r '.[] | select(.status == "in_progress" or .status == "queued") | .id' | \
-            while read run_id; do
-              if [ "$run_id" != "$CURRENT_RUN_ID" ] && [ "$run_id" -lt "$CURRENT_RUN_ID" ]; then
-                echo "found_duplicate=true" >> $GITHUB_OUTPUT
-                echo "duplicate_run_id=$run_id" >> $GITHUB_OUTPUT
-                exit 0
+          echo "Current run: $CURRENT_RUN_ID, Event: $CURRENT_EVENT, Number: $CURRENT_NUMBER"
+
+          # Get all recent workflow runs for this workflow (last 2 hours)
+          cutoff_time=$(date -d '2 hours ago' --iso-8601=seconds)
+
+          duplicate_found=false
+
+          # Check for runs from the same event/issue/PR that are still active
+          gh run list --workflow=sprint-update.yml --limit 50 --json id,createdAt,status,event,headSha,conclusion,url | \
+            jq -r --arg cutoff "$cutoff_time" '.[] | select(.createdAt > $cutoff) |
+                   select(.status == "in_progress" or .status == "queued" or
+                          (.status == "completed" and .conclusion == "success" and
+                           (.createdAt | fromdateiso8601) > (now - 300))) |
+                   "\(.id)|\(.status)|\(.event)|\(.createdAt)|\(.conclusion // "none")"' | \
+            while IFS='|' read -r run_id status event created_at conclusion; do
+              if [ "$run_id" != "$CURRENT_RUN_ID" ]; then
+                echo "Found recent run: $run_id (status: $status, event: $event, created: $created_at)"
+
+                # If there's a successful run within the last 5 minutes, skip this one
+                if [ "$conclusion" = "success" ]; then
+                  echo "found_duplicate=true" >> $GITHUB_OUTPUT
+                  echo "duplicate_reason=Recent successful run: $run_id" >> $GITHUB_OUTPUT
+                  duplicate_found=true
+                  break
+                fi
+
+                # If there's an active run, skip this one
+                if [ "$status" = "in_progress" ] || [ "$status" = "queued" ]; then
+                  echo "found_duplicate=true" >> $GITHUB_OUTPUT
+                  echo "duplicate_reason=Active run detected: $run_id" >> $GITHUB_OUTPUT
+                  duplicate_found=true
+                  break
+                fi
               fi
             done
 
-          echo "found_duplicate=false" >> $GITHUB_OUTPUT
+          if [ "$duplicate_found" = false ]; then
+            echo "found_duplicate=false" >> $GITHUB_OUTPUT
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -55,7 +89,8 @@ jobs:
         if: steps.check-duplicates.outputs.found_duplicate == 'true'
         run: |
           echo "⏭️ Skipping this run - duplicate detected"
-          echo "Another sprint update workflow is already running or queued"
+          echo "Reason: ${{ steps.check-duplicates.outputs.duplicate_reason }}"
+          echo "This prevents race conditions and duplicate PR creation"
           exit 0
 
       - name: Set up Python
@@ -219,6 +254,10 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         id: create-pr
         with:
+          # NOTE: Using GITHUB_TOKEN prevents CI workflows from running on the created PR
+          # This is a GitHub Actions security feature to prevent recursive workflow runs
+          # To enable CI checks on automated PRs, use a Personal Access Token (PAT) or GitHub App token
+          # See: https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: |
             chore: update sprint status via automation
@@ -242,6 +281,11 @@ jobs:
             ### Changes
             - Updated sprint YAML files in `context/sprints/`
             - Reflected current issue states and progress
+
+            ### ⚠️ CI Status
+            **Note:** Main CI workflows (tests, coverage, linting) do not run on PRs created by `github-actions[bot]` when using `GITHUB_TOKEN`. This is a GitHub Actions security feature.
+
+            If CI checks are required, the workflow should be updated to use a Personal Access Token (PAT) or GitHub App token instead of `GITHUB_TOKEN`.
 
             _This PR was automatically generated by the sprint update workflow._
           branch: automation/sprint-update-${{ github.run_number }}
