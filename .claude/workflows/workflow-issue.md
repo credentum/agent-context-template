@@ -31,13 +31,13 @@ This workflow automates the complete GitHub issue resolution process from analys
 ## Usage
 ```bash
 # Basic usage
-claude workflow fix-issue --issue 123
+claude workflow workflow-issue --issue 123
 
 # With automation features
-claude workflow fix-issue --issue 123 --auto-template --parallel-agents
+claude workflow workflow-issue --issue 123 --auto-template --parallel-agents
 
 # With custom parameters
-claude workflow fix-issue --issue 123 --priority high --component api --max-wait 24h
+claude workflow workflow-issue --issue 123 --priority high --component api --max-wait 24h
 ```
 
 ## EXECUTE WORKFLOW

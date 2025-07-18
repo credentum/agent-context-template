@@ -1,5 +1,12 @@
-# docker-compose.ci.yml - Run CI environment locally exactly like GitHub Actions
+# docker-compose.ci.yml - CI environment configuration
+# Extends base docker-compose.yml with CI-specific services and optimizations
 ---
+
+# Docker image references with SHA pinning for security
+x-images:
+  qdrant: &qdrant-image qdrant/qdrant:v1.14.1@sha256:419d72603f5346ee22ffc4606bdb7beb52fcb63077766fab678e6622ba247366  # yamllint disable-line rule:line-length
+  neo4j: &neo4j-image neo4j:5.20.0@sha256:52d3dec8d45585b21edeca8517d752b2512e52aa94f80fc36a5788c88c95f8e4  # yamllint disable-line rule:line-length
+  redis: &redis-image redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55  # yamllint disable-line rule:line-length
 
 services:
   # Run all CI lint checks (default)
@@ -252,32 +259,40 @@ services:
       - redis
     command: /bin/bash scripts/test-suite-like-ci.sh
 
-  # Qdrant service for workflow tests
+  # CI-specific overrides for base services
+  # These services inherit from base docker-compose.yml
   qdrant:
-    image: qdrant/qdrant@sha256:9d1eefc5f6fb4f20ba1b9de8862c85ce5b12b47c75ed2abac5e6c2c8bb2b6a92  # yamllint disable-line rule:line-length
+    # Use base service with CI optimizations
+    image: *qdrant-image
     ports:
-      - "6335:6333"
-      - "6336:6334"
+      - "6333:6333"
+      - "6334:6334"
+    environment:
+      - QDRANT__STORAGE__MEMORY_THRESHOLD=100000000  # 100MB for CI
+      - QDRANT__LOG_LEVEL=WARN
+    # Override healthcheck for faster CI
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6333/collections"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 3
 
-  # Neo4j service for workflow tests
   neo4j:
-    image: neo4j@sha256:b98e15a2b3c5b1b8e6e5f7e20a4a8b8c9d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5  # yamllint disable-line rule:line-length
+    # Use base service with CI authentication
+    image: *neo4j-image
     ports:
-      - "7688:7687"
-      - "7475:7474"
+      - "7474:7474"
+      - "7687:7687"
     environment:
-      - NEO4J_AUTH=neo4j/testpassword
+      - NEO4J_AUTH=${NEO4J_CI_AUTH:-neo4j/ci-secure-test-password-2025}
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
       - NEO4J_PLUGINS=["apoc"]
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
       # Memory optimization for CI
-      - NEO4J_dbms_memory_heap_initial__size=512m
-      - NEO4J_dbms_memory_heap_max__size=1G
+      - NEO4J_dbms_memory_heap_initial__size=256m
+      - NEO4J_dbms_memory_heap_max__size=512m
+      - NEO4J_dbms_memory_pagecache_size=128m
+    # Override healthcheck for CI authentication
     healthcheck:
       test:
         - "CMD"
@@ -285,19 +300,17 @@ services:
         - "-u"
         - "neo4j"
         - "-p"
-        - "testpassword"
+        - "ci-secure-test-password-2025"
         - "RETURN 1"
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 3
 
-  # Redis service for tests that need it
   redis:
-    image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55  # yamllint disable-line rule:line-length
+    # Use base service with CI optimizations
+    image: *redis-image
     ports:
       - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    command: >
+      redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+      --loglevel warning
