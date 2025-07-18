@@ -1,5 +1,14 @@
 ---
-name: Auto-Merge Completion Notifier
+###############################################################################
+# Auto-Merge Completion Notifier
+#
+# ⚠️  DISABLED: Replaced by AI-Monitored PR Process (.github/workflows/ai-pr-monitor.yml)
+# Issue #173: Replace brittle multi-workflow automation with AI-monitored PR process
+# This workflow (90 lines) is part of 2,059 lines consolidated into ai-pr-monitor.yml
+#
+# To re-enable for emergency rollback: Change condition from 'false' to previous logic
+###############################################################################
+name: Auto-Merge Completion Notifier (DISABLED)
 
 on:
   # Trigger when PR is merged
@@ -8,9 +17,9 @@ on:
 
 jobs:
   notify-merge-completion:
-    name: "🎉 Notify Auto-Merge Completion"
+    name: "🎉 Notify Auto-Merge Completion (DISABLED)"
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
+    if: false  # DISABLED: Replaced by AI-Monitored PR Process (ai-pr-monitor.yml)
 
     permissions:
       contents: read

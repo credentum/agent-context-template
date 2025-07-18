@@ -1,5 +1,14 @@
 ---
-name: Auto-Merge Notifier & Restart
+###############################################################################
+# Auto-Merge Notifier & Restart
+#
+# ⚠️  DISABLED: Replaced by AI-Monitored PR Process (.github/workflows/ai-pr-monitor.yml)
+# Issue #173: Replace brittle multi-workflow automation with AI-monitored PR process
+# This workflow (334 lines) is part of 2,059 lines consolidated into ai-pr-monitor.yml
+#
+# To re-enable for emergency rollback: Change condition from 'false' to previous logic
+###############################################################################
+name: Auto-Merge Notifier & Restart (DISABLED)
 
 on:
   # Trigger when ARC-Reviewer completes
@@ -21,9 +30,9 @@ on:
 
 jobs:
   check-blocking-issues:
-    name: "🔔 Check for Blocking Issues & Notify"
+    name: "🔔 Check for Blocking Issues & Notify (DISABLED)"
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'issue_comment'
+    if: false  # DISABLED: Replaced by AI-Monitored PR Process (ai-pr-monitor.yml)
 
     permissions:
       contents: read

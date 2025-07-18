@@ -2,8 +2,14 @@
 ###############################################################################
 # 🚀 Auto-Merge Workflow - Intelligent PR Merging
 # Automatically merges PRs after CI passes and ARC-Reviewer shows APPROVE
+#
+# ⚠️  DISABLED: Replaced by AI-Monitored PR Process (.github/workflows/ai-pr-monitor.yml)
+# Issue #173: Replace brittle multi-workflow automation with AI-monitored PR process
+# This workflow (737 lines) is part of 2,059 lines consolidated into ai-pr-monitor.yml
+#
+# To re-enable for emergency rollback: Change condition from 'false' to previous logic
 ###############################################################################
-name: Auto-Merge PR
+name: Auto-Merge PR (DISABLED)
 
 on:
   pull_request:
@@ -14,9 +20,9 @@ on:
 
 jobs:
   auto-merge:
-    name: "🔄 Auto-Merge Controller"
+    name: "🔄 Auto-Merge Controller (DISABLED)"
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: false  # DISABLED: Replaced by AI-Monitored PR Process (ai-pr-monitor.yml)
 
     permissions:
       contents: write
