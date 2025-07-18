@@ -14,7 +14,7 @@ assignees: ''
 ## Acceptance Criteria
 <!-- From sprint planning -->
 - [ ] Specific functional requirement
-- [ ] Performance requirement  
+- [ ] Performance requirement
 - [ ] Quality gate requirement
 
 ## Claude Code Readiness Checklist
@@ -28,7 +28,7 @@ assignees: ''
 ## Pre-Execution Context
 <!-- Gather these details for Claude Code -->
 **Key Files**: `src/path/to/files`, `tests/path/`
-**External Dependencies**: 
+**External Dependencies**:
 **Configuration**: Environment variables, feature flags
 **Related Issues/PRs**: #xyz, #abc
 

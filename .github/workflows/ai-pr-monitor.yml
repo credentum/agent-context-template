@@ -245,12 +245,14 @@ jobs:
                           created_at: comment.created_at
                         };
 
-                        // Check for blocking issues
-                        const blockingMatch = yamlContent.match(/blocking:\s*\[\s*\]/) ||
-                                            yamlContent.match(/blocking:\s*$/m);
-                        const hasBlockingContent = yamlContent.match(/blocking:\s*\n\s*-/);
+                        // Check for blocking issues - improved detection
+                        const emptyBlockingMatch = yamlContent.match(/blocking:\s*\[\s*\]/) ||
+                                                 yamlContent.match(/blocking:\s*$/m);
+                        const hasBlockingContent = yamlContent.match(/blocking:\s*\n\s*-/) ||
+                                                 yamlContent.match(/blocking:\s*\[\s*\{/) ||
+                                                 yamlContent.match(/blocking:\s*\n\s*-\s*description:/);
 
-                        arcReviewerStatus.has_blocking_issues = !blockingMatch && hasBlockingContent;
+                        arcReviewerStatus.has_blocking_issues = !emptyBlockingMatch && hasBlockingContent;
                         break;
                       }
                     }
@@ -524,15 +526,21 @@ jobs:
 
             # Try merge first (safer for automation)
             echo "🔄 Attempting merge with $BASE_REF..."
-            if git merge origin/$BASE_REF --no-edit; then
+            if git merge origin/$BASE_REF --no-edit --no-ff; then
               echo "✅ Merge successful, updating branch..."
+
+              # Validate merge was clean (no conflicts)
+              if git diff --quiet HEAD~1 HEAD; then
+                echo "⚠️ Merge created no changes - branch was already up to date"
+              fi
+
               git push origin $HEAD_REF
               echo "✅ Branch successfully updated via merge"
               echo "branch_updated=true" >> $GITHUB_OUTPUT
               echo "update_method=merge" >> $GITHUB_OUTPUT
 
               # Comment on PR about successful update
-              gh pr comment $PR_NUMBER --body "🔄 **Auto-update completed**: Branch merged with latest $BASE_REF to prevent conflicts."
+              gh pr comment $PR_NUMBER --body "🔄 **Auto-update completed**: Branch merged with latest $BASE_REF to prevent conflicts. No manual intervention required."
 
             else
               echo "❌ Merge failed, trying rebase..."
@@ -540,13 +548,21 @@ jobs:
 
               if git rebase origin/$BASE_REF; then
                 echo "✅ Rebase successful, updating branch..."
+
+                # Validate rebase was clean
+                if git status --porcelain | grep -q "^UU"; then
+                  echo "❌ Rebase has unresolved conflicts"
+                  git rebase --abort
+                  exit 1
+                fi
+
                 git push origin $HEAD_REF --force-with-lease
                 echo "✅ Branch successfully updated via rebase"
                 echo "branch_updated=true" >> $GITHUB_OUTPUT
                 echo "update_method=rebase" >> $GITHUB_OUTPUT
 
                 # Comment on PR about successful update
-                gh pr comment $PR_NUMBER --body "🔄 **Auto-update completed**: Branch rebased onto latest $BASE_REF to prevent conflicts."
+                gh pr comment $PR_NUMBER --body "🔄 **Auto-update completed**: Branch rebased onto latest $BASE_REF to prevent conflicts. All changes preserved."
 
               else
                 echo "❌ Both merge and rebase failed, conflicts detected"

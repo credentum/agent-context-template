@@ -31,8 +31,12 @@ Brief description of changes and why they are needed.
 - Mention any files or components affected
 
 ## Related Issues
-<!-- This section is now handled by the metadata above, but you can add context here -->
+<!-- Use closing keywords like "Closes #123, Fixes #456" or check exemption box below -->
 This PR addresses the requirements in the linked issues by implementing [describe approach].
+
+### Issue References
+- [ ] This PR doesn't close any issues (exemption - no issue linking required)
+- [ ] This PR closes the following issues: (list them with closing keywords like "Closes #123")
 
 ## Type of Change
 <!-- This is now specified in metadata, but you can elaborate here -->

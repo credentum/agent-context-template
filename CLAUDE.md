@@ -2,6 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Table of Contents
+1. [Repository Context](#repository-context)
+2. [Security & Secrets](#1-️-security--secrets-first-things-first)
+3. [Quick Start](#2--quick-start)
+4. [Project Structure & Key Files](#3--project-structure--key-files)
+5. [CLI Cheat-Sheet](#4-️-cli-cheat-sheet-keep-nearby)
+6. [Coding & Review Guidelines](#5--coding--review-guidelines)
+7. [Recommended Workflows](#6--recommended-workflows)
+8. [GitHub Actions Overview](#7-️-github-actions-overview)
+9. [Tokens & Cost Control](#8--tokens--cost-control)
+10. [Extending Claude](#9--extending-claude)
+11. [Project-Specific Resources](#10--project-specific-resources)
+12. [Agent Workflow System](#-agent-workflow-system)
+13. [Critical Git Workflow Rules](#-critical-git-workflow-rules)
+14. [Current Focus Areas](#-current-focus-areas)
+15. [Recently Resolved Issues](#-recently-resolved-issues)
+
 ## Repository Context
 
 This is an **Agent-First Project Context System** that provides structured context management with vector search (Qdrant) and graph relationships (Neo4j) for enhanced AI agent interactions. It includes GitHub Actions templates for integrating Claude AI into workflows using the `anthropics/claude-code-action@beta` action.

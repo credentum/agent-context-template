@@ -58,19 +58,19 @@ Follow these steps:
 | {identified files} | {modify/create/test} | {best technique} | {specific purpose} | {Low/Med/High} |
 
 ## 📝 Enhanced RCICO Prompt
-**Role**  
+**Role**
 You are a senior software engineer working on {component/domain}.
 
-**Context**  
+**Context**
 GitHub Issue #{number}: {title}
 {Paste relevant issue context}
 Current codebase follows {identified patterns}.
 Related files: {file list with purposes}
 
-**Instructions**  
+**Instructions**
 1. **Primary Objective**: {clear goal from issue}
 2. **Scope**: Address issue requirements while maintaining system integrity
-3. **Constraints**: 
+3. **Constraints**:
    - Follow existing code patterns: {identified patterns}
    - Maintain backward compatibility unless breaking change approved
    - Keep public APIs unchanged unless specified in issue
@@ -78,14 +78,14 @@ Related files: {file list with purposes}
 5. **Testing**: Address test requirements from issue acceptance criteria
 6. **Documentation**: Update as specified in issue requirements
 
-**Technical Constraints**  
+**Technical Constraints**
 • Expected diff ≤ {estimated} LoC, ≤ {estimated} files
 • Context budget: ≤ {estimated based on file analysis}k tokens
 • Performance budget: {based on complexity}
 • Code quality: Black formatting, coverage ≥ 71.82%
 • CI compliance: All Docker CI checks must pass
 
-**Output Format**  
+**Output Format**
 Return complete implementation addressing issue requirements.
 Use conventional commits: {type}({scope}): {description}
 
@@ -150,7 +150,7 @@ dependencies: {identified}
 12. Apply the selected prompt technique from your task template consistently
 13. Commit your changes after each step using conventional commits:
     - feat(scope): description
-    - fix(scope): description  
+    - fix(scope): description
     - test(scope): description
 14. Update CLAUDE.md if the changes affect development workflow
 
