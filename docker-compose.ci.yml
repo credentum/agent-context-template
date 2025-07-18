@@ -2,6 +2,12 @@
 # Extends base docker-compose.yml with CI-specific services and optimizations
 ---
 
+# Docker image references with SHA pinning for security
+x-images:
+  qdrant: &qdrant-image qdrant/qdrant:v1.14.1@sha256:419d72603f5346ee22ffc4606bdb7beb52fcb63077766fab678e6622ba247366  # yamllint disable-line rule:line-length
+  neo4j: &neo4j-image neo4j:5.20.0@sha256:52d3dec8d45585b21edeca8517d752b2512e52aa94f80fc36a5788c88c95f8e4  # yamllint disable-line rule:line-length
+  redis: &redis-image redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55  # yamllint disable-line rule:line-length
+
 services:
   # Run all CI lint checks (default)
   ci-lint:
@@ -257,7 +263,7 @@ services:
   # These services inherit from base docker-compose.yml
   qdrant:
     # Use base service with CI optimizations
-    image: qdrant/qdrant:v1.14.1@sha256:419d72603f5346ee22ffc4606bdb7beb52fcb63077766fab678e6622ba247366  # yamllint disable-line rule:line-length
+    image: *qdrant-image
     ports:
       - "6333:6333"
       - "6334:6334"
@@ -273,12 +279,12 @@ services:
 
   neo4j:
     # Use base service with CI authentication
-    image: neo4j:5.20.0@sha256:52d3dec8d45585b21edeca8517d752b2512e52aa94f80fc36a5788c88c95f8e4  # yamllint disable-line rule:line-length
+    image: *neo4j-image
     ports:
       - "7474:7474"
       - "7687:7687"
     environment:
-      - NEO4J_AUTH=neo4j/testpassword
+      - NEO4J_AUTH=${NEO4J_CI_AUTH:-neo4j/ci-secure-test-password-2025}
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
       - NEO4J_PLUGINS=["apoc"]
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
@@ -294,7 +300,7 @@ services:
         - "-u"
         - "neo4j"
         - "-p"
-        - "testpassword"
+        - "ci-secure-test-password-2025"
         - "RETURN 1"
       interval: 10s
       timeout: 5s
@@ -302,7 +308,7 @@ services:
 
   redis:
     # Use base service with CI optimizations
-    image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55  # yamllint disable-line rule:line-length
+    image: *redis-image
     ports:
       - "6379:6379"
     command: >

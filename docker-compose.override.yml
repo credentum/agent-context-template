@@ -13,7 +13,7 @@ services:
   neo4j:
     # Development-specific Neo4j settings
     environment:
-      - NEO4J_AUTH=none
+      - NEO4J_AUTH=${NEO4J_AUTH:-neo4j/devpassword}
       - NEO4J_PLUGINS=["apoc"]
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
       - NEO4J_dbms_memory_heap_initial__size=512m
@@ -21,7 +21,7 @@ services:
       - NEO4J_dbms_logs_debug_level=INFO
 
   redis:
-    # Development-specific Redis settings
+    # Development-specific Redis settings (aligned with CI for consistency)
     command: >
-      redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+      redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
       --loglevel notice

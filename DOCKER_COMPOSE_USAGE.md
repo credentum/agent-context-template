@@ -62,6 +62,23 @@ docker-compose -f docker-compose.ci.yml up redis qdrant neo4j
 - Same ports as development
 - CI-optimized configurations with reduced memory limits
 - Faster health checks for CI speed
+- Stronger authentication credentials for testing
+
+### Environment Variables
+
+The setup supports environment-specific authentication:
+
+**Development**:
+- `NEO4J_AUTH` - Defaults to `neo4j/devpassword` for local development
+- Can be overridden: `NEO4J_AUTH=neo4j/mypassword docker-compose up`
+
+**CI**:
+- `NEO4J_CI_AUTH` - Defaults to `neo4j/ci-secure-test-password-2025`
+- Stronger credentials for testing environments
+
+**Production**:
+- `NEO4J_AUTH` - Must be set for production deployment
+- No insecure defaults provided
 
 ## Network Configuration
 
