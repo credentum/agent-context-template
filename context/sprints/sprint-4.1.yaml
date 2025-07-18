@@ -232,6 +232,7 @@ phases:
     - automation
     dependencies: []
     estimate: 2 hours
+    github_issue: 116
 - phase: 9
   name: Sprint Update Workflow Testing
   status: pending
