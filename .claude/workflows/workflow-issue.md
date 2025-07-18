@@ -22,6 +22,9 @@ claude workflow fix-issue --issue 123 --auto-template --parallel-agents
 claude workflow fix-issue --issue 123 --priority high --component api --max-wait 24h
 ```
 
+## EXECUTE WORKFLOW
+Please follow these steps in order. **Actually perform each action** - don't just describe what should be done.
+
 ## Parameters
 - `--issue`: GitHub issue number (required)
 - `--auto-template`: Enable automatic task template generation
@@ -38,26 +41,27 @@ claude workflow fix-issue --issue 123 --priority high --component api --max-wait
 ### Phase 1: Analysis & Planning
 
 #### Step 1: Issue Analysis
-1. Use `gh issue view $ISSUE_NUMBER` to get issue details
-2. Extract sprint and phase information from issue labels/description
-3. Understand the problem described in the issue
-4. Ask clarifying questions if necessary
+**EXECUTE NOW:**
+1. First, extract the issue number from the command arguments
+2. Run: `gh issue view [ISSUE_NUMBER]` to get issue details
+3. Extract sprint and phase information from issue labels/description
+4. Understand the problem described in the issue
+5. Ask clarifying questions if necessary
 
 #### Step 2: Context Gathering
-1. Search `context/trace/scratchpad/` for previous thoughts
-2. Search `context/decisions/` for relevant ADRs
-3. Search PRs to find history on this issue: `gh pr list --search "issue:$ISSUE_NUMBER"`
-4. Search the codebase focusing on `src/` for relevant files
+**EXECUTE NOW:**
+1. Search for previous thoughts: `find context/trace/scratchpad/ -name "*issue-[ISSUE_NUMBER]*" -o -name "*[ISSUE_TITLE_KEYWORDS]*"`
+2. Search for relevant ADRs: `find context/decisions/ -name "*.md" | xargs grep -l "[RELEVANT_KEYWORDS]"`
+3. Search for related PRs: `gh pr list --search "issue:[ISSUE_NUMBER]"`
+4. Search the codebase for relevant files: `find src/ -name "*.py" | xargs grep -l "[RELEVANT_KEYWORDS]"`
 
 #### Step 3: Task Template Generation
-1. **Generate Claude Code task template** based on issue analysis:
-   - Save to `context/trace/task-templates/issue-$ISSUE_NUMBER-{sanitized-title}.md`
-   - Follow enhanced RCICO structure with:
-     - Clear goal and context from issue
-     - File-level breakdown with prompt techniques
-     - Budget estimates based on complexity analysis
-     - Verification criteria from acceptance criteria
-   - Include sprint metadata and relationships
+**EXECUTE NOW:**
+1. **Create the task template file** using the issue analysis:
+   - Determine sanitized title from issue
+   - Create file: `context/trace/task-templates/issue-[ISSUE_NUMBER]-[sanitized-title].md`
+   - Write the complete template content following the structure below
+   - Fill in all placeholders with actual values from the issue analysis
 
 **Task Template Structure:**
 ```markdown
@@ -161,13 +165,18 @@ dependencies: {identified}
 ```
 
 #### Step 4: Execution Planning
-1. Break down issue into manageable tasks based on task template
-2. Document execution plan in scratchpad:
-   - Save to `context/trace/scratchpad/$(date +%Y-%m-%d)-issue-$ISSUE_NUMBER-{title}.md`
-   - Include issue link and sprint reference
-   - Reference the created task template
-   - Include token budget and complexity assessment
-3. Update `context/sprints/current.yaml` if this affects sprint goals
+**EXECUTE NOW:**
+1. Break down the issue into specific, actionable tasks based on the issue requirements
+2. **Create the scratchpad file**:
+   - Create file: `context/trace/scratchpad/$(date +%Y-%m-%d)-issue-[ISSUE_NUMBER]-[title].md`
+   - Write the execution plan including:
+     - Issue link and sprint reference
+     - Reference to the created task template
+     - Token budget and complexity assessment
+     - Step-by-step implementation plan
+3. **Update sprint file if it exists**:
+   - Check if `context/sprints/current.yaml` exists
+   - If it does, update it to reflect this work item
 
 #### Step 5: Context Management Setup
 1. Monitor context window usage throughout execution
@@ -178,55 +187,79 @@ dependencies: {identified}
 ### Phase 2: Implementation
 
 #### Step 6: Branch Creation & Development
-1. Create branch: `git checkout -b fix/$ISSUE_NUMBER-{description}` or `feature/$ISSUE_NUMBER-{description}`
-2. Apply selected prompt technique from task template consistently
-3. Solve issue in small, manageable steps according to task template plan
-4. Commit changes after each step using conventional commits:
-   - `feat(scope): description`
-   - `fix(scope): description`
-   - `test(scope): description`
-5. Update `CLAUDE.md` if changes affect development workflow
+**EXECUTE NOW:**
+1. **Create and switch to new branch**:
+   - Determine if this is a fix or feature based on issue type
+   - Run: `git checkout -b [fix|feature]/[ISSUE_NUMBER]-[description]`
+2. **Implement the solution**:
+   - Apply the prompt technique identified in the task template
+   - Make the necessary code changes to address the issue requirements
+   - Work in small, logical commits
+3. **Make commits as you go**:
+   - After each logical change, run: `git add [changed_files]`
+   - Commit with: `git commit -m "[type]([scope]): [description]"`
+   - Types: feat, fix, test, docs, refactor, style, chore
+4. **Update CLAUDE.md** if the changes affect development workflow
 
 ### Phase 3: Testing & Validation
 
 #### Step 7: Local Testing
-1. **Run CI checks locally FIRST**: `./scripts/run-ci-docker.sh`
-   - This matches GitHub Actions exactly and prevents CI failures
-   - Alternative: `make lint` (uses local Python)
-2. Run pre-commit hooks: `pre-commit run --all-files`
-3. Write pytest tests for new functionality in `tests/`
-4. Ensure validators have >90% coverage if modified
-5. Run full test suite: `pytest --cov=src --cov-report=term-missing`
-6. Update coverage metrics: `python scripts/update_coverage_metrics.py`
-7. If working on MCP tools, test with a mock MCP client
-8. Ensure all tests pass and coverage doesn't drop below 71.82%
+**EXECUTE NOW:**
+1. **Run CI checks locally FIRST**: 
+   - Execute: `./scripts/run-ci-docker.sh`
+   - If this fails, debug with: `./scripts/run-ci-docker.sh debug`
+   - Alternative if Docker not available: `make lint`
+2. **Run pre-commit hooks**: 
+   - Execute: `pre-commit run --all-files`
+3. **Write and run tests**:
+   - Create/update tests in `tests/` directory for new functionality
+   - Run: `pytest --cov=src --cov-report=term-missing`
+   - Ensure coverage doesn't drop below 71.82%
+4. **Update coverage metrics**: 
+   - Run: `python scripts/update_coverage_metrics.py`
+5. **Additional testing if applicable**:
+   - If working on MCP tools, test with mock MCP client
+   - Run any domain-specific tests
 
 #### Step 8: Quality Verification
-1. **CI Docker checks MUST pass**: `./scripts/run-ci-docker.sh`
-   - Includes: Black, isort, Flake8, MyPy, context validation, import checks
-   - Debug failures with: `./scripts/run-ci-docker.sh debug`
-2. Check YAML files pass validation: `python -m src.agents.context_lint validate context/`
-3. Verify any new context files have proper schema_version
-4. If you modified embed_doc.py, check hash-diff functionality
-5. If you touched GraphRAG, verify Neo4j queries still work
+**EXECUTE NOW:**
+1. **Final CI verification**:
+   - Run: `./scripts/run-ci-docker.sh`
+   - All checks must pass: Black, isort, Flake8, MyPy, context validation, import checks
+2. **Validate YAML files**:
+   - Run: `python -m src.agents.context_lint validate context/`
+3. **Check specific functionality**:
+   - Verify any new context files have proper schema_version
+   - If embed_doc.py was modified, check hash-diff functionality
+   - If GraphRAG was touched, verify Neo4j queries still work
 
 ### Phase 4: Deployment & PR Management
 
 #### Step 9: Pre-PR Preparation
-1. Ensure branch is up to date with main: `git pull origin main`
-2. Run final CI checks: `./scripts/run-ci-docker.sh`
-3. Run final pre-commit and test suite
-4. If pre-commit made changes: `git add -A && git commit --amend --no-edit`
-5. **Update task template with actuals**: Fill in actual budget usage in task template
+**EXECUTE NOW:**
+1. **Sync with main branch**:
+   - Run: `git fetch origin main`
+   - Run: `git rebase origin/main` (or merge if preferred)
+   - Resolve any conflicts if they occur
+2. **Final verification**:
+   - Run: `./scripts/run-ci-docker.sh`
+   - Run: `pre-commit run --all-files`
+   - If pre-commit made changes: `git add -A && git commit --amend --no-edit`
+3. **Update task template with actual results**:
+   - Open the task template file created earlier
+   - Fill in the "Actuals" section with real token usage, time taken, etc.
+   - Document any lessons learned or deviations from plan
 
 #### Step 10: PR Creation
-1. **Create PR with comprehensive information**:
+**EXECUTE NOW:**
+1. **Create the Pull Request**:
    ```bash
-   gh pr create --title "fix($COMPONENT): $ISSUE_TITLE" \
-     --body "Fixes #$ISSUE_NUMBER
+   gh pr create \
+     --title "fix([COMPONENT]): [ISSUE_TITLE]" \
+     --body "Fixes #[ISSUE_NUMBER]
 
    ## Changes
-   - [List key changes made]
+   - [List the specific changes made]
    
    ## Testing
    - [X] All CI checks pass locally
@@ -234,9 +267,9 @@ dependencies: {identified}
    - [X] Pre-commit hooks pass
    
    ## Task Template
-   - Template used: context/trace/task-templates/issue-$ISSUE_NUMBER-{title}.md
-   - Estimated budget: {tokens/time}
-   - Actual usage: {tokens/time}
+   - Template used: context/trace/task-templates/issue-[ISSUE_NUMBER]-[title].md
+   - Estimated budget: [tokens/time from template]
+   - Actual usage: [actual tokens/time used]
    
    ## Verification
    - [X] Docker CI passed locally
@@ -247,126 +280,61 @@ dependencies: {identified}
    - [Document any changes to context/ structure]
    
    ## Sprint Impact
-   - Sprint: {sprint reference}
-   - Phase: {phase reference}
-   - Component: {component}
+   - Sprint: [sprint reference if applicable]
+   - Phase: [phase reference if applicable]
+   - Component: [component name]
    " \
-     --label "sprint-current,fix,component-$COMPONENT" \
+     --label "sprint-current,fix,ready-for-review" \
      --assignee @me
    ```
 
-2. **Add appropriate labels**:
-   - Sprint labels from issue
-   - Component labels
-   - Priority labels
-   - `ready-for-review` when complete
+2. **Push the branch**: `git push origin [BRANCH_NAME]`
 
 #### Step 11: PR Monitoring & Completion
+**EXECUTE NOW:**
 1. **Get PR number and enter monitoring mode**:
    ```bash
+   # Get the PR number from the created PR
    PR_NUMBER=$(gh pr view --json number --jq '.number')
    echo "Created PR #$PR_NUMBER - entering monitoring mode"
+   echo "You can check status manually with: gh pr view $PR_NUMBER"
+   echo "Monitoring will check every 15 minutes until merged or 48 hours elapsed"
    ```
 
-2. **Monitor PR status until completion**:
-   ```bash
-   MAX_WAIT_HOURS=${MAX_WAIT:-48}
-   CHECK_INTERVAL_MINUTES=${CHECK_INTERVAL:-15}
-   START_TIME=$(date +%s)
-   
-   while true; do
-     # Check current PR status
-     PR_STATUS=$(gh pr view $PR_NUMBER --json state,mergeable,statusCheckRollup --jq '{state: .state, mergeable: .mergeable, checks: .statusCheckRollup}')
-     
-     echo "$(date): Checking PR #$PR_NUMBER status..."
-     echo "Status: $PR_STATUS"
-     
-     # Parse the status
-     STATE=$(echo "$PR_STATUS" | jq -r '.state')
-     MERGEABLE=$(echo "$PR_STATUS" | jq -r '.mergeable')
-     CHECKS=$(echo "$PR_STATUS" | jq -r '.checks')
-     
-     # Check if PR is merged or closed
-     if [[ "$STATE" == "MERGED" ]]; then
-       echo "✅ SUCCESS: PR #$PR_NUMBER has been merged!"
-       break
-     elif [[ "$STATE" == "CLOSED" ]]; then
-       echo "❌ FAILURE: PR #$PR_NUMBER was closed without merging"
-       exit 1
-     fi
-     
-     # Check if all conditions are met for merge
-     if [[ "$MERGEABLE" == "MERGEABLE" ]]; then
-       # Check if all status checks pass
-       FAILING_CHECKS=$(echo "$CHECKS" | jq -r '.[] | select(.conclusion != "SUCCESS" and .conclusion != "SKIPPED" and .conclusion != null) | .name')
-       
-       if [[ -z "$FAILING_CHECKS" ]]; then
-         echo "✅ All checks passing and PR is mergeable"
-         
-         # Check if there are any requested changes or pending reviews
-         REVIEWS=$(gh pr view $PR_NUMBER --json reviews --jq '.reviews[] | select(.state == "CHANGES_REQUESTED" or .state == "PENDING")')
-         
-         if [[ -z "$REVIEWS" ]]; then
-           echo "✅ No blocking reviews - PR is ready for merge"
-           echo "⏳ Waiting for maintainer to merge..."
-         else
-           echo "⏳ Waiting for review completion..."
-           echo "$REVIEWS" | jq -r '"Review from " + .author.login + ": " + .state'
-         fi
-       else
-         echo "❌ Some checks are still failing:"
-         echo "$FAILING_CHECKS"
-       fi
-     else
-       echo "⏳ PR not yet mergeable: $MERGEABLE"
-     fi
-     
-     # Check timeout
-     CURRENT_TIME=$(date +%s)
-     ELAPSED_HOURS=$(( (CURRENT_TIME - START_TIME) / 3600 ))
-     
-     if [[ $ELAPSED_HOURS -ge $MAX_WAIT_HOURS ]]; then
-       echo "⏰ TIMEOUT: Waited $MAX_WAIT_HOURS hours for PR completion"
-       echo "PR #$PR_NUMBER status: $STATE"
-       echo "Final status: $PR_STATUS"
-       exit 1
-     fi
-     
-     # Wait before next check
-     echo "⏳ Waiting $CHECK_INTERVAL_MINUTES minutes before next check..."
-     echo "   Elapsed: ${ELAPSED_HOURS}h / ${MAX_WAIT_HOURS}h max"
-     sleep ${CHECK_INTERVAL_MINUTES}m
-   done
-   ```
+2. **Set up automated monitoring** (this will run in background):
+   - Create a monitoring script that checks PR status every 15 minutes
+   - Monitor CI checks, review status, and merge readiness
+   - Exit when PR is merged or after 48 hours
+   - Log all status changes to context/trace/logs/
 
-3. **Post-completion actions**:
-   ```bash
-   # Update completion logs
-   echo "$(date): PR #$PR_NUMBER completed successfully" >> context/trace/logs/pr-completions.log
-   
-   # Update task template with final actuals
-   echo "## Final Results" >> context/trace/task-templates/issue-$ISSUE_NUMBER-{title}.md
-   echo "- PR #$PR_NUMBER merged successfully" >> context/trace/task-templates/issue-$ISSUE_NUMBER-{title}.md
-   echo "- Total time: ${ELAPSED_HOURS} hours" >> context/trace/task-templates/issue-$ISSUE_NUMBER-{title}.md
-   echo "- Workflow completed: $(date)" >> context/trace/task-templates/issue-$ISSUE_NUMBER-{title}.md
-   
-   # Update sprint progress if applicable
-   if [[ -f context/sprints/current.yaml ]]; then
-     echo "Updating sprint progress for issue #$ISSUE_NUMBER"
-     # Add logic to update sprint completion status
-   fi
-   
-   echo "🎉 Workflow completed successfully!"
-   echo "Issue #$ISSUE_NUMBER resolved via PR #$PR_NUMBER"
-   ```
+3. **Manual monitoring instructions**:
+   - Check PR status: `gh pr view [PR_NUMBER]`
+   - Check CI status: `gh pr checks [PR_NUMBER]`
+   - Check reviews: `gh pr view [PR_NUMBER] --json reviews`
+   - The workflow will complete when the PR is merged by a reviewer
 
 ### Phase 5: Documentation & Cleanup
 
 #### Step 12: Final Documentation
-1. Update `context/trace/logs/` with completion notes and lessons learned
-2. Document any new patterns or techniques discovered
-3. Update relevant documentation if workflow changes were made
-4. Archive task template and scratchpad notes
+**EXECUTE NOW:**
+1. **Update completion logs**:
+   - Create/append to: `context/trace/logs/workflow-completions.log`
+   - Log: "$(date): Issue #[ISSUE_NUMBER] workflow completed via PR #[PR_NUMBER]"
+2. **Document lessons learned**:
+   - Add any new patterns or techniques discovered to the task template
+   - Note any deviations from the planned approach
+3. **Update documentation if needed**:
+   - If workflow changes were made, update relevant documentation
+   - Update CLAUDE.md if development processes changed
+4. **Archive and organize**:
+   - Ensure task template and scratchpad are properly saved
+   - Clean up any temporary files created during the workflow
+
+**WORKFLOW COMPLETION**: 
+- Issue #[ISSUE_NUMBER] has been resolved
+- PR created and submitted for review
+- All documentation updated
+- Monitoring in place for PR completion
 
 ---
 
