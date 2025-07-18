@@ -1,5 +1,23 @@
 # Fix GitHub Issue Workflow
 
+## Table of Contents
+1. [Overview](#overview)
+2. [Prerequisites](#prerequisites)
+3. [Usage](#usage)
+4. [Parameters](#parameters)
+5. [Workflow Steps](#workflow-steps)
+   - [Phase 1: Analysis & Planning](#phase-1-analysis--planning)
+   - [Phase 2: Implementation](#phase-2-implementation)
+   - [Phase 3: Testing & Validation](#phase-3-testing--validation)
+   - [Phase 4: Deployment & PR Management](#phase-4-deployment--pr-management)
+   - [Phase 5: Documentation & Cleanup](#phase-5-documentation--cleanup)
+6. [Error Handling](#error-handling)
+7. [Security Guidelines](#security-guidelines)
+8. [Success Criteria](#success-criteria)
+9. [Configuration](#configuration)
+10. [Integration Points](#integration-points)
+11. [Usage Notes](#usage-notes)
+
 ## Overview
 This workflow automates the complete GitHub issue resolution process from analysis through PR acceptance, including automated task template generation, implementation, testing, and monitoring the PR through completion.
 
@@ -94,19 +112,19 @@ Please follow these steps in order. **Actually perform each action** - don't jus
 | {identified files} | {modify/create/test} | {best technique} | {specific purpose} | {Low/Med/High} |
 
 ## 📝 Enhanced RCICO Prompt
-**Role**  
+**Role**
 You are a senior software engineer working on {component/domain}.
 
-**Context**  
+**Context**
 GitHub Issue #$ISSUE_NUMBER: {title}
 {Paste relevant issue context}
 Current codebase follows {identified patterns}.
 Related files: {file list with purposes}
 
-**Instructions**  
+**Instructions**
 1. **Primary Objective**: {clear goal from issue}
 2. **Scope**: Address issue requirements while maintaining system integrity
-3. **Constraints**: 
+3. **Constraints**:
    - Follow existing code patterns: {identified patterns}
    - Maintain backward compatibility unless breaking change approved
    - Keep public APIs unchanged unless specified in issue
@@ -114,14 +132,14 @@ Related files: {file list with purposes}
 5. **Testing**: Address test requirements from issue acceptance criteria
 6. **Documentation**: Update as specified in issue requirements
 
-**Technical Constraints**  
+**Technical Constraints**
 • Expected diff ≤ {estimated} LoC, ≤ {estimated} files
 • Context budget: ≤ {estimated based on file analysis}k tokens
 • Performance budget: {based on complexity}
 • Code quality: Black formatting, coverage ≥ 71.82%
 • CI compliance: All Docker CI checks must pass
 
-**Output Format**  
+**Output Format**
 Return complete implementation addressing issue requirements.
 Use conventional commits: {type}({scope}): {description}
 
@@ -205,17 +223,17 @@ dependencies: {identified}
 
 #### Step 7: Local Testing
 **EXECUTE NOW:**
-1. **Run CI checks locally FIRST**: 
+1. **Run CI checks locally FIRST**:
    - Execute: `./scripts/run-ci-docker.sh`
    - If this fails, debug with: `./scripts/run-ci-docker.sh debug`
    - Alternative if Docker not available: `make lint`
-2. **Run pre-commit hooks**: 
+2. **Run pre-commit hooks**:
    - Execute: `pre-commit run --all-files`
 3. **Write and run tests**:
    - Create/update tests in `tests/` directory for new functionality
    - Run: `pytest --cov=src --cov-report=term-missing`
    - Ensure coverage doesn't drop below 71.82%
-4. **Update coverage metrics**: 
+4. **Update coverage metrics**:
    - Run: `python scripts/update_coverage_metrics.py`
 5. **Additional testing if applicable**:
    - If working on MCP tools, test with mock MCP client
@@ -260,25 +278,25 @@ dependencies: {identified}
 
    ## Changes
    - [List the specific changes made]
-   
+
    ## Testing
    - [X] All CI checks pass locally
    - [X] Coverage maintained at 71.82%+
    - [X] Pre-commit hooks pass
-   
+
    ## Task Template
    - Template used: context/trace/task-templates/issue-[ISSUE_NUMBER]-[title].md
    - Estimated budget: [tokens/time from template]
    - Actual usage: [actual tokens/time used]
-   
+
    ## Verification
    - [X] Docker CI passed locally
    - [X] All tests pass
    - [X] Context validation successful
-   
+
    ## Context Changes
    - [Document any changes to context/ structure]
-   
+
    ## Sprint Impact
    - Sprint: [sprint reference if applicable]
    - Phase: [phase reference if applicable]
@@ -330,7 +348,7 @@ dependencies: {identified}
    - Ensure task template and scratchpad are properly saved
    - Clean up any temporary files created during the workflow
 
-**WORKFLOW COMPLETION**: 
+**WORKFLOW COMPLETION**:
 - Issue #[ISSUE_NUMBER] has been resolved
 - PR created and submitted for review
 - All documentation updated
@@ -359,7 +377,7 @@ dependencies: {identified}
 
 #### Merge Conflicts
 - **Problem**: Branch conflicts with main
-- **Solution**: 
+- **Solution**:
   ```bash
   git checkout main
   git pull origin main
@@ -384,6 +402,67 @@ If critical issues are discovered during PR review:
 2. Create follow-up issue if needed
 3. Update sprint plans if timeline affected
 4. Coordinate with team for resolution
+
+---
+
+## Security Guidelines
+
+### Bash Command Security
+When using bash commands in this workflow, follow these security guidelines:
+
+#### Variable Validation
+- **Always validate user input**: Never directly use issue numbers or user-provided strings without validation
+- **Use parameter expansion**: `${VAR:-default}` to provide safe defaults
+- **Sanitize file paths**: Use absolute paths and validate they're within expected directories
+
+#### Command Injection Prevention
+```bash
+# ❌ DANGEROUS - Direct variable interpolation
+git checkout fix/$ISSUE_NUMBER-$TITLE
+
+# ✅ SAFE - Validated and sanitized
+ISSUE_NUMBER=$(echo "$ISSUE_NUMBER" | grep -E '^[0-9]+$' || echo "invalid")
+SAFE_TITLE=$(echo "$TITLE" | sed 's/[^a-zA-Z0-9-]//g' | cut -c1-50)
+git checkout "fix/${ISSUE_NUMBER}-${SAFE_TITLE}"
+```
+
+#### Safe Command Patterns
+- **Use quoted variables**: Always quote variables in commands: `"$VARIABLE"`
+- **Validate exit codes**: Check `$?` after critical commands
+- **Use `--` for argument separation**: `git checkout -- "$FILE"`
+- **Avoid `eval`**: Never use `eval` with user input
+
+#### GitHub CLI Security
+- **Authenticate properly**: Use `gh auth status` before operations
+- **Validate PR numbers**: Ensure PR numbers are numeric
+- **Use `--repo` flag**: Specify repository explicitly for safety
+
+#### Example Safe Commands
+```bash
+# Safe issue number validation
+if [[ "$ISSUE_NUMBER" =~ ^[0-9]+$ ]]; then
+    gh issue view "$ISSUE_NUMBER"
+else
+    echo "Invalid issue number" >&2
+    exit 1
+fi
+
+# Safe branch name creation
+SAFE_BRANCH_NAME=$(echo "fix/${ISSUE_NUMBER}-${TITLE}" | \
+    sed 's/[^a-zA-Z0-9-]/-/g' | \
+    sed 's/--*/-/g' | \
+    cut -c1-100)
+```
+
+### Git Security
+- **Use `--force-with-lease`**: Instead of `--force` for safer push operations
+- **Validate remotes**: Check `git remote -v` before push operations
+- **Use SSH/HTTPS**: Avoid git:// protocol for security
+
+### File System Security
+- **Validate paths**: Ensure file paths are within expected directories
+- **Use temporary files safely**: Create with proper permissions
+- **Clean up**: Remove temporary files after use
 
 ---
 

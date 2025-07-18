@@ -47,9 +47,14 @@ jobs:
             const matches = [...combinedText.matchAll(globalRegex)];
             const issueNumbers = [...new Set(matches.map(match => parseInt(match[2])))];
 
-            // Check for exemption checkbox
-            const exemptionPattern = /- \[x\].*doesn't close any.*issues/i;
-            const isExempt = exemptionPattern.test(prBody);
+            // Check for exemption checkbox - improved patterns
+            const exemptionPatterns = [
+              /- \[x\].*doesn't close any.*issues/i,
+              /- \[x\].*no issue.*required/i,
+              /- \[x\].*exemption/i,
+              /- \[x\].*not.*closing.*issues/i
+            ];
+            const isExempt = exemptionPatterns.some(pattern => pattern.test(prBody));
 
             // Validate each referenced issue exists
             const validIssues = [];
