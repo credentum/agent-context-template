@@ -69,7 +69,7 @@ docker-compose -f docker-compose.ci.yml up redis qdrant neo4j
 The setup supports environment-specific authentication:
 
 **Development**:
-- `NEO4J_AUTH` - Defaults to `neo4j/defaultpassword` for local development
+- `NEO4J_AUTH` - Defaults to `neo4j/devpassword` for local development
 - Can be overridden: `NEO4J_AUTH=neo4j/mypassword docker-compose up`
 
 **CI**:
