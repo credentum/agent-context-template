@@ -20,14 +20,14 @@ name: Generate Sprint Issues
         type: boolean
         default: false
 
-  # Automatic trigger when sprint files are modified via PR merge
-  # Only triggers on successful PR merge to main, ensuring security review
-  pull_request:
-    types: [closed]
-    paths:
-      - 'context/sprints/sprint-*.yaml'
-    branches:
-      - main
+  # EMERGENCY DISABLE - causing runaway PR creation (99+ PRs)
+  # DISABLED: This trigger was creating infinite PRs
+  # pull_request:
+  #   types: [closed]
+  #   paths:
+  #     - 'context/sprints/sprint-*.yaml'
+  #   branches:
+  #     - main
 
 jobs:
   generate:
@@ -65,10 +65,8 @@ jobs:
               --sprint ${{ github.event.inputs.sprint_id }} --verbose
           fi
 
-      - name: Generate issues (Auto)
-        if: |
-          github.event_name == 'pull_request' &&
-          github.event.pull_request.merged == true
+      - name: Generate issues (Auto) - DISABLED
+        if: false  # EMERGENCY DISABLE - was creating runaway PRs
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |

@@ -3,16 +3,23 @@
 # ARC Follow-up Issue Processor
 # Intelligently processes ARC-Reviewer automation comments to create GitHub issues
 # Prevents duplicate issue creation through comprehensive state validation
+#
+# ⚠️  DISABLED: Replaced by AI-Monitored PR Process (.github/workflows/ai-pr-monitor.yml)
+# Issue #173: Replace brittle multi-workflow automation with AI-monitored PR process
+# This workflow (375 lines) is part of 2,059 lines consolidated into ai-pr-monitor.yml
+#
+# To re-enable for emergency rollback: Change condition from 'false' to previous logic
 ###############################################################################
-name: ARC Follow-up Issue Processor
+name: ARC Follow-up Issue Processor (DISABLED)
 
 on:
-  schedule:
-    # Run every 15 minutes during business hours (UTC)
-    - cron: '*/15 6-22 * * 1-5'
-    # Run every 30 minutes during off-hours
-    - cron: '*/30 22-6 * * *'
-    - cron: '*/30 * * * 0,6'
+  # DISABLED - being replaced by ai-pr-monitor.yml (Issue #173)
+  # schedule:
+  #   # Run every 15 minutes during business hours (UTC)
+  #   - cron: '*/15 6-22 * * 1-5'
+  #   # Run every 30 minutes during off-hours
+  #   - cron: '*/30 22-6 * * *'
+  #   - cron: '*/30 * * * 0,6'
   workflow_dispatch:
     inputs:
       pr_number:
@@ -38,8 +45,9 @@ env:
 
 jobs:
   process-arc-follow-ups:
-    name: "🤖 Process ARC Follow-ups"
+    name: "🤖 Process ARC Follow-ups (DISABLED)"
     runs-on: ubuntu-latest
+    if: false  # DISABLED: Replaced by AI-Monitored PR Process (ai-pr-monitor.yml)
 
     steps:
       - name: Checkout repository

@@ -1,14 +1,15 @@
 name: Lint Verification
 
 on:
-  push:
-    branches:
-      - main
-      - 'feature/**'
-      - 'fix/**'
+  # push:
+  #   branches:
+  #     - main
+  #     - 'feature/**'
+  #     - 'fix/**'  # Disabled for faster development
   pull_request:
     branches:
       - main
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   lint:
