@@ -255,15 +255,39 @@ dependencies: {identified}
 
 #### Step 9: Pre-PR Preparation
 **EXECUTE NOW:**
-1. **Sync with main branch**:
-   - Run: `git fetch origin main`
-   - Run: `git rebase origin/main` (or merge if preferred)
-   - Resolve any conflicts if they occur
-2. **Final verification**:
-   - Run: `./scripts/run-ci-docker.sh`
-   - Run: `pre-commit run --all-files`
-   - If pre-commit made changes: `git add -A && git commit --amend --no-edit`
-3. **Update task template with actual results**:
+
+**🚀 Quick Method (Recommended)**:
+```bash
+# Use the automated validation script
+./scripts/validate-branch-for-pr.sh
+```
+
+**📋 Manual Method (for understanding the process)**:
+
+1. **Branch Status Validation**:
+   - Verify current branch is not main
+   - Check for uncommitted changes
+   - Prompt user for confirmation if issues found
+
+2. **Sync with main branch and detect conflicts**:
+   - Fetch latest changes from origin/main
+   - Calculate commits behind main
+   - Show recent commits on main if behind
+   - Check for potential merge conflicts using `git merge-tree`
+   - Perform interactive rebase with conflict detection
+   - Handle rebase failures with clear instructions
+
+3. **Validate branch state**:
+   - Ensure branch exists on origin (required for PR)
+   - Push branch if not already pushed
+   - Push any new local commits to origin
+
+4. **Final verification**:
+   - Run CI checks to ensure everything works after rebase
+   - Run pre-commit hooks and handle any changes
+   - Force push with lease if pre-commit made changes
+
+5. **Update task template with actual results**:
    - Open the task template file created earlier
    - Fill in the "Actuals" section with real token usage, time taken, etc.
    - Document any lessons learned or deviations from plan
@@ -379,13 +403,26 @@ dependencies: {identified}
 - **Problem**: Branch conflicts with main
 - **Solution**:
   ```bash
-  git checkout main
-  git pull origin main
-  git checkout fix/$ISSUE_NUMBER-{description}
-  git rebase main
-  # Resolve conflicts
-  git push --force-with-lease
+  # Use the validation script which handles conflicts automatically
+  ./scripts/validate-branch-for-pr.sh
+
+  # Or manual resolution:
+  git fetch origin main
+  git rebase origin/main
+  # Resolve conflicts in editor
+  git add <resolved_files>
+  git rebase --continue
+  git push --force-with-lease origin <branch_name>
   ```
+
+#### Branch Out of Date
+- **Problem**: Branch is behind main when creating PR
+- **Solution**:
+  ```bash
+  # Run validation script before PR creation
+  ./scripts/validate-branch-for-pr.sh
+  ```
+- **Prevention**: Always run branch validation before creating PRs
 
 ### Emergency Procedures
 
@@ -537,17 +574,17 @@ require_coverage_maintained: true
 
 ### For Simple Issues
 ```bash
-claude workflow fix-issue --issue 123
+claude workflow workflow-issue --issue 123
 ```
 
 ### For Complex Issues with Full Automation
 ```bash
-claude workflow fix-issue --issue 456 --auto-template --parallel-agents --max-wait 72h
+claude workflow workflow-issue --issue 456 --auto-template --parallel-agents --max-wait 72h
 ```
 
 ### For Urgent Issues
 ```bash
-claude workflow fix-issue --issue 789 --priority high --check-interval 5m
+claude workflow workflow-issue --issue 789 --priority high --check-interval 5m
 ```
 
 Remember: This workflow is designed for **complete issue resolution** including PR acceptance. It will not complete until the PR is successfully merged or the timeout is reached.

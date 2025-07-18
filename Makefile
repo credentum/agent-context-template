@@ -77,10 +77,10 @@ pre-commit: format-check lint type-check test
 
 # Docker infrastructure management
 up:
-	docker-compose -f infra/docker-compose.yml up -d
+	NEO4J_AUTH=none docker-compose up -d
 
 down:
-	docker-compose -f infra/docker-compose.yml down -v
+	docker-compose down -v
 
 health:
 	@echo "Checking Qdrant health..."
