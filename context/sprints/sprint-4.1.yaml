@@ -24,14 +24,23 @@ phases:
   description: Create reproducible Docker Compose stack for Qdrant and Neo4j
   tasks:
   - title: Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
-    description: "Author a reproducible Docker Compose stack pinned to Qdrant v1.14.x\
-      \ and \nNeo4j 5.20.\n\n## Acceptance Criteria\n- [x] File `infra/docker-compose.yml`\
-      \ exists.\n- [x] `make up` starts Qdrant (6333) and Neo4j (7474/7687); `make\
-      \ down` \nstops & removes volumes.\n- [x] Named volumes `qdrant_data`, `neo4j_data`\
-      \ created.\n- [x] Neo4j runs with `NEO4J_AUTH=none` for dev.\n- [x] README updates\
-      \ include quick-start prerequisites.\n\n## Implementation Notes\n- mkdir -p\
-      \ infra\n- Populate compose with pinned images and volumes\n- Ensure platform-agnostic\
-      \ (linux/amd64 & linux/arm64) tags if available.\n"
+    description: |
+      Author a reproducible Docker Compose stack pinned to Qdrant v1.14.x
+      and Neo4j 5.20.
+
+      ## Acceptance Criteria
+      - [x] File `infra/docker-compose.yml` exists.
+      - [x] `make up` starts Qdrant (6333) and Neo4j (7474/7687); `make
+        down` stops & removes volumes.
+      - [x] Named volumes `qdrant_data`, `neo4j_data` created.
+      - [x] Neo4j runs with `NEO4J_AUTH=none` for dev.
+      - [x] README updates include quick-start prerequisites.
+
+      ## Implementation Notes
+      - mkdir -p infra
+      - Populate compose with pinned images and volumes
+      - Ensure platform-agnostic (linux/amd64 & linux/arm64) tags if
+        available.
     labels:
     - sprint-current
     - phase:4.1
@@ -48,13 +57,22 @@ phases:
   description: Add health check scripts to verify infrastructure status
   tasks:
   - title: Add infra/healthcheck.sh smoke test
-    description: "Create a bash script verifying Qdrant and Neo4j are healthy after\
-      \ `make \nup`.\n\n## Acceptance Criteria\n- [ ] `infra/healthcheck.sh` exits\
-      \ 0 on healthy stack.\n- [ ] Script checks:\ncurl localhost:6333/collections\
-      \ \u21D2 `[]`\npython -c \"from neo4j import GraphDatabase; \nGraphDatabase.driver('bolt://localhost:7687').verify_connectivity()\"\
-      \n- [ ] Neo4j driver added to `requirements-dev.txt`.\n- [ ] CONTRIBUTING updated\
-      \ with run instructions.\n\n## Implementation Notes\n- chmod +x infra/healthcheck.sh\n\
-      - add to Makefile: make health\n"
+    description: |
+      Create a bash script verifying Qdrant and Neo4j are healthy after
+      `make up`.
+
+      ## Acceptance Criteria
+      - [ ] `infra/healthcheck.sh` exits 0 on healthy stack.
+      - [ ] Script checks:
+        curl localhost:6333/collections => `[]`
+        python -c "from neo4j import GraphDatabase;
+        GraphDatabase.driver('bolt://localhost:7687').verify_connectivity()"
+      - [ ] Neo4j driver added to `requirements-dev.txt`.
+      - [ ] CONTRIBUTING updated with run instructions.
+
+      ## Implementation Notes
+      - chmod +x infra/healthcheck.sh
+      - add to Makefile: make health
     labels:
     - sprint-current
     - phase:4.1
@@ -72,12 +90,18 @@ phases:
   description: Configure GitHub Actions to use service containers
   tasks:
   - title: Configure GitHub Actions service containers
-    description: "Spin up Qdrant and Neo4j as service containers in CI to run all\
-      \ test jobs \nagainst live stores.\n\n## Acceptance Criteria\n- [ ] `ci.yml`\
-      \ includes `services:` for Qdrant v1.14.x and Neo4j 5.20.\n- [ ] Tests run green\
-      \ on live services.\n- [ ] Docker layers cached; total CI spin-up < 4 minutes.\n\
-      \n## Implementation Notes\n- Use GitHub Actions service-container syntax\n-\
-      \ Ensure ports match compose stack.\n"
+    description: |
+      Spin up Qdrant and Neo4j as service containers in CI to run all
+      test jobs against live stores.
+
+      ## Acceptance Criteria
+      - [ ] `ci.yml` includes `services:` for Qdrant v1.14.x and Neo4j 5.20.
+      - [ ] Tests run green on live services.
+      - [ ] Docker layers cached; total CI spin-up < 4 minutes.
+
+      ## Implementation Notes
+      - Use GitHub Actions service-container syntax
+      - Ensure ports match compose stack.
     labels:
     - sprint-current
     - phase:4.1
@@ -95,11 +119,17 @@ phases:
   description: Validate infrastructure with real data processing
   tasks:
   - title: Embedder sanity test with README.md
-    description: "Index README.md via embed pipeline and confirm both vector and graph\
-      \ \nentries exist.\n\n## Acceptance Criteria\n- [ ] New test `tests/smoke/test_embed_readme.py`\
-      \ passes.\n- [ ] Qdrant vector count \u2265 1; corresponding Neo4j node present.\n\
-      \n## Implementation Notes\n- pytest -k test_embed_readme\n- use qdrant_client\
-      \ & neo4j driver inside test.\n"
+    description: |
+      Index README.md via embed pipeline and confirm both vector and graph
+      entries exist.
+
+      ## Acceptance Criteria
+      - [ ] New test `tests/smoke/test_embed_readme.py` passes.
+      - [ ] Qdrant vector count >= 1; corresponding Neo4j node present.
+
+      ## Implementation Notes
+      - pytest -k test_embed_readme
+      - use qdrant_client & neo4j driver inside test.
     labels:
     - sprint-current
     - phase:4.1
@@ -118,21 +148,15 @@ phases:
   description: Improve local development workflow
   tasks:
   - title: Makefile convenience targets
-    description: 'Provide `make up`, `make down`, `make health` for local development.
-
+    description: |
+      Provide `make up`, `make down`, `make health` for local development.
 
       ## Acceptance Criteria
-
       - [ ] Make targets wrap docker-compose and healthcheck script.
-
       - [ ] Root README documents usage.
 
-
       ## Implementation Notes
-
       - .PHONY: up down health
-
-      '
     labels:
     - sprint-current
     - phase:4.1
@@ -151,11 +175,18 @@ phases:
   description: Implement supply-chain security for infrastructure
   tasks:
   - title: Sigstore sign compose & images
-    description: "Begin supply-chain integrity chain for infra artefacts using \n\
-      Sigstore/cosign.\n\n## Acceptance Criteria\n- [ ] cosign signatures committed\
-      \ under `context/logs/signatures/infra/`.\n- [ ] CI step verifies signatures\
-      \ before tests execute.\n\n## Implementation Notes\n- cosign sign --key k.json\
-      \ docker.io/qdrant/qdrant@sha256:...\n- cosign verify ...\n"
+    description: |
+      Begin supply-chain integrity chain for infra artefacts using
+      Sigstore/cosign.
+
+      ## Acceptance Criteria
+      - [ ] cosign signatures committed under
+        `context/logs/signatures/infra/`.
+      - [ ] CI step verifies signatures before tests execute.
+
+      ## Implementation Notes
+      - cosign sign --key k.json docker.io/qdrant/qdrant@sha256:...
+      - cosign verify ...
     labels:
     - sprint-current
     - phase:4.1
@@ -172,26 +203,40 @@ phases:
   description: Fix critical bugs affecting user experience
   tasks:
   - title: Fix Sprint Issue Linker Label Batching to Prevent Multiple Comments
-    description: "Fix the sprint issue linker's `_sync_issue_labels()` method that\
-      \ currently \nmakes individual GitHub API calls for each label operation, causing\
-      \ \nmultiple comments when creating/updating issues with many labels.\n\n##\
-      \ Problem Analysis\nThe current implementation calls `gh issue edit` separately\
-      \ for each label:\n- One subprocess call per label to add (lines 527-530)\n\
-      - One subprocess call per label to remove (lines 532-535)\n- With 8-12+ labels\
-      \ per task, this creates 8-12+ GitHub API calls\n- Each call can trigger comment\
-      \ creation, leading to comment spam\n\n## Acceptance Criteria\n- [ ] Batch all\
-      \ label additions into single `gh issue edit --add-label \nlabel1,label2,label3`\
-      \ call\n- [ ] Batch all label removals into single `gh issue edit --remove-label\
-      \ \nlabel1,label2,label3` call\n- [ ] Reduce API calls from ~10+ per issue to\
-      \ maximum 2 per issue\n- [ ] Add exponential backoff retry logic for GitHub\
-      \ API failures\n- [ ] Add label count warnings when approaching GitHub limits\n\
-      - [ ] Test with high-label-count scenarios (sprint 4.1 tasks)\n- [ ] Verify\
-      \ no duplicate comments are created\n- [ ] Ensure bidirectional sync still works\
-      \ correctly\n- [ ] Preserve existing dry-run and verbose logging functionality\n\
-      \n## Implementation Notes\n- Modify `_sync_issue_labels()` method in \n`src/agents/sprint_issue_linker.py`\n\
-      - GitHub CLI supports comma-separated labels: `--add-label \nlabel1,label2,label3`\n\
-      - Add comprehensive unit tests for batching behavior\n- Test with current sprint-4.1\
-      \ tasks that have extensive labels\n"
+    description: |
+      Fix the sprint issue linker's `_sync_issue_labels()` method that
+      currently makes individual GitHub API calls for each label operation,
+      causing multiple comments when creating/updating issues with many
+      labels.
+
+      ## Problem Analysis
+      The current implementation calls `gh issue edit` separately for each
+      label:
+      - One subprocess call per label to add (lines 527-530)
+      - One subprocess call per label to remove (lines 532-535)
+      - With 8-12+ labels per task, this creates 8-12+ GitHub API calls
+      - Each call can trigger comment creation, leading to comment spam
+
+      ## Acceptance Criteria
+      - [ ] Batch all label additions into single `gh issue edit --add-label
+        label1,label2,label3` call
+      - [ ] Batch all label removals into single `gh issue edit
+        --remove-label label1,label2,label3` call
+      - [ ] Reduce API calls from ~10+ per issue to maximum 2 per issue
+      - [ ] Add exponential backoff retry logic for GitHub API failures
+      - [ ] Add label count warnings when approaching GitHub limits
+      - [ ] Test with high-label-count scenarios (sprint 4.1 tasks)
+      - [ ] Verify no duplicate comments are created
+      - [ ] Ensure bidirectional sync still works correctly
+      - [ ] Preserve existing dry-run and verbose logging functionality
+
+      ## Implementation Notes
+      - Modify `_sync_issue_labels()` method in
+        `src/agents/sprint_issue_linker.py`
+      - GitHub CLI supports comma-separated labels: `--add-label
+        label1,label2,label3`
+      - Add comprehensive unit tests for batching behavior
+      - Test with current sprint-4.1 tasks that have extensive labels
     labels:
     - sprint-current
     - phase:4.1
@@ -207,23 +252,36 @@ phases:
   status: pending
   priority: high
   component: testing
-  description: Test and validate bidirectional sync between sprint YAML and GitHub
-    issues
+  description: Test and validate bidirectional sync between sprint YAML and
+    GitHub issues
   tasks:
   - title: Bidirectional Workflow Validation Test
-    description: "Test task to validate bidirectional sync between sprint YAML and\
-      \ GitHub \nissues.\nThis task should be automatically created as a GitHub issue\
-      \ and then sync \nback.\n\n## Test Scenarios\n- [x] Task created in YAML generates\
-      \ GitHub issue\n- [ ] GitHub issue status updates reflect in YAML\n- [ ] Task\
-      \ completion in YAML closes GitHub issue\n- [ ] Label changes sync bidirectionally\n\
-      - [ ] Task removal from YAML closes GitHub issue\n\n## Validation Steps\n1.\
-      \ Add this task to sprint YAML\n2. Run sprint issue linker to create GitHub\
-      \ issue\n3. Verify issue creation and YAML update with issue number\n4. Test\
-      \ status changes in both directions\n5. Test label synchronization\n6. Test\
-      \ orphan handling when task is removed\n\n## Implementation Notes\n- This is\
-      \ a temporary test task for issue #93\n- Will be removed after validation\n\
-      - Should not affect production workflows\n- Tests complete bidirectional workflow\
-      \ as requested\n"
+    description: |
+      Test task to validate bidirectional sync between sprint YAML and
+      GitHub issues.
+      This task should be automatically created as a GitHub issue and then
+      sync back.
+
+      ## Test Scenarios
+      - [x] Task created in YAML generates GitHub issue
+      - [ ] GitHub issue status updates reflect in YAML
+      - [ ] Task completion in YAML closes GitHub issue
+      - [ ] Label changes sync bidirectionally
+      - [ ] Task removal from YAML closes GitHub issue
+
+      ## Validation Steps
+      1. Add this task to sprint YAML
+      2. Run sprint issue linker to create GitHub issue
+      3. Verify issue creation and YAML update with issue number
+      4. Test status changes in both directions
+      5. Test label synchronization
+      6. Test orphan handling when task is removed
+
+      ## Implementation Notes
+      - This is a temporary test task for issue #93
+      - Will be removed after validation
+      - Should not affect production workflows
+      - Tests complete bidirectional workflow as requested
     labels:
     - sprint-current
     - phase:4.1
@@ -242,25 +300,43 @@ phases:
   description: Test and validate Sprint Update workflow duplicate prevention
   tasks:
   - title: Test Sprint Update Workflow Duplicate Prevention
-    description: "Test task to validate that the Sprint Update workflow no longer\
-      \ creates \nduplicate PRs\nwhen both pull_request.closed and issues.closed events\
-      \ fire simultaneously.\n\n## Problem Being Fixed\n- Sprint Update workflow previously\
-      \ created duplicate PRs when:\n1. A PR is merged (pull_request.closed event)\n\
-      2. An issue is auto-closed by the PR (issues.closed event)\n- This caused PRs\
-      \ #106 and #107 to be created simultaneously\n\n## Test Scenarios\n- [ ] Create\
-      \ PR that closes an issue (using \"Closes #XXX\")\n- [ ] Merge PR and verify\
-      \ only one Sprint Update PR is created\n- [ ] Verify duplicate detection logic\
-      \ works correctly\n- [ ] Confirm no duplicate PRs are generated\n- [ ] Test\
-      \ workflow timing and race conditions\n\n## Validation Steps\n1. Add this task\
-      \ to sprint YAML (triggers issue creation)\n2. Create PR that closes this issue\n\
-      3. Merge PR and observe Sprint Update workflow behavior\n4. Verify only one\
-      \ Sprint Update PR is created\n5. Confirm duplicate prevention logic activates\
-      \ correctly\n\n## Implementation Notes\n- This task validates the fix in .github/workflows/sprint-update.yml\n\
-      - Tests the duplicate run detection logic added to prevent race conditions\n\
-      - Confirms GitHub Actions workflow concurrency handling\n- Will be removed after\
-      \ successful validation\n\n## Success Criteria\n- [ ] No duplicate Sprint Update\
-      \ PRs created\n- [ ] Workflow logs show duplicate detection working\n- [ ] Sprint\
-      \ status updates work correctly\n- [ ] No race conditions or timing issues\n"
+    description: |
+      Test task to validate that the Sprint Update workflow no longer
+      creates duplicate PRs when both pull_request.closed and
+      issues.closed events fire simultaneously.
+
+      ## Problem Being Fixed
+      - Sprint Update workflow previously created duplicate PRs when:
+        1. A PR is merged (pull_request.closed event)
+        2. An issue is auto-closed by the PR (issues.closed event)
+      - This caused PRs #106 and #107 to be created simultaneously
+
+      ## Test Scenarios
+      - [ ] Create PR that closes an issue (using "Closes #XXX")
+      - [ ] Merge PR and verify only one Sprint Update PR is created
+      - [ ] Verify duplicate detection logic works correctly
+      - [ ] Confirm no duplicate PRs are generated
+      - [ ] Test workflow timing and race conditions
+
+      ## Validation Steps
+      1. Add this task to sprint YAML (triggers issue creation)
+      2. Create PR that closes this issue
+      3. Merge PR and observe Sprint Update workflow behavior
+      4. Verify only one Sprint Update PR is created
+      5. Confirm duplicate prevention logic activates correctly
+
+      ## Implementation Notes
+      - This task validates the fix in .github/workflows/sprint-update.yml
+      - Tests the duplicate run detection logic added to prevent race
+        conditions
+      - Confirms GitHub Actions workflow concurrency handling
+      - Will be removed after successful validation
+
+      ## Success Criteria
+      - [ ] No duplicate Sprint Update PRs created
+      - [ ] Workflow logs show duplicate detection working
+      - [ ] Sprint status updates work correctly
+      - [ ] No race conditions or timing issues
     labels:
     - sprint-current
     - phase:4.1
