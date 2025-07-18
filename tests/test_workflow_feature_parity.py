@@ -38,7 +38,7 @@ class TestWorkflowFeatureParity:
 
     def test_workflow_files_exist(self):
         """Test that all required workflow files exist"""
-        assert self.new_workflow.exists(), "ai-pr-monitor.yml should exist"
+        assert self.new_workflow.exists(), f"ai-pr-monitor.yml should exist at {self.new_workflow}"
 
         for legacy_workflow in self.legacy_workflows:
             assert legacy_workflow.exists(), f"{legacy_workflow.name} should exist for comparison"
