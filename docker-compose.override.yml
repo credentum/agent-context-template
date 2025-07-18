@@ -21,7 +21,7 @@ services:
       - NEO4J_dbms_logs_debug_level=INFO
 
   redis:
-    # Development-specific Redis settings (aligned with CI for consistency)
+    # Development-specific Redis settings
     command: >
-      redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+      redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
       --loglevel notice
