@@ -15,6 +15,7 @@ services:
       - ./tests:/app/tests:ro
       - ./scripts:/app/scripts:ro
       - ./context:/app/context
+      - ./.github:/app/.github:ro
       # Mount config files
       - ./mypy.ini:/app/mypy.ini:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
