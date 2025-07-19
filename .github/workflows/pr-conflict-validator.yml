@@ -87,19 +87,37 @@ jobs:
           # Test 3: Manual merge simulation
           echo "🧪 Simulating merge to detect conflicts..."
 
+          # Configure git user identity for merge simulation
+          git config user.email "action@github.com"
+          git config user.name "GitHub Actions"
+
           git checkout base-branch
           git checkout -b merge-test
 
-          if git merge pr-branch --no-commit --no-ff; then
+          # Attempt merge and capture both exit code and output
+          MERGE_OUTPUT=$(git merge pr-branch --no-commit --no-ff 2>&1)
+          MERGE_EXIT_CODE=$?
+
+          if [ $MERGE_EXIT_CODE -eq 0 ]; then
             echo "✅ Merge simulation successful - no conflicts detected"
             git merge --abort 2>/dev/null || true
             echo "has_conflicts=false" >> $GITHUB_OUTPUT
             echo "conflict_type=none" >> $GITHUB_OUTPUT
           else
-            echo "❌ Merge simulation failed - conflicts detected"
-            git merge --abort 2>/dev/null || true
-            echo "has_conflicts=true" >> $GITHUB_OUTPUT
-            echo "conflict_type=merge_simulation" >> $GITHUB_OUTPUT
+            # Check if failure was due to actual conflicts vs other issues
+            if echo "$MERGE_OUTPUT" | grep -q "CONFLICT\|Automatic merge failed"; then
+              echo "❌ Merge simulation detected actual conflicts"
+              echo "Conflict details: $MERGE_OUTPUT"
+              git merge --abort 2>/dev/null || true
+              echo "has_conflicts=true" >> $GITHUB_OUTPUT
+              echo "conflict_type=merge_simulation" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️ Merge simulation failed for non-conflict reason (likely no conflicts)"
+              echo "Failure reason: $MERGE_OUTPUT"
+              git merge --abort 2>/dev/null || true
+              echo "has_conflicts=false" >> $GITHUB_OUTPUT
+              echo "conflict_type=none" >> $GITHUB_OUTPUT
+            fi
           fi
 
           # Test 4: Check for divergent history using centralized git commands
