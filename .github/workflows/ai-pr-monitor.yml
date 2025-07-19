@@ -515,7 +515,8 @@ jobs:
           git fetch origin $HEAD_REF --force
 
           # Check if branch is behind
-          COMMITS_BEHIND=$(git rev-list --count origin/$HEAD_REF..origin/$BASE_REF)
+          echo "🔍 Checking if origin/$HEAD_REF is behind origin/$BASE_REF"
+          COMMITS_BEHIND=$(git rev-list --count origin/$HEAD_REF..origin/$BASE_REF 2>/dev/null || echo "0")
           echo "Branch is $COMMITS_BEHIND commits behind $BASE_REF"
 
           if [ "$COMMITS_BEHIND" -gt 0 ]; then
