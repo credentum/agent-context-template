@@ -61,4 +61,15 @@ runs:
         esac
 
         echo "✅ Result: $RESULT"
-        echo "result=$RESULT" >> $GITHUB_OUTPUT
+
+        # Handle multi-line output properly for GitHub Actions
+        if [[ "$RESULT" == *$'\n'* ]]; then
+          # Multi-line output - use delimiter format
+          delimiter="EOF_$(date +%s)"
+          echo "result<<$delimiter" >> $GITHUB_OUTPUT
+          echo "$RESULT" >> $GITHUB_OUTPUT
+          echo "$delimiter" >> $GITHUB_OUTPUT
+        else
+          # Single line output - use simple format
+          echo "result=$RESULT" >> $GITHUB_OUTPUT
+        fi
