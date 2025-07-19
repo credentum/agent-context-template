@@ -22,13 +22,13 @@ jobs:
       checks: write
 
     steps:
-      - name: Checkout base branch
+      - name: Checkout PR head (contains reusable actions)
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.base.ref }}
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Fetch PR branch
+      - name: Fetch base and PR branches for conflict detection
         run: |
           git fetch origin ${{ github.event.pull_request.head.ref }}:pr-branch
           git fetch origin ${{ github.event.pull_request.base.ref }}:base-branch
