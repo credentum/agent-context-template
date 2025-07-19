@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
 
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     permissions:
       contents: read
       pull-requests: write
@@ -137,58 +140,18 @@ jobs:
             echo "needs_update=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update PR status check
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const hasConflicts = '${{ steps.conflict-check.outputs.has_conflicts }}' === 'true';
-            const conflictType = '${{ steps.conflict-check.outputs.conflict_type }}';
-            const mergeableState = '${{ steps.conflict-check.outputs.mergeable }}';
-            const mergeStateStatus = '${{ steps.conflict-check.outputs.merge_state_status }}';
-            const needsUpdate = '${{ steps.process-results.outputs.needs_update }}' === 'true';
-            const commitsBehind = '${{ steps.process-results.outputs.commits_behind }}';
+      - name: Set workflow status
+        run: |
+          has_conflicts="${{ steps.conflict-check.outputs.has_conflicts }}"
+          conflict_type="${{ steps.conflict-check.outputs.conflict_type }}"
 
-            let conclusion = 'success';
-            let title = '✅ No conflicts detected';
-            let summary = 'PR can be safely merged.';
-
-            if (hasConflicts) {
-              conclusion = 'failure';
-              title = '❌ Conflicts detected';
-              summary = `Conflicts found via ${conflictType}. Manual resolution required.`;
-            } else if (needsUpdate) {
-              conclusion = 'neutral';
-              title = '⚠️ Branch needs update';
-              summary = `Branch is ${commitsBehind} commits behind. Consider updating before merge.`;
-            }
-
-            // Create check run
-            await github.rest.checks.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'Conflict Detection',
-              head_sha: context.payload.pull_request.head.sha,
-              status: 'completed',
-              conclusion: conclusion,
-              output: {
-                title: title,
-                summary: summary,
-                text: `
-            ## Conflict Detection Results
-
-            **GitHub Mergeable**: ${mergeableState}
-            **Merge State Status**: ${mergeStateStatus}
-            **Conflict Type**: ${conflictType}
-            **Commits Behind**: ${commitsBehind}
-            **Needs Update**: ${needsUpdate}
-
-            ${hasConflicts ?
-              '### ❌ Action Required\nThis PR has conflicts that must be resolved before merging.' :
-              '### ✅ Safe to Merge\nNo conflicts detected. PR is ready for review and merge.'
-            }
-            `
-              }
-            });
+          if [ "$has_conflicts" = "true" ]; then
+            echo "❌ Conflicts detected via $conflict_type. Manual resolution required."
+            exit 1
+          else
+            echo "✅ No conflicts detected. PR can be safely merged."
+            exit 0
+          fi
 
       - name: Comment on PR if conflicts detected
         if: steps.conflict-check.outputs.has_conflicts == 'true'
@@ -236,6 +199,3 @@ jobs:
 
             _This is an automated message from the PR Conflict Validator._`
             });
-
-env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
