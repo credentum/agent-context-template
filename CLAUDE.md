@@ -47,7 +47,7 @@ This is an **Agent-First Project Context System** that provides structured conte
   **Additional secrets needed for this project:**
   - `QDRANT_API_KEY` - Vector database authentication
   - `NEO4J_PASSWORD` - Graph database authentication
-  - `GITHUB_TOKEN` - For GitHub API operations
+  - `GH_TOKEN` - Personal Access Token for GitHub API operations (enables CI on bot-created PRs)
 
 Grant the minimal permissions your workflow needs:
 
@@ -341,6 +341,34 @@ This eliminates the previous brittle system where coverage thresholds were hardc
 - ❌ Documentation drift from actual CI settings
 
 Now changing coverage baselines requires updating only one file! 🎉
+
+## 6.3 🔑 GitHub Token Usage Guide
+
+### When to Use GH_TOKEN vs GITHUB_TOKEN
+
+**Use `GH_TOKEN` (Personal Access Token) when:**
+- Creating PRs from workflows (e.g., sprint-update.yml)
+- Need CI workflows to run on bot-created PRs
+- Updating protected branches
+- Triggering other workflows
+
+**Use `GITHUB_TOKEN` (default) when:**
+- Reading repository data
+- Posting comments on issues/PRs
+- Running checks and status updates
+- General CI operations that don't create PRs
+
+**Example:**
+```yaml
+# For PR creation (use GH_TOKEN)
+- uses: peter-evans/create-pull-request@v6
+  with:
+    token: ${{ secrets.GH_TOKEN }}  # ✅ CI will run on created PR
+
+# For reading/commenting (GITHUB_TOKEN is fine)
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # ✅ Sufficient for gh CLI read operations
+```
 
 ## 7 ▶️ GitHub Actions Overview
 
