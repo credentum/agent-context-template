@@ -1,0 +1,64 @@
+---
+name: 'Git PR Commands'
+description: 'Centralized, reliable git commands for PR workflows'
+inputs:
+  command:
+    description: 'Command to run: commits-behind, commits-ahead, diff-files'
+    required: true
+  head-sha:
+    description: 'PR head SHA'
+    required: true
+  base-sha:
+    description: 'PR base SHA'
+    required: true
+outputs:
+  result:
+    description: 'Command result'
+    value: ${{ steps.git-command.outputs.result }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Execute Git Command
+      id: git-command
+      shell: bash
+      run: |
+        set -e
+
+        HEAD_SHA="${{ inputs.head-sha }}"
+        BASE_SHA="${{ inputs.base-sha }}"
+        COMMAND="${{ inputs.command }}"
+
+        echo "🔍 Executing git command: $COMMAND"
+        echo "HEAD SHA: $HEAD_SHA"
+        echo "BASE SHA: $BASE_SHA"
+
+        case "$COMMAND" in
+          "commits-behind")
+            # Count commits that base has but head doesn't
+            RESULT=$(git rev-list --count $HEAD_SHA..$BASE_SHA \
+              2>/dev/null || echo "0")
+            ;;
+          "commits-ahead")
+            # Count commits that head has but base doesn't
+            RESULT=$(git rev-list --count $BASE_SHA..$HEAD_SHA \
+              2>/dev/null || echo "0")
+            ;;
+          "diff-files")
+            # List changed files between base and head
+            RESULT=$(git diff --name-only $BASE_SHA...$HEAD_SHA \
+              2>/dev/null || echo "")
+            ;;
+          "log-commits")
+            # Show commit log between base and head
+            RESULT=$(git log --oneline $BASE_SHA..$HEAD_SHA \
+              2>/dev/null || echo "")
+            ;;
+          *)
+            echo "❌ Unknown command: $COMMAND"
+            exit 1
+            ;;
+        esac
+
+        echo "✅ Result: $RESULT"
+        echo "result=$RESULT" >> $GITHUB_OUTPUT

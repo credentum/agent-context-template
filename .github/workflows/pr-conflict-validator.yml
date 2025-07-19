@@ -94,23 +94,34 @@ jobs:
             echo "conflict_type=merge_simulation" >> $GITHUB_OUTPUT
           fi
 
-          # Test 4: Check for divergent history
-          echo "🔍 Checking divergent history between origin/$HEAD_REF and origin/$BASE_REF"
+          # Test 4: Check for divergent history using centralized git commands
+          echo "🔍 Checking divergent history using reliable git commands"
 
-          # Verify branches exist
-          if ! git ls-remote --exit-code origin $HEAD_REF > /dev/null 2>&1; then
-            echo "⚠️ HEAD_REF branch origin/$HEAD_REF not found"
-            COMMITS_BEHIND="unknown"
-            COMMITS_AHEAD="unknown"
-          elif ! git ls-remote --exit-code origin $BASE_REF > /dev/null 2>&1; then
-            echo "⚠️ BASE_REF branch origin/$BASE_REF not found"
-            COMMITS_BEHIND="unknown"
-            COMMITS_AHEAD="unknown"
-          else
-            # Calculate commits behind and ahead using GitHub event SHAs for reliability
-            COMMITS_BEHIND=$(git rev-list --count ${{ github.event.pull_request.head.sha }}..${{ github.event.pull_request.base.sha }} 2>/dev/null || echo "0")
-            COMMITS_AHEAD=$(git rev-list --count ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} 2>/dev/null || echo "0")
-          fi
+          # Store SHA values for the centralized git action
+          echo "pr_head_sha=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+          echo "pr_base_sha=${{ github.event.pull_request.base.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Check Commits Behind
+        id: commits-behind
+        uses: ./.github/actions/git-pr-commands
+        with:
+          command: commits-behind
+          head-sha: ${{ github.event.pull_request.head.sha }}
+          base-sha: ${{ github.event.pull_request.base.sha }}
+
+      - name: Check Commits Ahead
+        id: commits-ahead
+        uses: ./.github/actions/git-pr-commands
+        with:
+          command: commits-ahead
+          head-sha: ${{ github.event.pull_request.head.sha }}
+          base-sha: ${{ github.event.pull_request.base.sha }}
+
+      - name: Process Divergent History Results
+        id: process-results
+        run: |
+          COMMITS_BEHIND="${{ steps.commits-behind.outputs.result }}"
+          COMMITS_AHEAD="${{ steps.commits-ahead.outputs.result }}"
 
           echo "Commits behind base: $COMMITS_BEHIND"
           echo "Commits ahead of base: $COMMITS_AHEAD"
@@ -134,8 +145,8 @@ jobs:
             const conflictType = '${{ steps.conflict-check.outputs.conflict_type }}';
             const mergeableState = '${{ steps.conflict-check.outputs.mergeable }}';
             const mergeStateStatus = '${{ steps.conflict-check.outputs.merge_state_status }}';
-            const needsUpdate = '${{ steps.conflict-check.outputs.needs_update }}' === 'true';
-            const commitsBehind = '${{ steps.conflict-check.outputs.commits_behind }}';
+            const needsUpdate = '${{ steps.process-results.outputs.needs_update }}' === 'true';
+            const commitsBehind = '${{ steps.process-results.outputs.commits_behind }}';
 
             let conclusion = 'success';
             let title = '✅ No conflicts detected';
@@ -185,7 +196,7 @@ jobs:
         with:
           script: |
             const conflictType = '${{ steps.conflict-check.outputs.conflict_type }}';
-            const commitsBehind = '${{ steps.conflict-check.outputs.commits_behind }}';
+            const commitsBehind = '${{ steps.process-results.outputs.commits_behind }}';
 
             // Only show branch status for merge simulation conflicts
             const branchStatusText = conflictType === 'merge_simulation' && commitsBehind > 0
