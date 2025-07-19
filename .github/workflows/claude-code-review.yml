@@ -75,7 +75,7 @@ jobs:
             COMMENT_FORMAT: Use identical structure and indentation for all review iterations.
 
             🔍 REVIEW SCOPE: You must review the ENTIRE cumulative PR state, not just recent changes.
-            Use 'git diff --name-only origin/main...HEAD' to see ALL changed files in the PR.
+            Use 'git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}' to see ALL changed files in the PR.
             Read the complete current state of ALL modified files, not just the latest diff.
             Consider all issues that may exist across the entire changeset, including:
             - Issues identified in previous reviews that may still exist
@@ -144,8 +144,8 @@ jobs:
             Bash(yamale -s context/schemas/ context/),
             Bash(npm run test:mcp-types),
             Bash(ajv validate -s mcp-schema.json -d context/mcp_contracts/*.json),
-            Bash(git diff --name-only origin/main...HEAD),
-            Bash(git log --oneline origin/main...HEAD),
+            Bash(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}),
+            Bash(git log --oneline ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}),
             Read,
             Grep,
             Glob
