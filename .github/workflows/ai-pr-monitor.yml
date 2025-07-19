@@ -1,8 +1,24 @@
 name: AI-Monitored PR Process
 
 on:
+  # PR lifecycle events
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, closed]
+
+  # Review events
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+
+  # CI completion events
+  check_suite:
+    types: [completed]
+  status: {}
+
+  # Issue comments for manual triggering
+  issue_comment:
+    types: [created]
 
 jobs:
   ai-monitor:
