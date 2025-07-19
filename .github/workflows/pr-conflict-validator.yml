@@ -96,7 +96,7 @@ jobs:
 
           # Test 4: Check for divergent history
           echo "🔍 Checking divergent history between origin/$HEAD_REF and origin/$BASE_REF"
-          
+
           # Verify branches exist
           if ! git ls-remote --exit-code origin $HEAD_REF > /dev/null 2>&1; then
             echo "⚠️ HEAD_REF branch origin/$HEAD_REF not found"
@@ -107,9 +107,9 @@ jobs:
             COMMITS_BEHIND="unknown"
             COMMITS_AHEAD="unknown"
           else
-            # Calculate commits behind and ahead
-            COMMITS_BEHIND=$(git rev-list --count origin/$HEAD_REF..origin/$BASE_REF 2>/dev/null || echo "0")
-            COMMITS_AHEAD=$(git rev-list --count origin/$BASE_REF..origin/$HEAD_REF 2>/dev/null || echo "0")
+            # Calculate commits behind and ahead using GitHub event SHAs for reliability
+            COMMITS_BEHIND=$(git rev-list --count ${{ github.event.pull_request.head.sha }}..${{ github.event.pull_request.base.sha }} 2>/dev/null || echo "0")
+            COMMITS_AHEAD=$(git rev-list --count ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} 2>/dev/null || echo "0")
           fi
 
           echo "Commits behind base: $COMMITS_BEHIND"
