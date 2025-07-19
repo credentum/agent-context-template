@@ -143,20 +143,34 @@ class TestDirectoryStructure:
             assert init_file.exists(), f"Missing __init__.py in src/{subdir_name}"
 
     def test_github_workflows(self, project_root):
-        """Test that GitHub Actions workflows exist"""
+        """Test that essential GitHub Actions workflows exist"""
         workflows_dir = project_root / ".github" / "workflows"
 
-        # Check for context-lint workflow
-        context_lint_workflow = workflows_dir / "context-lint.yml"
-        assert context_lint_workflow.exists()
+        # Check for essential workflows (streamlined from 20 to 10)
+        essential_workflows = [
+            "test.yml",
+            "test-coverage.yml",
+            "lint-verification.yml",
+            "claude-code-review.yml",
+            "ai-pr-monitor.yml",
+            "pr-issue-validation.yml",
+            "pr-conflict-validator.yml",
+            "auto-close-issues.yml",
+            "claude.yml",
+            "sprint-update.yml",
+        ]
 
-        # Verify it's valid YAML
+        for workflow_name in essential_workflows:
+            workflow_path = workflows_dir / workflow_name
+            assert workflow_path.exists(), f"Missing essential workflow: {workflow_name}"
+
+        # Verify a sample workflow is valid YAML
         import yaml
 
-        with open(context_lint_workflow, "r") as f:
+        test_workflow = workflows_dir / "test.yml"
+        with open(test_workflow, "r") as f:
             workflow = yaml.safe_load(f)
             assert "name" in workflow
-            assert workflow["name"] == "Context Lint"
 
     def test_gitignore_entries(self, project_root):
         """Test that .gitignore has proper entries"""
