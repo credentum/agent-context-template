@@ -60,6 +60,22 @@ jobs:
           mkdir -p context/logs/prompts
           mkdir -p context/logs/signatures
 
+      - name: Get Changed Files (Centralized)
+        id: changed-files
+        uses: ./.github/actions/git-pr-commands
+        with:
+          command: diff-files
+          head-sha: ${{ github.event.pull_request.head.sha }}
+          base-sha: ${{ github.event.pull_request.base.sha }}
+
+      - name: Get Commit Log (Centralized)
+        id: commit-log
+        uses: ./.github/actions/git-pr-commands
+        with:
+          command: log-commits
+          head-sha: ${{ github.event.pull_request.head.sha }}
+          base-sha: ${{ github.event.pull_request.base.sha }}
+
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@beta
@@ -75,7 +91,8 @@ jobs:
             COMMENT_FORMAT: Use identical structure and indentation for all review iterations.
 
             🔍 REVIEW SCOPE: You must review the ENTIRE cumulative PR state, not just recent changes.
-            Use 'git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}' to see ALL changed files in the PR.
+            Use 'echo "Changed files: ${{ steps.changed-files.outputs.result }}"' to see ALL changed files in the PR.
+            Use 'echo "Commit log: ${{ steps.commit-log.outputs.result }}"' to see commit history.
             Read the complete current state of ALL modified files, not just the latest diff.
             Consider all issues that may exist across the entire changeset, including:
             - Issues identified in previous reviews that may still exist
@@ -144,8 +161,8 @@ jobs:
             Bash(yamale -s context/schemas/ context/),
             Bash(npm run test:mcp-types),
             Bash(ajv validate -s mcp-schema.json -d context/mcp_contracts/*.json),
-            Bash(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}),
-            Bash(git log --oneline ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}),
+            Bash(echo "Changed files: ${{ steps.changed-files.outputs.result }}"),
+            Bash(echo "Commit log: ${{ steps.commit-log.outputs.result }}"),
             Read,
             Grep,
             Glob
