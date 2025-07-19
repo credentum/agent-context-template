@@ -2,6 +2,15 @@
 
 A template repository that provides workflow templates for an Agent-First Project Context System.
 
+## Projects
+
+| Name | Description | Status |
+|------|-------------|--------|
+| context-store | Lightweight agent memory: vector, graph, and KV store | 🟢 Active |
+| scarline | Append-only scar lineage log + replay engine | 🔲 In Planning |
+| credentum-core | Shared schemas, MCP tooling, symbolic reflex logic | 🟡 Drafting |
+| credentum-ui | Public witness dashboard for lineage & replay | 🔲 In Planning |
+
 ## Test Coverage
 
 Coverage is automatically tracked using `pytest-cov` and updated via:
