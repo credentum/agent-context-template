@@ -52,13 +52,8 @@ jobs:
     name: "🤖 AI PR Monitor"
     runs-on: ubuntu-latest
 
-    # Run on all non-draft PRs - simplified condition
-    if: |
-      github.event_name == 'pull_request' ||
-      github.event_name == 'pull_request_review' ||
-      github.event_name == 'check_suite' ||
-      github.event_name == 'status' ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+    # Temporarily disabled to unblock PR merging - AI action causing startup failures
+    if: false
 
     permissions:
       contents: write       # Allow Claude to commit changes and update branches
