@@ -514,9 +514,42 @@ jobs:
           git fetch origin $BASE_REF --force
           git fetch origin $HEAD_REF --force
 
-          # Check if branch is behind
-          echo "🔍 Checking if origin/$HEAD_REF is behind origin/$BASE_REF"
-          COMMITS_BEHIND=$(git rev-list --count origin/$HEAD_REF..origin/$BASE_REF 2>/dev/null || echo "0")
+      - name: Check Commits Behind (Centralized)
+        id: commits-behind-check
+        uses: ./.github/actions/git-pr-commands
+        with:
+          command: commits-behind
+          head-sha: ${{ github.event.pull_request.head.sha }}
+          base-sha: ${{ github.event.pull_request.base.sha }}
+
+      - name: Process Branch Update Logic
+        id: process-update
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Get commits behind from centralized action
+          COMMITS_BEHIND="${{ steps.commits-behind-check.outputs.result }}"
+
+          PR_DATA='${{ steps.pr-context.outputs.result }}'
+          PR_NUMBER=$(echo "$PR_DATA" | jq -r '.number // empty')
+          HEAD_REF=$(echo "$PR_DATA" | jq -r '.head_ref // empty')
+          BASE_REF=$(echo "$PR_DATA" | jq -r '.base_ref // empty')
+
+          if [ -z "$PR_NUMBER" ] || [ -z "$HEAD_REF" ] || [ -z "$BASE_REF" ]; then
+            echo "⚠️ Missing PR context, skipping auto-update"
+            exit 0
+          fi
+
+          # Configure git for GitHub Actions
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Fetch latest changes
+          git fetch origin $BASE_REF --force
+          git fetch origin $HEAD_REF --force
+
+          # Check if branch is behind using centralized git commands
+          echo "🔍 Checking if branch is behind using reliable git commands"
           echo "Branch is $COMMITS_BEHIND commits behind $BASE_REF"
 
           if [ "$COMMITS_BEHIND" -gt 0 ]; then
