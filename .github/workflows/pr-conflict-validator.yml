@@ -169,14 +169,18 @@ jobs:
             const conflictType = '${{ steps.conflict-check.outputs.conflict_type }}';
             const commitsBehind = '${{ steps.conflict-check.outputs.commits_behind }}';
 
+            // Only show branch status for merge simulation conflicts
+            const branchStatusText = conflictType === 'merge_simulation' && commitsBehind > 0
+              ? `\n**Branch Status**: ${commitsBehind} commits behind base branch`
+              : '';
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
               body: `## ❌ Conflicts Detected
 
-            **Detection Method**: ${conflictType}
-            **Branch Status**: ${commitsBehind} commits behind base branch
+            **Detection Method**: ${conflictType}${branchStatusText}
 
             ### 🔧 Resolution Steps:
 
