@@ -68,11 +68,33 @@ This document explains the workflow optimization performed to reduce complexity 
 
 ## Re-enabling Disabled Workflows
 
-To re-enable a workflow:
+### When to Re-enable
+
+**Specialized Features** (re-enable as needed):
+- `context-lint.yml.disabled` - When implementing new context YAML validation rules
+- `vector-graph-sync.yml.disabled` - When Vector/Graph DB synchronization is required
+- `kv-analytics-sync.yml.disabled` - When KV store analytics functionality is needed
+- `generate-sprint-issues.yml.disabled` - When automatic sprint issue generation is required
+- `sprint-start.yml.disabled` - When formal sprint initialization process is needed
+
+**Redundant Workflows** (consider alternatives first):
+- `ai-pr-monitor-minimal.yml.disabled` - Only if full ai-pr-monitor.yml is too complex
+- `ci-optimized.yml.disabled` - Only if lint-verification.yml is insufficient
+- `test-suite.yml.disabled` - Only if test.yml doesn't provide enough coverage
+- `pr-validation.yml.disabled` - Only if pr-issue-validation.yml is insufficient
+
+### Re-enablement Process
+
+1. **Evaluate need**: Confirm the specific functionality is required
+2. **Check for conflicts**: Ensure no overlap with active workflows
+3. **Re-enable workflow**:
 ```bash
 # Example: Re-enable context validation
 mv .github/workflows/context-lint.yml.disabled .github/workflows/context-lint.yml
 ```
+4. **Test thoroughly**: Verify the workflow works correctly
+5. **Monitor impact**: Watch for any negative effects on CI performance
+6. **Update documentation**: Add notes about why the workflow was re-enabled
 
 ## Monitoring and Adjustment
 
