@@ -16,19 +16,22 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
 
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     permissions:
       contents: read
       pull-requests: write
       checks: write
 
     steps:
-      - name: Checkout base branch
+      - name: Checkout PR head (contains reusable actions)
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.base.ref }}
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Fetch PR branch
+      - name: Fetch base and PR branches for conflict detection
         run: |
           git fetch origin ${{ github.event.pull_request.head.ref }}:pr-branch
           git fetch origin ${{ github.event.pull_request.base.ref }}:base-branch
@@ -41,10 +44,14 @@ jobs:
           PR_HEAD="${{ github.event.pull_request.head.sha }}"
           BASE_HEAD="${{ github.event.pull_request.base.sha }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
+          HEAD_REF="${{ github.event.pull_request.head.ref }}"
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
 
           echo "PR HEAD: $PR_HEAD"
           echo "BASE HEAD: $BASE_HEAD"
           echo "PR NUMBER: $PR_NUMBER"
+          echo "HEAD REF: $HEAD_REF"
+          echo "BASE REF: $BASE_REF"
 
           # Get current merge status from GitHub API
           MERGEABLE_STATE=$(gh pr view $PR_NUMBER --json mergeable,mergeStateStatus --jq '{mergeable: .mergeable, state: .mergeStateStatus}')
@@ -65,34 +72,88 @@ jobs:
           fi
 
           # Test 2: Check merge state status
-          if [ "$MERGE_STATE" = "DIRTY" ] || [ "$MERGE_STATE" = "BLOCKED" ]; then
-            echo "❌ Merge state is $MERGE_STATE"
+          if [ "$MERGE_STATE" = "DIRTY" ]; then
+            echo "❌ Merge state is $MERGE_STATE - conflicts detected"
             echo "has_conflicts=true" >> $GITHUB_OUTPUT
             echo "conflict_type=merge_state" >> $GITHUB_OUTPUT
             exit 0
           fi
 
+          # Note: BLOCKED state means PR is blocked by status checks, not merge conflicts
+          if [ "$MERGE_STATE" = "BLOCKED" ]; then
+            echo "ℹ️ Merge state is BLOCKED due to pending/failing status checks (not conflicts)"
+          fi
+
           # Test 3: Manual merge simulation
           echo "🧪 Simulating merge to detect conflicts..."
+
+          # Configure git user identity for merge simulation
+          git config user.email "action@github.com"
+          git config user.name "GitHub Actions"
 
           git checkout base-branch
           git checkout -b merge-test
 
-          if git merge pr-branch --no-commit --no-ff; then
+          # Attempt merge and capture both exit code and output
+          MERGE_OUTPUT=$(git merge pr-branch --no-commit --no-ff 2>&1)
+          MERGE_EXIT_CODE=$?
+
+          if [ $MERGE_EXIT_CODE -eq 0 ]; then
             echo "✅ Merge simulation successful - no conflicts detected"
             git merge --abort 2>/dev/null || true
             echo "has_conflicts=false" >> $GITHUB_OUTPUT
             echo "conflict_type=none" >> $GITHUB_OUTPUT
           else
-            echo "❌ Merge simulation failed - conflicts detected"
-            git merge --abort 2>/dev/null || true
-            echo "has_conflicts=true" >> $GITHUB_OUTPUT
-            echo "conflict_type=merge_simulation" >> $GITHUB_OUTPUT
+            # Check if failure was due to actual conflicts vs other issues
+            if echo "$MERGE_OUTPUT" | grep -q "CONFLICT\|Automatic merge failed"; then
+              echo "❌ Merge simulation detected actual conflicts"
+              echo "Conflict details: $MERGE_OUTPUT"
+              git merge --abort 2>/dev/null || true
+              echo "has_conflicts=true" >> $GITHUB_OUTPUT
+              echo "conflict_type=merge_simulation" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️ Merge simulation failed for non-conflict reason (likely no conflicts)"
+              echo "Failure reason: $MERGE_OUTPUT"
+              git merge --abort 2>/dev/null || true
+              echo "has_conflicts=false" >> $GITHUB_OUTPUT
+              echo "conflict_type=none" >> $GITHUB_OUTPUT
+            fi
           fi
 
-          # Test 4: Check for divergent history
-          COMMITS_BEHIND=$(git rev-list --count pr-branch..base-branch)
-          COMMITS_AHEAD=$(git rev-list --count base-branch..pr-branch)
+          # Test 4: Check for divergent history using centralized git commands
+          echo "🔍 Checking divergent history using reliable git commands"
+
+          # Store SHA values for the centralized git action
+          echo "pr_head_sha=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+          echo "pr_base_sha=${{ github.event.pull_request.base.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Check Commits Behind
+        id: commits-behind
+        run: |
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          echo "🔍 Checking commits behind using: git rev-list --count $HEAD_SHA..$BASE_SHA"
+          COMMITS_BEHIND=$(git rev-list --count $HEAD_SHA..$BASE_SHA 2>/dev/null || echo "0")
+          echo "result=$COMMITS_BEHIND" >> $GITHUB_OUTPUT
+          echo "✅ Commits behind: $COMMITS_BEHIND"
+
+      - name: Check Commits Ahead
+        id: commits-ahead
+        run: |
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          echo "🔍 Checking commits ahead using: git rev-list --count $BASE_SHA..$HEAD_SHA"
+          COMMITS_AHEAD=$(git rev-list --count $BASE_SHA..$HEAD_SHA 2>/dev/null || echo "0")
+          echo "result=$COMMITS_AHEAD" >> $GITHUB_OUTPUT
+          echo "✅ Commits ahead: $COMMITS_AHEAD"
+
+      - name: Process Divergent History Results
+        id: process-results
+        run: |
+          COMMITS_BEHIND="${{ steps.commits-behind.outputs.result }}"
+          COMMITS_AHEAD="${{ steps.commits-ahead.outputs.result }}"
 
           echo "Commits behind base: $COMMITS_BEHIND"
           echo "Commits ahead of base: $COMMITS_AHEAD"
@@ -108,58 +169,18 @@ jobs:
             echo "needs_update=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update PR status check
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const hasConflicts = '${{ steps.conflict-check.outputs.has_conflicts }}' === 'true';
-            const conflictType = '${{ steps.conflict-check.outputs.conflict_type }}';
-            const mergeableState = '${{ steps.conflict-check.outputs.mergeable }}';
-            const mergeStateStatus = '${{ steps.conflict-check.outputs.merge_state_status }}';
-            const needsUpdate = '${{ steps.conflict-check.outputs.needs_update }}' === 'true';
-            const commitsBehind = '${{ steps.conflict-check.outputs.commits_behind }}';
+      - name: Set workflow status
+        run: |
+          has_conflicts="${{ steps.conflict-check.outputs.has_conflicts }}"
+          conflict_type="${{ steps.conflict-check.outputs.conflict_type }}"
 
-            let conclusion = 'success';
-            let title = '✅ No conflicts detected';
-            let summary = 'PR can be safely merged.';
-
-            if (hasConflicts) {
-              conclusion = 'failure';
-              title = '❌ Conflicts detected';
-              summary = `Conflicts found via ${conflictType}. Manual resolution required.`;
-            } else if (needsUpdate) {
-              conclusion = 'neutral';
-              title = '⚠️ Branch needs update';
-              summary = `Branch is ${commitsBehind} commits behind. Consider updating before merge.`;
-            }
-
-            // Create check run
-            await github.rest.checks.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'Conflict Detection',
-              head_sha: context.payload.pull_request.head.sha,
-              status: 'completed',
-              conclusion: conclusion,
-              output: {
-                title: title,
-                summary: summary,
-                text: `
-            ## Conflict Detection Results
-
-            **GitHub Mergeable**: ${mergeableState}
-            **Merge State Status**: ${mergeStateStatus}
-            **Conflict Type**: ${conflictType}
-            **Commits Behind**: ${commitsBehind}
-            **Needs Update**: ${needsUpdate}
-
-            ${hasConflicts ?
-              '### ❌ Action Required\nThis PR has conflicts that must be resolved before merging.' :
-              '### ✅ Safe to Merge\nNo conflicts detected. PR is ready for review and merge.'
-            }
-            `
-              }
-            });
+          if [ "$has_conflicts" = "true" ]; then
+            echo "❌ Conflicts detected via $conflict_type. Manual resolution required."
+            exit 1
+          else
+            echo "✅ No conflicts detected. PR can be safely merged."
+            exit 0
+          fi
 
       - name: Comment on PR if conflicts detected
         if: steps.conflict-check.outputs.has_conflicts == 'true'
@@ -167,7 +188,12 @@ jobs:
         with:
           script: |
             const conflictType = '${{ steps.conflict-check.outputs.conflict_type }}';
-            const commitsBehind = '${{ steps.conflict-check.outputs.commits_behind }}';
+            const commitsBehind = '${{ steps.process-results.outputs.commits_behind }}';
+
+            // Only show branch status for merge simulation conflicts
+            const branchStatusText = conflictType === 'merge_simulation' && commitsBehind > 0
+              ? `\n**Branch Status**: ${commitsBehind} commits behind base branch`
+              : '';
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -175,8 +201,7 @@ jobs:
               issue_number: context.payload.pull_request.number,
               body: `## ❌ Conflicts Detected
 
-            **Detection Method**: ${conflictType}
-            **Branch Status**: ${commitsBehind} commits behind base branch
+            **Detection Method**: ${conflictType}${branchStatusText}
 
             ### 🔧 Resolution Steps:
 
@@ -203,6 +228,3 @@ jobs:
 
             _This is an automated message from the PR Conflict Validator._`
             });
-
-env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
