@@ -41,10 +41,14 @@ jobs:
           PR_HEAD="${{ github.event.pull_request.head.sha }}"
           BASE_HEAD="${{ github.event.pull_request.base.sha }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
+          HEAD_REF="${{ github.event.pull_request.head.ref }}"
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
 
           echo "PR HEAD: $PR_HEAD"
           echo "BASE HEAD: $BASE_HEAD"
           echo "PR NUMBER: $PR_NUMBER"
+          echo "HEAD REF: $HEAD_REF"
+          echo "BASE REF: $BASE_REF"
 
           # Get current merge status from GitHub API
           MERGEABLE_STATE=$(gh pr view $PR_NUMBER --json mergeable,mergeStateStatus --jq '{mergeable: .mergeable, state: .mergeStateStatus}')
@@ -91,8 +95,8 @@ jobs:
           fi
 
           # Test 4: Check for divergent history
-          COMMITS_BEHIND=$(git rev-list --count $PR_HEAD..$BASE_HEAD)
-          COMMITS_AHEAD=$(git rev-list --count $BASE_HEAD..$PR_HEAD)
+          COMMITS_BEHIND=$(git rev-list --count origin/$HEAD_REF..origin/$BASE_REF)
+          COMMITS_AHEAD=$(git rev-list --count origin/$BASE_REF..origin/$HEAD_REF)
 
           echo "Commits behind base: $COMMITS_BEHIND"
           echo "Commits ahead of base: $COMMITS_AHEAD"
