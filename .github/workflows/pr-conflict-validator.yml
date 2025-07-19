@@ -111,19 +111,25 @@ jobs:
 
       - name: Check Commits Behind
         id: commits-behind
-        uses: ./.github/actions/git-pr-commands
-        with:
-          command: commits-behind
-          head-sha: ${{ github.event.pull_request.head.sha }}
-          base-sha: ${{ github.event.pull_request.base.sha }}
+        run: |
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          echo "🔍 Checking commits behind using: git rev-list --count $HEAD_SHA..$BASE_SHA"
+          COMMITS_BEHIND=$(git rev-list --count $HEAD_SHA..$BASE_SHA 2>/dev/null || echo "0")
+          echo "result=$COMMITS_BEHIND" >> $GITHUB_OUTPUT
+          echo "✅ Commits behind: $COMMITS_BEHIND"
 
       - name: Check Commits Ahead
         id: commits-ahead
-        uses: ./.github/actions/git-pr-commands
-        with:
-          command: commits-ahead
-          head-sha: ${{ github.event.pull_request.head.sha }}
-          base-sha: ${{ github.event.pull_request.base.sha }}
+        run: |
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          echo "🔍 Checking commits ahead using: git rev-list --count $BASE_SHA..$HEAD_SHA"
+          COMMITS_AHEAD=$(git rev-list --count $BASE_SHA..$HEAD_SHA 2>/dev/null || echo "0")
+          echo "result=$COMMITS_AHEAD" >> $GITHUB_OUTPUT
+          echo "✅ Commits ahead: $COMMITS_AHEAD"
 
       - name: Process Divergent History Results
         id: process-results
