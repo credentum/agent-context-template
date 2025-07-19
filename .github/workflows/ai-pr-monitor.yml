@@ -347,12 +347,14 @@ jobs:
             **Event Type**: ${{ github.event_name }}
             **Enhanced PR Data**: ${{ steps.pr-context.outputs.result }}
 
-            The PR data includes comprehensive context: CI status, auto-merge flags, ARC-Reviewer status, and readiness summary.
+            The PR data includes comprehensive context: CI status, auto-merge flags,
+            ARC-Reviewer status, and readiness summary.
 
             ## Core Responsibilities
 
             ### 1. **Auto-Merge Management** (Replaces auto-merge.yml + smart-auto-merge.yml)
-            You have access to complete auto-merge readiness analysis. When `ready_for_auto_merge: true`, enable auto-merge immediately using:
+            You have access to complete auto-merge readiness analysis.
+            When `ready_for_auto_merge: true`, enable auto-merge immediately using:
 
             ```bash
             # Enable auto-merge using GitHub CLI
@@ -574,7 +576,8 @@ jobs:
               echo "update_method=merge" >> $GITHUB_OUTPUT
 
               # Comment on PR about successful update
-              gh pr comment $PR_NUMBER --body "🔄 **Auto-update completed**: Branch merged with latest $BASE_REF to prevent conflicts. No manual intervention required."
+              gh pr comment $PR_NUMBER --body \
+                "🔄 **Auto-update completed**: Branch merged with latest $BASE_REF to prevent conflicts. No manual intervention required."
 
             else
               echo "❌ Merge failed, trying rebase..."
@@ -596,7 +599,8 @@ jobs:
                 echo "update_method=rebase" >> $GITHUB_OUTPUT
 
                 # Comment on PR about successful update
-                gh pr comment $PR_NUMBER --body "🔄 **Auto-update completed**: Branch rebased onto latest $BASE_REF to prevent conflicts. All changes preserved."
+                gh pr comment $PR_NUMBER --body \
+                  "🔄 **Auto-update completed**: Branch rebased onto latest $BASE_REF to prevent conflicts. All changes preserved."
 
               else
                 echo "❌ Both merge and rebase failed, conflicts detected"
@@ -648,18 +652,25 @@ jobs:
           echo "- **Timestamp**: $(date)" >> $GITHUB_STEP_SUMMARY
           PR_NUM=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.number // "N/A"')
           echo "- **PR Number**: $PR_NUM" >> $GITHUB_STEP_SUMMARY
-          AUTO_MERGE_REQ=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.auto_merge_requested // false')
-          AUTO_MERGE_METHOD=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.auto_merge_method // "none"')
-          echo "- **Auto-merge Requested**: $AUTO_MERGE_REQ via $AUTO_MERGE_METHOD" >> $GITHUB_STEP_SUMMARY
-          CI_READY=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.ci_ready // false')
+          AUTO_MERGE_REQ=$(echo '${{ steps.pr-context.outputs.result }}' | \
+            jq -r '.auto_merge_requested // false')
+          AUTO_MERGE_METHOD=$(echo '${{ steps.pr-context.outputs.result }}' | \
+            jq -r '.auto_merge_method // "none"')
+          echo "- **Auto-merge Requested**: $AUTO_MERGE_REQ via $AUTO_MERGE_METHOD" >> \
+            $GITHUB_STEP_SUMMARY
+          CI_READY=$(echo '${{ steps.pr-context.outputs.result }}' | \
+            jq -r '.ci_ready // false')
           echo "- **CI Ready**: $CI_READY" >> $GITHUB_STEP_SUMMARY
-          ARC_STATUS=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.arc_reviewer_status.verdict // "pending"')
+          ARC_STATUS=$(echo '${{ steps.pr-context.outputs.result }}' | \
+            jq -r '.arc_reviewer_status.verdict // "pending"')
           echo "- **ARC-Reviewer Status**: $ARC_STATUS" >> $GITHUB_STEP_SUMMARY
-          READY_FOR_MERGE=$(echo '${{ steps.pr-context.outputs.result }}' | jq -r '.ready_for_auto_merge // false')
+          READY_FOR_MERGE=$(echo '${{ steps.pr-context.outputs.result }}' | \
+            jq -r '.ready_for_auto_merge // false')
           echo "- **Ready for Auto-merge**: $READY_FOR_MERGE" >> $GITHUB_STEP_SUMMARY
           BRANCH_UPDATED="${{ steps.branch-update.outputs.branch_updated || 'not_needed' }}"
           UPDATE_METHOD="${{ steps.branch-update.outputs.update_method || 'none' }}"
-          echo "- **Branch Update**: $BRANCH_UPDATED ($UPDATE_METHOD)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch Update**: $BRANCH_UPDATED ($UPDATE_METHOD)" >> \
+            $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🎯 Enhanced AI-Monitored PR Process" >> $GITHUB_STEP_SUMMARY
           echo "This workflow replaces **2,063 lines** of brittle multi-workflow coordination:" >> $GITHUB_STEP_SUMMARY
