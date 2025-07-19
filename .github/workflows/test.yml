@@ -1,4 +1,4 @@
-name: 🧪 Core Tests
+name: Unit Tests (Fast)
 
 on:
   # push:

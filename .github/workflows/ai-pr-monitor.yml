@@ -101,10 +101,10 @@ jobs:
               const requiredChecks = [
                 'claude-pr-review',
                 'ARC-Reviewer',
-                '📊 Coverage Analysis',
-                '🔍 Lint & Style',
-                '🧪 Core Tests',
-                '🔗 Integration Tests'
+                'coverage',
+                'lint',
+                'test',
+                'validate-issue-links'
               ];
 
               // Check runs (GitHub Checks API)

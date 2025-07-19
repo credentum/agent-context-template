@@ -1,4 +1,4 @@
-name: 🔍 Lint & Style
+name: Lint Verification
 
 on:
   # push:
