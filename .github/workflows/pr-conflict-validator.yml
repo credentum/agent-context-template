@@ -21,6 +21,9 @@ jobs:
       pull-requests: write
       checks: write
 
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     steps:
       - name: Checkout base branch
         uses: actions/checkout@v4
@@ -203,6 +206,3 @@ jobs:
 
             _This is an automated message from the PR Conflict Validator._`
             });
-
-env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
