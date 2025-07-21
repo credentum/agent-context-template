@@ -64,6 +64,7 @@ jobs:
           mkdir -p context/logs/kv
           mkdir -p context/logs/prompts
           mkdir -p context/logs/signatures
+          mkdir -p .claude/hooks
 
       - name: Run unit tests
         run: |

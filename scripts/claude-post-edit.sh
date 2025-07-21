@@ -70,7 +70,7 @@ for file in "${FILES[@]}"; do
         continue
     fi
 
-    ((TOTAL_FILES++))
+    ((TOTAL_FILES++)) || true
 
     echo -e "${YELLOW}Checking: $file${NC}"
 
@@ -85,8 +85,8 @@ for file in "${FILES[@]}"; do
         REMAINING=$(echo "$VALIDATION_OUTPUT" | grep "^remaining_issues:" | cut -d' ' -f2)
 
         # Update totals
-        TOTAL_ISSUES=$((TOTAL_ISSUES + ISSUES))
-        TOTAL_FIXED=$((TOTAL_FIXED + FIXED))
+        TOTAL_ISSUES=$((TOTAL_ISSUES + ${ISSUES:-0}))
+        TOTAL_FIXED=$((TOTAL_FIXED + ${FIXED:-0}))
 
         # Log the edit
         log_edit "File: $file, Status: $STATUS, Issues: $ISSUES, Fixed: $FIXED, Remaining: $REMAINING"
@@ -95,15 +95,15 @@ for file in "${FILES[@]}"; do
         case "$STATUS" in
             "success")
                 echo -e "${GREEN}✓ Format check passed${NC}"
-                ((SUCCESS_FILES++))
+                ((SUCCESS_FILES++)) || true
                 ;;
             "warning")
                 echo -e "${YELLOW}⚠ Fixed $FIXED issue(s)${NC}"
-                ((WARNING_FILES++))
+                ((WARNING_FILES++)) || true
                 ;;
             "error")
                 echo -e "${RED}✗ Found $REMAINING issue(s) that need manual fixing${NC}"
-                ((ERROR_FILES++))
+                ((ERROR_FILES++)) || true
 
                 # Show details if available
                 if [[ "$VALIDATION_OUTPUT" =~ "details:" ]]; then
@@ -115,7 +115,7 @@ for file in "${FILES[@]}"; do
         esac
     else
         echo -e "${RED}✗ Error running validation${NC}"
-        ((ERROR_FILES++))
+        ((ERROR_FILES++)) || true
     fi
 
     echo

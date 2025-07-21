@@ -156,6 +156,7 @@ jobs:
           mkdir -p context/archive
           mkdir -p context/mcp_contracts
           mkdir -p context/logs/{cleanup,eval,kv,prompts,signatures}
+          mkdir -p .claude/hooks
 
   # Fast lint checks - parallel execution
   lint:
@@ -327,6 +328,18 @@ jobs:
             context/mcp_contracts
             context/logs
           key: ${{ runner.os }}-directories-${{ env.CACHE_VERSION }}
+
+      - name: Create missing directories
+        run: |
+          mkdir -p context/.duckdb
+          mkdir -p context/.graph_cache
+          mkdir -p context/.vector_cache
+          mkdir -p context/.embeddings_cache
+          mkdir -p context/trace
+          mkdir -p context/archive
+          mkdir -p context/mcp_contracts
+          mkdir -p context/logs/{cleanup,eval,kv,prompts,signatures}
+          mkdir -p .claude/hooks
 
       # Unified test execution with coverage
       - name: Run unit tests with coverage

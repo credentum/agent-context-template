@@ -149,6 +149,7 @@ services:
       - ./tests:/app/tests
       - ./scripts:/app/scripts
       - ./context:/app/context
+      - ./.claude:/app/.claude
       - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml
       - ./pyproject.toml:/app/pyproject.toml
       - ./mypy.ini:/app/mypy.ini
@@ -194,6 +195,7 @@ services:
       - ./tests:/app/tests:ro
       - ./scripts:/app/scripts:ro
       - ./context:/app/context
+      - ./.claude:/app/.claude:ro
       - ./.coverage-config.json:/app/.coverage-config.json:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
       - ./pytest.ini:/app/pytest.ini:ro
@@ -220,6 +222,7 @@ services:
       - ./tests:/app/tests:ro
       - ./scripts:/app/scripts:ro
       - ./context:/app/context
+      - ./.claude:/app/.claude:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
       - ./pytest.ini:/app/pytest.ini:ro
     environment:
@@ -245,6 +248,7 @@ services:
       - ./tests:/app/tests:ro
       - ./scripts:/app/scripts:ro
       - ./context:/app/context
+      - ./.claude:/app/.claude:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
       - ./pytest.ini:/app/pytest.ini:ro
     environment:
@@ -284,10 +288,14 @@ services:
         echo '🔍 Running parallel lint checks...'
         # Run all lint checks in parallel with proper error handling
         (echo '  ▶ Black...' && black --check src/ tests/ scripts/) &
-        (echo '  ▶ isort...' && isort --check-only --profile black src/ tests/ scripts/) &
-        (echo '  ▶ Flake8...' && flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503) &
+        (echo '  ▶ isort...' && \
+          isort --check-only --profile black src/ tests/ scripts/) &
+        (echo '  ▶ Flake8...' && \
+          flake8 src/ tests/ scripts/ \
+          --max-line-length=100 --extend-ignore=E203,W503) &
         (echo '  ▶ MyPy...' && mypy src/ --config-file=mypy.ini) &
-        (echo '  ▶ Context lint...' && python -m src.agents.context_lint validate context/) &
+        (echo '  ▶ Context lint...' && \
+          python -m src.agents.context_lint validate context/) &
         wait
         echo '🎉 All lint checks completed'
       "

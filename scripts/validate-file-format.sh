@@ -26,7 +26,11 @@ fi
 
 # Check if file exists
 if [ ! -f "$FILE_PATH" ]; then
-    echo "Error: File not found: $FILE_PATH"
+    echo "CLAUDE_FORMAT_CHECK:START"
+    echo "status: error"
+    echo "file: $FILE_PATH"
+    echo "error: File not found"
+    echo "CLAUDE_FORMAT_CHECK:END"
     exit 1
 fi
 
@@ -50,6 +54,11 @@ FILENAME=$(basename "$FILE_PATH")
 # Start structured output
 echo "CLAUDE_FORMAT_CHECK:START"
 
+# Show fix mode message if enabled
+if $FIX_MODE; then
+    echo "Fixing $FILE_PATH"
+fi
+
 # Python file handling
 if [[ "$EXTENSION" == "py" ]]; then
     # Check if in virtual environment or use project Python
@@ -63,13 +72,13 @@ if [[ "$EXTENSION" == "py" ]]; then
     if command -v black >/dev/null 2>&1; then
         if $FIX_MODE; then
             if ! black --line-length 100 --quiet "$FILE_PATH" 2>/dev/null; then
-                ((AUTO_FIXED++))
+                ((AUTO_FIXED++)) || true
                 add_detail "black" "Reformatted with Black"
             fi
         else
             if ! black --line-length 100 --check --quiet "$FILE_PATH" 2>/dev/null; then
-                ((ISSUES_FOUND++))
-                ((REMAINING_ISSUES++))
+                ((ISSUES_FOUND++)) || true
+                ((REMAINING_ISSUES++)) || true
                 add_detail "black" "File needs Black formatting"
             fi
         fi
@@ -80,13 +89,13 @@ if [[ "$EXTENSION" == "py" ]]; then
         if $FIX_MODE; then
             if ! isort --profile black --line-length 100 --check-only "$FILE_PATH" 2>/dev/null; then
                 isort --profile black --line-length 100 "$FILE_PATH" 2>/dev/null
-                ((AUTO_FIXED++))
+                ((AUTO_FIXED++)) || true
                 add_detail "isort" "Import order fixed with isort"
             fi
         else
             if ! isort --profile black --line-length 100 --check-only "$FILE_PATH" 2>/dev/null; then
-                ((ISSUES_FOUND++))
-                ((REMAINING_ISSUES++))
+                ((ISSUES_FOUND++)) || true
+                ((REMAINING_ISSUES++)) || true
                 add_detail "isort" "Import order needs fixing"
             fi
         fi
@@ -96,8 +105,8 @@ if [[ "$EXTENSION" == "py" ]]; then
     if command -v flake8 >/dev/null 2>&1; then
         FLAKE8_OUTPUT=$(flake8 --max-line-length=100 --extend-ignore=E203,W503 "$FILE_PATH" 2>&1 || true)
         if [ -n "$FLAKE8_OUTPUT" ]; then
-            ((ISSUES_FOUND++))
-            ((REMAINING_ISSUES++))
+            ((ISSUES_FOUND++)) || true
+            ((REMAINING_ISSUES++)) || true
             # Extract first error for detail
             FIRST_ERROR=$(echo "$FLAKE8_OUTPUT" | head -n1)
             add_detail "flake8" "Linting issues: $FIRST_ERROR"
@@ -118,8 +127,8 @@ elif [[ "$EXTENSION" == "yaml" ]] || [[ "$EXTENSION" == "yml" ]]; then
     if command -v yamllint >/dev/null 2>&1; then
         YAMLLINT_OUTPUT=$(yamllint -c .yamllint "$FILE_PATH" 2>&1 || true)
         if [ -n "$YAMLLINT_OUTPUT" ]; then
-            ((ISSUES_FOUND++))
-            ((REMAINING_ISSUES++))
+            ((ISSUES_FOUND++)) || true
+            ((REMAINING_ISSUES++)) || true
             FIRST_ERROR=$(echo "$YAMLLINT_OUTPUT" | head -n1)
             add_detail "yamllint" "YAML formatting issues: $FIRST_ERROR"
         fi
@@ -130,8 +139,8 @@ elif [[ "$EXTENSION" == "sh" ]] || [[ "$FILENAME" == "Makefile" ]]; then
     if command -v shellcheck >/dev/null 2>&1 && [[ "$EXTENSION" == "sh" ]]; then
         SHELLCHECK_OUTPUT=$(shellcheck "$FILE_PATH" 2>&1 || true)
         if [ -n "$SHELLCHECK_OUTPUT" ]; then
-            ((ISSUES_FOUND++))
-            ((REMAINING_ISSUES++))
+            ((ISSUES_FOUND++)) || true
+            ((REMAINING_ISSUES++)) || true
             add_detail "shellcheck" "Shell script issues found"
         fi
     fi
