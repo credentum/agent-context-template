@@ -6,6 +6,7 @@
 3. [Usage](#usage)
 4. [Parameters](#parameters)
 5. [Workflow Steps](#workflow-steps)
+   - [Phase 0: Investigation (If Needed)](#phase-0-investigation-if-needed)
    - [Phase 1: Analysis & Planning](#phase-1-analysis--planning)
    - [Phase 2: Implementation](#phase-2-implementation)
    - [Phase 3: Testing & Validation](#phase-3-testing--validation)
@@ -55,6 +56,102 @@ Please follow these steps in order. **Actually perform each action** - don't jus
 ---
 
 ## Workflow Steps
+
+### Phase 0: Investigation (If Needed)
+
+**When to Use This Phase:**
+- Issue describes symptoms but root cause is unclear
+- Initial implementation attempts reveal unexpected complexity
+- Multiple potential solutions exist with different trade-offs
+- The problem spans multiple components or systems
+- You discover the issue is significantly larger than described
+
+#### Step 0.1: Assess Investigation Need
+**EXECUTE NOW:**
+1. Review the issue description for clarity of scope
+2. Check if issue uses investigation template or has "needs-scope" label
+3. Look for phrases like "sometimes", "occasionally", "might be related to"
+4. Consider if you can confidently estimate the implementation effort
+
+**Decision Point:**
+- If scope is clear → Skip to Phase 1
+- If scope is unclear → Continue with investigation
+
+#### Step 0.2: Create Investigation Issue (If Not Exists)
+**EXECUTE NOW:**
+```bash
+# If the current issue isn't already an investigation issue
+gh issue create \
+  --title "[INVESTIGATION] Original issue title" \
+  --body "$(cat <<EOF
+## Related To
+Original issue: #[ISSUE_NUMBER]
+
+## Symptoms Observed
+[Copy relevant symptoms from original issue]
+
+## Investigation Plan
+- [ ] [Specific investigation steps based on symptoms]
+
+## Time Budget
+Maximum investigation time: 4 hours
+EOF
+)" \
+  --label "investigation,needs-scope"
+```
+
+#### Step 0.3: Time-boxed Investigation
+**EXECUTE NOW:**
+1. Set investigation timer (recommended: 2-4 hours max)
+2. Follow investigation plan systematically
+3. Document findings in real-time in the investigation issue
+4. Test theories with minimal code changes
+5. Identify distinct sub-problems as you discover them
+
+#### Step 0.4: Document Findings and Decompose
+**EXECUTE NOW:**
+1. Update investigation issue with:
+   - Root cause analysis
+   - Identified sub-problems
+   - Recommended decomposition strategy
+   - Effort estimates for each component
+
+2. Create decomposed implementation issues:
+```bash
+# For each identified sub-problem
+gh issue create \
+  --title "[Component] Specific sub-problem" \
+  --body "Part of investigation #[INVESTIGATION_NUMBER]
+
+## Context
+[Relevant findings from investigation]
+
+## Specific Scope
+[Clear boundaries of this sub-issue]
+
+## Dependencies
+- Depends on: #[OTHER_ISSUE] (if applicable)
+- Blocks: #[OTHER_ISSUE] (if applicable)
+" \
+  --label "component:[relevant],decomposed"
+```
+
+#### Step 0.5: Close Investigation with Summary
+**EXECUTE NOW:**
+1. Update investigation issue with final summary
+2. Link all created sub-issues
+3. Close investigation issue with resolution comment
+4. Proceed to Phase 1 with first implementation issue
+
+**Example from Issue #1029:**
+```markdown
+Investigation revealed 3 interconnected problems:
+1. Git syntax error (created #1043) - Must fix first
+2. Authentication scope issue (created #1044) - Depends on #1043
+3. Phantom check creation (created #1045) - Cleanup after #1044
+
+Proceeding with #1043 as first implementation.
+```
 
 ### Phase 1: Analysis & Planning
 
