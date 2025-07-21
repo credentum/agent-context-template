@@ -95,7 +95,7 @@ jobs:
 
           # Test 4: Check for divergent history
           COMMITS_BEHIND=$(git rev-list --count base-branch..pr-branch)
-          COMMITS_AHEAD=$(git rev-list --count base-branch..pr-branch)
+          COMMITS_AHEAD=$(git rev-list --count pr-branch..base-branch)
 
           echo "Commits behind base: $COMMITS_BEHIND"
           echo "Commits ahead of base: $COMMITS_AHEAD"
