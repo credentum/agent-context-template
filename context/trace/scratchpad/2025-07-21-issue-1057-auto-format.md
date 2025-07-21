@@ -1,6 +1,10 @@
+---
+schema_version: 1.0
+---
+
 # Scratchpad: Issue 1057 - Auto-Format After Claude Edits
 Date: 2025-07-21
-Issue: https://github.com/anthropics/claude-code/issues/1057
+Issue: https://github.com/credentum/agent-context-template/issues/1057
 
 ## Task Reference
 Template: context/trace/task-templates/issue-1057-auto-format-after-claude-edits.md

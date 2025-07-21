@@ -1,3 +1,7 @@
+---
+schema_version: 1.0
+---
+
 # ────────────────────────────────────────────────────────────────────────
 # TASK: issue-1057-auto-format-after-claude-edits
 # Generated from GitHub Issue #1057
@@ -10,7 +14,7 @@
 > Create a post-edit hook system that automatically runs formatting checks after Claude uses Edit/MultiEdit/Write tools, providing immediate feedback to prevent formatting errors from accumulating.
 
 ## 🧠 Context
-- **GitHub Issue**: #1057 - [INVESTIGATION] Auto-Format After Claude Edits
+- **GitHub Issue**: [#1057](https://github.com/credentum/agent-context-template/issues/1057) - [INVESTIGATION] Auto-Format After Claude Edits
 - **Sprint**: Not specified
 - **Phase**: Investigation
 - **Component**: CI
