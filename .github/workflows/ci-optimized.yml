@@ -341,6 +341,13 @@ jobs:
           mkdir -p context/logs/{cleanup,eval,kv,prompts,signatures}
           mkdir -p .claude/hooks
 
+      - name: Clean coverage data
+        run: |
+          echo "🧹 Cleaning any existing coverage data..."
+          rm -f .coverage* coverage.xml coverage.json
+          find . -name ".coverage*" -type f -delete 2>/dev/null || true
+          echo "✅ Coverage data cleaned"
+
       # Unified test execution with coverage
       - name: Run unit tests with coverage
         id: test

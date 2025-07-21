@@ -57,6 +57,13 @@ jobs:
           mkdir -p context/logs/prompts
           mkdir -p context/logs/signatures
 
+      - name: Clean coverage data
+        run: |
+          echo "🧹 Cleaning any existing coverage data..."
+          rm -f .coverage* coverage.xml coverage.json
+          find . -name ".coverage*" -type f -delete 2>/dev/null || true
+          echo "✅ Coverage data cleaned"
+
       - name: Run unit tests
         run: |
           pytest tests/ -m "not integration and not e2e and not slow" \
