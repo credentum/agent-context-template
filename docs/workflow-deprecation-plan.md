@@ -49,7 +49,7 @@
 | `generate-sprint-issues.yml` | Issue generation | Keep - specialized function |
 | `vector-graph-sync.yml` | Database synchronization | Keep - infrastructure |
 | `kv-analytics-sync.yml` | Analytics processing | Keep - data pipeline |
-| `pr-conflict-validator.yml` | Conflict detection | Review overlap with ai-pr-monitor.yml |
+| `pr-conflict-validator.yml` | Conflict detection | ✅ Simplified - removed phantom checks (Issue #1045) |
 | `pr-validation.yml` | PR format validation | Review integration potential |
 | `pr-required.yml` | PR enforcement | Keep - policy enforcement |
 
@@ -209,3 +209,33 @@ auto_merge_ecosystem_replacement:
 ---
 
 **Status**: Ready for Phase 4.1 execution - immediate replacement of auto-merge ecosystem with validated AI-monitored process.
+
+## 🏗️ Architectural Decisions
+
+### **PR Conflict Validator Simplification (Issue #1045)**
+**Date**: 2025-07-21
+**Decision**: Remove manual GitHub check creation from pr-conflict-validator.yml
+
+#### Problem Solved
+- Manual creation of GitHub checks via `github.rest.checks.create` API caused phantom "🔍 Conflict Detection" checks to appear in unrelated workflows (Lint, Tests, Coverage)
+- These phantom checks created false failures and confusion
+- Cross-workflow attribution issues made debugging difficult
+
+#### Solution Implemented
+- Removed the entire "Update PR status check" step that used `github.rest.checks.create`
+- Modified workflow to rely on native GitHub Actions job status (success/failure)
+- Added explicit exit codes: exit 1 on conflicts, exit 0 on success
+- Preserved PR commenting functionality for conflict notifications
+
+#### Benefits
+- **Eliminates phantom checks**: No more false "Conflict Detection" checks in other workflows
+- **Cleaner separation of concerns**: Each workflow focuses on its core responsibility
+- **Simplified architecture**: Relies on native GitHub Actions features instead of manual API calls
+- **Better debugging**: Clear job status without cross-workflow attribution issues
+
+#### Implementation Details
+- Removed 52 lines of API check creation code
+- Added 6 lines for proper exit code handling
+- Net reduction of 46 lines with improved functionality
+
+This architectural decision aligns with the broader workflow simplification strategy, reducing complexity while improving reliability.
