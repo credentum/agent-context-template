@@ -156,6 +156,7 @@ jobs:
           mkdir -p context/archive
           mkdir -p context/mcp_contracts
           mkdir -p context/logs/{cleanup,eval,kv,prompts,signatures}
+          mkdir -p .claude/hooks
 
   # Fast lint checks - parallel execution
   lint:
@@ -185,7 +186,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies
@@ -288,7 +290,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies
@@ -327,6 +330,25 @@ jobs:
             context/mcp_contracts
             context/logs
           key: ${{ runner.os }}-directories-${{ env.CACHE_VERSION }}
+
+      - name: Create missing directories
+        run: |
+          mkdir -p context/.duckdb
+          mkdir -p context/.graph_cache
+          mkdir -p context/.vector_cache
+          mkdir -p context/.embeddings_cache
+          mkdir -p context/trace
+          mkdir -p context/archive
+          mkdir -p context/mcp_contracts
+          mkdir -p context/logs/{cleanup,eval,kv,prompts,signatures}
+          mkdir -p .claude/hooks
+
+      - name: Clean coverage data
+        run: |
+          echo "🧹 Cleaning any existing coverage data..."
+          rm -f .coverage* coverage.xml coverage.json
+          find . -name ".coverage*" -type f -delete 2>/dev/null || true
+          echo "✅ Coverage data cleaned"
 
       # Unified test execution with coverage
       - name: Run unit tests with coverage
@@ -405,7 +427,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies
@@ -487,7 +510,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies
@@ -557,7 +581,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies
@@ -631,7 +656,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies
@@ -656,6 +682,13 @@ jobs:
           which coverage || pip install --force-reinstall coverage
           which bc || { echo "bc not available, installing..." && apt-get update && apt-get install -y bc; }
           echo "✅ Coverage analysis tools verified"
+
+      - name: Clean coverage data
+        run: |
+          echo "🧹 Cleaning any existing coverage data..."
+          rm -f .coverage* coverage.xml coverage.json
+          find . -name ".coverage*" -type f -delete 2>/dev/null || true
+          echo "✅ Coverage data cleaned"
 
       - name: Download test artifacts
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16

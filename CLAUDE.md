@@ -175,6 +175,44 @@ pytest tests/test_validators.py -v
 git add -A && git commit --amend --no-edit
 ```
 
+### NEW: Auto-Format After Claude Edits
+When Claude uses Edit/MultiEdit/Write tools, formatting errors can be caught immediately:
+
+```bash
+# After editing Python files, validate formatting
+./scripts/claude-post-edit.sh src/module.py src/another.py
+
+# Automatically fix formatting issues
+./scripts/claude-post-edit.sh src/module.py --fix
+
+# Use the hook functions
+source .claude/hooks/post-edit.sh
+claude_validate_edits file1.py file2.py  # Check only
+claude_format_edits file1.py file2.py    # Check and fix
+```
+
+**Claude Workflow Integration:**
+1. After using Edit/MultiEdit/Write on Python files, run validation
+2. Parse the structured output to understand issues
+3. Use --fix flag to automatically resolve formatting problems
+4. Stage fixed files before committing
+
+**Structured Output Format:**
+```
+CLAUDE_FORMAT_CHECK:START
+status: success|warning|error
+file: <filepath>
+issues_found: <count>
+auto_fixed: <count>
+remaining_issues: <count>
+details:
+  - type: black|isort|flake8
+    message: <issue description>
+CLAUDE_FORMAT_CHECK:END
+```
+
+This prevents formatting errors from accumulating and reduces CI failures.
+
 ### Development Workflow:
 When | Ask Claude to...
 ---|---
@@ -183,6 +221,7 @@ New feature | TDD: write failing tests → commit → implement until green → 
 High coverage | analyze uncovered lines → write specific tests → verify >85%
 Refactor | generate checklist → test baseline → refactor → test again → pre-commit
 Debug | reproduce issue → add logging → isolate → fix → add regression test
+After edits | run claude-post-edit.sh → fix issues → continue work
 
 ### NEW: Git Hooks & Automation:
 ```bash

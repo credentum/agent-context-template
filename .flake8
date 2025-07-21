@@ -17,4 +17,5 @@ exclude =
     context/.duckdb,
     context/.graph_cache,
     context/.vector_cache,
-    context/.embeddings_cache
+    context/.embeddings_cache,
+    tests/test_formatting_issues.py
