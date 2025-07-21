@@ -369,3 +369,52 @@ class TestFormatterIntegration:
 
         # Should detect unused import
         assert "flake8" in result.stdout.lower() or "F401" in result.stdout
+
+
+class TestPerformance:
+    """Test performance requirements."""
+
+    @pytest.fixture
+    def script_path(self):
+        """Get validate-file-format.sh path."""
+        return Path(__file__).parent.parent / "scripts" / "validate-file-format.sh"
+
+    def test_validation_under_2_seconds(self, script_path, tmp_path):
+        """Test that validation completes in under 2 seconds."""
+        import time
+
+        # Create a typical Python file
+        test_file = tmp_path / "perf_test.py"
+        test_file.write_text(
+            """
+import os
+import sys
+
+def example_function(x, y):
+    '''Example function for performance testing.'''
+    result = x + y
+    return result
+
+class ExampleClass:
+    def __init__(self):
+        self.value = 42
+
+    def method(self):
+        return self.value * 2
+"""
+        )
+
+        # Measure execution time
+        start_time = time.time()
+        result = subprocess.run(
+            [str(script_path), str(test_file)],
+            capture_output=True,
+            text=True,
+        )
+        end_time = time.time()
+
+        execution_time = end_time - start_time
+
+        # Should complete in under 2 seconds
+        assert execution_time < 2.0, f"Validation took {execution_time:.2f}s, exceeding 2s target"
+        assert result.returncode == 0
