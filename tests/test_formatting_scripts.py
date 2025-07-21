@@ -386,24 +386,32 @@ class TestPerformance:
         # Create a typical Python file
         test_file = tmp_path / "perf_test.py"
         test_file.write_text(
-            """
+            '''"""Test module for performance validation."""
+
+
 def example_function(x, y):
-    '''Example function for performance testing.'''
+    """Example function for performance testing."""
     result = x + y
     return result
 
+
 class ExampleClass:
+    """Example class for testing."""
+
     def __init__(self):
+        """Initialize with test value."""
         self.value = 42
 
     def method(self):
+        """Return doubled value."""
         return self.value * 2
+
 
 if __name__ == "__main__":
     obj = ExampleClass()
     print(obj.method())
     print(example_function(1, 2))
-"""
+'''
         )
 
         # Measure execution time
