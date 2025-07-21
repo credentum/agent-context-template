@@ -11,6 +11,14 @@ assignees: ''
 **Phase**: <!-- e.g., Phase 2: Implementation -->
 **Component**: <!-- e.g., api-middleware -->
 
+## Scope Assessment
+<!-- Check one -->
+- [ ] **Scope is clear** - Requirements are well-defined, proceed with implementation
+- [ ] **Scope needs investigation** - Create investigation issue first (use investigation.md template)
+- [ ] **Partially clear** - Some aspects need investigation (note below)
+
+**Investigation Notes**: <!-- If scope unclear, describe what needs investigation -->
+
 ## Acceptance Criteria
 <!-- From sprint planning -->
 - [ ] Specific functional requirement

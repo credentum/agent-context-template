@@ -11,7 +11,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import click
 import yaml
@@ -28,6 +28,7 @@ class SprintIssueLinker:
         self.verbose = verbose
         self.context_dir = Path("context")
         self.sprints_dir = self.context_dir / "sprints"
+        self.templates_dir = Path(".github/ISSUE_TEMPLATE")
         self._check_gh_cli()
 
     def _sanitize_text(self, text: str) -> str:
@@ -128,17 +129,69 @@ class SprintIssueLinker:
                 click.echo(f"Error fetching issues: {e}")
             return []
 
-    def _create_issue(self, title: str, body: str, labels: List[str]) -> Optional[int]:
-        """Create a GitHub issue"""
+    def _get_template_for_task(self, task: Union[str, Dict[str, Any]]) -> Optional[str]:
+        """Determine which template to use based on task properties"""
+        # Only check for templates if task is in dict format
+        if not isinstance(task, dict):
+            return None
+
+        # Check if task explicitly specifies a template
+        if task.get("template"):
+            template_name = task["template"]
+            if template_name == "investigation":
+                return "investigation.md"
+            elif template_name == "sprint-task":
+                return "sprint-task.md"
+
+        # Check if task indicates unclear scope
+        description = task.get("description", "").lower()
+        title = task.get("title", "").lower()
+
+        # Keywords that suggest investigation is needed
+        investigation_keywords = [
+            "investigate",
+            "unclear",
+            "unknown",
+            "research",
+            "find out",
+            "determine",
+            "analyze",
+            "discover",
+            "root cause",
+            "debug",
+            "diagnose",
+            "scope",
+        ]
+
+        for keyword in investigation_keywords:
+            if keyword in description or keyword in title:
+                if self.verbose:
+                    click.echo(f"  Auto-detected investigation task (keyword: {keyword})")
+                return "investigation.md"
+
+        # Default to sprint task template for sprint tasks
+        return "sprint-task.md"
+
+    def _create_issue(
+        self, title: str, body: str, labels: List[str], template: Optional[str] = None
+    ) -> Optional[int]:
+        """Create a GitHub issue, optionally noting the template used"""
         # Sanitize all inputs
         safe_title = self._sanitize_text(title)
         safe_body = self._sanitize_text(body)
         safe_labels = [self._validate_label(label) for label in labels]
 
+        # Add template reference to body if provided
+        if template:
+            template_note = f"<!-- Created from template: {template} -->\n\n"
+            safe_body = template_note + safe_body
+
         if self.dry_run:
             click.echo(f"[DRY RUN] Would create issue: {safe_title}")
             if self.verbose:
                 click.echo(f"  Labels: {', '.join(safe_labels)}")
+                if template:
+                    click.echo(f"  Template: {template}")
                 click.echo(f"  Body preview: {safe_body[:200]}...")
             return None
 
@@ -156,6 +209,8 @@ class SprintIssueLinker:
                 parts = result.stdout.strip().split("/")
                 issue_number = int(parts[-1])
                 click.echo(f"✓ Created issue #{issue_number}: {title}")
+                if template and self.verbose:
+                    click.echo(f"  Using template guidance: {template}")
                 return issue_number
         except Exception as e:
             click.echo(f"✗ Failed to create issue: {e}")
@@ -294,8 +349,15 @@ _Auto-created from sprint YAML and tracked by sprint system._
                 elif phase_status == "blocked":
                     task_labels.append("blocked")
 
-                # Create the issue
-                issue_number = self._create_issue(task_title, issue_body, task_labels)
+                # Determine template for task
+                template = self._get_template_for_task(task)
+
+                # Add investigation label if using investigation template
+                if template == "investigation.md" and "investigation" not in task_labels:
+                    task_labels.append("investigation")
+
+                # Create the issue with template reference
+                issue_number = self._create_issue(task_title, issue_body, task_labels, template)
                 if issue_number:
                     created_count += 1
 
@@ -804,7 +866,14 @@ def cli():
 @click.option("--dry-run", is_flag=True, help="Show what would be done without creating issues")
 @click.option("--verbose", is_flag=True, help="Show detailed output")
 def create(sprint, dry_run, verbose):
-    """Create GitHub issues from sprint tasks"""
+    """Create GitHub issues from sprint tasks
+
+    Automatically selects appropriate issue templates:
+    - Investigation template for unclear scope tasks
+    - Sprint task template for standard tasks
+
+    Tasks can specify template: "investigation" or "sprint-task"
+    """
     linker = SprintIssueLinker(sprint_id=sprint, dry_run=dry_run, verbose=verbose)
     count = linker.create_issues_from_sprint()
     sys.exit(0 if count >= 0 else 1)
