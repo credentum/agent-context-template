@@ -670,6 +670,13 @@ jobs:
           which bc || { echo "bc not available, installing..." && apt-get update && apt-get install -y bc; }
           echo "✅ Coverage analysis tools verified"
 
+      - name: Clean coverage data
+        run: |
+          echo "🧹 Cleaning any existing coverage data..."
+          rm -f .coverage* coverage.xml coverage.json
+          find . -name ".coverage*" -type f -delete 2>/dev/null || true
+          echo "✅ Coverage data cleaned"
+
       - name: Download test artifacts
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
         with:

@@ -61,6 +61,13 @@ jobs:
           mkdir -p context/logs/prompts
           mkdir -p context/logs/signatures
 
+      - name: Clean coverage data
+        run: |
+          echo "🧹 Cleaning any existing coverage data..."
+          rm -f .coverage* coverage.xml coverage.json
+          find . -name ".coverage*" -type f -delete 2>/dev/null || true
+          echo "✅ Coverage data cleaned"
+
       - name: Run tests with coverage
         run: |
           python -m pytest \
