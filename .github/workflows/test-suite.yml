@@ -68,7 +68,7 @@ jobs:
         run: |
           pytest tests/ -m "not integration and not e2e and not slow" \
             --junit-xml=test-results/junit-unit.xml \
-            --cov=src --cov-branch \
+            --cov=src \
             --cov-report=xml:coverage-unit.xml \
             --cov-report=term
         continue-on-error: true
@@ -77,7 +77,7 @@ jobs:
         run: |
           pytest tests/ -m "integration" \
             --junit-xml=test-results/junit-integration.xml \
-            --cov=src --cov-branch --cov-append \
+            --cov=src --cov-append \
             --cov-report=xml:coverage-integration.xml \
             --cov-report=term
         continue-on-error: true
