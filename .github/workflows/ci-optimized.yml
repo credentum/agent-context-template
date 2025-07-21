@@ -186,7 +186,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies
@@ -289,7 +290,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies
@@ -425,7 +427,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies
@@ -507,7 +510,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies
@@ -577,7 +581,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies
@@ -651,7 +656,8 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Tool check: ${{ matrix.check }}"
           echo "Available tools:"
-          which python pip black isort flake8 mypy || echo "Some tools not found"
+          which python pip black isort flake8 mypy || \
+            echo "Some tools not found"
           echo "✅ Lint environment debugging complete"
 
       - name: Cache Python dependencies

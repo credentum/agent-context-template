@@ -1,5 +1,18 @@
-# This file intentionally has formatting issues for testing claude-post-edit.sh
-# flake8: noqa - This file is meant to have issues for testing purposes
+"""
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! WARNING: TEST DATA FILE - DO NOT FIX FORMATTING ISSUES IN THIS FILE!         !
+!                                                                               !
+! This file intentionally contains formatting issues for testing purposes.      !
+! It is used by test_formatting_scripts.py to verify that formatting tools     !
+! can detect and report various code style violations.                         !
+!                                                                               !
+! DO NOT: Run formatters on this file                                          !
+! DO NOT: Fix any formatting issues                                            !
+! DO NOT: Add this file to pre-commit hooks                                    !
+!                                                                               !
+! flake8: noqa - All formatting violations in this file are intentional        !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+"""
 import json
 import os
 import sys

@@ -22,12 +22,12 @@ class TestValidateFileFormat:
         """Get the path to validate-file-format.sh."""
         return Path(__file__).parent.parent / "scripts" / "validate-file-format.sh"
 
-    def test_script_exists_and_executable(self, script_path):
+    def test_script_exists_and_executable(self, script_path) -> None:
         """Test that the script exists and is executable."""
         assert script_path.exists()
         assert os.access(script_path, os.X_OK)
 
-    def test_python_file_needs_formatting(self, script_path, tmp_path):
+    def test_python_file_needs_formatting(self, script_path, tmp_path) -> None:
         """Test detection of Python formatting issues."""
         # Create a poorly formatted Python file
         test_file = tmp_path / "bad_format.py"
@@ -52,7 +52,7 @@ def badly_formatted(x,y):
         # Should report issues or be in error/warning state
         assert result.returncode != 0 or "issues_found: 0" not in result.stdout
 
-    def test_python_file_well_formatted(self, script_path, tmp_path):
+    def test_python_file_well_formatted(self, script_path, tmp_path) -> None:
         """Test that well-formatted Python passes validation."""
         # Create a well-formatted Python file
         test_file = tmp_path / "good_format.py"
@@ -77,7 +77,7 @@ def well_formatted(x: int, y: int) -> int:
         assert result.returncode == 0
         assert "status: success" in result.stdout
 
-    def test_auto_fix_mode(self, script_path, tmp_path):
+    def test_auto_fix_mode(self, script_path, tmp_path) -> None:
         """Test that --fix mode corrects formatting issues."""
         # Create a file with fixable issues
         test_file = tmp_path / "fixable.py"
@@ -104,7 +104,7 @@ def needs_space(x,y): return x+y
         # Either file was fixed or script ran successfully
         assert result.returncode == 0 or "def needs_space(x, y):" in content
 
-    def test_yaml_file_validation(self, script_path, tmp_path):
+    def test_yaml_file_validation(self, script_path, tmp_path) -> None:
         """Test YAML file validation."""
         # Create a YAML file with issues
         test_file = tmp_path / "test.yaml"
@@ -126,7 +126,7 @@ trailing_spaces:  value
         if "yamllint" in result.stdout or "YAML" in result.stdout:
             assert result.returncode == 1
 
-    def test_nonexistent_file(self, script_path):
+    def test_nonexistent_file(self, script_path) -> None:
         """Test handling of nonexistent files."""
         result = subprocess.run(
             [str(script_path), "/nonexistent/file.py"],
@@ -137,7 +137,7 @@ trailing_spaces:  value
         assert result.returncode == 1
         assert "File not found" in result.stdout
 
-    def test_structured_output_format(self, script_path, tmp_path):
+    def test_structured_output_format(self, script_path, tmp_path) -> None:
         """Test that output follows the expected structured format."""
         test_file = tmp_path / "test.py"
         test_file.write_text("x = 1\n")  # Well-formatted to ensure full output
@@ -166,12 +166,12 @@ class TestClaudePostEdit:
         """Get the path to claude-post-edit.sh."""
         return Path(__file__).parent.parent / "scripts" / "claude-post-edit.sh"
 
-    def test_script_exists_and_executable(self, script_path):
+    def test_script_exists_and_executable(self, script_path) -> None:
         """Test that the script exists and is executable."""
         assert script_path.exists()
         assert os.access(script_path, os.X_OK)
 
-    def test_multiple_file_validation(self, script_path, tmp_path):
+    def test_multiple_file_validation(self, script_path, tmp_path) -> None:
         """Test validation of multiple files."""
         # Create multiple test files
         file1 = tmp_path / "file1.py"
@@ -191,7 +191,7 @@ class TestClaudePostEdit:
         # Should show it's running
         assert "Claude Post-Edit Format Check" in result.stdout or result.returncode in (0, 1)
 
-    def test_summary_output(self, script_path, tmp_path):
+    def test_summary_output(self, script_path, tmp_path) -> None:
         """Test that summary is displayed correctly."""
         # Create a test file
         test_file = tmp_path / "test.py"
@@ -207,7 +207,7 @@ class TestClaudePostEdit:
         # Script should run successfully
         assert result.returncode == 0 or "Claude Post-Edit Format Check" in result.stdout
 
-    def test_fix_mode_flag(self, script_path, tmp_path):
+    def test_fix_mode_flag(self, script_path, tmp_path) -> None:
         """Test that --fix flag is passed through correctly."""
         test_file = tmp_path / "fixme.py"
         test_file.write_text("x=1")
@@ -222,7 +222,7 @@ class TestClaudePostEdit:
         # Should attempt to fix
         assert result.returncode == 0 or "Fixed" in result.stdout
 
-    def test_log_file_creation(self, script_path, tmp_path, monkeypatch):
+    def test_log_file_creation(self, script_path, tmp_path, monkeypatch) -> None:
         """Test that edit log is created."""
         # Change to temp directory to avoid polluting project
         monkeypatch.chdir(tmp_path)
@@ -242,7 +242,7 @@ class TestClaudePostEdit:
         log_file = tmp_path / "context" / "trace" / "logs" / "claude-edits.log"
         assert log_file.exists()
 
-    def test_exit_codes(self, script_path, tmp_path):
+    def test_exit_codes(self, script_path, tmp_path) -> None:
         """Test appropriate exit codes."""
         # Success case
         good_file = tmp_path / "good.py"
@@ -274,12 +274,12 @@ class TestPostEditHook:
         """Get the path to post-edit.sh hook."""
         return Path(__file__).parent.parent / ".claude" / "hooks" / "post-edit.sh"
 
-    def test_hook_exists_and_executable(self, hook_path):
+    def test_hook_exists_and_executable(self, hook_path) -> None:
         """Test that the hook exists and is executable."""
         assert hook_path.exists()
         assert os.access(hook_path, os.X_OK)
 
-    def test_hook_functions_available(self, hook_path):
+    def test_hook_functions_available(self, hook_path) -> None:
         """Test that hook functions are defined when sourced."""
         # Source the script and check function availability
         result = subprocess.run(
@@ -296,7 +296,7 @@ class TestPostEditHook:
         assert "claude_validate_edits is a function" in result.stdout
         assert "claude_format_edits is a function" in result.stdout
 
-    def test_hook_usage_message(self, hook_path):
+    def test_hook_usage_message(self, hook_path) -> None:
         """Test that running hook directly shows usage."""
         result = subprocess.run(
             [str(hook_path)],
@@ -321,7 +321,7 @@ class TestFormatterIntegration:
         subprocess.run(["which", "black"], capture_output=True).returncode != 0,
         reason="Black not installed",
     )
-    def test_black_integration(self, script_path, tmp_path):
+    def test_black_integration(self, script_path, tmp_path) -> None:
         """Test Black formatter integration."""
         test_file = tmp_path / "black_test.py"
         test_file.write_text("x=1+2")
@@ -338,7 +338,7 @@ class TestFormatterIntegration:
         subprocess.run(["which", "isort"], capture_output=True).returncode != 0,
         reason="isort not installed",
     )
-    def test_isort_integration(self, script_path, tmp_path):
+    def test_isort_integration(self, script_path, tmp_path) -> None:
         """Test isort integration."""
         test_file = tmp_path / "isort_test.py"
         test_file.write_text("import sys\nimport os\n")
@@ -356,7 +356,7 @@ class TestFormatterIntegration:
         subprocess.run(["which", "flake8"], capture_output=True).returncode != 0,
         reason="Flake8 not installed",
     )
-    def test_flake8_integration(self, script_path, tmp_path):
+    def test_flake8_integration(self, script_path, tmp_path) -> None:
         """Test Flake8 integration."""
         test_file = tmp_path / "flake8_test.py"
         test_file.write_text("import unused_module\nx = 1\n")
@@ -379,7 +379,7 @@ class TestPerformance:
         """Get validate-file-format.sh path."""
         return Path(__file__).parent.parent / "scripts" / "validate-file-format.sh"
 
-    def test_validation_under_2_seconds(self, script_path, tmp_path):
+    def test_validation_under_2_seconds(self, script_path, tmp_path) -> None:
         """Test that validation completes in under 2 seconds."""
         import time
 
