@@ -1,16 +1,14 @@
 ---
 ################################################################################
-# 🔍 Unified PR Review - Uses Claude CI Review Scripts
-# Replaces complex embedded review logic with claude-ci review delegation
+# 🔍 Unified PR Review (Simple) - Uses Claude CI Review Scripts
+# Simplified version without complex JavaScript comment posting
 # Issue #1063: Align GitHub Actions with Claude Local CI
 ################################################################################
-name: Unified PR Review
+name: Unified PR Review (Simple)
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  pull_request_review:
-    types: [submitted]
 
 permissions:
   contents: read
@@ -24,7 +22,6 @@ jobs:
   pr-review:
     name: "🔍 PR Review Simulation"
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     
     steps:
       - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871b0ad9019b8ad7c6f7e9a0556
@@ -68,53 +65,13 @@ jobs:
           echo "🔍 Running PR review using claude-ci review --github-output"
           
           # Run the same review command Claude uses locally
-          if ./scripts/claude-ci.sh review --github-output > review-output.json; then
-            echo "review_status=APPROVED" >> $GITHUB_OUTPUT
-            echo "Review completed successfully"
+          if ./scripts/claude-ci.sh review --github-output; then
+            echo "✅ PR Review completed successfully"
+            echo "status=PASSED" >> $GITHUB_OUTPUT
           else
-            echo "review_status=REQUEST_CHANGES" >> $GITHUB_OUTPUT
-            echo "Review identified issues"
-            # Exit code will be propagated
-          fi
-
-      - name: Parse and Display Review Results
-        if: always()
-        run: |
-          if [ -f review-output.json ]; then
-            echo "## 🔍 PR Review Results" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            
-            # Extract key information from review output
-            status=$(jq -r '.status // "UNKNOWN"' review-output.json)
-            command=$(jq -r '.command // "review"' review-output.json)
-            duration=$(jq -r '.duration // "unknown"' review-output.json)
-            next_action=$(jq -r '.next_action // "No action specified"' review-output.json)
-            
-            case "$status" in
-              "PASSED")
-                echo "✅ **Review Status:** APPROVED" >> $GITHUB_STEP_SUMMARY
-                echo "🚀 **Next Action:** $next_action" >> $GITHUB_STEP_SUMMARY
-                ;;
-              "FAILED")
-                echo "❌ **Review Status:** REQUEST_CHANGES" >> $GITHUB_STEP_SUMMARY
-                echo "🔧 **Next Action:** $next_action" >> $GITHUB_STEP_SUMMARY
-                
-                # Show any errors if available
-                if jq -e '.errors | length > 0' review-output.json >/dev/null; then
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "**Issues Found:**" >> $GITHUB_STEP_SUMMARY
-                  jq -r '.errors[] | "- " + (.message // .error // .)' review-output.json >> $GITHUB_STEP_SUMMARY
-                fi
-                ;;
-            esac
-            
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Review Duration:** $duration" >> $GITHUB_STEP_SUMMARY
-            echo "**Local Command:** \`claude-ci review\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "*This review uses the same claude-ci scripts that run locally for consistent results.*" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ No review output file generated" >> $GITHUB_STEP_SUMMARY
+            echo "❌ PR Review identified issues"
+            echo "status=FAILED" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
       - name: Upload Review Artifacts
@@ -123,96 +80,6 @@ jobs:
         with:
           name: pr-review-results
           path: |
-            review-output.json
             test-results/
             coverage*.xml
-
-  # Comment on PR with review results (optional)
-  pr-comment:
-    name: "💬 PR Review Comment"
-    runs-on: ubuntu-latest
-    needs: pr-review
-    if: always() && github.event_name == 'pull_request'
-    
-    steps:
-      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871b0ad9019b8ad7c6f7e9a0556
-
-      - name: Download review results
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
-        with:
-          name: pr-review-results
-          path: review-results/
-
-      - name: Post Review Comment
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
-        with:
-          script: |
-            const fs = require('fs');
-            const path = 'review-results/review-output.json';
-            
-            let reviewData = {};
-            try {
-              if (fs.existsSync(path)) {
-                reviewData = JSON.parse(fs.readFileSync(path, 'utf8'));
-              }
-            } catch (error) {
-              console.log('Could not parse review output:', error);
-            }
-            
-            const status = reviewData.status || '${{ needs.pr-review.result }}';
-            const isSuccess = status === 'PASSED' || '${{ needs.pr-review.result }}' === 'success';
-            
-            const statusIcon = isSuccess ? '✅' : '❌';
-            const statusText = isSuccess ? 'APPROVED' : 'REQUEST_CHANGES';
-            const localCommand = 'claude-ci review';
-            
-            let comment = `## ${statusIcon} PR Review Results
-            
-**Status:** ${statusText}  
-**Local Command:** \`${localCommand}\`
-
-This review uses the same claude-ci scripts that run locally, ensuring identical results between GitHub and local development.
-
-`;
-            
-            if (reviewData.errors && reviewData.errors.length > 0) {
-              comment += '\n**Issues Found:**\n';
-              reviewData.errors.forEach(error => {
-                const message = error.message || error.error || error;
-                comment += `- ${message}\n`;
-              });
-            }
-            
-            if (reviewData.next_action) {
-              comment += `\n**Recommended Action:** ${reviewData.next_action}`;
-            }
-            
-            comment += '\n\n*Issue #1063: This unified workflow ensures GitHub Actions align with Claude local CI.*';
-            
-            // Find existing comment to update or create new one
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number
-            });
-            
-            const existingComment = comments.find(comment =>
-              comment.user.type === 'Bot' &&
-              comment.body.includes('PR Review Results')
-            );
-            
-            if (existingComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existingComment.id,
-                body: comment
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: comment
-              });
-            }
+            review-output.json

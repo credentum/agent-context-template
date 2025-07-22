@@ -75,9 +75,19 @@ github_actions_output() {
     
     if [ "$GITHUB_OUTPUT" = true ]; then
         # Set GitHub Actions step outputs
-        echo "status=${status}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
-        echo "command=${command}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
-        echo "target=${target}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
+        if [ -n "${GITHUB_OUTPUT_FILE:-}" ]; then
+            echo "status=${status}" >> "${GITHUB_OUTPUT_FILE}"
+            echo "command=${command}" >> "${GITHUB_OUTPUT_FILE}"
+            echo "target=${target}" >> "${GITHUB_OUTPUT_FILE}"
+        elif [ -n "${GITHUB_OUTPUT:-}" ] && [ "$GITHUB_OUTPUT" != "true" ]; then
+            echo "status=${status}" >> "${GITHUB_OUTPUT}"
+            echo "command=${command}" >> "${GITHUB_OUTPUT}"
+            echo "target=${target}" >> "${GITHUB_OUTPUT}"
+        else
+            echo "::set-output name=status::${status}"
+            echo "::set-output name=command::${command}"
+            echo "::set-output name=target::${target}"
+        fi
         
         # Set summary for GitHub Actions UI
         if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
