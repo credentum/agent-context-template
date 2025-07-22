@@ -424,9 +424,14 @@ EOF
         echo
         echo "Recommendation: $recommendation"
 
-        if [[ $FIX_MODE ]] && [[ $(echo "$files_modified_json" | jq '. | length') -gt 0 ]]; then
+        if [[ $FIX_MODE ]] && [[ "$files_modified_json" != "[]" ]]; then
             echo -e "\n${YELLOW}Files Modified:${NC}"
-            echo "$files_modified_json" | jq -r '.[] | "  - \(.path)"'
+            if command -v jq &> /dev/null; then
+                echo "$files_modified_json" | jq -r '.[] | "  - \(.path)"'
+            else
+                # Fallback without jq - basic parsing
+                echo "$files_modified_json" | grep -o '"path": "[^"]*"' | cut -d'"' -f4 | sed 's/^/  - /'
+            fi
         fi
     fi
 
