@@ -187,28 +187,45 @@ generate_simulation_metadata() {
     fi
 }
 
-# Calculate test coverage matching GitHub CI format
+# Calculate test coverage matching GitHub CI format exactly
 calculate_coverage_matching_ci() {
-    local coverage_format="$1"  # json, xml, or term
+    local coverage_format="$1"  # json, xml, term, or thresholds
 
-    # Run the same coverage command as GitHub CI
+    # Run the exact same coverage command as GitHub CI (.github/workflows/test-coverage.yml)
     cd "$(git rev-parse --show-toplevel)"
 
+    log_info "🔍 Running coverage calculation (matching GitHub CI)..."
+
+    # Clean any existing coverage data first (matching CI)
+    rm -f .coverage* coverage.xml coverage.json > /dev/null 2>&1
+    find . -name ".coverage*" -type f -delete 2>/dev/null || true
+
+    # Use exact same command as GitHub Actions test-coverage.yml lines 73-78
     local coverage_cmd=(
         "python" "-m" "pytest"
         "--cov=src"
+        "--cov-report=term-missing:skip-covered"
+        "--cov-report=xml"
         "--cov-report=json"
-        "--cov-report=term-missing"
-        "-m" "not integration and not e2e"
-        "--quiet"
+        "-v"
     )
+
+    # Set same environment variables as GitHub CI
+    export REDIS_HOST=localhost
+    export REDIS_PORT=6379
 
     if [[ "$VERBOSE" == true ]]; then
         log_debug "Running coverage calculation: ${coverage_cmd[*]}"
+        log_debug "Environment: REDIS_HOST=$REDIS_HOST REDIS_PORT=$REDIS_PORT"
     fi
 
     # Run coverage and capture results
-    if "${coverage_cmd[@]}" > /dev/null 2>&1; then
+    local coverage_output
+    if coverage_output=$("${coverage_cmd[@]}" 2>&1); then
+        if [[ "$VERBOSE" == true ]]; then
+            log_success "Coverage calculation completed successfully"
+        fi
+
         if [[ -f "coverage.json" ]]; then
             case "$coverage_format" in
                 "json")
@@ -228,6 +245,9 @@ print(f\"Branches: {totals.get('covered_branches', 0)}/{totals.get('num_branches
 print(f\"Functions: {totals.get('covered_functions', 0)}/{totals.get('num_functions', 0)}\")
 "
                     ;;
+                "thresholds")
+                    run_coverage_threshold_checks
+                    ;;
                 *)
                     echo "Coverage calculation completed"
                     ;;
@@ -238,8 +258,78 @@ print(f\"Functions: {totals.get('covered_functions', 0)}/{totals.get('num_functi
         fi
     else
         log_error "Coverage calculation failed"
+        if [[ "$VERBOSE" == true ]]; then
+            echo "Coverage output:"
+            echo "$coverage_output"
+        fi
         return 1
     fi
+}
+
+# Run coverage threshold checks exactly like GitHub CI
+run_coverage_threshold_checks() {
+    log_info "📊 Running coverage threshold checks (matching GitHub CI)..."
+
+    # Step 1: Run coverage_summary.py (matching CI line 85)
+    if python scripts/coverage_summary.py; then
+        log_success "Coverage summary check passed"
+    else
+        log_error "Coverage summary check failed"
+        return 1
+    fi
+
+    # Step 2: Enforce coverage thresholds using centralized config (matching CI lines 89-91)
+    local threshold
+    if threshold=$(python scripts/get_coverage_threshold.py); then
+        log_info "Using coverage threshold: ${threshold}%"
+
+        if python -m coverage report --fail-under="$threshold"; then
+            log_success "Coverage threshold check passed (≥${threshold}%)"
+            return 0
+        else
+            log_error "Coverage threshold check failed (<${threshold}%)"
+            return 1
+        fi
+    else
+        log_error "Failed to get coverage threshold from configuration"
+        return 1
+    fi
+}
+
+# Get coverage data in same format as GitHub CI
+get_coverage_data_for_review() {
+    if [[ ! -f "coverage.json" ]]; then
+        log_error "coverage.json not found - run coverage calculation first"
+        return 1
+    fi
+
+    # Parse coverage.json to extract metrics in ARC-Reviewer format
+    python -c "
+import json
+try:
+    with open('coverage.json') as f:
+        data = json.load(f)
+    totals = data['totals']
+
+    # Get threshold for baseline comparison
+    with open('.coverage-config.json') as f:
+        config = json.load(f)
+    baseline = config.get('baseline', 78.0)
+    tolerance_buffer = config.get('tolerance_buffer', 5.0)
+    minimum_threshold = baseline - tolerance_buffer
+
+    current_pct = totals['percent_covered']
+    meets_baseline = current_pct >= minimum_threshold
+
+    print(f'current_pct:{current_pct:.2f}')
+    print(f'meets_baseline:{meets_baseline}')
+    print(f'baseline_threshold:{baseline}')
+    print(f'minimum_threshold:{minimum_threshold:.1f}')
+    print(f'covered_lines:{totals[\"covered_lines\"]}')
+    print(f'total_lines:{totals[\"num_statements\"]}')
+except Exception as e:
+    print(f'error:{e}')
+"
 }
 
 # Validate git diff analysis works locally
