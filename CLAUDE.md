@@ -175,6 +175,56 @@ pytest tests/test_validators.py -v
 git add -A && git commit --amend --no-edit
 ```
 
+### NEW: Smart Test Runner for Claude Code
+Run only tests relevant to your recent changes for faster feedback:
+
+```bash
+# After making code changes, run smart test detection
+./scripts/claude-test-changed.sh
+
+# Output shows which tests were run and why
+# JSON format for easy parsing by Claude
+
+# Run with human-readable output
+./scripts/claude-test-changed.sh --format text
+
+# Show what tests would run without executing
+./scripts/claude-test-changed.sh --dry-run
+
+# Force full test suite when needed
+./scripts/claude-test-changed.sh --all
+
+# Verbose mode for debugging test mapping
+./scripts/claude-test-changed.sh --verbose
+```
+
+**Smart Test Runner Features:**
+- **Automatic detection**: Finds changed files using git diff
+- **Intelligent mapping**: Maps source files to their test files
+- **Import detection**: Finds tests that import changed modules
+- **Fast feedback**: 10-30 seconds vs 3-5 minutes for full suite
+- **Structured output**: JSON format with recommendations
+- **Coverage tracking**: Module-specific coverage information
+
+**Example Output (JSON):**
+```json
+{
+  "files_changed": ["src/agents/claude_helper.py"],
+  "tests_run": ["tests/test_agents.py"],
+  "test_results": {
+    "passed": 5,
+    "failed": 0,
+    "skipped": 1
+  },
+  "coverage": {
+    "percentage": 87,
+    "modules": ["src.agents.claude_helper"]
+  },
+  "duration": "2.3s",
+  "recommendation": "All tests passed. Coverage is good."
+}
+```
+
 ### NEW: Auto-Format After Claude Edits
 When Claude uses Edit/MultiEdit/Write tools, formatting errors can be caught immediately:
 
