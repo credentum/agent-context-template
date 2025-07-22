@@ -28,6 +28,7 @@ services:
       - ./pyproject.toml:/app/pyproject.toml:ro
       - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml:ro
       - ./.yamllint-workflows.yml:/app/.yamllint-workflows.yml:ro
+      - ./.flake8:/app/.flake8:ro
     environment:
       - PYTHONPATH=/app
       - CI=true
@@ -80,15 +81,14 @@ services:
       - ./src:/app/src:ro
       - ./tests:/app/tests:ro
       - ./scripts:/app/scripts:ro
+      - ./.flake8:/app/.flake8:ro
     environment:
       - CI=true
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
-    command: >
-      flake8 src/ tests/ scripts/ --max-line-length=100
-      --extend-ignore=E203,W503
+    command: flake8 src/ tests/ scripts/
 
   ci-mypy:
     build:
@@ -277,6 +277,7 @@ services:
       - ./mypy.ini:/app/mypy.ini:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
       - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml:ro
+      - ./.flake8:/app/.flake8:ro
     environment:
       - PYTHONPATH=/app
       - CI=true
@@ -290,9 +291,7 @@ services:
         (echo '  ▶ Black...' && black --check src/ tests/ scripts/) &
         (echo '  ▶ isort...' && \
           isort --check-only --profile black src/ tests/ scripts/) &
-        (echo '  ▶ Flake8...' && \
-          flake8 src/ tests/ scripts/ \
-          --max-line-length=100 --extend-ignore=E203,W503) &
+        (echo '  ▶ Flake8...' && flake8 src/ tests/ scripts/) &
         (echo '  ▶ MyPy...' && mypy src/ --config-file=mypy.ini) &
         (echo '  ▶ Context lint...' && \
           python -m src.agents.context_lint validate context/) &

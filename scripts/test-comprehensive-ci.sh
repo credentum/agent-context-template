@@ -51,7 +51,7 @@ echo "=================================="
 
 run_check "Black formatting" "black --check src/ tests/ scripts/"
 run_check "isort import sorting" "isort --check-only --profile black src/ tests/ scripts/"
-run_check "Flake8 linting" "flake8 src/ tests/ scripts/ --max-line-length=100 --extend-ignore=E203,W503"
+run_check "Flake8 linting" "flake8 src/ tests/ scripts/"
 run_check "MyPy type checking (src/)" "mypy src/ --config-file=mypy.ini"
 run_check "MyPy type checking (tests/)" "mypy tests/ --config-file=mypy.ini" "true"
 run_check "Context YAML validation" "python -m src.agents.context_lint validate context/"
