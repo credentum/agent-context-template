@@ -64,7 +64,7 @@ phases:
       - Graph database tests
       - GitHub Actions workflow for sync
 team:
-    - role: lead
+  - role: lead
     agent: pm_agent
   - role: implementation
     agent: code_agent
@@ -73,7 +73,7 @@ team:
   - role: validation
     agent: ci_agent
 success_metrics:
-    - metric: schema_compliance
+  - metric: schema_compliance
     target: 100
     unit: percent
   - metric: vector_recall
@@ -85,7 +85,7 @@ success_metrics:
 graph_metadata:
   node_type: sprint_document
   relationships:
-      - type: implements
+    - type: implements
       target: system_architecture
     - type: tracks
       target: project_phases
