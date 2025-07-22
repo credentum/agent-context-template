@@ -1,0 +1,286 @@
+---
+################################################################################
+# 🚀 Unified CI Pipeline - Delegates to Claude CI Scripts
+# Consolidates ci-optimized.yml, test.yml, test-suite.yml, lint-verification.yml
+# Uses same claude-ci.sh commands that Claude uses locally for consistency
+# Issue #1063: Align GitHub Actions with Claude Local CI
+################################################################################
+name: Unified CI Pipeline
+
+on:
+  push:
+    branches: [main, 'feature/*', 'fix/*', develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  statuses: write
+
+env:
+  PYTHON_VERSION: "3.11"
+  CACHE_VERSION: "v2025-07-22"
+
+jobs:
+  # Shared setup for all CI jobs
+  setup:
+    name: "⚙️ Setup Environment"
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871b0ad9019b8ad7c6f7e9a0556
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache Python dependencies
+        id: cache
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install -r requirements-test.txt
+
+      - name: Create required directories
+        run: |
+          mkdir -p context/.duckdb
+          mkdir -p context/.graph_cache
+          mkdir -p context/.vector_cache
+          mkdir -p context/.embeddings_cache
+          mkdir -p context/trace
+          mkdir -p context/archive
+          mkdir -p context/mcp_contracts
+          mkdir -p context/logs/{cleanup,eval,kv,prompts,signatures}
+          mkdir -p .claude/hooks
+
+  # Quick validation - equivalent to: claude-ci all --quick
+  quick-validation:
+    name: "⚡ Quick Validation"
+    runs-on: ubuntu-latest
+    needs: setup
+    outputs:
+      status: ${{ steps.quick.outputs.status }}
+      command: ${{ steps.quick.outputs.command }}
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871b0ad9019b8ad7c6f7e9a0556
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache Python dependencies
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install -r requirements-test.txt
+
+      - name: Restore context directories
+        run: |
+          mkdir -p context/.duckdb context/.graph_cache context/.vector_cache
+          mkdir -p context/.embeddings_cache context/trace context/archive
+          mkdir -p context/mcp_contracts context/logs/{cleanup,eval,kv,prompts,signatures}
+          mkdir -p .claude/hooks
+
+      - name: Run Quick Validation
+        id: quick
+        run: |
+          echo "🚀 Running claude-ci all --quick --github-output"
+          ./scripts/claude-ci.sh all --quick --github-output
+
+  # Full CI pipeline - equivalent to: claude-ci all
+  full-ci:
+    name: "🔄 Full CI Pipeline"
+    runs-on: ubuntu-latest
+    needs: [setup, quick-validation]
+    if: needs.quick-validation.outputs.status == 'PASSED'
+    
+    services:
+      redis:
+        image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    outputs:
+      status: ${{ steps.full-ci.outputs.status }}
+      command: ${{ steps.full-ci.outputs.command }}
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871b0ad9019b8ad7c6f7e9a0556
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache Python dependencies
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install -r requirements-test.txt
+
+      - name: Restore context directories
+        run: |
+          mkdir -p context/.duckdb context/.graph_cache context/.vector_cache
+          mkdir -p context/.embeddings_cache context/trace context/archive
+          mkdir -p context/mcp_contracts context/logs/{cleanup,eval,kv,prompts,signatures}
+          mkdir -p .claude/hooks
+
+      - name: Run Full CI Pipeline
+        id: full-ci
+        run: |
+          echo "🚀 Running claude-ci all --github-output"
+          ./scripts/claude-ci.sh all --github-output
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029
+        if: always()
+        with:
+          name: ci-test-results
+          path: |
+            test-results/
+            coverage*.xml
+            coverage.json
+            htmlcov/
+
+  # Comprehensive validation for critical PRs - equivalent to: claude-ci all --comprehensive  
+  comprehensive-ci:
+    name: "🔬 Comprehensive CI"
+    runs-on: ubuntu-latest
+    needs: [setup, full-ci]
+    if: |
+      github.event_name == 'pull_request' && 
+      (contains(github.event.pull_request.labels.*.name, 'priority-high') ||
+       contains(github.event.pull_request.labels.*.name, 'breaking-change'))
+    
+    services:
+      redis:
+        image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    outputs:
+      status: ${{ steps.comprehensive.outputs.status }}
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871b0ad9019b8ad7c6f7e9a0556
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache Python dependencies
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ env.CACHE_VERSION }}-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install -r requirements-test.txt
+
+      - name: Install comprehensive testing dependencies
+        run: |
+          pip install locust==2.31.7 mutmut
+
+      - name: Restore context directories
+        run: |
+          mkdir -p context/.duckdb context/.graph_cache context/.vector_cache
+          mkdir -p context/.embeddings_cache context/trace context/archive
+          mkdir -p context/mcp_contracts context/logs/{cleanup,eval,kv,prompts,signatures}
+          mkdir -p .claude/hooks
+
+      - name: Run Comprehensive CI
+        id: comprehensive
+        run: |
+          echo "🚀 Running claude-ci all --comprehensive --github-output"
+          ./scripts/claude-ci.sh all --comprehensive --github-output
+
+  # Summary job that reports overall status
+  ci-summary:
+    name: "📋 CI Summary"
+    runs-on: ubuntu-latest
+    needs: [quick-validation, full-ci, comprehensive-ci]
+    if: always()
+    steps:
+      - name: Generate CI Summary
+        run: |
+          echo "## 🚀 Unified CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Determine overall status
+          quick_status="${{ needs.quick-validation.result }}"
+          full_status="${{ needs.full-ci.result }}"
+          comp_status="${{ needs.comprehensive-ci.result }}"
+          
+          get_emoji() {
+            case $1 in
+              "success") echo "✅" ;;
+              "failure") echo "❌" ;;
+              "cancelled") echo "⏸️" ;;
+              "skipped") echo "⏭️" ;;
+              *) echo "❓" ;;
+            esac
+          }
+          
+          echo "| Stage | Status | Claude Command |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|----------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Quick Validation | $(get_emoji "$quick_status") | \`claude-ci all --quick\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Full CI | $(get_emoji "$full_status") | \`claude-ci all\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Comprehensive | $(get_emoji "$comp_status") | \`claude-ci all --comprehensive\` |" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Key Benefits:**" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Identical local/GitHub behavior** - Same scripts everywhere" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 **Single source of truth** - CI logic in claude-ci.sh only" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔄 **Easy debugging** - Run exact same commands locally" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎯 **Simplified workflows** - 90% reduction in YAML complexity" >> $GITHUB_STEP_SUMMARY
+          
+          # Set job status based on required checks
+          if [[ "$quick_status" == "success" && ("$full_status" == "success" || "$full_status" == "skipped") ]]; then
+            echo "✅ CI Pipeline completed successfully"
+            exit 0
+          else
+            echo "❌ CI Pipeline failed"
+            exit 1
+          fi

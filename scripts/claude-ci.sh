@@ -15,6 +15,7 @@ FIX_MODE=false
 ALL_MODE=false
 COMPREHENSIVE=false
 QUICK=false
+GITHUB_OUTPUT=false
 
 # Colors for terminal output (disabled in JSON mode)
 RED='\033[0;31m'
@@ -45,13 +46,14 @@ Options:
   --comprehensive Full validation suite
   --json         Output raw JSON (default)
   --pretty       Human-readable output
+  --github-output Enable GitHub Actions output format
   --verbose      Show detailed output
 
 Examples:
   claude-ci check src/main.py
   claude-ci test --all
   claude-ci pre-commit --fix
-  claude-ci all --quick
+  claude-ci all --quick --github-output
   claude-ci review --comprehensive
 
 Progressive Validation Modes:
@@ -61,6 +63,46 @@ Progressive Validation Modes:
 
 EOF
     exit 0
+}
+
+# GitHub Actions output helper
+github_actions_output() {
+    local status="$1"
+    local command="$2"
+    local target="${3:-all}"
+    local checks="${4:-{}}"
+    local errors="${5:-[]}"
+    
+    if [ "$GITHUB_OUTPUT" = true ]; then
+        # Set GitHub Actions step outputs
+        echo "status=${status}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
+        echo "command=${command}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
+        echo "target=${target}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
+        
+        # Set summary for GitHub Actions UI
+        if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            case "$status" in
+                "PASSED")
+                    echo "✅ **${command}** completed successfully" >> "$GITHUB_STEP_SUMMARY"
+                    ;;
+                "FAILED")
+                    echo "❌ **${command}** failed" >> "$GITHUB_STEP_SUMMARY"
+                    if [ "$errors" != "[]" ]; then
+                        echo "" >> "$GITHUB_STEP_SUMMARY"
+                        echo "**Errors:**" >> "$GITHUB_STEP_SUMMARY"
+                        echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+                        echo "$errors" | jq -r '.[] | "- " + (.message // .error // .)' 2>/dev/null || echo "- Check logs for details" >> "$GITHUB_STEP_SUMMARY"
+                        echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+                    fi
+                    ;;
+            esac
+        fi
+        
+        # Add annotations for errors (visible in PR checks)
+        if [ "$status" = "FAILED" ] && [ "$errors" != "[]" ]; then
+            echo "$errors" | jq -r '.[] | select(.file and .line) | "::error file=\(.file),line=\(.line)::\(.message // .error // "Check failed")"' 2>/dev/null || true
+        fi
+    fi
 }
 
 # JSON output helper - robust JSON generation using jq
@@ -80,6 +122,9 @@ json_output() {
     if ! echo "$errors" | jq empty 2>/dev/null; then
         errors="[]"
     fi
+
+    # Add GitHub Actions output if enabled
+    github_actions_output "$status" "$command" "$target" "$checks" "$errors"
 
     if [ "$JSON_OUTPUT" = true ]; then
         # Use jq to ensure proper JSON formatting
@@ -480,6 +525,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --pretty)
             JSON_OUTPUT=false
+            shift
+            ;;
+        --github-output)
+            GITHUB_OUTPUT=true
             shift
             ;;
         --verbose)
