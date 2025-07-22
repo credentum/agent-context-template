@@ -295,6 +295,7 @@ run_arc_reviewer_analysis() {
             log_error "ARC-Reviewer execution failed - cannot generate proper YAML format"
             log_error "This may indicate missing dependencies or test failures"
             log_error "Try running: python -m src.agents.arc_reviewer --pr $pr_number --base $base_branch --verbose"
+            log_error "For setup help, see: https://github.com/credentum/agent-context-template/blob/main/CLAUDE.md#arc-reviewer-setup"
             return 1
         fi
         echo "$review_result"

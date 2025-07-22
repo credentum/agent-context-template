@@ -4,7 +4,7 @@ schema_version: "1.0"
 
 # Execution Plan: Issue #1133 - Generate review report in same format
 
-**Issue Link**: https://github.com/droter/agent-context-template/issues/1133
+**Issue Link**: https://github.com/credentum/agent-context-template/issues/1133
 **Sprint Reference**: Part of investigation #1060
 **Task Template**: context/trace/task-templates/issue-1133-generate-review-report-in-same-format.md
 
