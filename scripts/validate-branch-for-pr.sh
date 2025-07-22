@@ -157,15 +157,52 @@ validate_branch_for_pr() {
     # Run pre-commit hooks if available
     if command -v pre-commit &> /dev/null; then
         log_info "Running pre-commit hooks..."
-        if ! pre-commit run --all-files; then
-            log_info "Pre-commit made changes, committing..."
-            git add -A
-            if git diff --cached --quiet; then
-                log_info "No changes to commit after pre-commit"
-            else
-                git commit --amend --no-edit
-                git push origin $CURRENT_BRANCH --force-with-lease
-                log_success "Pushed pre-commit changes"
+
+        # Use claude-pre-commit wrapper if available for better output
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        CLAUDE_PRE_COMMIT="$SCRIPT_DIR/claude-pre-commit.sh"
+
+        if [ -x "$CLAUDE_PRE_COMMIT" ]; then
+            log_info "Using claude-pre-commit wrapper for structured output..."
+            # Run check first to see if fixes are needed
+            if ! "$CLAUDE_PRE_COMMIT" --json > /tmp/pre-commit-result.json; then
+                # Check if there are auto-fixable issues
+                AUTO_FIXABLE=$(jq -r '.summary.auto_fixable // 0' /tmp/pre-commit-result.json)
+                if [ "$AUTO_FIXABLE" -gt 0 ]; then
+                    log_info "Found $AUTO_FIXABLE auto-fixable issues, running auto-fix..."
+                    "$CLAUDE_PRE_COMMIT" --fix --json > /tmp/pre-commit-fix-result.json
+
+                    # Check if files were modified
+                    MODIFIED_COUNT=$(jq -r '.files_modified | length' /tmp/pre-commit-fix-result.json)
+                    if [ "$MODIFIED_COUNT" -gt 0 ]; then
+                        log_info "Pre-commit fixed $MODIFIED_COUNT files, committing..."
+                        git add -A
+                        git commit --amend --no-edit
+                        git push origin $CURRENT_BRANCH --force-with-lease
+                        log_success "Pushed pre-commit fixes"
+                    fi
+                fi
+
+                # Check if issues remain
+                if ! "$CLAUDE_PRE_COMMIT" --json > /tmp/pre-commit-final.json; then
+                    log_error "Pre-commit checks still failing after auto-fix:"
+                    jq -r '.recommendation' /tmp/pre-commit-final.json
+                    exit 1
+                fi
+            fi
+            log_success "All pre-commit checks passed"
+        else
+            # Fallback to standard pre-commit
+            if ! pre-commit run --all-files; then
+                log_info "Pre-commit made changes, committing..."
+                git add -A
+                if git diff --cached --quiet; then
+                    log_info "No changes to commit after pre-commit"
+                else
+                    git commit --amend --no-edit
+                    git push origin $CURRENT_BRANCH --force-with-lease
+                    log_success "Pushed pre-commit changes"
+                fi
             fi
         fi
     else

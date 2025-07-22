@@ -263,6 +263,68 @@ CLAUDE_FORMAT_CHECK:END
 
 This prevents formatting errors from accumulating and reduces CI failures.
 
+### NEW: Pre-Commit Integration for Claude
+When working with pre-commit checks, use the Claude-friendly wrapper for structured feedback:
+
+```bash
+# Check all files with structured JSON output
+./scripts/claude-pre-commit.sh
+
+# Auto-fix all fixable issues
+./scripts/claude-pre-commit.sh --fix
+
+# Check specific files
+./scripts/claude-pre-commit.sh src/module.py tests/test_module.py
+
+# Human-readable output
+./scripts/claude-pre-commit.sh --text
+
+# Use the hook functions
+source .claude/hooks/pre-commit.sh
+claude_pre_commit_check           # Check all files
+claude_pre_commit_fix            # Auto-fix issues
+claude_safe_commit "message"     # Commit with pre-commit validation
+```
+
+**Claude Workflow Integration:**
+1. Before committing, run `claude_pre_commit_check` for structured feedback
+2. Parse JSON output to understand specific failures
+3. Use `claude_pre_commit_fix` for auto-fixable issues
+4. Follow fix guidance for manual corrections
+5. Use `claude_safe_commit` for validated commits
+
+**Structured Output Format:**
+```json
+{
+  "overall_status": "FAILED",
+  "checks": [
+    {
+      "hook": "black",
+      "status": "FAILED",
+      "files_failed": ["src/module.py"],
+      "auto_fixable": true
+    },
+    {
+      "hook": "flake8",
+      "status": "FAILED",
+      "issues": [
+        {
+          "file": "src/module.py",
+          "line": 45,
+          "code": "E501",
+          "message": "line too long",
+          "fix_guidance": "Break line at logical point"
+        }
+      ],
+      "auto_fixable": false
+    }
+  ],
+  "recommendation": "Run with --fix to auto-fix 1 issue(s), then manually fix remaining issues"
+}
+```
+
+This provides clear, actionable feedback for resolving pre-commit failures efficiently.
+
 ### Development Workflow:
 When | Ask Claude to...
 ---|---
