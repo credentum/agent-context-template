@@ -426,7 +426,9 @@ class TestErrorHandling:
         """Test connection with timeout error"""
         from qdrant_client.http.exceptions import ResponseHandlingException
 
-        mock_qdrant_client.side_effect = ResponseHandlingException("Connection timeout")  # type: ignore[arg-type]
+        mock_qdrant_client.side_effect = ResponseHandlingException(
+            "Connection timeout"
+        )  # type: ignore[arg-type]
 
         embedder = HashDiffEmbedder()
         embedder.config = {"qdrant": {"host": "localhost", "port": 6333}}
