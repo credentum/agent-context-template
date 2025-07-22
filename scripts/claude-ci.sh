@@ -213,15 +213,7 @@ cmd_check() {
         return 1
     fi
 
-    # Check dependency first
-    if ! check_script_dependency "claude-post-edit.sh"; then
-        local check_result=$?
-        local error_msg
-        error_msg=$(get_dependency_error "claude-post-edit.sh" $check_result)
-        json_output "check" "FAILED" "$file" "0s" "{}" "[{\"message\": \"$error_msg\", \"dependency\": \"claude-post-edit.sh\"}]" "Install missing dependency script"
-        pretty_output "check" "FAILED" "$error_msg"
-        return 1
-    fi
+    # Dependencies already validated at startup
 
     # Delegate to claude-post-edit.sh
     local fix_flag=""
@@ -247,113 +239,80 @@ cmd_check() {
 cmd_test() {
     local start_time=$(date +%s)
 
-    # Check dependency first
-    if ! check_script_dependency "claude-test-changed.sh"; then
-        local check_result=$?
-        local error_msg
-        error_msg=$(get_dependency_error "claude-test-changed.sh" $check_result)
-        json_output "test" "FAILED" "smart" "0s" "{}" "[{\"message\": \"$error_msg\", \"dependency\": \"claude-test-changed.sh\"}]" "Install missing dependency script"
-        pretty_output "test" "FAILED" "$error_msg"
-        return 1
+    # Dependencies already validated at startup
+    local test_args=""
+    if [ "$ALL_MODE" = true ]; then
+        test_args="--all"
+    fi
+    if [ "$VERBOSE" = true ]; then
+        test_args="$test_args --verbose"
+    fi
+    if [ "$JSON_OUTPUT" = false ]; then
+        test_args="$test_args --format text"
     fi
 
-    if true; then  # Always true since we checked dependency above
-        local test_args=""
-        if [ "$ALL_MODE" = true ]; then
-            test_args="--all"
-        fi
-        if [ "$VERBOSE" = true ]; then
-            test_args="$test_args --verbose"
-        fi
-        if [ "$JSON_OUTPUT" = false ]; then
-            test_args="$test_args --format text"
-        fi
+    local end_time=$(date +%s)
+    local duration="$((end_time - start_time))s"
 
-        local end_time=$(date +%s)
-        local duration="$((end_time - start_time))s"
-
-        if "$SCRIPT_DIR/claude-test-changed.sh" $test_args; then
-            json_output "test" "PASSED" "smart" "$duration" "{\"tests\": \"PASSED\"}" "[]" "All tests passed"
-            pretty_output "test" "PASSED" "Tests completed successfully"
-            return 0
-        else
-            json_output "test" "FAILED" "smart" "$duration" "{\"tests\": \"FAILED\"}" "[{\"message\": \"Some tests failed\"}]" "Review test failures"
-            pretty_output "test" "FAILED" "Some tests failed"
-            return 1
-        fi
-    fi  # End of dependency check conditional
+    if "$SCRIPT_DIR/claude-test-changed.sh" $test_args; then
+        json_output "test" "PASSED" "smart" "$duration" "{\"tests\": \"PASSED\"}" "[]" "All tests passed"
+        pretty_output "test" "PASSED" "Tests completed successfully"
+        return 0
+    else
+        json_output "test" "FAILED" "smart" "$duration" "{\"tests\": \"FAILED\"}" "[{\"message\": \"Some tests failed\"}]" "Review test failures"
+        pretty_output "test" "FAILED" "Some tests failed"
+        return 1
+    fi
 }
 
 # Pre-commit command
 cmd_pre_commit() {
     local start_time=$(date +%s)
 
-    # Check dependency first
-    if ! check_script_dependency "claude-pre-commit.sh"; then
-        local check_result=$?
-        local error_msg
-        error_msg=$(get_dependency_error "claude-pre-commit.sh" $check_result)
-        json_output "pre-commit" "FAILED" "all" "0s" "{}" "[{\"message\": \"$error_msg\", \"dependency\": \"claude-pre-commit.sh\"}]" "Install missing dependency script"
-        pretty_output "pre-commit" "FAILED" "$error_msg"
-        return 1
+    # Dependencies already validated at startup
+    local precommit_args=""
+    if [ "$FIX_MODE" = true ]; then
+        precommit_args="--fix"
+    fi
+    if [ "$JSON_OUTPUT" = false ]; then
+        precommit_args="$precommit_args --text"
+    fi
+    if [ "$VERBOSE" = true ]; then
+        precommit_args="$precommit_args --verbose"
     fi
 
-    if true; then  # Always true since we checked dependency above
-        local precommit_args=""
-        if [ "$FIX_MODE" = true ]; then
-            precommit_args="--fix"
-        fi
-        if [ "$JSON_OUTPUT" = false ]; then
-            precommit_args="$precommit_args --text"
-        fi
-        if [ "$VERBOSE" = true ]; then
-            precommit_args="$precommit_args --verbose"
-        fi
+    local end_time=$(date +%s)
+    local duration="$((end_time - start_time))s"
 
-        local end_time=$(date +%s)
-        local duration="$((end_time - start_time))s"
-
-        if "$SCRIPT_DIR/claude-pre-commit.sh" $precommit_args; then
-            json_output "pre-commit" "PASSED" "all" "$duration" "{\"pre-commit\": \"PASSED\"}" "[]" "Pre-commit checks passed"
-            pretty_output "pre-commit" "PASSED" "All pre-commit checks passed"
-            return 0
-        else
-            json_output "pre-commit" "FAILED" "all" "$duration" "{\"pre-commit\": \"FAILED\"}" "[{\"message\": \"Pre-commit checks failed\"}]" "Fix issues and run again"
-            pretty_output "pre-commit" "FAILED" "Pre-commit checks failed"
-            return 1
-        fi
-    fi  # End of dependency check conditional
+    if "$SCRIPT_DIR/claude-pre-commit.sh" $precommit_args; then
+        json_output "pre-commit" "PASSED" "all" "$duration" "{\"pre-commit\": \"PASSED\"}" "[]" "Pre-commit checks passed"
+        pretty_output "pre-commit" "PASSED" "All pre-commit checks passed"
+        return 0
+    else
+        json_output "pre-commit" "FAILED" "all" "$duration" "{\"pre-commit\": \"FAILED\"}" "[{\"message\": \"Pre-commit checks failed\"}]" "Fix issues and run again"
+        pretty_output "pre-commit" "FAILED" "Pre-commit checks failed"
+        return 1
+    fi
 }
 
 # Review command - local PR review simulation
 cmd_review() {
     local start_time=$(date +%s)
 
-    # Check dependency first
-    if ! check_script_dependency "run-ci-docker.sh"; then
-        local check_result=$?
-        local error_msg
-        error_msg=$(get_dependency_error "run-ci-docker.sh" $check_result)
-        json_output "review" "FAILED" "all" "0s" "{}" "[{\"message\": \"$error_msg\", \"dependency\": \"run-ci-docker.sh\"}]" "Install missing dependency script"
-        pretty_output "review" "FAILED" "$error_msg"
+    # Dependencies already validated at startup
+    # Use run-ci-docker.sh for comprehensive review
+    local end_time=$(date +%s)
+    local duration="$((end_time - start_time))s"
+
+    if "$SCRIPT_DIR/run-ci-docker.sh" > /dev/null 2>&1; then
+        json_output "review" "PASSED" "all" "$duration" "{\"docker-ci\": \"PASSED\", \"coverage\": \"PASSED\"}" "[]" "PR review simulation passed"
+        pretty_output "review" "PASSED" "PR review simulation completed successfully"
+        return 0
+    else
+        json_output "review" "FAILED" "all" "$duration" "{\"docker-ci\": \"FAILED\"}" "[{\"message\": \"Docker CI checks failed\"}]" "Fix CI issues before PR"
+        pretty_output "review" "FAILED" "Docker CI checks failed"
         return 1
     fi
-
-    # Use run-ci-docker.sh for comprehensive review
-    if true; then  # Always true since we checked dependency above
-        local end_time=$(date +%s)
-        local duration="$((end_time - start_time))s"
-
-        if "$SCRIPT_DIR/run-ci-docker.sh" > /dev/null 2>&1; then
-            json_output "review" "PASSED" "all" "$duration" "{\"docker-ci\": \"PASSED\", \"coverage\": \"PASSED\"}" "[]" "PR review simulation passed"
-            pretty_output "review" "PASSED" "PR review simulation completed successfully"
-            return 0
-        else
-            json_output "review" "FAILED" "all" "$duration" "{\"docker-ci\": \"FAILED\"}" "[{\"message\": \"Docker CI checks failed\"}]" "Fix CI issues before PR"
-            pretty_output "review" "FAILED" "Docker CI checks failed"
-            return 1
-        fi
-    fi  # End of dependency check conditional
 }
 
 # All command - complete CI pipeline with detailed error aggregation
@@ -552,6 +511,45 @@ if [ -z "$COMMAND" ]; then
     echo "Error: No command specified" >&2
     exit 1
 fi
+
+# Early dependency validation for better user experience
+validate_dependencies() {
+    local dependencies=()
+
+    case "$COMMAND" in
+        check)
+            dependencies+=("claude-post-edit.sh")
+            ;;
+        test)
+            dependencies+=("claude-test-changed.sh")
+            ;;
+        pre-commit)
+            dependencies+=("claude-pre-commit.sh")
+            ;;
+        review)
+            dependencies+=("run-ci-docker.sh")
+            ;;
+        all)
+            # All command needs multiple dependencies
+            dependencies+=("claude-post-edit.sh" "claude-test-changed.sh" "claude-pre-commit.sh" "run-ci-docker.sh")
+            ;;
+    esac
+
+    # Check all required dependencies upfront
+    for script_name in "${dependencies[@]}"; do
+        if ! check_script_dependency "$script_name"; then
+            local check_result=$?
+            local error_msg
+            error_msg=$(get_dependency_error "$script_name" $check_result)
+            json_output "$COMMAND" "FAILED" "" "0s" "{}" "[{\"message\": \"$error_msg\", \"dependency\": \"$script_name\"}]" "Install missing dependency script"
+            pretty_output "$COMMAND" "FAILED" "$error_msg"
+            exit 1
+        fi
+    done
+}
+
+# Run dependency validation early
+validate_dependencies
 
 # Execute command
 case "$COMMAND" in
