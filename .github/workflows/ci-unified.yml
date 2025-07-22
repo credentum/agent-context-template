@@ -164,6 +164,30 @@ jobs:
           echo "🚀 Running claude-ci all --github-output"
           ./scripts/claude-ci.sh all --github-output
 
+      - name: Extract Coverage Information
+        id: coverage
+        run: |
+          # Extract coverage from test results if available
+          if [ -f coverage.json ]; then
+            coverage_pct=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+            echo "coverage-pct=${coverage_pct}" >> $GITHUB_OUTPUT
+            echo "Coverage extracted: ${coverage_pct}%"
+          elif [ -f coverage.xml ]; then
+            # Extract from XML if JSON not available
+            coverage_pct=$(python -c "
+import xml.etree.ElementTree as ET
+tree = ET.parse('coverage.xml')
+root = tree.getroot()
+line_rate = float(root.attrib.get('line-rate', '0'))
+print(round(line_rate * 100, 2))
+")
+            echo "coverage-pct=${coverage_pct}" >> $GITHUB_OUTPUT
+            echo "Coverage extracted from XML: ${coverage_pct}%"
+          else
+            echo "coverage-pct=0" >> $GITHUB_OUTPUT
+            echo "No coverage file found"
+          fi
+
       - name: Upload test artifacts
         uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029
         if: always()

@@ -64,14 +64,33 @@ jobs:
         run: |
           echo "🔍 Running PR review using claude-ci review --github-output"
           
-          # Run the same review command Claude uses locally
-          if ./scripts/claude-ci.sh review --github-output; then
+          # Capture structured output to file
+          if ./scripts/claude-ci.sh review --github-output > review-output.json 2>&1; then
             echo "✅ PR Review completed successfully"
             echo "status=PASSED" >> $GITHUB_OUTPUT
+            
+            # Display review results
+            echo "Review results:"
+            cat review-output.json
           else
             echo "❌ PR Review identified issues"
             echo "status=FAILED" >> $GITHUB_OUTPUT
+            
+            # Still capture output for analysis
+            echo "Review output (failed):"
+            cat review-output.json || echo "No review output captured"
             exit 1
+          fi
+
+      - name: Parse and Format Review Results
+        if: always()
+        run: |
+          # Use post-review-comment.py to format results
+          if [ -f review-output.json ]; then
+            echo "Parsing review results..."
+            python3 scripts/post-review-comment.py review-output.json --output-format summary
+          else
+            echo "No review output file found"
           fi
 
       - name: Upload Review Artifacts
