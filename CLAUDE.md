@@ -118,6 +118,7 @@ Headless mode: claude -p "<prompt>" --output-format stream-json
 Add tools: claude mcp add playwright npx @playwright/mcp@latest
 
 **Project-specific scripts:**
+- `./scripts/claude-ci.sh` – Unified CI command hub (check, test, pre-commit, review, all)
 - `./scripts/check-pr-keywords.sh` – Validate PR has proper issue closing keywords
 
 ## 5 📋 Coding & Review Guidelines
@@ -174,6 +175,58 @@ pytest tests/test_validators.py -v
 # If pre-commit made changes:
 git add -A && git commit --amend --no-edit
 ```
+
+### NEW: Unified Claude CI Command Hub
+Single command interface for all CI operations with consistent output:
+
+```bash
+# Quick file validation after edits
+./scripts/claude-ci.sh check src/module.py
+
+# Auto-fix formatting issues
+./scripts/claude-ci.sh check src/module.py --fix
+
+# Run smart test selection
+./scripts/claude-ci.sh test
+
+# Run full test suite
+./scripts/claude-ci.sh test --all
+
+# Pre-commit validation
+./scripts/claude-ci.sh pre-commit
+
+# Pre-commit with auto-fix
+./scripts/claude-ci.sh pre-commit --fix
+
+# Local PR review simulation
+./scripts/claude-ci.sh review
+
+# Complete CI pipeline (standard mode)
+./scripts/claude-ci.sh all
+
+# Quick validation (seconds)
+./scripts/claude-ci.sh all --quick
+
+# Comprehensive validation (full suite)
+./scripts/claude-ci.sh all --comprehensive
+
+# Human-readable output
+./scripts/claude-ci.sh all --pretty
+```
+
+**Unified CI Features:**
+- **Single interface**: One command for all CI operations
+- **Consistent output**: JSON format by default for Claude integration
+- **Progressive validation**: Quick → Standard → Comprehensive modes
+- **Auto-fixing**: Built-in support for fixable issues
+- **Integration**: Leverages existing claude-*.sh scripts
+- **Help system**: `./scripts/claude-ci.sh help` for full documentation
+
+**Recommended Usage:**
+- **After edits**: `claude-ci check <file> --fix`
+- **Before commit**: `claude-ci all`
+- **Quick validation**: `claude-ci all --quick`
+- **PR preparation**: `claude-ci all --comprehensive`
 
 ### NEW: Smart Test Runner for Claude Code
 Run only tests relevant to your recent changes for faster feedback:
