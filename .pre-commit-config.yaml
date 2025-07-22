@@ -53,7 +53,8 @@ repos:
       - id: yamllint
         name: yamllint (general)
         args: [--format, parsable, --strict]
-        exclude: ^\.github/workflows/
+        files: \.(yaml|yml)$
+        exclude: ^(\.github/workflows/|context/sprints/|context/decisions/|context/schemas/|workflows/|\.pre-commit-config.*\.yaml|context/mcp_contracts/)
       - id: yamllint
         name: yamllint (workflows)
         args: [--format, parsable, -c, .yamllint-workflows.yml]

@@ -131,7 +131,7 @@ cmd_check() {
 
     if [ -x "$SCRIPT_DIR/claude-post-edit.sh" ]; then
         local end_time=$(date +%s)
-        local duration="${((end_time - start_time))}s"
+        local duration="$((end_time - start_time))s"
 
         if "$SCRIPT_DIR/claude-post-edit.sh" "$file" $fix_flag > /dev/null 2>&1; then
             json_output "check" "PASSED" "$file" "$duration" "{\"format\": \"PASSED\", \"lint\": \"PASSED\"}" "[]" "File validation successful"
@@ -166,7 +166,7 @@ cmd_test() {
         fi
 
         local end_time=$(date +%s)
-        local duration="${((end_time - start_time))}s"
+        local duration="$((end_time - start_time))s"
 
         if "$SCRIPT_DIR/claude-test-changed.sh" $test_args; then
             json_output "test" "PASSED" "smart" "$duration" "{\"tests\": \"PASSED\"}" "[]" "All tests passed"
@@ -201,7 +201,7 @@ cmd_pre_commit() {
         fi
 
         local end_time=$(date +%s)
-        local duration="${((end_time - start_time))}s"
+        local duration="$((end_time - start_time))s"
 
         if "$SCRIPT_DIR/claude-pre-commit.sh" $precommit_args; then
             json_output "pre-commit" "PASSED" "all" "$duration" "{\"pre-commit\": \"PASSED\"}" "[]" "Pre-commit checks passed"
@@ -226,7 +226,7 @@ cmd_review() {
     # Use run-ci-docker.sh for comprehensive review
     if [ -x "$SCRIPT_DIR/run-ci-docker.sh" ]; then
         local end_time=$(date +%s)
-        local duration="${((end_time - start_time))}s"
+        local duration="$((end_time - start_time))s"
 
         if "$SCRIPT_DIR/run-ci-docker.sh" > /dev/null 2>&1; then
             json_output "review" "PASSED" "all" "$duration" "{\"docker-ci\": \"PASSED\", \"coverage\": \"PASSED\"}" "[]" "PR review simulation passed"
@@ -274,7 +274,7 @@ cmd_all() {
     fi
 
     local end_time=$(date +%s)
-    local duration="${((end_time - start_time))}s"
+    local duration="$((end_time - start_time))s"
 
     if [ "$overall_status" = "PASSED" ]; then
         json_output "all" "PASSED" "pipeline" "$duration" "$checks" "$errors" "CI pipeline completed successfully"
