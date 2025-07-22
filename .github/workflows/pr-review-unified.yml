@@ -64,8 +64,8 @@ jobs:
         run: |
           echo "🔍 Running PR review using claude-ci review --github-output"
           
-          # Capture structured output to file
-          if ./scripts/claude-ci.sh review --github-output > review-output.json 2>&1; then
+          # Capture only stdout for clean JSON, stderr to log
+          if ./scripts/claude-ci.sh review --github-output > review-output.json 2>review-errors.log; then
             echo "✅ PR Review completed successfully"
             echo "status=PASSED" >> $GITHUB_OUTPUT
             
@@ -76,9 +76,11 @@ jobs:
             echo "❌ PR Review identified issues"
             echo "status=FAILED" >> $GITHUB_OUTPUT
             
-            # Still capture output for analysis
+            # Display both output and errors for debugging
             echo "Review output (failed):"
-            cat review-output.json || echo "No review output captured"
+            cat review-output.json || echo "No JSON output captured"
+            echo "Review errors:"
+            cat review-errors.log || echo "No error log captured"
             exit 1
           fi
 
