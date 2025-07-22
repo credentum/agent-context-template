@@ -63,7 +63,7 @@ EOF
     exit 0
 }
 
-# JSON output helper
+# JSON output helper - robust JSON generation using jq
 json_output() {
     local command="$1"
     local status="$2"
@@ -73,19 +73,69 @@ json_output() {
     local errors="${6:-[]}"
     local next_action="${7:-No action needed}"
 
-    if [ "$JSON_OUTPUT" = true ]; then
-        cat << EOF
-{
-  "command": "$command",
-  "status": "$status",
-  "target": "$target",
-  "duration": "$duration",
-  "checks": $checks,
-  "errors": $errors,
-  "next_action": "$next_action"
-}
-EOF
+    # Validate JSON inputs and ensure proper formatting
+    if ! echo "$checks" | jq empty 2>/dev/null; then
+        checks="{}"
     fi
+    if ! echo "$errors" | jq empty 2>/dev/null; then
+        errors="[]"
+    fi
+
+    if [ "$JSON_OUTPUT" = true ]; then
+        # Use jq to ensure proper JSON formatting
+        jq -n \
+            --arg command "$command" \
+            --arg status "$status" \
+            --arg target "$target" \
+            --arg duration "$duration" \
+            --argjson checks "$checks" \
+            --argjson errors "$errors" \
+            --arg next_action "$next_action" \
+            '{
+                "command": $command,
+                "status": $status,
+                "target": $target,
+                "duration": $duration,
+                "checks": $checks,
+                "errors": $errors,
+                "next_action": $next_action
+            }'
+    fi
+}
+
+# File path validation helper
+validate_file_path() {
+    local file="$1"
+
+    # Check for empty path
+    if [ -z "$file" ]; then
+        return 1
+    fi
+
+    # Convert to absolute path and validate it's within project
+    local abs_path
+    abs_path=$(realpath "$file" 2>/dev/null) || return 1
+    local project_path
+    project_path=$(realpath "$PROJECT_ROOT" 2>/dev/null) || return 1
+
+    # Ensure path is within project boundaries
+    case "$abs_path" in
+        "$project_path"*)
+            # Path is within project - additional security checks
+            # Reject paths with suspicious patterns
+            case "$file" in
+                */../*|../*|*/..*)
+                    return 1 ;;
+                */proc/*|*/sys/*|*/dev/*)
+                    return 1 ;;
+                *)
+                    return 0 ;;
+            esac
+            ;;
+        *)
+            # Path is outside project
+            return 1 ;;
+    esac
 }
 
 # Pretty output helper
@@ -116,6 +166,13 @@ pretty_output() {
 cmd_check() {
     local file="$1"
     local start_time=$(date +%s)
+
+    # Validate file path for security
+    if ! validate_file_path "$file"; then
+        json_output "check" "FAILED" "$file" "0s" "{}" "[{\"message\": \"Invalid file path: $file\", \"details\": \"Path must be within project directory and not contain directory traversal patterns\"}]" "Use a valid file path within the project"
+        pretty_output "check" "FAILED" "Invalid file path: $file"
+        return 1
+    fi
 
     if [ ! -f "$file" ]; then
         json_output "check" "FAILED" "$file" "0s" "{}" "[{\"message\": \"File not found: $file\"}]" "Verify file path"
@@ -244,45 +301,115 @@ cmd_review() {
     fi
 }
 
-# All command - complete CI pipeline
+# All command - complete CI pipeline with detailed error aggregation
 cmd_all() {
     local start_time=$(date +%s)
     local overall_status="PASSED"
-    local checks="{}"
-    local errors="[]"
+    local checks_json="{"
+    local errors_json="["
+    local stages_run=""
+    local first_check=true
+    local first_error=true
 
     pretty_output "all" "INFO" "Running complete CI pipeline..."
+
+    # Helper function to capture command output and status
+    run_stage() {
+        local stage_name="$1"
+        local stage_func="$2"
+        local temp_output
+        local stage_result
+
+        pretty_output "all" "INFO" "Running stage: $stage_name"
+        stages_run="$stages_run $stage_name"
+
+        # Capture output from stage
+        temp_output=$(mktemp)
+        set +e  # Allow failures temporarily
+        $stage_func >"$temp_output" 2>&1
+        stage_result=$?
+        set -e
+
+        # Parse stage output if it's JSON
+        if [ -s "$temp_output" ] && head -1 "$temp_output" | grep -q "^{"; then
+            local stage_output
+            stage_output=$(cat "$temp_output")
+
+            # Extract checks and errors from stage output
+            if echo "$stage_output" | jq empty 2>/dev/null; then
+                local stage_checks stage_errors
+                stage_checks=$(echo "$stage_output" | jq -c '.checks // {}')
+                stage_errors=$(echo "$stage_output" | jq -c '.errors // []')
+
+                # Add to aggregated checks
+                if [ "$first_check" = true ]; then
+                    checks_json="$checks_json\"$stage_name\": $stage_checks"
+                    first_check=false
+                else
+                    checks_json="$checks_json, \"$stage_name\": $stage_checks"
+                fi
+
+                # Add to aggregated errors
+                if [ "$stage_errors" != "[]" ]; then
+                    if [ "$first_error" = true ]; then
+                        errors_json="$errors_json{\"stage\": \"$stage_name\", \"details\": $stage_errors}"
+                        first_error=false
+                    else
+                        errors_json="$errors_json, {\"stage\": \"$stage_name\", \"details\": $stage_errors}"
+                    fi
+                fi
+            fi
+        fi
+
+        rm -f "$temp_output"
+
+        if [ $stage_result -ne 0 ]; then
+            overall_status="FAILED"
+            if [ "$first_error" = true ]; then
+                errors_json="$errors_json{\"stage\": \"$stage_name\", \"message\": \"Stage failed with exit code $stage_result\"}"
+                first_error=false
+            else
+                errors_json="$errors_json, {\"stage\": \"$stage_name\", \"message\": \"Stage failed with exit code $stage_result\"}"
+            fi
+        fi
+
+        return $stage_result
+    }
 
     # Progressive validation based on mode
     if [ "$QUICK" = true ]; then
         pretty_output "all" "INFO" "Quick mode: format check + basic lint"
-        # Quick format check on changed files
-        if ! cmd_pre_commit; then
-            overall_status="FAILED"
-        fi
+        run_stage "pre-commit" "cmd_pre_commit" || true
     elif [ "$COMPREHENSIVE" = true ]; then
         pretty_output "all" "INFO" "Comprehensive mode: full validation suite"
-        # Run everything
-        if ! cmd_pre_commit; then overall_status="FAILED"; fi
-        if ! cmd_test; then overall_status="FAILED"; fi
-        if ! cmd_review; then overall_status="FAILED"; fi
+        run_stage "pre-commit" "cmd_pre_commit" || true
+        run_stage "test" "cmd_test" || true
+        run_stage "review" "cmd_review" || true
     else
         pretty_output "all" "INFO" "Standard mode: lint + relevant tests + pre-commit"
-        # Standard pipeline
-        if ! cmd_pre_commit; then overall_status="FAILED"; fi
-        if ! cmd_test; then overall_status="FAILED"; fi
+        run_stage "pre-commit" "cmd_pre_commit" || true
+        run_stage "test" "cmd_test" || true
     fi
+
+    # Close JSON objects
+    checks_json="$checks_json}"
+    errors_json="$errors_json]"
 
     local end_time=$(date +%s)
     local duration="$((end_time - start_time))s"
+    local next_action="CI pipeline completed successfully"
+
+    if [ "$overall_status" = "FAILED" ]; then
+        next_action="Review failed stages:$stages_run. Check individual stage outputs for details."
+    fi
+
+    json_output "all" "$overall_status" "pipeline" "$duration" "$checks_json" "$errors_json" "$next_action"
 
     if [ "$overall_status" = "PASSED" ]; then
-        json_output "all" "PASSED" "pipeline" "$duration" "$checks" "$errors" "CI pipeline completed successfully"
         pretty_output "all" "PASSED" "Complete CI pipeline finished successfully"
         return 0
     else
-        json_output "all" "FAILED" "pipeline" "$duration" "$checks" "[{\"message\": \"One or more pipeline stages failed\"}]" "Review failures and fix issues"
-        pretty_output "all" "FAILED" "CI pipeline failed - review individual stage results"
+        pretty_output "all" "FAILED" "CI pipeline failed - stages run:$stages_run"
         return 1
     fi
 }
@@ -335,14 +462,18 @@ while [[ $# -gt 0 ]]; do
             ;;
         -*)
             echo "Unknown option: $1" >&2
-            usage
+            exit 1
             ;;
         *)
             if [ "$COMMAND" = "check" ] && [ -z "$TARGET_FILE" ]; then
                 TARGET_FILE="$1"
+            elif [ -z "$COMMAND" ]; then
+                # This is likely an invalid command
+                echo "Unknown command: $1" >&2
+                exit 1
             else
                 echo "Unexpected argument: $1" >&2
-                usage
+                exit 1
             fi
             shift
             ;;
@@ -352,7 +483,7 @@ done
 # Validate command
 if [ -z "$COMMAND" ]; then
     echo "Error: No command specified" >&2
-    usage
+    exit 1
 fi
 
 # Execute command
@@ -378,7 +509,7 @@ case "$COMMAND" in
         cmd_all
         ;;
     *)
-        echo "Error: Unknown command: $COMMAND" >&2
-        usage
+        echo "Unknown command: $COMMAND" >&2
+        exit 1
         ;;
 esac

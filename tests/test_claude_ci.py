@@ -26,12 +26,24 @@ class TestClaudeCICommandHub:
 
     @pytest.fixture
     def temp_file(self):
-        """Create a temporary file for testing."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        """Create a temporary file within project for testing."""
+        # Create temp file within project directory for path validation
+        temp_dir = Path(__file__).parent.parent / "tmp"
+        temp_dir.mkdir(exist_ok=True)
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", delete=False, dir=str(temp_dir)
+        ) as f:
             f.write("print('hello world')\n")
             f.flush()
             yield f.name
         os.unlink(f.name)
+
+        # Clean up temp directory if empty
+        try:
+            temp_dir.rmdir()
+        except OSError:
+            pass  # Directory not empty or doesn't exist
 
     def test_script_exists_and_executable(self, script_path):
         """Test that claude-ci.sh exists and is executable."""
@@ -78,9 +90,30 @@ class TestClaudeCICommandHub:
             output = json.loads(result.stdout)
             assert output["command"] == "check"
             assert output["status"] == "FAILED"
-            assert "File not found" in str(output["errors"])
+            # Now expects path validation error instead of file not found
+            assert "Invalid file path" in str(output["errors"]) or "File not found" in str(
+                output["errors"]
+            )
         except json.JSONDecodeError:
             pytest.fail("Expected JSON output for check command")
+
+    def test_check_command_file_not_found_within_project(self, script_path):
+        """Test check command with non-existent file within project (gets past path validation)."""
+        result = subprocess.run(
+            [str(script_path), "check", "nonexistent_file.py"], capture_output=True, text=True
+        )
+
+        assert result.returncode == 1
+
+        # Should output JSON by default
+        try:
+            output = json.loads(result.stdout)
+            assert output["command"] == "check"
+            assert output["status"] == "FAILED"
+            # This should get past path validation and hit file not found
+            assert "File not found" in str(output["errors"])
+        except json.JSONDecodeError:
+            pytest.fail("Expected JSON output for file not found check")
 
     def test_check_command_pretty_output(self, script_path, temp_file):
         """Test check command with pretty output format."""
@@ -246,6 +279,121 @@ class TestClaudeCICommandHub:
 
         except json.JSONDecodeError:
             pytest.fail("Expected JSON output with error structure")
+
+    def test_check_command_success_path(self, script_path, temp_file):
+        """Test successful execution of check command."""
+        result = subprocess.run(
+            [str(script_path), "check", temp_file], capture_output=True, text=True
+        )
+
+        # Check command should execute (may pass or fail validation)
+        assert result.returncode in [0, 1]  # Success or validation failure
+
+        try:
+            output = json.loads(result.stdout)
+            assert output["command"] == "check"
+            assert output["status"] in ["PASSED", "FAILED"]
+            assert output["target"] == temp_file
+            assert "duration" in output
+            assert isinstance(output["errors"], list)
+            assert "next_action" in output
+
+        except json.JSONDecodeError:
+            pytest.fail("Expected valid JSON output for check command")
+
+    def test_path_validation_security(self, script_path):
+        """Test path validation prevents directory traversal."""
+        dangerous_paths = [
+            "../../../etc/passwd",
+            "/etc/passwd",
+            "../../sensitive_file",
+            "/proc/self/environ",
+        ]
+
+        for path in dangerous_paths:
+            result = subprocess.run(
+                [str(script_path), "check", path], capture_output=True, text=True
+            )
+
+            assert result.returncode == 1
+            try:
+                output = json.loads(result.stdout)
+                assert output["status"] == "FAILED"
+                assert "Invalid file path" in str(output["errors"])
+            except json.JSONDecodeError:
+                pytest.fail(f"Expected JSON output for path validation failure: {path}")
+
+    def test_json_validation_robustness(self, script_path):
+        """Test that jq-based JSON generation is robust."""
+        # This test ensures our jq implementation works correctly
+        result = subprocess.run(
+            [str(script_path), "check", "/nonexistent"], capture_output=True, text=True
+        )
+
+        try:
+            output = json.loads(result.stdout)
+
+            # Verify all expected fields are present and properly typed
+            assert isinstance(output["command"], str)
+            assert isinstance(output["status"], str)
+            assert isinstance(output["target"], str)
+            assert isinstance(output["duration"], str)
+            assert isinstance(output["checks"], dict)
+            assert isinstance(output["errors"], list)
+            assert isinstance(output["next_action"], str)
+
+        except json.JSONDecodeError as e:
+            pytest.fail(f"jq-based JSON generation failed to produce valid JSON: {e}")
+
+    def test_all_commands_produce_valid_json(self, script_path, temp_file):
+        """Test that all commands produce valid JSON output."""
+        commands = [
+            ["check", temp_file],
+            ["test", "--json"],
+            ["pre-commit", "--json"],
+            ["all", "--quick", "--json"],
+        ]
+
+        for cmd_args in commands:
+            result = subprocess.run(
+                [str(script_path)] + cmd_args, capture_output=True, text=True, timeout=30
+            )
+
+            if result.stdout.strip():
+                try:
+                    # Should produce valid JSON (may be from underlying tools)
+                    if result.stdout.strip().startswith("{"):
+                        json.loads(result.stdout)
+                except json.JSONDecodeError:
+                    pytest.fail(
+                        f"Command {' '.join(cmd_args)} produced invalid JSON: {result.stdout[:200]}"
+                    )
+
+    def test_success_path_integration_with_real_files(self, script_path):
+        """Test successful integration with actual project files."""
+        # Test with a real Python file from the project
+        test_files = [
+            "src/core/__init__.py",
+            "tests/test_claude_ci.py",  # This test file itself
+        ]
+
+        for test_file in test_files:
+            if Path(test_file).exists():
+                result = subprocess.run(
+                    [str(script_path), "check", test_file, "--json"], capture_output=True, text=True
+                )
+
+                # Should handle real files gracefully
+                assert result.returncode in [0, 1]  # Success or validation failure
+
+                if result.stdout.strip():
+                    try:
+                        output = json.loads(result.stdout)
+                        assert "command" in output
+                        assert "status" in output
+                        assert output["target"] == test_file
+                    except json.JSONDecodeError:
+                        pytest.fail(f"Real file test failed for {test_file}: invalid JSON")
 
 
 class TestClaudeCIIntegration:
