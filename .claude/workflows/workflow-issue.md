@@ -52,8 +52,8 @@ Please follow these steps in order. **Actually perform each action** - don't jus
 | Phase 1 | Create task template & scratchpad | Before implementation | Planning & context |
 | Phase 1 | Initial commit of docs | Before code changes | Ensure docs in PR |
 | Phase 4 | Update with actual results | Before PR creation | Accurate tracking |
-| Phase 5 | Add completion logs | After PR creation | Final status |
-| Phase 5 | Push final updates | Immediately | Include in PR |
+| Phase 4 | Add completion logs | Before PR creation | Include in PR |
+| Phase 5 | Verify documentation | After PR creation | Ensure completeness |
 
 **This prevents the common mistake of creating documentation after pushing the PR, which leaves it only in local branch.**
 
@@ -405,14 +405,23 @@ dependencies: {identified}
    - Run pre-commit hooks and handle any changes
    - Force push with lease if pre-commit made changes
 
-5. **Update task template with actual results and commit immediately**:
+5. **Update task template with actual results and create completion logs**:
    - Open the task template file created earlier
    - Fill in the "Actuals" section with real token usage, time taken, etc.
    - Document any lessons learned or deviations from plan
-   - **CRITICAL: Commit updates before creating PR**:
+   - **Create completion log entry**:
+     ```bash
+     # Create logs directory if it doesn't exist
+     mkdir -p context/trace/logs
+     
+     # Add completion log entry
+     echo "$(date): Issue #[ISSUE_NUMBER] workflow completed - creating PR" >> context/trace/logs/workflow-completions.log
+     ```
+   - **CRITICAL: Commit all documentation before creating PR**:
      ```bash
      git add context/trace/task-templates/issue-[ISSUE_NUMBER]-*.md
-     git commit -m "docs(trace): update task template with actual results for issue #[ISSUE_NUMBER]"
+     git add context/trace/logs/workflow-completions.log
+     git commit -m "docs(trace): update task template with actuals and add completion log for issue #[ISSUE_NUMBER]"
      ```
 
 #### Step 10: PR Creation
@@ -482,32 +491,38 @@ dependencies: {identified}
 
 ### Phase 5: Documentation & Cleanup
 
-#### Step 12: Final Documentation & Post-PR Updates
+#### Step 12: Documentation Verification & Cleanup
 **EXECUTE NOW:**
-1. **Update completion logs and push to PR**:
+1. **Verify all documentation is included in PR**:
    ```bash
-   # Update completion logs
-   echo "$(date): Issue #[ISSUE_NUMBER] workflow completed via PR #[PR_NUMBER]" >> context/trace/logs/workflow-completions.log
+   # Check that all documentation files are in the PR
+   gh pr view [PR_NUMBER] --json files --jq '.files[].path' | grep -E "(task-templates|logs|scratchpad)"
+   
+   # Expected files:
+   # - context/trace/task-templates/issue-[ISSUE_NUMBER]-*.md
+   # - context/trace/scratchpad/*-issue-[ISSUE_NUMBER]-*.md
+   # - context/trace/logs/workflow-completions.log
+   ```
 
-   # Add any final lessons learned to task template
-   # Edit context/trace/task-templates/issue-[ISSUE_NUMBER]-*.md if needed
-
-   # Commit and push to include in PR
-   git add context/trace/logs/workflow-completions.log
-   git add context/trace/task-templates/issue-[ISSUE_NUMBER]-*.md  # if updated
-   git commit -m "docs(trace): add completion log and final updates for issue #[ISSUE_NUMBER]"
+2. **If any documentation is missing** (this should not happen with updated workflow):
+   ```bash
+   # Add missing files and push to PR
+   git add context/trace/
+   git commit -m "docs(trace): add missing documentation for issue #[ISSUE_NUMBER]"
    git push origin [BRANCH_NAME]
    ```
-2. **Verify all documentation is in PR**:
+
+3. **Update PR status in completion log** (optional):
    ```bash
-   gh pr view [PR_NUMBER] --json files --jq '.files[].path' | grep -E "(task-templates|logs|scratchpad)"
+   # Update log with PR number if desired
+   echo "$(date): PR #[PR_NUMBER] created for issue #[ISSUE_NUMBER]" >> context/trace/logs/pr-status.log
+   # Note: This is optional since main completion log was already created in Phase 4
    ```
-3. **Update documentation if needed**:
-   - If workflow changes were made, update relevant documentation
-   - Update CLAUDE.md if development processes changed
-4. **Archive and organize**:
-   - Ensure all files are committed and pushed to PR
-   - Clean up any temporary files created during the workflow
+
+4. **Clean up and organize**:
+   - Archive any temporary files created during the workflow
+   - Ensure workspace is clean for next task
+   - Document any process improvements discovered
 
 **WORKFLOW COMPLETION**:
 - Issue #[ISSUE_NUMBER] has been resolved
@@ -519,9 +534,9 @@ dependencies: {identified}
 **✅ DOCUMENTATION INTEGRITY CHECK:**
 - Task template: ✅ Created in Phase 1, committed before implementation
 - Execution scratchpad: ✅ Created in Phase 1, committed before implementation
-- Actual results: ✅ Updated and committed before PR creation
-- Completion logs: ✅ Added and pushed to PR after creation
-- All files: ✅ Included in PR, will be merged with code changes
+- Actual results: ✅ Updated in Phase 4, committed before PR creation
+- Completion logs: ✅ Created in Phase 4, committed before PR creation
+- All files: ✅ Included in PR from the start, will be merged with code changes
 
 ---
 
@@ -571,7 +586,7 @@ dependencies: {identified}
 
 #### Documentation Not in PR
 - **Problem**: Documentation files created after pushing PR, only exist locally
-- **Root Cause**: Documentation created in Phase 5 instead of Phase 1
+- **Root Cause**: Documentation created in Phase 5 instead of Phase 4
 - **Solution**:
   ```bash
   # Add missing documentation to existing PR
@@ -584,7 +599,7 @@ dependencies: {identified}
   # Verify it's now in the PR
   gh pr view [PR_NUMBER] --json files --jq '.files[].path' | grep -E "(task-templates|logs|scratchpad)"
   ```
-- **Prevention**: Follow Documentation Strategy table - commit docs in Phase 1, update in Phase 4, finalize in Phase 5
+- **Prevention**: Follow Documentation Strategy table - commit docs in Phase 1, update and create completion logs in Phase 4 BEFORE creating PR, verify in Phase 5
 
 ### Emergency Procedures
 
