@@ -11,11 +11,11 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 # For running without Locust UI
-import gevent
-from locust import HttpUser, between, events, task
-from locust.env import Environment
-from locust.log import setup_logging
-from locust.stats import stats_history, stats_printer
+import gevent  # type: ignore[import-not-found]
+from locust import HttpUser, between, events, task  # type: ignore[import-not-found]
+from locust.env import Environment  # type: ignore[import-not-found]
+from locust.log import setup_logging  # type: ignore[import-not-found]
+from locust.stats import stats_history, stats_printer  # type: ignore[import-not-found]
 
 
 class DocumentProcessingUser(HttpUser):
@@ -365,7 +365,7 @@ if __name__ == "__main__":
         )
 
         # Save results
-        if args.csv:
+        if args.csv and results:
             import csv
 
             # Write summary

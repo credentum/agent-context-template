@@ -297,7 +297,7 @@ class TestGetSecureConnectionConfig:
 
     def test_missing_service_config(self):
         """Test handling of missing service configuration"""
-        config = {}
+        config: dict[str, dict[str, str]] = {}
 
         with patch("src.core.utils.get_environment", return_value="development"):
             result = get_secure_connection_config(config, "missing-service")

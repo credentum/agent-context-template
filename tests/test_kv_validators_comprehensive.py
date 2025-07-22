@@ -6,6 +6,7 @@ Critical domain tests to boost coverage above 78.5% threshold
 
 import json
 from datetime import datetime, timedelta
+from typing import Any
 
 from src.validators.kv_validators import (
     sanitize_metric_name,
@@ -46,7 +47,7 @@ class TestValidateCacheEntry:
 
     def test_invalid_key_type(self):
         """Test validation fails for non-string keys"""
-        invalid_entries = [
+        invalid_entries: list[dict[str, Any]] = [
             {"key": 123, "value": "test", "created_at": "2025-07-16T10:00:00", "ttl_seconds": 3600},
             {
                 "key": None,
@@ -161,7 +162,7 @@ class TestValidateMetricEvent:
 
     def test_invalid_metric_name_types(self):
         """Test validation fails for non-string metric names"""
-        invalid_names = [123, None, [], {"name": "test"}]
+        invalid_names: list[Any] = [123, None, [], {"name": "test"}]
 
         for name in invalid_names:
             metric = {
@@ -174,7 +175,7 @@ class TestValidateMetricEvent:
 
     def test_invalid_value_types(self):
         """Test validation fails for invalid value types"""
-        invalid_values = ["100", None, [], {"value": 100}]
+        invalid_values: list[Any] = ["100", None, [], {"value": 100}]
 
         for value in invalid_values:
             metric = {
@@ -230,7 +231,7 @@ class TestValidateMetricEvent:
 
     def test_invalid_timestamp_types(self):
         """Test validation fails for invalid timestamp types"""
-        invalid_timestamps = [123, None, []]
+        invalid_timestamps: list[Any] = [123, None, []]
 
         for timestamp in invalid_timestamps:
             metric = {
@@ -375,14 +376,14 @@ class TestValidateRedisKey:
     def test_empty_key(self):
         """Test that empty keys are invalid"""
         assert validate_redis_key("") is False
-        assert validate_redis_key(None) is False
+        assert validate_redis_key(None) is False  # type: ignore[arg-type]
 
     def test_non_string_keys(self):
         """Test that non-string keys are invalid"""
-        invalid_keys = [123, [], {}, 3.14, True]
+        invalid_keys: list[Any] = [123, [], {}, 3.14, True]
 
         for key in invalid_keys:
-            assert validate_redis_key(key) is False
+            assert validate_redis_key(key) is False  # type: ignore[arg-type]
 
     def test_key_length_limit(self):
         """Test key length validation"""
@@ -468,7 +469,7 @@ class TestValidateSessionData:
     def test_non_serializable_data(self):
         """Test that non-JSON-serializable data is invalid"""
         # Functions are not JSON serializable
-        invalid_data = {"function": lambda x: x}
+        invalid_data: dict[str, Any] = {"function": lambda x: x}
         assert validate_session_data(invalid_data) is False
 
         # Sets are not JSON serializable
@@ -478,7 +479,7 @@ class TestValidateSessionData:
     def test_circular_reference_data(self):
         """Test handling of circular references"""
         # Create circular reference
-        circular_data = {"key": "value"}
+        circular_data: dict[str, Any] = {"key": "value"}
         circular_data["self"] = circular_data
 
         assert validate_session_data(circular_data) is False
