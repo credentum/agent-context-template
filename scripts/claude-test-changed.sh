@@ -228,6 +228,13 @@ run_tests() {
     pytest_args+=("--tb=short")
     pytest_args+=("-v")
 
+    # Check if pytest is installed
+    if ! command -v pytest >/dev/null 2>&1; then
+        echo -e "${RED}Error: pytest is not installed${NC}" >&2
+        echo "Please install pytest: pip install pytest pytest-cov" >&2
+        exit 1
+    fi
+
     # Run pytest
     log_verbose "Running: pytest ${pytest_args[*]}"
 
@@ -262,6 +269,8 @@ EOF
     pytest_output=$(pytest "${pytest_args[@]}" 2>&1) || pytest_exit_code=$?
 
     # Parse results
+    # TODO: Consider using pytest-json-report plugin for more reliable parsing
+    # This would eliminate the need for grep-based parsing and provide structured data
     local tests_passed=0
     local tests_failed=0
     local tests_skipped=0
@@ -304,7 +313,8 @@ EOF
     "report": "Run with --verbose to see full coverage report"
   },
   "duration": "${duration}",
-  "recommendation": "$(get_recommendation $tests_failed $coverage_percentage)"
+  "recommendation": "$(get_recommendation $tests_failed $coverage_percentage)",
+  "note": "Consider using pytest-json-report for more reliable parsing"
 }
 EOF
 )

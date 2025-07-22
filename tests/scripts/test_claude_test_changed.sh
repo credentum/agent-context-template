@@ -79,6 +79,13 @@ else
     echo -e "Skipping: Shellcheck validation ... ${YELLOW}SKIPPED${NC} (shellcheck not installed)"
 fi
 
+# Test 11: JSON output structure validation
+if command -v jq >/dev/null 2>&1; then
+    run_test "JSON output validation" "$SCRIPT_PATH --dry-run 2>/dev/null | jq -e '.files_changed' >/dev/null" "pass"
+else
+    echo -e "Skipping: JSON output validation ... ${YELLOW}SKIPPED${NC} (jq not installed)"
+fi
+
 echo -e "\n${YELLOW}Test Summary:${NC}"
 echo -e "  ${GREEN}Passed: $TESTS_PASSED${NC}"
 if [[ $TESTS_FAILED -gt 0 ]]; then
