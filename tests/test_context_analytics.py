@@ -58,7 +58,9 @@ class TestContextAnalytics:
     @patch("src.analytics.context_analytics.Path.exists")
     @patch("builtins.open", create=True)
     @patch("yaml.safe_load")
-    def test_analyze_document_lifecycle_no_connection(self, mock_yaml_load, mock_open, mock_exists) -> None:
+    def test_analyze_document_lifecycle_no_connection(
+        self, mock_yaml_load, mock_open, mock_exists
+    ) -> None:
         """Test analyze_document_lifecycle when connection fails"""
         mock_exists.return_value = True
         mock_yaml_load.return_value = self.mock_config
@@ -77,7 +79,9 @@ class TestContextAnalytics:
     @patch("src.analytics.context_analytics.Path.exists")
     @patch("builtins.open", create=True)
     @patch("yaml.safe_load")
-    def test_analyze_document_lifecycle_with_data(self, mock_yaml_load, mock_open, mock_exists) -> None:
+    def test_analyze_document_lifecycle_with_data(
+        self, mock_yaml_load, mock_open, mock_exists
+    ) -> None:
         """Test analyze_document_lifecycle with successful data retrieval"""
         mock_exists.return_value = True
         mock_yaml_load.return_value = self.mock_config
@@ -121,7 +125,9 @@ class TestContextAnalytics:
     @patch("src.analytics.context_analytics.Path.exists")
     @patch("builtins.open", create=True)
     @patch("yaml.safe_load")
-    def test_analyze_document_lifecycle_exception(self, mock_yaml_load, mock_open, mock_exists) -> None:
+    def test_analyze_document_lifecycle_exception(
+        self, mock_yaml_load, mock_open, mock_exists
+    ) -> None:
         """Test analyze_document_lifecycle with exception"""
         mock_exists.return_value = True
         mock_yaml_load.return_value = self.mock_config
@@ -141,7 +147,9 @@ class TestContextAnalytics:
     @patch("src.analytics.context_analytics.Path.exists")
     @patch("builtins.open", create=True)
     @patch("yaml.safe_load")
-    def test_analyze_agent_performance_with_data(self, mock_yaml_load, mock_open, mock_exists) -> None:
+    def test_analyze_agent_performance_with_data(
+        self, mock_yaml_load, mock_open, mock_exists
+    ) -> None:
         """Test analyze_agent_performance with successful data retrieval"""
         mock_exists.return_value = True
         mock_yaml_load.return_value = self.mock_config
@@ -189,7 +197,9 @@ class TestContextAnalytics:
     @patch("src.analytics.context_analytics.Path.exists")
     @patch("builtins.open", create=True)
     @patch("yaml.safe_load")
-    def test_analyze_agent_performance_no_data(self, mock_yaml_load, mock_open, mock_exists) -> None:
+    def test_analyze_agent_performance_no_data(
+        self, mock_yaml_load, mock_open, mock_exists
+    ) -> None:
         """Test analyze_agent_performance with no data"""
         mock_exists.return_value = True
         mock_yaml_load.return_value = self.mock_config
@@ -357,7 +367,9 @@ class TestContextAnalytics:
     @patch("src.analytics.context_analytics.Path.exists")
     @patch("builtins.open", create=True)
     @patch("yaml.safe_load")
-    def test_export_analytics_data_invalid_format(self, mock_yaml_load, mock_open, mock_exists) -> None:
+    def test_export_analytics_data_invalid_format(
+        self, mock_yaml_load, mock_open, mock_exists
+    ) -> None:
         """Test export_analytics_data with invalid format"""
         mock_exists.return_value = True
         mock_yaml_load.return_value = self.mock_config

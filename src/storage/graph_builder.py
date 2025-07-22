@@ -30,7 +30,7 @@ class GraphBuilder:
         self.processed_cache_path = Path("context/.graph_cache/processed.json")
         self.processed_docs: Dict[str, str] = self._load_processed_cache()
 
-    def __enter__(self) -> 'GraphBuilder':
+    def __enter__(self) -> "GraphBuilder":
         """Context manager entry"""
         return self
 

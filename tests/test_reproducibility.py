@@ -153,7 +153,9 @@ class TestReproducibility:
         restored_hash = self._calculate_file_hash(doc_path)
         assert restored_hash == snapshot["documents"]["sprint-001.yaml"]["hash"]
 
-    def test_incremental_hash_tracking(self, hash_embedder: HashDiffEmbedder, test_data_dir: Path) -> None:
+    def test_incremental_hash_tracking(
+        self, hash_embedder: HashDiffEmbedder, test_data_dir: Path
+    ) -> None:
         """Test incremental hash tracking for changes"""
         history: List[Dict[str, Any]] = []
 

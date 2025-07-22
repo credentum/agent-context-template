@@ -40,7 +40,9 @@ class TestHashDiffEmbedder:
 
     @patch("builtins.open", new_callable=mock_open)
     @patch("yaml.safe_load")
-    def test_load_config_success(self, mock_yaml_load: Mock, mock_file: Mock, test_config: Dict[str, Any]) -> None:
+    def test_load_config_success(
+        self, mock_yaml_load: Mock, mock_file: Mock, test_config: Dict[str, Any]
+    ) -> None:
         """Test successful config loading"""
         mock_yaml_load.return_value = test_config
 
@@ -137,7 +139,9 @@ class TestHashDiffEmbedder:
     @patch("pathlib.Path.exists", return_value=True)
     @patch("builtins.open", new_callable=mock_open)
     @patch("json.load")
-    def test_load_hash_cache_success(self, mock_json_load: Mock, mock_file: Mock, mock_exists: Mock) -> None:
+    def test_load_hash_cache_success(
+        self, mock_json_load: Mock, mock_file: Mock, mock_exists: Mock
+    ) -> None:
         """Test successful hash cache loading"""
         cache_data = {
             "doc1": {
@@ -173,7 +177,9 @@ class TestHashDiffEmbedder:
     @patch("builtins.open", new_callable=mock_open)
     @patch("json.load", side_effect=json.JSONDecodeError("error", "doc", 0))
     @patch("click.echo")
-    def test_load_hash_cache_invalid_json(self, mock_echo: Mock, mock_json_load: Mock, mock_file: Mock, mock_exists: Mock) -> None:
+    def test_load_hash_cache_invalid_json(
+        self, mock_echo: Mock, mock_json_load: Mock, mock_file: Mock, mock_exists: Mock
+    ) -> None:
         """Test hash cache loading with invalid JSON"""
         embedder = HashDiffEmbedder()
 
@@ -207,7 +213,13 @@ class TestHashDiffEmbedder:
 
     @patch("src.storage.hash_diff_embedder.openai.OpenAI")
     @patch("src.storage.hash_diff_embedder.QdrantClient")
-    def test_connect_success(self, mock_qdrant_client: Mock, mock_openai: Mock, test_config: Dict[str, Any], monkeypatch: Any) -> None:
+    def test_connect_success(
+        self,
+        mock_qdrant_client: Mock,
+        mock_openai: Mock,
+        test_config: Dict[str, Any],
+        monkeypatch: Any,
+    ) -> None:
         """Test successful connection"""
         # Set OpenAI API key from test config
         monkeypatch.setenv("OPENAI_API_KEY", test_config["openai"]["api_key"])
