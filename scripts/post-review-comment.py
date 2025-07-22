@@ -4,10 +4,10 @@ GitHub Actions helper to parse claude-ci review output and format for PR comment
 Part of Issue #1063: Align GitHub Actions with Claude Local CI
 """
 
+import argparse
 import json
 import sys
-import argparse
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def parse_review_output(file_path: str) -> Dict[str, Any]:

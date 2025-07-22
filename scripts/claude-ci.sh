@@ -84,9 +84,10 @@ github_actions_output() {
             echo "command=${command}" >> "${GITHUB_OUTPUT}"
             echo "target=${target}" >> "${GITHUB_OUTPUT}"
         else
-            echo "::set-output name=status::${status}"
-            echo "::set-output name=command::${command}"
-            echo "::set-output name=target::${target}"
+            # Use modern GitHub Actions output format
+            echo "status=${status}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
+            echo "command=${command}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
+            echo "target=${target}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
         fi
         
         # Set summary for GitHub Actions UI
