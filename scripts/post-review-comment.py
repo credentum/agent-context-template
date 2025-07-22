@@ -11,16 +11,38 @@ from typing import Any, Dict
 
 
 def parse_review_output(file_path: str) -> Dict[str, Any]:
-    """Parse claude-ci review JSON output."""
+    """Parse claude-ci review JSON output with comprehensive error handling."""
     try:
         with open(file_path, "r") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
+            content = f.read().strip()
+            if not content:
+                return {
+                    "status": "FAILED",
+                    "command": "review",
+                    "errors": [{"message": "Review output file is empty"}],
+                    "next_action": "Check claude-ci review execution",
+                }
+            return json.loads(content)
+    except FileNotFoundError:
         return {
             "status": "FAILED",
             "command": "review",
-            "errors": [{"message": f"Could not parse review output: {e}"}],
-            "next_action": "Check review output format",
+            "errors": [{"message": f"Review output file not found: {file_path}"}],
+            "next_action": "Ensure claude-ci review output is captured to file",
+        }
+    except json.JSONDecodeError as e:
+        return {
+            "status": "FAILED",
+            "command": "review",
+            "errors": [{"message": f"Invalid JSON in review output: {e}"}],
+            "next_action": "Check claude-ci review output format and ensure valid JSON",
+        }
+    except Exception as e:
+        return {
+            "status": "FAILED",
+            "command": "review",
+            "errors": [{"message": f"Unexpected error parsing review output: {e}"}],
+            "next_action": "Check file permissions and claude-ci review execution",
         }
 
 
