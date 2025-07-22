@@ -149,9 +149,10 @@ class TestARCReviewer:
             assert result["status"] == "PASS"
             assert "src/validators/test.py" in result["details"]["validators"]
 
-    def test_check_coverage_no_json(self):
+    def test_check_coverage_no_json(self, tmp_path):
         """Test coverage checking without coverage.json file."""
         reviewer = ARCReviewer()
+        reviewer.repo_root = tmp_path  # Point to empty directory
 
         with patch.object(reviewer, "_run_command") as mock_cmd:
             mock_cmd.return_value = (0, "", "")
@@ -261,7 +262,7 @@ class TestARCReviewer:
         test_file = tmp_path / "src" / "test.py"
         test_file.parent.mkdir(parents=True)
         with open(test_file, "w") as f:
-            f.write('API_KEY = "secret123"')
+            f.write('API_KEY = "secret"')
 
         issues = reviewer._check_security(["src/test.py"])
 
