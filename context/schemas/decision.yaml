@@ -2,7 +2,7 @@
 # Schema for decision documents
 # Extends base schema with decision-specific fields
 
-include('base.yaml')
+include: base.yaml
 
 decision_content: str(min=1, required=True)
 decision_date: regex(r'^\\d{4}-\\d{2}-\\d{2}$', required=True)
