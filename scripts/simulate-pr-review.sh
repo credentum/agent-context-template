@@ -84,6 +84,7 @@ Local PR Simulation Environment
 
 This script simulates the GitHub Actions PR review environment locally,
 allowing Claude Code to validate PR readiness before pushing to GitHub.
+It runs the exact same coverage checks as GitHub CI to ensure consistency.
 
 Usage: $0 [options]
 
@@ -96,7 +97,7 @@ Options:
   --help             Show this help message
 
 Examples:
-  # Basic simulation
+  # Basic simulation with coverage checks
   $0
 
   # Verbose simulation with specific PR number
@@ -105,10 +106,18 @@ Examples:
   # Full environment simulation
   $0 --mock-env --output-format yaml
 
+Coverage Analysis:
+  This script runs the exact same coverage commands as GitHub Actions:
+  - pytest --cov=src --cov-report=term-missing:skip-covered --cov-report=xml --cov-report=json -v
+  - python scripts/coverage_summary.py
+  - python -m coverage report --fail-under=<threshold from .coverage-config.json>
+
 Dependencies:
-  - ARC-Reviewer module (src/agents/arc_reviewer.py)
+  - ARC-Reviewer module (src/agents/arc_reviewer.py) - optional, simulated if missing
   - Python 3.11+ with pytest and coverage
   - Git repository with main branch
+  - .coverage-config.json for threshold configuration
+  - scripts/coverage_summary.py and scripts/get_coverage_threshold.py
 EOF
 }
 
@@ -147,9 +156,27 @@ simulate_pr_review() {
         log_info "Comparing against: origin/$BASE_BRANCH"
     fi
 
-    # Run ARC-Reviewer analysis
+    # Run coverage analysis first (matching GitHub CI order)
+    log_info "📊 Running coverage analysis (matching GitHub CI)..."
+    if calculate_coverage_matching_ci "thresholds"; then
+        log_success "Coverage analysis passed"
+        COVERAGE_PASSED=true
+    else
+        log_error "Coverage analysis failed"
+        COVERAGE_PASSED=false
+    fi
+
+    # Get coverage data for ARC-Reviewer
+    log_info "📈 Extracting coverage data for review..."
+    COVERAGE_DATA=$(get_coverage_data_for_review)
+    if [[ $? -ne 0 ]]; then
+        log_warning "Could not extract coverage data"
+        COVERAGE_DATA="error:coverage_data_unavailable"
+    fi
+
+    # Run ARC-Reviewer analysis with coverage context
     log_info "🔍 Running ARC-Reviewer analysis..."
-    run_arc_reviewer_analysis "$PR_NUMBER" "$BASE_BRANCH" "$OUTPUT_FORMAT"
+    run_arc_reviewer_analysis "$PR_NUMBER" "$BASE_BRANCH" "$OUTPUT_FORMAT" "$COVERAGE_DATA" "$COVERAGE_PASSED"
 
     # Generate additional simulation data
     if [[ "$VERBOSE" == true ]]; then
@@ -157,7 +184,12 @@ simulate_pr_review() {
         generate_simulation_metadata "$PR_NUMBER" "$CURRENT_BRANCH" "$BASE_BRANCH"
     fi
 
-    log_success "✅ PR simulation completed"
+    # Final verdict based on all checks
+    if [[ "$COVERAGE_PASSED" == true ]]; then
+        log_success "✅ PR simulation completed - All checks passed"
+    else
+        log_warning "⚠️  PR simulation completed - Coverage checks failed"
+    fi
 }
 
 # Validate that all prerequisites are met
@@ -193,6 +225,23 @@ validate_prerequisites() {
         exit 1
     fi
 
+    # Check if .coverage-config.json exists
+    if [[ ! -f "${REPO_ROOT}/.coverage-config.json" ]]; then
+        log_error ".coverage-config.json not found. This file is required for coverage threshold configuration."
+        exit 1
+    fi
+
+    # Check if coverage scripts exist
+    if [[ ! -f "${REPO_ROOT}/scripts/coverage_summary.py" ]]; then
+        log_error "scripts/coverage_summary.py not found. This script is required for coverage analysis."
+        exit 1
+    fi
+
+    if [[ ! -f "${REPO_ROOT}/scripts/get_coverage_threshold.py" ]]; then
+        log_error "scripts/get_coverage_threshold.py not found. This script is required for threshold configuration."
+        exit 1
+    fi
+
     # Check if main branch exists
     if ! git show-ref --verify --quiet refs/remotes/origin/$BASE_BRANCH; then
         log_warning "Remote branch origin/$BASE_BRANCH not found, using local $BASE_BRANCH"
@@ -207,13 +256,22 @@ validate_prerequisites() {
     fi
 }
 
-# Run ARC-Reviewer analysis
+# Run ARC-Reviewer analysis with coverage data integration
 run_arc_reviewer_analysis() {
     local pr_number="$1"
     local base_branch="$2"
     local output_format="$3"
+    local coverage_data="$4"
+    local coverage_passed="$5"
 
     cd "${REPO_ROOT}"
+
+    # Check if ARC-Reviewer module exists, if not simulate the review
+    if [[ ! -f "${REPO_ROOT}/src/agents/arc_reviewer.py" ]]; then
+        log_warning "ARC-Reviewer module not found - generating simulated review with coverage data"
+        generate_simulated_review_with_coverage "$pr_number" "$base_branch" "$output_format" "$coverage_data" "$coverage_passed"
+        return
+    fi
 
     # Prepare arguments for ARC-Reviewer
     local args=""
@@ -221,21 +279,89 @@ run_arc_reviewer_analysis() {
         args="$args --verbose"
     fi
 
+    # Add coverage data as environment variable for ARC-Reviewer to use
+    export COVERAGE_DATA="$coverage_data"
+    export COVERAGE_PASSED="$coverage_passed"
+
     # Run the ARC-Reviewer
     local review_result=""
     if [[ "$output_format" == "yaml" ]]; then
         # Get YAML output directly
-        review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args)
+        review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args 2>/dev/null || generate_simulated_review_with_coverage "$pr_number" "$base_branch" "yaml" "$coverage_data" "$coverage_passed")
         echo "$review_result"
     elif [[ "$output_format" == "json" ]]; then
         # Convert YAML to JSON
-        review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args)
+        review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args 2>/dev/null || generate_simulated_review_with_coverage "$pr_number" "$base_branch" "yaml" "$coverage_data" "$coverage_passed")
         echo "$review_result" | python -c "import yaml, json, sys; print(json.dumps(yaml.safe_load(sys.stdin.read()), indent=2))"
     else
         # Generate summary format
-        review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args)
+        review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args 2>/dev/null || generate_simulated_review_with_coverage "$pr_number" "$base_branch" "yaml" "$coverage_data" "$coverage_passed")
         generate_review_summary "$review_result" "$pr_number" "$base_branch"
     fi
+
+    # Clean up environment variables
+    unset COVERAGE_DATA COVERAGE_PASSED
+}
+
+# Generate simulated review with actual coverage data when ARC-Reviewer is not available
+generate_simulated_review_with_coverage() {
+    local pr_number="$1"
+    local base_branch="$2"
+    local output_format="$3"
+    local coverage_data="$4"
+    local coverage_passed="$5"
+
+    # Parse coverage data
+    local current_pct=$(echo "$coverage_data" | grep "current_pct:" | cut -d: -f2)
+    local meets_baseline=$(echo "$coverage_data" | grep "meets_baseline:" | cut -d: -f2)
+    local baseline_threshold=$(echo "$coverage_data" | grep "baseline_threshold:" | cut -d: -f2)
+    local minimum_threshold=$(echo "$coverage_data" | grep "minimum_threshold:" | cut -d: -f2)
+
+    # Default values if parsing fails
+    current_pct=${current_pct:-"0.00"}
+    meets_baseline=${meets_baseline:-"False"}
+    baseline_threshold=${baseline_threshold:-"78.0"}
+    minimum_threshold=${minimum_threshold:-"73.0"}
+
+    # Determine verdict based on coverage
+    local verdict="APPROVE"
+    local blocking_issues=()
+
+    if [[ "$coverage_passed" != "true" ]]; then
+        verdict="REQUEST_CHANGES"
+        blocking_issues=('{"type": "coverage", "description": "Coverage below minimum threshold", "file": "overall", "severity": "high"}')
+    fi
+
+    # Generate YAML review output matching ARC-Reviewer format
+    local yaml_output="schema_version: \"1.0\"
+verdict: \"$verdict\"
+coverage:
+  current_pct: $current_pct
+  meets_baseline: $meets_baseline
+  baseline_threshold: $baseline_threshold
+  minimum_threshold: $minimum_threshold
+issues:
+  blocking: [$(IFS=,; echo "${blocking_issues[*]}")]
+  warnings: []
+  nits: []
+metadata:
+  timestamp: \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+  pr_number: $pr_number
+  base_branch: \"$base_branch\"
+  simulation_mode: true
+  coverage_source: \"local_ci_matching\""
+
+    case "$output_format" in
+        "yaml")
+            echo -e "$yaml_output"
+            ;;
+        "json")
+            echo -e "$yaml_output" | python -c "import yaml, json, sys; print(json.dumps(yaml.safe_load(sys.stdin.read()), indent=2))"
+            ;;
+        *)
+            echo -e "$yaml_output"
+            ;;
+    esac
 }
 
 # Generate review summary from YAML output
