@@ -1,0 +1,106 @@
+---
+################################################################################
+# 🔍 Unified PR Review (Simple) - Uses Claude CI Review Scripts
+# Simplified version without complex JavaScript comment posting
+# Issue #1063: Align GitHub Actions with Claude Local CI
+################################################################################
+name: Unified PR Review (Simple)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  pr-review:
+    name: "🔍 PR Review Simulation"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871b0ad9019b8ad7c6f7e9a0556
+        with:
+          fetch-depth: 0  # Need full history for review
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache dependencies
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ hashFiles('requirements*.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install -r requirements-test.txt
+
+      - name: Setup Docker for PR review
+        run: |
+          # Ensure Docker is available for claude-ci review
+          docker --version
+          docker info
+
+      - name: Create required directories
+        run: |
+          mkdir -p context/.duckdb context/.graph_cache context/.vector_cache
+          mkdir -p context/.embeddings_cache context/trace context/archive
+          mkdir -p context/mcp_contracts context/logs
+          mkdir -p .claude/hooks
+
+      - name: Run PR Review Simulation
+        id: review
+        run: |
+          echo "🔍 Running PR review using claude-ci review --github-output"
+          
+          # Capture only stdout for clean JSON, stderr to log
+          if ./scripts/claude-ci.sh review --github-output > review-output.json 2>review-errors.log; then
+            echo "✅ PR Review completed successfully"
+            echo "status=PASSED" >> $GITHUB_OUTPUT
+            
+            # Display review results
+            echo "Review results:"
+            cat review-output.json
+          else
+            echo "❌ PR Review identified issues"
+            echo "status=FAILED" >> $GITHUB_OUTPUT
+            
+            # Display both output and errors for debugging
+            echo "Review output (failed):"
+            cat review-output.json || echo "No JSON output captured"
+            echo "Review errors:"
+            cat review-errors.log || echo "No error log captured"
+            exit 1
+          fi
+
+      - name: Parse and Format Review Results
+        if: always()
+        run: |
+          # Use post-review-comment.py to format results
+          if [ -f review-output.json ]; then
+            echo "Parsing review results..."
+            python3 scripts/post-review-comment.py review-output.json --output-format summary
+          else
+            echo "No review output file found"
+          fi
+
+      - name: Upload Review Artifacts
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029
+        if: always()
+        with:
+          name: pr-review-results
+          path: |
+            test-results/
+            coverage*.xml
+            review-output.json

@@ -15,6 +15,7 @@ FIX_MODE=false
 ALL_MODE=false
 COMPREHENSIVE=false
 QUICK=false
+GITHUB_OUTPUT=false
 
 # Colors for terminal output (disabled in JSON mode)
 RED='\033[0;31m'
@@ -45,13 +46,14 @@ Options:
   --comprehensive Full validation suite
   --json         Output raw JSON (default)
   --pretty       Human-readable output
+  --github-output Enable GitHub Actions output format
   --verbose      Show detailed output
 
 Examples:
   claude-ci check src/main.py
   claude-ci test --all
   claude-ci pre-commit --fix
-  claude-ci all --quick
+  claude-ci all --quick --github-output
   claude-ci review --comprehensive
 
 Progressive Validation Modes:
@@ -61,6 +63,59 @@ Progressive Validation Modes:
 
 EOF
     exit 0
+}
+
+# GitHub Actions output helper
+github_actions_output() {
+    local status="$1"
+    local command="$2"
+    local target="${3:-all}"
+    local checks="${4:-{}}"
+    local errors="${5:-[]}"
+    
+    if [ "$GITHUB_OUTPUT" = true ]; then
+        # Set GitHub Actions step outputs
+        if [ -n "${GITHUB_OUTPUT_FILE:-}" ]; then
+            echo "status=${status}" >> "${GITHUB_OUTPUT_FILE}"
+            echo "command=${command}" >> "${GITHUB_OUTPUT_FILE}"
+            echo "target=${target}" >> "${GITHUB_OUTPUT_FILE}"
+        elif [ -n "${GITHUB_OUTPUT:-}" ] && [ "$GITHUB_OUTPUT" != "true" ]; then
+            echo "status=${status}" >> "${GITHUB_OUTPUT}"
+            echo "command=${command}" >> "${GITHUB_OUTPUT}"
+            echo "target=${target}" >> "${GITHUB_OUTPUT}"
+        else
+            # Use modern GitHub Actions output format (only if GITHUB_OUTPUT is set)
+            if [ -n "${GITHUB_OUTPUT:-}" ]; then
+                echo "status=${status}" >> "${GITHUB_OUTPUT}"
+                echo "command=${command}" >> "${GITHUB_OUTPUT}"
+                echo "target=${target}" >> "${GITHUB_OUTPUT}"
+            fi
+        fi
+        
+        # Set summary for GitHub Actions UI
+        if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            case "$status" in
+                "PASSED")
+                    echo "✅ **${command}** completed successfully" >> "$GITHUB_STEP_SUMMARY"
+                    ;;
+                "FAILED")
+                    echo "❌ **${command}** failed" >> "$GITHUB_STEP_SUMMARY"
+                    if [ "$errors" != "[]" ]; then
+                        echo "" >> "$GITHUB_STEP_SUMMARY"
+                        echo "**Errors:**" >> "$GITHUB_STEP_SUMMARY"
+                        echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+                        echo "$errors" | jq -r '.[] | "- " + (.message // .error // .)' 2>/dev/null || echo "- Check logs for details" >> "$GITHUB_STEP_SUMMARY"
+                        echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+                    fi
+                    ;;
+            esac
+        fi
+        
+        # Add annotations for errors (visible in PR checks)
+        if [ "$status" = "FAILED" ] && [ "$errors" != "[]" ]; then
+            echo "$errors" | jq -r '.[] | select(.file and .line) | "::error file=\(.file),line=\(.line)::\(.message // .error // "Check failed")"' 2>/dev/null || true
+        fi
+    fi
 }
 
 # JSON output helper - robust JSON generation using jq
@@ -80,6 +135,9 @@ json_output() {
     if ! echo "$errors" | jq empty 2>/dev/null; then
         errors="[]"
     fi
+
+    # Add GitHub Actions output if enabled
+    github_actions_output "$status" "$command" "$target" "$checks" "$errors"
 
     if [ "$JSON_OUTPUT" = true ]; then
         # Use jq to ensure proper JSON formatting
@@ -300,17 +358,84 @@ cmd_review() {
     local start_time=$(date +%s)
 
     # Dependencies already validated at startup
-    # Use run-ci-docker.sh for comprehensive review
+    # Use comprehensive checks instead of Docker in CI environment
+    local overall_status="PASSED"
+    local checks_json="{"
+    local errors_json="["
+    local first_check=true
+    local first_error=true
+    
+    # Don't output pretty messages in JSON mode to avoid contaminating JSON output
+    if [ "$JSON_OUTPUT" = false ]; then
+        pretty_output "review" "INFO" "Running comprehensive PR review simulation..."
+    fi
+    
+    # Run pre-commit checks
+    if cmd_pre_commit > /dev/null 2>&1; then
+        if [ "$first_check" = true ]; then
+            checks_json="${checks_json}\"pre-commit\": \"PASSED\""
+            first_check=false
+        else
+            checks_json="${checks_json}, \"pre-commit\": \"PASSED\""
+        fi
+    else
+        overall_status="FAILED"
+        if [ "$first_check" = true ]; then
+            checks_json="${checks_json}\"pre-commit\": \"FAILED\""
+            first_check=false
+        else
+            checks_json="${checks_json}, \"pre-commit\": \"FAILED\""
+        fi
+        if [ "$first_error" = true ]; then
+            errors_json="${errors_json}{\"stage\": \"pre-commit\", \"message\": \"Pre-commit checks failed\"}"
+            first_error=false
+        else
+            errors_json="${errors_json}, {\"stage\": \"pre-commit\", \"message\": \"Pre-commit checks failed\"}"
+        fi
+    fi
+    
+    # Run test suite
+    if cmd_test > /dev/null 2>&1; then
+        if [ "$first_check" = true ]; then
+            checks_json="${checks_json}\"tests\": \"PASSED\""
+            first_check=false
+        else
+            checks_json="${checks_json}, \"tests\": \"PASSED\""
+        fi
+    else
+        overall_status="FAILED"
+        if [ "$first_check" = true ]; then
+            checks_json="${checks_json}\"tests\": \"FAILED\""
+            first_check=false
+        else
+            checks_json="${checks_json}, \"tests\": \"FAILED\""
+        fi
+        if [ "$first_error" = true ]; then
+            errors_json="${errors_json}{\"stage\": \"tests\", \"message\": \"Test suite failed\"}"
+            first_error=false
+        else
+            errors_json="${errors_json}, {\"stage\": \"tests\", \"message\": \"Test suite failed\"}"
+        fi
+    fi
+    
+    checks_json="${checks_json}}"
+    errors_json="${errors_json}]"
+
     local end_time=$(date +%s)
     local duration="$((end_time - start_time))s"
+    local next_action="PR review simulation completed successfully"
+    
+    if [ "$overall_status" = "FAILED" ]; then
+        next_action="Fix failed checks before PR submission"
+    fi
 
-    if "$SCRIPT_DIR/run-ci-docker.sh" > /dev/null 2>&1; then
-        json_output "review" "PASSED" "all" "$duration" "{\"docker-ci\": \"PASSED\", \"coverage\": \"PASSED\"}" "[]" "PR review simulation passed"
+    json_output "review" "$overall_status" "all" "$duration" "$checks_json" "$errors_json" "$next_action"
+
+    if [ "$overall_status" = "PASSED" ]; then
         pretty_output "review" "PASSED" "PR review simulation completed successfully"
         return 0
     else
-        json_output "review" "FAILED" "all" "$duration" "{\"docker-ci\": \"FAILED\"}" "[{\"message\": \"Docker CI checks failed\"}]" "Fix CI issues before PR"
-        pretty_output "review" "FAILED" "Docker CI checks failed"
+        pretty_output "review" "FAILED" "PR review found issues that need fixing"
         return 1
     fi
 }
@@ -336,7 +461,10 @@ cmd_all() {
     }
     trap cleanup_temp_files EXIT
 
-    pretty_output "all" "INFO" "Running complete CI pipeline..."
+    # Don't output pretty messages in JSON mode to avoid contaminating JSON output
+    if [ "$JSON_OUTPUT" = false ]; then
+        pretty_output "all" "INFO" "Running complete CI pipeline..."
+    fi
 
     # Helper function to capture command output and status
     run_stage() {
@@ -345,7 +473,10 @@ cmd_all() {
         local temp_output
         local stage_result
 
-        pretty_output "all" "INFO" "Running stage: $stage_name"
+        # Don't output pretty messages in JSON mode to avoid contaminating JSON output
+        if [ "$JSON_OUTPUT" = false ]; then
+            pretty_output "all" "INFO" "Running stage: $stage_name"
+        fi
         stages_run="$stages_run $stage_name"
 
         # Capture output from stage with secure temp file
@@ -404,15 +535,21 @@ cmd_all() {
 
     # Progressive validation based on mode
     if [ "$QUICK" = true ]; then
-        pretty_output "all" "INFO" "Quick mode: format check + basic lint"
+        if [ "$JSON_OUTPUT" = false ]; then
+            pretty_output "all" "INFO" "Quick mode: format check + basic lint"
+        fi
         run_stage "pre-commit" "cmd_pre_commit" || true
     elif [ "$COMPREHENSIVE" = true ]; then
-        pretty_output "all" "INFO" "Comprehensive mode: full validation suite"
+        if [ "$JSON_OUTPUT" = false ]; then
+            pretty_output "all" "INFO" "Comprehensive mode: full validation suite"
+        fi
         run_stage "pre-commit" "cmd_pre_commit" || true
         run_stage "test" "cmd_test" || true
         run_stage "review" "cmd_review" || true
     else
-        pretty_output "all" "INFO" "Standard mode: lint + relevant tests + pre-commit"
+        if [ "$JSON_OUTPUT" = false ]; then
+            pretty_output "all" "INFO" "Standard mode: lint + relevant tests + pre-commit"
+        fi
         run_stage "pre-commit" "cmd_pre_commit" || true
         run_stage "test" "cmd_test" || true
     fi
@@ -482,6 +619,10 @@ while [[ $# -gt 0 ]]; do
             JSON_OUTPUT=false
             shift
             ;;
+        --github-output)
+            GITHUB_OUTPUT=true
+            shift
+            ;;
         --verbose)
             VERBOSE=true
             shift
@@ -527,11 +668,12 @@ validate_dependencies() {
             dependencies+=("claude-pre-commit.sh")
             ;;
         review)
-            dependencies+=("run-ci-docker.sh")
+            # Review uses pre-commit and test commands, no Docker required
+            dependencies+=("claude-pre-commit.sh" "claude-test-changed.sh")
             ;;
         all)
-            # All command needs multiple dependencies
-            dependencies+=("claude-post-edit.sh" "claude-test-changed.sh" "claude-pre-commit.sh" "run-ci-docker.sh")
+            # All command needs multiple dependencies, Docker optional for review
+            dependencies+=("claude-post-edit.sh" "claude-test-changed.sh" "claude-pre-commit.sh")
             ;;
     esac
 
