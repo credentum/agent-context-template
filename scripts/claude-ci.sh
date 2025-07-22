@@ -356,17 +356,81 @@ cmd_review() {
     local start_time=$(date +%s)
 
     # Dependencies already validated at startup
-    # Use run-ci-docker.sh for comprehensive review
+    # Use comprehensive checks instead of Docker in CI environment
+    local overall_status="PASSED"
+    local checks_json="{"
+    local errors_json="["
+    local first_check=true
+    local first_error=true
+    
+    pretty_output "review" "INFO" "Running comprehensive PR review simulation..."
+    
+    # Run pre-commit checks
+    if cmd_pre_commit > /dev/null 2>&1; then
+        if [ "$first_check" = true ]; then
+            checks_json="${checks_json}\"pre-commit\": \"PASSED\""
+            first_check=false
+        else
+            checks_json="${checks_json}, \"pre-commit\": \"PASSED\""
+        fi
+    else
+        overall_status="FAILED"
+        if [ "$first_check" = true ]; then
+            checks_json="${checks_json}\"pre-commit\": \"FAILED\""
+            first_check=false
+        else
+            checks_json="${checks_json}, \"pre-commit\": \"FAILED\""
+        fi
+        if [ "$first_error" = true ]; then
+            errors_json="${errors_json}{\"stage\": \"pre-commit\", \"message\": \"Pre-commit checks failed\"}"
+            first_error=false
+        else
+            errors_json="${errors_json}, {\"stage\": \"pre-commit\", \"message\": \"Pre-commit checks failed\"}"
+        fi
+    fi
+    
+    # Run test suite
+    if cmd_test > /dev/null 2>&1; then
+        if [ "$first_check" = true ]; then
+            checks_json="${checks_json}\"tests\": \"PASSED\""
+            first_check=false
+        else
+            checks_json="${checks_json}, \"tests\": \"PASSED\""
+        fi
+    else
+        overall_status="FAILED"
+        if [ "$first_check" = true ]; then
+            checks_json="${checks_json}\"tests\": \"FAILED\""
+            first_check=false
+        else
+            checks_json="${checks_json}, \"tests\": \"FAILED\""
+        fi
+        if [ "$first_error" = true ]; then
+            errors_json="${errors_json}{\"stage\": \"tests\", \"message\": \"Test suite failed\"}"
+            first_error=false
+        else
+            errors_json="${errors_json}, {\"stage\": \"tests\", \"message\": \"Test suite failed\"}"
+        fi
+    fi
+    
+    checks_json="${checks_json}}"
+    errors_json="${errors_json}]"
+
     local end_time=$(date +%s)
     local duration="$((end_time - start_time))s"
+    local next_action="PR review simulation completed successfully"
+    
+    if [ "$overall_status" = "FAILED" ]; then
+        next_action="Fix failed checks before PR submission"
+    fi
 
-    if "$SCRIPT_DIR/run-ci-docker.sh" > /dev/null 2>&1; then
-        json_output "review" "PASSED" "all" "$duration" "{\"docker-ci\": \"PASSED\", \"coverage\": \"PASSED\"}" "[]" "PR review simulation passed"
+    json_output "review" "$overall_status" "all" "$duration" "$checks_json" "$errors_json" "$next_action"
+
+    if [ "$overall_status" = "PASSED" ]; then
         pretty_output "review" "PASSED" "PR review simulation completed successfully"
         return 0
     else
-        json_output "review" "FAILED" "all" "$duration" "{\"docker-ci\": \"FAILED\"}" "[{\"message\": \"Docker CI checks failed\"}]" "Fix CI issues before PR"
-        pretty_output "review" "FAILED" "Docker CI checks failed"
+        pretty_output "review" "FAILED" "PR review found issues that need fixing"
         return 1
     fi
 }
@@ -587,11 +651,12 @@ validate_dependencies() {
             dependencies+=("claude-pre-commit.sh")
             ;;
         review)
-            dependencies+=("run-ci-docker.sh")
+            # Review uses pre-commit and test commands, no Docker required
+            dependencies+=("claude-pre-commit.sh" "claude-test-changed.sh")
             ;;
         all)
-            # All command needs multiple dependencies
-            dependencies+=("claude-post-edit.sh" "claude-test-changed.sh" "claude-pre-commit.sh" "run-ci-docker.sh")
+            # All command needs multiple dependencies, Docker optional for review
+            dependencies+=("claude-post-edit.sh" "claude-test-changed.sh" "claude-pre-commit.sh")
             ;;
     esac
 
