@@ -257,21 +257,32 @@ class GraphBuilder:
         if graph_meta:
             # Define allowed relationship types for security
             ALLOWED_REL_TYPES = {
-                "RELATES_TO", "IMPLEMENTS", "FOLLOWS", "PREPARES", 
-                "CONSTRAINS", "REQUIRES", "DEFINES", "DEPENDS_ON",
-                "REFERENCES", "CONTAINS", "EXTENDS", "MODIFIES"
+                "RELATES_TO",
+                "IMPLEMENTS",
+                "FOLLOWS",
+                "PREPARES",
+                "CONSTRAINS",
+                "REQUIRES",
+                "DEFINES",
+                "DEPENDS_ON",
+                "REFERENCES",
+                "CONTAINS",
+                "EXTENDS",
+                "MODIFIES",
             }
-            
+
             relationships = graph_meta.get("relationships", [])
             for rel in relationships:
                 rel_type = rel.get("type", "RELATES_TO").upper()
-                
+
                 # Validate relationship type to prevent injection
                 if rel_type not in ALLOWED_REL_TYPES:
                     if self.verbose:
-                        click.echo(f"Warning: Skipping invalid relationship type: {rel_type}", err=True)
+                        click.echo(
+                            f"Warning: Skipping invalid relationship type: {rel_type}", err=True
+                        )
                     continue
-                    
+
                 target = rel.get("target")
                 if target:
                     # Use parameterized query with validated rel_type
