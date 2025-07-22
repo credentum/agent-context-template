@@ -159,12 +159,10 @@ class ConfigValidator:
             search = config["search"]
             if "ranking" in search:
                 ranking = search["ranking"]
-                if not isinstance(ranking.get("temporal_decay_rate", 0.01), (int, float)):
+                temporal_decay = ranking.get("temporal_decay_rate", 0.01)
+                if not isinstance(temporal_decay, (int, float)):
                     self.errors.append("search.ranking.temporal_decay_rate must be a number")
-                if (
-                    ranking.get("temporal_decay_rate", 0.01) < 0
-                    or ranking.get("temporal_decay_rate", 0.01) > 1
-                ):
+                elif temporal_decay < 0 or temporal_decay > 1:
                     self.errors.append("search.ranking.temporal_decay_rate must be between 0 and 1")
 
                 # Validate type boosts

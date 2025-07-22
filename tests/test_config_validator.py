@@ -310,6 +310,14 @@ class TestConfigValidator:
             "temporal_decay_rate must be between 0 and 1" in e for e in self.validator.errors
         )
 
+        # Test with non-numeric value (covers line 163)
+        config["search"]["ranking"]["temporal_decay_rate"] = "not-a-number"
+        config_path = self.create_config_file("performance3.yaml", config)
+        self.validator.errors = []
+
+        assert self.validator.validate_performance_config(config_path) is False
+        assert any("temporal_decay_rate must be a number" in e for e in self.validator.errors)
+
     def test_type_boosts_validation(self) -> None:
         """Test type boosts validation"""
         config = {
