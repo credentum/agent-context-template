@@ -30,7 +30,7 @@ class TestEndToEnd:
     """End-to-end tests for complete workflows"""
 
     @pytest.fixture
-    def test_project(self, tmp_path):
+    def test_project(self, tmp_path) -> None:
         """Create a complete test project structure"""
         # Create directory structure
         (tmp_path / "context").mkdir()
@@ -136,7 +136,7 @@ class TestEndToEnd:
             # If original directory no longer exists, go to project root
             os.chdir(Path(__file__).parent.parent)
 
-    def test_config_validation_workflow(self, test_project):
+    def test_config_validation_workflow(self, test_project) -> None:
         """Test configuration validation workflow"""
         # Validate configuration
         validator = ConfigValidator()
@@ -147,7 +147,7 @@ class TestEndToEnd:
         # SSL warnings are expected in test environment
         assert any("SSL is disabled" in w for w in warnings)
 
-    def test_lint_and_cleanup_workflow(self, test_project):
+    def test_lint_and_cleanup_workflow(self, test_project) -> None:
         """Test linting and cleanup workflow"""
         # Step 1: Lint documents
         linter = ContextLinter()
@@ -171,7 +171,7 @@ class TestEndToEnd:
         not all([os.getenv("QDRANT_HOST"), os.getenv("NEO4J_HOST"), os.getenv("OPENAI_API_KEY")]),
         reason="Integration services not available",
     )
-    def test_vector_graph_workflow(self, test_project):
+    def test_vector_graph_workflow(self, test_project) -> None:
         """Test complete vector and graph database workflow"""
         # Step 1: Initialize Vector DB
         vdb_init = VectorDBInitializer()
@@ -214,7 +214,7 @@ class TestEndToEnd:
             assert len(result.vector_results) > 0
 
     @patch("subprocess.run")
-    def test_github_actions_workflow_simulation(self, mock_run, test_project):
+    def test_github_actions_workflow_simulation(self, mock_run, test_project) -> None:
         """Test simulated GitHub Actions workflow"""
         # Simulate the vector-graph-sync workflow
 
@@ -239,7 +239,7 @@ class TestEndToEnd:
 
         assert report_path.exists()
 
-    def test_sprint_update_workflow(self, test_project):
+    def test_sprint_update_workflow(self, test_project) -> None:
         """Test sprint update workflow"""
         # Create mock GitHub CLI output
         github_issues = [
@@ -271,7 +271,7 @@ class TestEndToEnd:
         # Should have task status updated
         assert sprint["phases"][0]["tasks"][0] == "Run E2E tests"
 
-    def test_error_recovery_workflow(self, test_project):
+    def test_error_recovery_workflow(self, test_project) -> None:
         """Test error recovery and resilience"""
         # Test with invalid configuration
         with open(test_project / ".ctxrc.yaml", "w") as f:
@@ -298,7 +298,7 @@ class TestEndToEnd:
         linter2 = ContextLinter()
         assert "system" in linter2.config
 
-    def test_performance_config_workflow(self, test_project):
+    def test_performance_config_workflow(self, test_project) -> None:
         """Test performance configuration workflow"""
         # Create performance config
         perf_config = {
@@ -322,7 +322,7 @@ class TestEndToEnd:
 class TestPerformanceE2E:
     """End-to-end performance tests"""
 
-    def test_large_dataset_processing(self, tmp_path):
+    def test_large_dataset_processing(self, tmp_path) -> None:
         """Test processing large number of documents"""
         # Create many documents
         (tmp_path / "context" / "test").mkdir(parents=True)

@@ -4,7 +4,7 @@ utils.py: Common utility functions for the Agent-First Context System
 """
 
 import re
-from typing import List, Optional
+from typing import Any, List, Optional
 
 
 def sanitize_error_message(error_msg: str, sensitive_values: Optional[List[str]] = None) -> str:
@@ -125,7 +125,7 @@ def get_environment() -> str:
         return "development"
 
 
-def get_secure_connection_config(config: dict, service: str) -> dict:
+def get_secure_connection_config(config: dict[str, Any], service: str) -> dict[str, Any]:
     """
     Get secure connection configuration with SSL/TLS options
 

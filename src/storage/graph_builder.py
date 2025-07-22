@@ -30,11 +30,11 @@ class GraphBuilder:
         self.processed_cache_path = Path("context/.graph_cache/processed.json")
         self.processed_docs: Dict[str, str] = self._load_processed_cache()
 
-    def __enter__(self):
+    def __enter__(self) -> 'GraphBuilder':
         """Context manager entry"""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool:
         """Context manager exit - ensure cleanup"""
         try:
             self.close()
@@ -69,7 +69,7 @@ class GraphBuilder:
                 pass
         return {}
 
-    def _save_processed_cache(self):
+    def _save_processed_cache(self) -> None:
         """Save cache of processed documents"""
         self.processed_cache_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.processed_cache_path, "w") as f:
@@ -115,7 +115,7 @@ class GraphBuilder:
                 click.echo(f"Failed to connect to Neo4j: {error_msg}", err=True)
             return False
 
-    def _create_document_node(self, session, data: Dict[str, Any], file_path: Path) -> str:
+    def _create_document_node(self, session: Any, data: Dict[str, Any], file_path: Path) -> str:
         """Create or update a document node"""
         doc_type = data.get("document_type", "document")
         doc_id = data.get("id", file_path.stem)
@@ -163,7 +163,7 @@ class GraphBuilder:
         # Ensure we return a string
         return str(doc_id)
 
-    def _create_relationships(self, session, data: Dict[str, Any], doc_id: str):
+    def _create_relationships(self, session: Any, data: Dict[str, Any], doc_id: str) -> None:
         """Create relationships based on document content"""
         doc_type = data.get("document_type")
 

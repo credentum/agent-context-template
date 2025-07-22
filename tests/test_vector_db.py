@@ -38,14 +38,14 @@ class TestVectorDBInitializer:
             yaml.dump(config, f)
         return str(config_path)
 
-    def test_load_config(self, config_file):
+    def test_load_config(self, config_file) -> None:
         """Test configuration loading"""
         initializer = VectorDBInitializer(config_file)
         assert initializer.config["qdrant"]["host"] == "localhost"
         assert initializer.config["qdrant"]["port"] == 6333
 
     @patch("src.storage.vector_db_init.QdrantClient")
-    def test_connect_success(self, mock_client_class, config_file):
+    def test_connect_success(self, mock_client_class, config_file) -> None:
         """Test successful connection"""
         mock_client = Mock()
         mock_client.get_collections.return_value = Mock(collections=[])
@@ -56,7 +56,7 @@ class TestVectorDBInitializer:
         mock_client_class.assert_called_once_with(host="localhost", port=6333, timeout=30)
 
     @patch("src.storage.vector_db_init.QdrantClient")
-    def test_connect_failure(self, mock_client_class, config_file):
+    def test_connect_failure(self, mock_client_class, config_file) -> None:
         """Test connection failure"""
         mock_client_class.side_effect = Exception("Connection failed")
 
@@ -64,7 +64,7 @@ class TestVectorDBInitializer:
         assert initializer.connect() is False
 
     @patch("src.storage.vector_db_init.QdrantClient")
-    def test_create_collection(self, mock_client_class, config_file):
+    def test_create_collection(self, mock_client_class, config_file) -> None:
         """Test collection creation"""
         mock_client = Mock()
         mock_client.get_collections.return_value = Mock(collections=[])
@@ -86,7 +86,7 @@ class TestHashDiffEmbedder:
     """Test hash-based embedder"""
 
     @pytest.fixture
-    def test_dir(self):
+    def test_dir(self) -> None:
         """Create test directory structure"""
         temp_dir = tempfile.mkdtemp()
         yield Path(temp_dir)
@@ -99,7 +99,7 @@ class TestHashDiffEmbedder:
         embedder.hash_cache_path = test_dir / ".embeddings_cache/hash_cache.json"
         return embedder
 
-    def test_compute_content_hash(self, embedder):
+    def test_compute_content_hash(self, embedder) -> None:
         """Test content hashing"""
         content = "Test content"
         hash1 = embedder._compute_content_hash(content)
@@ -110,7 +110,7 @@ class TestHashDiffEmbedder:
         assert hash1 != hash3  # Different content = different hash
         assert len(hash1) == 64  # SHA-256 hex length
 
-    def test_needs_embedding(self, embedder, test_dir):
+    def test_needs_embedding(self, embedder, test_dir) -> None:
         """Test change detection"""
         # Create test file
         test_file = test_dir / "test.yaml"
@@ -146,7 +146,7 @@ class TestHashDiffEmbedder:
 
     @patch("src.storage.hash_diff_embedder.openai.OpenAI")
     @patch("src.storage.hash_diff_embedder.QdrantClient")
-    def test_embed_document(self, mock_qdrant_class, mock_openai_class, embedder, test_dir):
+    def test_embed_document(self, mock_qdrant_class, mock_openai_class, embedder, test_dir) -> None:
         """Test document embedding"""
         # Setup mocks
         mock_client = Mock()
@@ -204,7 +204,7 @@ class TestSumScoresAPI:
         """Create API instance"""
         return SumScoresAPI()
 
-    def test_calculate_temporal_decay(self, api):
+    def test_calculate_temporal_decay(self, api) -> None:
         """Test temporal decay calculation"""
         from datetime import datetime, timedelta
 
@@ -222,7 +222,7 @@ class TestSumScoresAPI:
         decay = api._calculate_temporal_decay(None)
         assert decay == 1.0
 
-    def test_get_type_boost(self, api):
+    def test_get_type_boost(self, api) -> None:
         """Test document type boosting"""
         assert api._get_type_boost("architecture") == 1.25
         assert api._get_type_boost("design") == 1.2
@@ -230,7 +230,7 @@ class TestSumScoresAPI:
         assert api._get_type_boost("unknown") == 1.0
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_search_single(self, mock_client_class, api):
+    def test_search_single(self, mock_client_class, api) -> None:
         """Test single vector search"""
         # Setup mock
         mock_client = Mock()
@@ -264,7 +264,7 @@ class TestSumScoresAPI:
         assert result.decay_factor == 1.0  # recent document
         assert result.final_score == 0.85 * 1.2 * 1.0
 
-    def test_search_multi_aggregation(self, api):
+    def test_search_multi_aggregation(self, api) -> None:
         """Test multi-query aggregation logic"""
         # Create test results
         result1 = SearchResult(
@@ -306,12 +306,12 @@ class TestSumScoresAPI:
         assert result1.score == 1.5
         assert len(result1.raw_scores) == 2
 
-    def test_load_config_file_not_found(self):
+    def test_load_config_file_not_found(self) -> None:
         """Test configuration loading when file doesn't exist"""
         api = SumScoresAPI(config_path="nonexistent.yaml")
         assert api.config == {}
 
-    def test_load_perf_config_file_not_found(self):
+    def test_load_perf_config_file_not_found(self) -> None:
         """Test performance config loading when file doesn't exist"""
         api = SumScoresAPI(perf_config_path="nonexistent.yaml")
         # Should return default config
@@ -321,7 +321,7 @@ class TestSumScoresAPI:
         assert api.perf_config == expected_default
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_connect_success(self, mock_client_class):
+    def test_connect_success(self, mock_client_class) -> None:
         """Test successful connection to Qdrant"""
         mock_client = Mock()
         mock_client.get_collections.return_value = []
@@ -334,7 +334,7 @@ class TestSumScoresAPI:
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
     @patch("click.echo")
-    def test_connect_failure(self, mock_echo, mock_client_class):
+    def test_connect_failure(self, mock_echo, mock_client_class) -> None:
         """Test connection failure"""
         mock_client_class.side_effect = Exception("Connection failed")
 
@@ -345,7 +345,7 @@ class TestSumScoresAPI:
             "Failed to connect to Qdrant: Connection failed", err=True
         )
 
-    def test_calculate_temporal_decay_invalid_date(self, api):
+    def test_calculate_temporal_decay_invalid_date(self, api) -> None:
         """Test temporal decay with invalid date format"""
         # Invalid date should return default 1.0
         decay = api._calculate_temporal_decay("invalid-date")
@@ -355,7 +355,7 @@ class TestSumScoresAPI:
         decay = api._calculate_temporal_decay("")
         assert decay == 1.0
 
-    def test_calculate_temporal_decay_iso_format(self, api):
+    def test_calculate_temporal_decay_iso_format(self, api) -> None:
         """Test temporal decay with ISO format dates"""
         from datetime import datetime, timedelta
 
@@ -376,7 +376,7 @@ class TestSumScoresAPI:
         assert decay == 0.5
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_search_single_with_filters(self, mock_client_class, api):
+    def test_search_single_with_filters(self, mock_client_class, api) -> None:
         """Test single search with filter conditions"""
         mock_client = Mock()
         mock_client_class.return_value = mock_client
@@ -412,7 +412,7 @@ class TestSumScoresAPI:
         assert len(query_filter.must) == 2  # Two filter conditions
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_search_multi_sum_aggregation(self, mock_client_class, api):
+    def test_search_multi_sum_aggregation(self, mock_client_class, api) -> None:
         """Test multi-query search with sum aggregation"""
         mock_client = Mock()
         api.client = mock_client
@@ -458,7 +458,7 @@ class TestSumScoresAPI:
         assert len(result.raw_scores) == 2
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_search_multi_max_aggregation(self, mock_client_class, api):
+    def test_search_multi_max_aggregation(self, mock_client_class, api) -> None:
         """Test multi-query search with max aggregation"""
         mock_client = Mock()
         api.client = mock_client
@@ -488,7 +488,7 @@ class TestSumScoresAPI:
         assert result.score == 0.8  # max(0.8, 0.6)
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_search_multi_avg_aggregation(self, mock_client_class, api):
+    def test_search_multi_avg_aggregation(self, mock_client_class, api) -> None:
         """Test multi-query search with average aggregation"""
         mock_client = Mock()
         api.client = mock_client
@@ -518,7 +518,7 @@ class TestSumScoresAPI:
         assert result.score == 0.7  # (0.8 + 0.6) / 2
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_search_contextual(self, mock_client_class, api):
+    def test_search_contextual(self, mock_client_class, api) -> None:
         """Test contextual search with document relationships"""
         mock_client = Mock()
         api.client = mock_client
@@ -576,7 +576,7 @@ class TestSumScoresAPI:
         assert results[1].document_id == "result-doc-2"
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_search_contextual_with_exception(self, mock_client_class, api):
+    def test_search_contextual_with_exception(self, mock_client_class, api) -> None:
         """Test contextual search when context lookup fails"""
         mock_client = Mock()
         api.client = mock_client
@@ -609,7 +609,7 @@ class TestSumScoresAPI:
         assert results[0].document_id == "result-doc-1"
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_get_statistics_small_collection(self, mock_client_class, api):
+    def test_get_statistics_small_collection(self, mock_client_class, api) -> None:
         """Test statistics for small collection (full scan)"""
         mock_client = Mock()
         api.client = mock_client
@@ -654,7 +654,7 @@ class TestSumScoresAPI:
         assert stats["document_types"]["unknown"] == 1
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_get_statistics_large_collection(self, mock_client_class, api):
+    def test_get_statistics_large_collection(self, mock_client_class, api) -> None:
         """Test statistics for large collection (sampling)"""
         mock_client = Mock()
         api.client = mock_client
@@ -687,7 +687,7 @@ class TestSumScoresAPI:
         assert stats["type_boosts"] == api.type_boosts
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_get_statistics_error(self, mock_client_class, api):
+    def test_get_statistics_error(self, mock_client_class, api) -> None:
         """Test statistics when error occurs"""
         mock_client = Mock()
         api.client = mock_client
@@ -701,7 +701,7 @@ class TestSumScoresAPI:
     @patch("src.analytics.sum_scores_api.SumScoresAPI.connect")
     @patch("src.analytics.sum_scores_api.SumScoresAPI.search_single")
     @patch("click.echo")
-    def test_search_command_table_format(self, mock_echo, mock_search, mock_connect):
+    def test_search_command_table_format(self, mock_echo, mock_search, mock_connect) -> None:
         """Test CLI search command with table format"""
         from src.analytics.sum_scores_api import search
 
@@ -740,7 +740,7 @@ class TestSumScoresAPI:
     @patch("src.analytics.sum_scores_api.SumScoresAPI.connect")
     @patch("src.analytics.sum_scores_api.SumScoresAPI.search_single")
     @patch("click.echo")
-    def test_search_command_json_format(self, mock_echo, mock_search, mock_connect):
+    def test_search_command_json_format(self, mock_echo, mock_search, mock_connect) -> None:
         """Test CLI search command with JSON format"""
         from src.analytics.sum_scores_api import search
 
@@ -773,7 +773,7 @@ class TestSumScoresAPI:
         mock_connect.assert_called_once()
 
     @patch("src.analytics.sum_scores_api.SumScoresAPI.connect")
-    def test_search_command_connection_failure(self, mock_connect):
+    def test_search_command_connection_failure(self, mock_connect) -> None:
         """Test CLI search command when connection fails"""
         from src.analytics.sum_scores_api import search
 
@@ -792,7 +792,7 @@ class TestSumScoresAPI:
     @patch("src.analytics.sum_scores_api.SumScoresAPI.connect")
     @patch("src.analytics.sum_scores_api.SumScoresAPI.get_statistics")
     @patch("click.echo")
-    def test_stats_command(self, mock_echo, mock_get_stats, mock_connect):
+    def test_stats_command(self, mock_echo, mock_get_stats, mock_connect) -> None:
         """Test CLI stats command"""
         from src.analytics.sum_scores_api import stats
 
@@ -821,7 +821,7 @@ class TestSumScoresAPI:
         mock_get_stats.assert_called_once()
 
     @patch("src.analytics.sum_scores_api.SumScoresAPI.connect")
-    def test_stats_command_connection_failure(self, mock_connect):
+    def test_stats_command_connection_failure(self, mock_connect) -> None:
         """Test CLI stats command when connection fails"""
         from src.analytics.sum_scores_api import stats
 
@@ -838,7 +838,7 @@ class TestSumScoresAPI:
         mock_connect.assert_called_once()
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_search_single_empty_payload_fields(self, mock_client_class, api):
+    def test_search_single_empty_payload_fields(self, mock_client_class, api) -> None:
         """Test search with empty/missing payload fields"""
         mock_client = Mock()
         api.client = mock_client
@@ -861,7 +861,7 @@ class TestSumScoresAPI:
         assert result.file_path == ""
 
     @patch("src.analytics.sum_scores_api.QdrantClient")
-    def test_search_contextual_no_context_vectors(self, mock_client_class, api):
+    def test_search_contextual_no_context_vectors(self, mock_client_class, api) -> None:
         """Test contextual search when no context vectors found"""
         mock_client = Mock()
         api.client = mock_client
@@ -893,7 +893,7 @@ class TestSumScoresAPI:
         assert len(results) == 1
         assert results[0].document_id == "result-doc-1"
 
-    def test_search_result_dataclass(self):
+    def test_search_result_dataclass(self) -> None:
         """Test SearchResult dataclass creation"""
         result = SearchResult(
             vector_id="vec1",

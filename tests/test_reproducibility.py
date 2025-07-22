@@ -22,7 +22,7 @@ class TestReproducibility:
     """Test cases for system reproducibility via hashes"""
 
     @pytest.fixture
-    def test_data_dir(self, tmp_path):
+    def test_data_dir(self, tmp_path: Path) -> Path:
         """Create test data directory with sample documents"""
         data_dir = tmp_path / "test_data"
         data_dir.mkdir()
@@ -53,7 +53,7 @@ class TestReproducibility:
         return data_dir
 
     @pytest.fixture
-    def hash_embedder(self, tmp_path):
+    def hash_embedder(self, tmp_path: Path) -> HashDiffEmbedder:
         """Create HashDiffEmbedder instance"""
         config = {
             "embeddings": {
@@ -68,7 +68,7 @@ class TestReproducibility:
         embedder = HashDiffEmbedder(config_path=str(config_path))
         return embedder
 
-    def test_document_hash_deterministic(self, test_data_dir):
+    def test_document_hash_deterministic(self, test_data_dir: Path) -> None:
         """Test that document hashes are deterministic"""
         doc_path = test_data_dir / "sprint-001.yaml"
 
@@ -87,7 +87,7 @@ class TestReproducibility:
         assert len(set(hashes)) == 1
         assert all(h == hashes[0] for h in hashes)
 
-    def test_state_snapshot_creation(self, test_data_dir, tmp_path):
+    def test_state_snapshot_creation(self, test_data_dir: Path, tmp_path: Path) -> None:
         """Test creating a reproducible state snapshot"""
         snapshot: Dict[str, Any] = {
             "timestamp": datetime.now().isoformat(),
@@ -129,7 +129,7 @@ class TestReproducibility:
         assert "sprint" in snapshot["metadata"]["document_types"]
         assert "decision" in snapshot["metadata"]["document_types"]
 
-    def test_state_reproduction_from_snapshot(self, test_data_dir, tmp_path):
+    def test_state_reproduction_from_snapshot(self, test_data_dir: Path, tmp_path: Path) -> None:
         """Test reproducing system state from a snapshot"""
         # Create initial snapshot
         snapshot = self._create_snapshot(test_data_dir)
@@ -153,7 +153,7 @@ class TestReproducibility:
         restored_hash = self._calculate_file_hash(doc_path)
         assert restored_hash == snapshot["documents"]["sprint-001.yaml"]["hash"]
 
-    def test_incremental_hash_tracking(self, hash_embedder, test_data_dir):
+    def test_incremental_hash_tracking(self, hash_embedder: HashDiffEmbedder, test_data_dir: Path) -> None:
         """Test incremental hash tracking for changes"""
         history: List[Dict[str, Any]] = []
 
@@ -192,7 +192,7 @@ class TestReproducibility:
         for i in range(1, len(history)):
             assert history[i].get("parent_hash") == history[i - 1]["hash"]
 
-    def test_graph_state_reproducibility(self, tmp_path):
+    def test_graph_state_reproducibility(self, tmp_path: Path) -> None:
         """Test reproducing graph database state"""
         # Mock graph data
         graph_snapshot: Dict[str, Any] = {
@@ -234,7 +234,7 @@ class TestReproducibility:
 
         assert recalc_hash == graph_snapshot["metadata"]["snapshot_hash"]
 
-    def test_kv_store_state_backup_restore(self, tmp_path):
+    def test_kv_store_state_backup_restore(self, tmp_path: Path) -> None:
         """Test KV store state backup and restoration"""
         # Create config file
         config = {"redis": {"host": "localhost", "port": 6379}}
@@ -278,7 +278,7 @@ class TestReproducibility:
                 # Verify restoration - setex should be called for each restore
                 assert mock_client.setex.call_count == len(test_data)
 
-    def test_audit_checkpoint_creation(self, test_data_dir, tmp_path):
+    def test_audit_checkpoint_creation(self, test_data_dir: Path, tmp_path: Path) -> None:
         """Test creating audit checkpoints with hashes"""
         checkpoint: Dict[str, Any] = {
             "id": "checkpoint-001",
@@ -314,7 +314,7 @@ class TestReproducibility:
         # Verify checkpoint can be validated
         assert self._validate_checkpoint(checkpoint)
 
-    def test_diff_based_reproduction(self, test_data_dir):
+    def test_diff_based_reproduction(self, test_data_dir: Path) -> None:
         """Test reproducing state using diffs"""
         # Initial state
         doc_path = test_data_dir / "sprint-001.yaml"
@@ -393,7 +393,7 @@ class TestReproducibility:
 
         return snapshot
 
-    def _restore_from_snapshot(self, snapshot: Dict[str, Any], data_dir: Path):
+    def _restore_from_snapshot(self, snapshot: Dict[str, Any], data_dir: Path) -> None:
         """Restore data directory from snapshot"""
         for filename, data in snapshot["documents"].items():
             file_path = data_dir / filename

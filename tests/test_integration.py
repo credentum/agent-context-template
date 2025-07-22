@@ -21,7 +21,7 @@ class TestIntegration:
     """Integration tests combining multiple components"""
 
     @pytest.fixture
-    def test_dir(self):
+    def test_dir(self) -> None:
         """Create test directory with sample documents"""
         temp_dir = tempfile.mkdtemp()
         test_path = Path(temp_dir)
@@ -61,7 +61,7 @@ class TestIntegration:
     @patch("src.storage.hash_diff_embedder.openai.OpenAI")
     @patch("src.storage.hash_diff_embedder.QdrantClient")
     @patch("src.storage.graph_builder.GraphDatabase.driver")
-    def test_vector_graph_sync(self, mock_neo4j, mock_qdrant, mock_openai_class, test_dir):
+    def test_vector_graph_sync(self, mock_neo4j, mock_qdrant, mock_openai_class, test_dir) -> None:
         """Test synchronization between vector and graph databases"""
         # Setup mocks
         mock_qdrant_instance = Mock()
@@ -113,7 +113,7 @@ class TestIntegration:
 
     @patch("src.integrations.graphrag_integration.QdrantClient")
     @patch("src.integrations.graphrag_integration.GraphDatabase.driver")
-    def test_graphrag_search_integration(self, mock_neo4j, mock_qdrant):
+    def test_graphrag_search_integration(self, mock_neo4j, mock_qdrant) -> None:
         """Test GraphRAG search combining vector and graph results"""
         # Setup mocks
         mock_qdrant_instance = Mock()
@@ -169,7 +169,7 @@ class TestIntegration:
             assert len(result.reasoning_path) > 0
             assert "design-001" in result.summary
 
-    def test_error_handling_cascade(self):
+    def test_error_handling_cascade(self) -> None:
         """Test error handling across components"""
         # Test context manager cleanup
         mock_driver = Mock()
@@ -181,7 +181,7 @@ class TestIntegration:
 
     @pytest.mark.skip(reason="Test takes too long due to rate limit simulation")
     @patch("src.storage.hash_diff_embedder.openai.OpenAI")
-    def test_rate_limiting_retry(self, mock_openai_class):
+    def test_rate_limiting_retry(self, mock_openai_class) -> None:
         """Test rate limiting retry logic"""
         import openai as openai_module
 

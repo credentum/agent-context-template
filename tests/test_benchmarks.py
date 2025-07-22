@@ -17,7 +17,7 @@ from src.validators.kv_validators import sanitize_metric_name, validate_redis_ke
 class TestPerformanceBenchmarks:
     """Performance benchmark tests"""
 
-    def test_hash_computation_benchmark(self, benchmark):
+    def test_hash_computation_benchmark(self, benchmark) -> None:
         """Benchmark hash computation performance"""
         embedder = HashDiffEmbedder()
 
@@ -31,7 +31,7 @@ class TestPerformanceBenchmarks:
         assert len(result) == 64  # SHA-256 hash
         assert all(c in "0123456789abcdef" for c in result)
 
-    def test_embedding_hash_benchmark(self, benchmark):
+    def test_embedding_hash_benchmark(self, benchmark) -> None:
         """Benchmark embedding hash computation"""
         embedder = HashDiffEmbedder()
 
@@ -44,7 +44,7 @@ class TestPerformanceBenchmarks:
         # Ensure result is valid
         assert len(result) == 64
 
-    def test_yaml_parsing_benchmark(self, benchmark):
+    def test_yaml_parsing_benchmark(self, benchmark) -> None:
         """Benchmark YAML parsing performance"""
         # Create a moderately complex YAML document
         test_doc = {
@@ -69,7 +69,7 @@ class TestPerformanceBenchmarks:
         assert isinstance(result, dict)
         assert "metadata" in result
 
-    def test_redis_key_validation_benchmark(self, benchmark):
+    def test_redis_key_validation_benchmark(self, benchmark) -> None:
         """Benchmark Redis key validation performance"""
         # Various test keys
         test_keys = [
@@ -88,7 +88,7 @@ class TestPerformanceBenchmarks:
         # Ensure validations worked
         assert len(results) == len(test_keys)
 
-    def test_metric_sanitization_benchmark(self, benchmark):
+    def test_metric_sanitization_benchmark(self, benchmark) -> None:
         """Benchmark metric name sanitization performance"""
         # Various metric names to sanitize
         test_names = [
@@ -108,7 +108,7 @@ class TestPerformanceBenchmarks:
         assert len(results) == len(test_names)
 
     @pytest.mark.slow
-    def test_document_embedding_benchmark(self, benchmark):
+    def test_document_embedding_benchmark(self, benchmark) -> None:
         """Benchmark full document embedding process"""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create test document
@@ -142,7 +142,7 @@ class TestPerformanceBenchmarks:
 class TestConcurrencyBenchmarks:
     """Benchmarks for concurrent operations"""
 
-    def test_concurrent_hash_cache_benchmark(self, benchmark):
+    def test_concurrent_hash_cache_benchmark(self, benchmark) -> None:
         """Benchmark concurrent hash cache operations"""
         from concurrent.futures import ThreadPoolExecutor
 

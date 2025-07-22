@@ -16,12 +16,12 @@ from src.validators.config_validator import ConfigValidator, main
 class TestConfigValidator:
     """Tests for ConfigValidator class"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test fixtures"""
         self.validator = ConfigValidator()
         self.temp_dir = tempfile.mkdtemp()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up temp files"""
         import shutil
 
@@ -37,7 +37,7 @@ class TestConfigValidator:
                 f.write(content)
         return filepath
 
-    def test_valid_main_config(self):
+    def test_valid_main_config(self) -> None:
         """Test with valid main configuration"""
         config = {
             "system": {"name": "test-system"},
@@ -53,20 +53,20 @@ class TestConfigValidator:
         assert len(self.validator.errors) == 0
         assert len(self.validator.warnings) == 0
 
-    def test_missing_config_file(self):
+    def test_missing_config_file(self) -> None:
         """Test with missing configuration file"""
         assert self.validator.validate_main_config("nonexistent.yaml") is False
         assert len(self.validator.errors) == 1
         assert "not found" in self.validator.errors[0]
 
-    def test_invalid_yaml(self):
+    def test_invalid_yaml(self) -> None:
         """Test with invalid YAML syntax"""
         config_path = self.create_config_file(".ctxrc.yaml", "invalid: yaml: content:")
         assert self.validator.validate_main_config(config_path) is False
         assert len(self.validator.errors) == 1
         assert "Invalid YAML" in self.validator.errors[0]
 
-    def test_missing_required_sections(self):
+    def test_missing_required_sections(self) -> None:
         """Test with missing required sections"""
         config = {
             "system": {"name": "test"},
@@ -79,7 +79,7 @@ class TestConfigValidator:
         for section in ["qdrant", "neo4j", "storage", "agents"]:
             assert any(section in error for error in self.validator.errors)
 
-    def test_invalid_qdrant_port(self):
+    def test_invalid_qdrant_port(self) -> None:
         """Test with invalid Qdrant port"""
         # Non-integer port
         config = {
@@ -104,7 +104,7 @@ class TestConfigValidator:
         assert validator2.validate_main_config(config_path) is False
         assert any("qdrant.port must be between" in e for e in validator2.errors)
 
-    def test_invalid_neo4j_port(self):
+    def test_invalid_neo4j_port(self) -> None:
         """Test with invalid Neo4j port"""
         # Non-integer port
         config = {
@@ -128,7 +128,7 @@ class TestConfigValidator:
         assert validator2.validate_main_config(config_path) is False
         assert any("neo4j.port must be between" in e for e in validator2.errors)
 
-    def test_redis_configuration(self):
+    def test_redis_configuration(self) -> None:
         """Test Redis configuration validation"""
         # Invalid port type
         config = {
@@ -161,7 +161,7 @@ class TestConfigValidator:
         assert validator3.validate_main_config(config_path) is False
         assert any("redis.database must be a non-negative" in e for e in validator3.errors)
 
-    def test_duckdb_configuration(self):
+    def test_duckdb_configuration(self) -> None:
         """Test DuckDB configuration validation"""
         # Missing database_path
         config = {
@@ -189,7 +189,7 @@ class TestConfigValidator:
         assert self.validator.validate_main_config(config_path) is False
         assert any("duckdb.threads must be a positive" in e for e in self.validator.errors)
 
-    def test_ssl_warnings(self):
+    def test_ssl_warnings(self) -> None:
         """Test SSL warnings for services"""
         config = {
             "system": {},
@@ -209,17 +209,17 @@ class TestConfigValidator:
         assert any("SSL is disabled for Neo4j" in w for w in self.validator.warnings)
         assert any("SSL is disabled for Redis" in w for w in self.validator.warnings)
 
-    def test_performance_config_missing(self):
+    def test_performance_config_missing(self) -> None:
         """Test that missing performance config is okay"""
         assert self.validator.validate_performance_config("nonexistent.yaml") is True
 
-    def test_performance_config_invalid_yaml(self):
+    def test_performance_config_invalid_yaml(self) -> None:
         """Test with invalid YAML in performance config"""
         config_path = self.create_config_file("performance.yaml", "invalid: yaml: content:")
         assert self.validator.validate_performance_config(config_path) is False
         assert any("Invalid YAML" in e for e in self.validator.errors)
 
-    def test_vector_db_embedding_validation(self):
+    def test_vector_db_embedding_validation(self) -> None:
         """Test vector DB embedding settings validation"""
         config = {
             "vector_db": {
@@ -238,7 +238,7 @@ class TestConfigValidator:
         assert any("max_retries must be a non-negative" in e for e in self.validator.errors)
         assert any("request_timeout must be a positive" in e for e in self.validator.errors)
 
-    def test_vector_db_search_validation(self):
+    def test_vector_db_search_validation(self) -> None:
         """Test vector DB search settings validation"""
         config = {
             "vector_db": {
@@ -254,7 +254,7 @@ class TestConfigValidator:
         assert self.validator.validate_performance_config(config_path) is False
         assert any("max_limit must be >= default_limit" in e for e in self.validator.errors)
 
-    def test_graph_db_connection_pool(self):
+    def test_graph_db_connection_pool(self) -> None:
         """Test graph DB connection pool validation"""
         config = {
             "graph_db": {
@@ -270,7 +270,7 @@ class TestConfigValidator:
         assert self.validator.validate_performance_config(config_path) is False
         assert any("max_size must be >= min_size" in e for e in self.validator.errors)
 
-    def test_graph_db_query_settings(self):
+    def test_graph_db_query_settings(self) -> None:
         """Test graph DB query settings validation"""
         config = {"graph_db": {"query": {"max_path_length": 0}}}  # Invalid
         config_path = self.create_config_file("performance.yaml", config)
@@ -288,7 +288,7 @@ class TestConfigValidator:
         assert self.validator.validate_performance_config(config_path) is True
         assert any("max_path_length > 10 may cause" in w for w in self.validator.warnings)
 
-    def test_search_ranking_validation(self):
+    def test_search_ranking_validation(self) -> None:
         """Test search ranking settings validation"""
         # Test with valid number out of range
         config = {"search": {"ranking": {"temporal_decay_rate": 1.5}}}  # Out of range
@@ -310,7 +310,7 @@ class TestConfigValidator:
             "temporal_decay_rate must be between 0 and 1" in e for e in self.validator.errors
         )
 
-    def test_type_boosts_validation(self):
+    def test_type_boosts_validation(self) -> None:
         """Test type boosts validation"""
         config = {
             "search": {
@@ -332,7 +332,7 @@ class TestConfigValidator:
         )
         assert any("type_boosts.trace must be a non-negative" in e for e in self.validator.errors)
 
-    def test_resources_validation(self):
+    def test_resources_validation(self) -> None:
         """Test resources validation"""
         config = {
             "resources": {
@@ -347,7 +347,7 @@ class TestConfigValidator:
         assert any("max_memory_gb must be at least 0.5" in e for e in self.validator.errors)
         assert any("max_cpu_percent must be between 1 and 100" in e for e in self.validator.errors)
 
-    def test_kv_store_redis_validation(self):
+    def test_kv_store_redis_validation(self) -> None:
         """Test KV store Redis settings validation"""
         config = {
             "kv_store": {
@@ -366,7 +366,7 @@ class TestConfigValidator:
         )
         assert any("ttl_seconds must be a positive" in e for e in self.validator.errors)
 
-    def test_kv_store_duckdb_validation(self):
+    def test_kv_store_duckdb_validation(self) -> None:
         """Test KV store DuckDB settings validation"""
         config = {
             "kv_store": {
@@ -383,7 +383,7 @@ class TestConfigValidator:
         assert any("batch_insert.size must be a positive" in e for e in self.validator.errors)
         assert any("retention_days must be a positive" in e for e in self.validator.errors)
 
-    def test_validate_all(self):
+    def test_validate_all(self) -> None:
         """Test validate_all method"""
         # Create valid main config
         main_config: Dict[str, Any] = {
@@ -414,12 +414,12 @@ class TestConfigValidator:
 class TestCLI:
     """Tests for CLI interface"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test fixtures"""
         self.runner = CliRunner()
         self.temp_dir = tempfile.mkdtemp()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up temp files"""
         import shutil
 
@@ -432,7 +432,7 @@ class TestCLI:
             yaml.dump(content, f)
         return filepath
 
-    def test_cli_valid_config(self):
+    def test_cli_valid_config(self) -> None:
         """Test CLI with valid configuration"""
         config = {
             "system": {},
@@ -448,7 +448,7 @@ class TestCLI:
         assert result.exit_code == 0
         assert "All configurations are valid" in result.output
 
-    def test_cli_with_errors(self):
+    def test_cli_with_errors(self) -> None:
         """Test CLI with configuration errors"""
         config: Dict[str, Any] = {"system": {}}  # Missing required sections
         config_path = self.create_config_file(".ctxrc.yaml", config)
@@ -458,7 +458,7 @@ class TestCLI:
         assert "Errors:" in result.output
         assert "❌" in result.output
 
-    def test_cli_with_warnings(self):
+    def test_cli_with_warnings(self) -> None:
         """Test CLI with warnings"""
         config = {
             "system": {},
@@ -474,7 +474,7 @@ class TestCLI:
         assert "Warnings:" in result.output
         assert "⚠️" in result.output
 
-    def test_cli_strict_mode(self):
+    def test_cli_strict_mode(self) -> None:
         """Test CLI in strict mode (warnings as errors)"""
         config = {
             "system": {},
@@ -488,7 +488,7 @@ class TestCLI:
         result = self.runner.invoke(main, ["--config", config_path, "--strict"])
         assert result.exit_code == 1  # Exits with error due to warnings in strict mode
 
-    def test_cli_custom_performance_config(self):
+    def test_cli_custom_performance_config(self) -> None:
         """Test CLI with custom performance config path"""
         main_config: Dict[str, Any] = {
             "system": {},

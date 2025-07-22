@@ -17,35 +17,35 @@ from src.storage.neo4j_init import Neo4jInitializer
 class TestPasswordSanitization:
     """Test password sanitization in error messages"""
 
-    def test_sanitize_error_message_basic(self):
+    def test_sanitize_error_message_basic(self) -> None:
         """Test basic password sanitization"""
         error = "Failed to connect with password: mysecret123"
         sanitized = sanitize_error_message(error, ["mysecret123"])
         assert "mysecret123" not in sanitized
         assert "***" in sanitized
 
-    def test_sanitize_error_message_url(self):
+    def test_sanitize_error_message_url(self) -> None:
         """Test sanitization of passwords in URLs"""
         error = "Connection failed: bolt://user:password123@localhost:7687"
         sanitized = sanitize_error_message(error, ["password123"])
         assert "password123" not in sanitized
         assert "***:***@" in sanitized
 
-    def test_sanitize_error_message_encoded(self):
+    def test_sanitize_error_message_encoded(self) -> None:
         """Test sanitization of URL-encoded passwords"""
         error = "Auth failed with token: my%20secret%20pass"
         sanitized = sanitize_error_message(error, ["my secret pass"])
         assert "my%20secret%20pass" not in sanitized
         assert "my secret pass" not in sanitized
 
-    def test_sanitize_error_message_headers(self):
+    def test_sanitize_error_message_headers(self) -> None:
         """Test sanitization of auth headers"""
         error = "Request failed with Authorization: Bearer abc123def456"
         sanitized = sanitize_error_message(error, [])
         assert "abc123def456" not in sanitized
         assert "Authorization: ***" in sanitized
 
-    def test_sanitize_error_message_short_values(self):
+    def test_sanitize_error_message_short_values(self) -> None:
         """Test that very short values are not sanitized"""
         error = "Failed to connect to db"
         sanitized = sanitize_error_message(error, ["to", "db"])
@@ -57,7 +57,7 @@ class TestInjectionPrevention:
     """Test prevention of injection attacks"""
 
     @patch("src.storage.neo4j_init.GraphDatabase.driver")
-    def test_cypher_injection_prevention(self, mock_driver):
+    def test_cypher_injection_prevention(self, mock_driver) -> None:
         """Test that Cypher injection is prevented"""
         # Setup mock
         mock_driver_instance = Mock()
@@ -97,7 +97,7 @@ class TestInjectionPrevention:
 
             os.unlink(config_path)
 
-    def test_path_traversal_prevention(self):
+    def test_path_traversal_prevention(self) -> None:
         """Test prevention of path traversal attacks"""
         from src.storage.graph_builder import GraphBuilder
 
@@ -129,7 +129,7 @@ class TestInjectionPrevention:
 class TestAuthenticationSecurity:
     """Test authentication security measures"""
 
-    def test_no_default_passwords(self):
+    def test_no_default_passwords(self) -> None:
         """Test that no default passwords are present"""
         # Check that CLI tools require passwords
         # Import statements removed - F401 errors
@@ -139,7 +139,7 @@ class TestAuthenticationSecurity:
         pass
 
     @patch("src.storage.graph_builder.GraphDatabase.driver")
-    def test_password_not_logged(self, mock_driver):
+    def test_password_not_logged(self, mock_driver) -> None:
         """Test that passwords are not logged in verbose mode"""
         # Setup mock to raise an error with password
         mock_driver.side_effect = Exception("Auth failed with password: secret123")
@@ -166,7 +166,7 @@ class TestSSLConfiguration:
     """Test SSL/TLS configuration"""
 
     @patch.dict(os.environ, {"ENVIRONMENT": "production"})
-    def test_ssl_config_loading(self):
+    def test_ssl_config_loading(self) -> None:
         """Test that SSL configuration is properly loaded"""
         from src.core.utils import get_secure_connection_config
 
@@ -179,7 +179,7 @@ class TestSSLConfiguration:
         assert secure_config["ssl"] is True
         assert secure_config["verify_ssl"] is True
 
-    def test_ssl_certificate_paths(self):
+    def test_ssl_certificate_paths(self) -> None:
         """Test SSL certificate path configuration"""
         from src.core.utils import get_secure_connection_config
 
@@ -203,7 +203,7 @@ class TestSSLConfiguration:
 class TestInputValidation:
     """Test input validation and sanitization"""
 
-    def test_sprint_number_validation(self):
+    def test_sprint_number_validation(self) -> None:
         """Test that sprint numbers are validated"""
         # Sprint numbers should be integers between 1-999
         valid_numbers = [1, 50, 999]
@@ -219,7 +219,7 @@ class TestInputValidation:
                 # String inputs should be rejected
                 assert not isinstance(num, int)
 
-    def test_yaml_path_validation(self):
+    def test_yaml_path_validation(self) -> None:
         """Test YAML file path validation"""
         from pathlib import Path
 

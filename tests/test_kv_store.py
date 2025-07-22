@@ -27,7 +27,7 @@ class TestRedisConnector:
             connector.is_connected = True
             return connector
 
-    def test_connect_success(self):
+    def test_connect_success(self) -> None:
         """Test successful Redis connection"""
         with patch("src.storage.context_kv.redis.ConnectionPool"):
             with patch("src.storage.context_kv.redis.Redis") as mock_redis:
@@ -40,7 +40,7 @@ class TestRedisConnector:
                 assert connector.is_connected is True
                 mock_client.ping.assert_called_once()
 
-    def test_connect_failure(self):
+    def test_connect_failure(self) -> None:
         """Test Redis connection failure"""
         with patch("src.storage.context_kv.redis.ConnectionPool"):
             with patch("src.storage.context_kv.redis.Redis") as mock_redis:
@@ -50,7 +50,7 @@ class TestRedisConnector:
                 assert connector.connect() is False
                 assert connector.is_connected is False
 
-    def test_set_cache(self, redis_connector):
+    def test_set_cache(self, redis_connector) -> None:
         """Test setting cache value"""
         key = "test:key"
         value = {"data": "test", "count": 42}
@@ -73,7 +73,7 @@ class TestRedisConnector:
         assert stored_data["value"] == value
         assert stored_data["ttl_seconds"] == ttl
 
-    def test_get_cache(self, redis_connector):
+    def test_get_cache(self, redis_connector) -> None:
         """Test getting cache value"""
         key = "test:key"
         cached_data = {
@@ -93,7 +93,7 @@ class TestRedisConnector:
         assert result == {"data": "test"}
         redis_connector.redis_client.get.assert_called_with("cache:test:key")
 
-    def test_delete_cache(self, redis_connector):
+    def test_delete_cache(self, redis_connector) -> None:
         """Test deleting cache entries"""
         pattern = "test:*"
         matching_keys = ["cache:test:1", "cache:test:2", "cache:test:3"]
@@ -107,7 +107,7 @@ class TestRedisConnector:
         redis_connector.redis_client.scan_iter.assert_called_with(match="cache:test:*")
         redis_connector.redis_client.delete.assert_called_with(*matching_keys)
 
-    def test_session_management(self, redis_connector):
+    def test_session_management(self, redis_connector) -> None:
         """Test session storage and retrieval"""
         session_id = "session123"
         session_data = {"user": "test", "permissions": ["read", "write"]}
@@ -131,7 +131,7 @@ class TestRedisConnector:
         result = redis_connector.get_session(session_id)
         assert result == session_data
 
-    def test_distributed_lock(self, redis_connector):
+    def test_distributed_lock(self, redis_connector) -> None:
         """Test distributed lock acquisition and release"""
         resource = "resource:123"
         timeout = 30
@@ -151,7 +151,7 @@ class TestRedisConnector:
         redis_connector.redis_client.eval.return_value = 1
         assert redis_connector.release_lock(resource, lock_id) is True
 
-    def test_record_metric(self, redis_connector):
+    def test_record_metric(self, redis_connector) -> None:
         """Test metric recording"""
         metric = MetricEvent(
             timestamp=datetime.utcnow(),
@@ -193,7 +193,7 @@ class TestDuckDBAnalytics:
 
             return analytics
 
-    def test_connect_and_initialize(self):
+    def test_connect_and_initialize(self) -> None:
         """Test DuckDB connection and table initialization"""
         with patch("src.storage.context_kv.duckdb.connect") as mock_connect:
             with patch("src.storage.context_kv.Path.mkdir"):
@@ -213,7 +213,7 @@ class TestDuckDBAnalytics:
                 ]
                 assert len(create_calls) == 4  # metrics, events, summaries, trends
 
-    def test_insert_metrics(self, duckdb_analytics):
+    def test_insert_metrics(self, duckdb_analytics) -> None:
         """Test batch metric insertion"""
         metrics = [
             MetricEvent(
@@ -250,7 +250,7 @@ class TestDuckDBAnalytics:
         assert values[0][1] == "test.metric1"
         assert values[0][2] == 10.5
 
-    def test_query_metrics(self, duckdb_analytics):
+    def test_query_metrics(self, duckdb_analytics) -> None:
         """Test metric querying"""
         query = "SELECT * FROM context_metrics WHERE metric_name = ?"
         params = ["test.metric"]
@@ -273,7 +273,7 @@ class TestDuckDBAnalytics:
         assert results[0]["metric_name"] == "test.metric"
         assert results[0]["value"] == 42.5
 
-    def test_aggregate_metrics(self, duckdb_analytics):
+    def test_aggregate_metrics(self, duckdb_analytics) -> None:
         """Test metric aggregation"""
         metric_name = "test.metric"
         start_time = datetime.utcnow() - timedelta(hours=1)
@@ -288,7 +288,7 @@ class TestDuckDBAnalytics:
         assert result["value"] == 35.5
         assert result["count"] == 100
 
-    def test_generate_summary(self, duckdb_analytics):
+    def test_generate_summary(self, duckdb_analytics) -> None:
         """Test summary generation"""
         from datetime import date
 
@@ -325,7 +325,7 @@ class TestContextAnalytics:
 
             return analytics
 
-    def test_analyze_document_lifecycle(self, context_analytics):
+    def test_analyze_document_lifecycle(self, context_analytics) -> None:
         """Test document lifecycle analysis"""
         mock_results = [
             {
@@ -357,7 +357,7 @@ class TestContextAnalytics:
         # Insights may be empty if metrics are within normal ranges
         assert isinstance(report.insights, list)
 
-    def test_analyze_agent_performance(self, context_analytics):
+    def test_analyze_agent_performance(self, context_analytics) -> None:
         """Test agent performance analysis"""
         mock_results = [
             {
@@ -389,7 +389,7 @@ class TestContextAnalytics:
         assert "agent1" in report.metrics["agent_metrics"]
         assert report.metrics["agent_metrics"]["agent1"]["success_rate"] == 0.9
 
-    def test_analyze_system_health(self, context_analytics):
+    def test_analyze_system_health(self, context_analytics) -> None:
         """Test system health analysis"""
         mock_metrics = [
             {
@@ -435,7 +435,7 @@ class TestContextKV:
         kv.duckdb = MagicMock(spec=DuckDBAnalytics)
         return kv
 
-    def test_connect(self, context_kv):
+    def test_connect(self, context_kv) -> None:
         """Test connecting to both stores"""
         context_kv.redis.connect.return_value = True
         context_kv.duckdb.connect.return_value = True
@@ -445,7 +445,7 @@ class TestContextKV:
         context_kv.redis.connect.assert_called_once()
         context_kv.duckdb.connect.assert_called_once()
 
-    def test_record_event(self, context_kv):
+    def test_record_event(self, context_kv) -> None:
         """Test event recording to both stores"""
         context_kv.redis.record_metric.return_value = True
         context_kv.duckdb.insert_metrics.return_value = True
@@ -466,7 +466,7 @@ class TestContextKV:
         assert redis_call.value == 1.0
         assert redis_call.document_id == "doc123"
 
-    def test_get_recent_activity(self, context_kv):
+    def test_get_recent_activity(self, context_kv) -> None:
         """Test getting recent activity summary"""
         mock_metrics = [
             {"metric_name": "event.create", "count": 50, "avg_value": 1.0},
@@ -490,7 +490,7 @@ class TestKVStoreIntegration:
         not all([os.environ.get("REDIS_HOST"), os.environ.get("DUCKDB_PATH")]),
         reason="Integration test requires REDIS_HOST and DUCKDB_PATH environment variables",
     )
-    def test_full_workflow(self):
+    def test_full_workflow(self) -> None:
         """Test complete KV store workflow"""
         kv = ContextKV()
 
