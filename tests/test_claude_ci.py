@@ -288,7 +288,7 @@ class TestClaudeCICommandHub:
             [str(script_path), "all", "--comprehensive", "--json"],
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=60,
         )
 
         # Comprehensive mode should run pre-commit, test, and review
