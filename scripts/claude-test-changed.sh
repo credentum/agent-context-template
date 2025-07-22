@@ -115,12 +115,15 @@ detect_changed_files() {
     # Filter only Python files
     local python_files=()
     for file in "${changed_files[@]}"; do
-        if [[ "$file" == *.py ]]; then
+        if [[ -n "$file" ]] && [[ "$file" == *.py ]]; then
             python_files+=("$file")
         fi
     done
 
-    printf '%s\n' "${python_files[@]}"
+    # Only output if we have files
+    if [[ ${#python_files[@]} -gt 0 ]]; then
+        printf '%s\n' "${python_files[@]}"
+    fi
 }
 
 # Function to map source file to test files
@@ -230,6 +233,25 @@ run_tests() {
 
     if [[ "$DRY_RUN" == "true" ]]; then
         echo "Would run: pytest ${pytest_args[*]}"
+        # Set empty results for dry run
+        TEST_RESULTS_JSON=$(cat <<EOF
+{
+  "test_results": {
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "exit_code": 0
+  },
+  "coverage": {
+    "percentage": 0,
+    "modules": [$(printf '"%s",' "${coverage_modules[@]}" | sed 's/,$//')],
+    "report": "Dry run - no actual results"
+  },
+  "duration": "0s",
+  "recommendation": "Dry run - no tests executed"
+}
+EOF
+)
         return 0
     fi
 
