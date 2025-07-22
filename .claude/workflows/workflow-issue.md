@@ -44,6 +44,19 @@ claude workflow workflow-issue --issue 123 --priority high --component api --max
 ## EXECUTE WORKFLOW
 Please follow these steps in order. **Actually perform each action** - don't just describe what should be done.
 
+## 📋 DOCUMENTATION STRATEGY
+**CRITICAL: All documentation must be committed BEFORE or DURING the PR, not after!**
+
+| Phase | Documentation Action | Timing | Purpose |
+|-------|---------------------|---------|----------|
+| Phase 1 | Create task template & scratchpad | Before implementation | Planning & context |
+| Phase 1 | Initial commit of docs | Before code changes | Ensure docs in PR |
+| Phase 4 | Update with actual results | Before PR creation | Accurate tracking |
+| Phase 5 | Add completion logs | After PR creation | Final status |
+| Phase 5 | Push final updates | Immediately | Include in PR |
+
+**This prevents the common mistake of creating documentation after pushing the PR, which leaves it only in local branch.**
+
 ## Parameters
 - `--issue`: GitHub issue number (required)
 - `--auto-template`: Enable automatic task template generation
@@ -279,7 +292,7 @@ dependencies: {identified}
 ```
 ```
 
-#### Step 4: Execution Planning
+#### Step 4: Execution Planning & Initial Documentation Commit
 **EXECUTE NOW:**
 1. Break down the issue into specific, actionable tasks based on the issue requirements
 2. **Create the scratchpad file**:
@@ -292,6 +305,14 @@ dependencies: {identified}
 3. **Update sprint file if it exists**:
    - Check if `context/sprints/current.yaml` exists
    - If it does, update it to reflect this work item
+4. **CRITICAL: Commit documentation files before implementation**:
+   ```bash
+   git add context/trace/task-templates/issue-[ISSUE_NUMBER]-*.md
+   git add context/trace/scratchpad/$(date +%Y-%m-%d)-issue-[ISSUE_NUMBER]-*.md
+   git commit -m "docs(trace): add task template and execution plan for issue #[ISSUE_NUMBER]"
+   ```
+   - This ensures documentation is included in the eventual PR
+   - Prevents the issue of documentation being created after PR push
 
 #### Step 5: Context Management Setup
 1. Monitor context window usage throughout execution
@@ -384,10 +405,15 @@ dependencies: {identified}
    - Run pre-commit hooks and handle any changes
    - Force push with lease if pre-commit made changes
 
-5. **Update task template with actual results**:
+5. **Update task template with actual results and commit immediately**:
    - Open the task template file created earlier
    - Fill in the "Actuals" section with real token usage, time taken, etc.
    - Document any lessons learned or deviations from plan
+   - **CRITICAL: Commit updates before creating PR**:
+     ```bash
+     git add context/trace/task-templates/issue-[ISSUE_NUMBER]-*.md
+     git commit -m "docs(trace): update task template with actual results for issue #[ISSUE_NUMBER]"
+     ```
 
 #### Step 10: PR Creation
 **EXECUTE NOW:**
@@ -427,7 +453,9 @@ dependencies: {identified}
      --assignee @me
    ```
 
-2. **Push the branch**: `git push origin [BRANCH_NAME]`
+2. **Push the branch with all documentation**: `git push origin [BRANCH_NAME]`
+   - This ensures all documentation files are included in the PR
+   - No need for follow-up documentation pushes
 
 #### Step 11: PR Monitoring & Completion
 **EXECUTE NOW:**
@@ -454,26 +482,46 @@ dependencies: {identified}
 
 ### Phase 5: Documentation & Cleanup
 
-#### Step 12: Final Documentation
+#### Step 12: Final Documentation & Post-PR Updates
 **EXECUTE NOW:**
-1. **Update completion logs**:
-   - Create/append to: `context/trace/logs/workflow-completions.log`
-   - Log: "$(date): Issue #[ISSUE_NUMBER] workflow completed via PR #[PR_NUMBER]"
-2. **Document lessons learned**:
-   - Add any new patterns or techniques discovered to the task template
-   - Note any deviations from the planned approach
+1. **Update completion logs and push to PR**:
+   ```bash
+   # Update completion logs
+   echo "$(date): Issue #[ISSUE_NUMBER] workflow completed via PR #[PR_NUMBER]" >> context/trace/logs/workflow-completions.log
+
+   # Add any final lessons learned to task template
+   # Edit context/trace/task-templates/issue-[ISSUE_NUMBER]-*.md if needed
+
+   # Commit and push to include in PR
+   git add context/trace/logs/workflow-completions.log
+   git add context/trace/task-templates/issue-[ISSUE_NUMBER]-*.md  # if updated
+   git commit -m "docs(trace): add completion log and final updates for issue #[ISSUE_NUMBER]"
+   git push origin [BRANCH_NAME]
+   ```
+2. **Verify all documentation is in PR**:
+   ```bash
+   gh pr view [PR_NUMBER] --json files --jq '.files[].path' | grep -E "(task-templates|logs|scratchpad)"
+   ```
 3. **Update documentation if needed**:
    - If workflow changes were made, update relevant documentation
    - Update CLAUDE.md if development processes changed
 4. **Archive and organize**:
-   - Ensure task template and scratchpad are properly saved
+   - Ensure all files are committed and pushed to PR
    - Clean up any temporary files created during the workflow
 
 **WORKFLOW COMPLETION**:
 - Issue #[ISSUE_NUMBER] has been resolved
 - PR created and submitted for review
-- All documentation updated
+- **All documentation committed and included in PR**
+- Task template, scratchpad, and completion logs are part of the PR
 - Monitoring in place for PR completion
+
+**✅ DOCUMENTATION INTEGRITY CHECK:**
+- Task template: ✅ Created in Phase 1, committed before implementation
+- Execution scratchpad: ✅ Created in Phase 1, committed before implementation
+- Actual results: ✅ Updated and committed before PR creation
+- Completion logs: ✅ Added and pushed to PR after creation
+- All files: ✅ Included in PR, will be merged with code changes
 
 ---
 
@@ -520,6 +568,23 @@ dependencies: {identified}
   ./scripts/validate-branch-for-pr.sh
   ```
 - **Prevention**: Always run branch validation before creating PRs
+
+#### Documentation Not in PR
+- **Problem**: Documentation files created after pushing PR, only exist locally
+- **Root Cause**: Documentation created in Phase 5 instead of Phase 1
+- **Solution**:
+  ```bash
+  # Add missing documentation to existing PR
+  git add context/trace/task-templates/issue-[ISSUE_NUMBER]-*.md
+  git add context/trace/scratchpad/$(date +%Y-%m-%d)-issue-[ISSUE_NUMBER]-*.md
+  git add context/trace/logs/workflow-completions.log
+  git commit -m "docs(trace): add missing documentation for issue #[ISSUE_NUMBER]"
+  git push origin [BRANCH_NAME]
+
+  # Verify it's now in the PR
+  gh pr view [PR_NUMBER] --json files --jq '.files[].path' | grep -E "(task-templates|logs|scratchpad)"
+  ```
+- **Prevention**: Follow Documentation Strategy table - commit docs in Phase 1, update in Phase 4, finalize in Phase 5
 
 ### Emergency Procedures
 
