@@ -2,7 +2,8 @@
 # test-comprehensive-ci.sh - Run ALL CI checks exactly like GitHub Actions
 # This matches ALL GitHub Actions workflows that are failing
 
-set -e  # Exit on error
+# Note: We intentionally do NOT use 'set -e' here
+# This ensures ALL checks run even if some fail, allowing us to see all errors at once
 
 # Colors for output
 RED='\033[0;31m'
