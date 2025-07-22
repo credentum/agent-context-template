@@ -8,7 +8,7 @@ import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -89,7 +89,7 @@ class TestReproducibility:
 
     def test_state_snapshot_creation(self, test_data_dir, tmp_path):
         """Test creating a reproducible state snapshot"""
-        snapshot = {
+        snapshot: Dict[str, Any] = {
             "timestamp": datetime.now().isoformat(),
             "version": "1.0.0",
             "documents": {},
@@ -155,7 +155,7 @@ class TestReproducibility:
 
     def test_incremental_hash_tracking(self, hash_embedder, test_data_dir):
         """Test incremental hash tracking for changes"""
-        history = []
+        history: List[Dict[str, Any]] = []
 
         # Initial state
         doc_path = test_data_dir / "sprint-001.yaml"
@@ -195,7 +195,7 @@ class TestReproducibility:
     def test_graph_state_reproducibility(self, tmp_path):
         """Test reproducing graph database state"""
         # Mock graph data
-        graph_snapshot = {
+        graph_snapshot: Dict[str, Any] = {
             "nodes": [
                 {
                     "id": "sprint-001",
@@ -260,7 +260,7 @@ class TestReproducibility:
                 }
 
                 # Create backup
-                backup = {}
+                backup: Dict[str, Dict[str, Any]] = {}
                 for key, value in test_data.items():
                     backup[key] = {
                         "value": value,
@@ -273,14 +273,14 @@ class TestReproducibility:
 
                 # Restore from backup
                 for key, data in backup.items():
-                    kv_store.redis.set_cache(key, data["value"], ttl_seconds=data["ttl"])
+                    kv_store.redis.set_cache(key, data["value"], ttl_seconds=int(data["ttl"]))
 
                 # Verify restoration - setex should be called for each restore
                 assert mock_client.setex.call_count == len(test_data)
 
     def test_audit_checkpoint_creation(self, test_data_dir, tmp_path):
         """Test creating audit checkpoints with hashes"""
-        checkpoint = {
+        checkpoint: Dict[str, Any] = {
             "id": "checkpoint-001",
             "timestamp": datetime.now().isoformat(),
             "system_state": {"documents": {}, "configuration": {}, "metrics": {}},
@@ -322,11 +322,11 @@ class TestReproducibility:
             initial_content = yaml.safe_load(f)
 
         # Create diff history
-        diffs = []
+        diffs: List[Dict[str, Any]] = []
         current_content = initial_content.copy()
 
         # Apply changes
-        changes = [
+        changes: List[Dict[str, Any]] = [
             {"op": "add", "path": "status", "value": "active"},
             {"op": "update", "path": "title", "value": "Updated Sprint"},
             {"op": "add", "path": "progress", "value": 50},
@@ -380,7 +380,7 @@ class TestReproducibility:
 
     def _create_snapshot(self, data_dir: Path) -> Dict[str, Any]:
         """Create a snapshot of the data directory"""
-        snapshot = {"timestamp": datetime.now().isoformat(), "documents": {}}
+        snapshot: Dict[str, Any] = {"timestamp": datetime.now().isoformat(), "documents": {}}
 
         for doc_file in data_dir.glob("*.yaml"):
             with open(doc_file) as f:
@@ -406,4 +406,4 @@ class TestReproducibility:
         state_str = json.dumps(checkpoint["system_state"], sort_keys=True)
         calculated_hash = hashlib.sha256(state_str.encode()).hexdigest()
 
-        return calculated_hash == checkpoint["verification"]["total_hash"]
+        return bool(calculated_hash == checkpoint["verification"]["total_hash"])

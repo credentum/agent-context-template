@@ -16,7 +16,9 @@ source: "scripts/benchmark-ci-performance.py"
 data:
   tool_name: "benchmark-ci-performance"
   contract_type: "performance_analysis"
-  description: "Measures and compares CI pipeline execution times between legacy and optimized workflows"
+  description: |
+    Measures and compares CI pipeline execution times between legacy and
+    optimized workflows
   executable: "python scripts/benchmark-ci-performance.py"
   language: "python"
   capabilities:

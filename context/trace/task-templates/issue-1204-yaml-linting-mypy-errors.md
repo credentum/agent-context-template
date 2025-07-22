@@ -72,7 +72,7 @@ Use conventional commits: fix(ci): resolve YAML and type errors blocking local e
 - `yamllint context/` (all YAML files valid)
 - `mypy --strict tests/` (all type errors resolved)
 - `pre-commit run --all-files` (hooks work on all files)
-- **Issue-specific tests**: 
+- **Issue-specific tests**:
   - Verify decision.yaml syntax is fixed
   - Confirm pre-commit runs on context/ files
   - Check MyPy passes on all test files
