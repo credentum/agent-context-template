@@ -1,3 +1,7 @@
+---
+schema_version: "1.0"
+---
+
 # Execution Plan: Issue #1133 - Generate review report in same format
 
 **Issue Link**: https://github.com/droter/agent-context-template/issues/1133

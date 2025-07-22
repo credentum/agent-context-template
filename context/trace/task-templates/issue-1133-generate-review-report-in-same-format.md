@@ -1,3 +1,7 @@
+---
+schema_version: "1.0"
+---
+
 # ────────────────────────────────────────────────────────────────────────
 # TASK: issue-1133-generate-review-report-in-same-format
 # Generated from GitHub Issue #1133
