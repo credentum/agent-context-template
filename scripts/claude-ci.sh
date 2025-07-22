@@ -136,7 +136,6 @@ get_dependency_error() {
             ;;
     esac
 }
-
 # File path validation helper
 validate_file_path() {
     local file="$1"
@@ -393,7 +392,6 @@ cmd_all() {
         # Capture output from stage with secure temp file
         temp_output=$(mktemp -t "claude-ci-${stage_name}-XXXXXX")
         temp_files+=("$temp_output")
-
         set +e  # Allow failures temporarily
         $stage_func >"$temp_output" 2>&1
         stage_result=$?
