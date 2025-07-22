@@ -117,9 +117,19 @@ Headless mode: claude -p "<prompt>" --output-format stream-json
 
 Add tools: claude mcp add playwright npx @playwright/mcp@latest
 
-**Project-specific scripts:**
-- `./scripts/claude-ci.sh` – Unified CI command hub (check, test, pre-commit, review, all)
+**Project-specific CI commands:**
+- `claude-ci check <file>` – Validate single file (with --fix for auto-correction)
+- `claude-ci test` – Run smart test selection (--all for full suite)
+- `claude-ci pre-commit` – Pre-commit validation (--fix to auto-fix)
+- `claude-ci review` – Local PR review simulation
+- `claude-ci all` – Complete validation (--quick or --comprehensive modes)
+- `claude-ci help` – Show all CI commands and options
+
+**Other project scripts:**
 - `./scripts/check-pr-keywords.sh` – Validate PR has proper issue closing keywords
+- `./scripts/claude-test-changed.sh` – Smart test runner (called by claude-ci)
+- `./scripts/claude-post-edit.sh` – Post-edit validation
+- `./scripts/claude-pre-commit.sh` – Pre-commit wrapper
 
 ## 5 📋 Coding & Review Guidelines
 
@@ -150,20 +160,28 @@ Add tools: claude mcp add playwright npx @playwright/mcp@latest
 ## 6 🔄 Recommended Workflows
 
 ### Testing Workflow:
-```bash
-# ALWAYS run before creating/pushing PR:
-pre-commit run --all-files
 
+**🚀 Quick CI-First Approach (Recommended):**
+```bash
+# After making code changes, run smart tests
+claude-ci test
+
+# Before committing, validate and auto-fix
+claude-ci pre-commit --fix
+
+# Final check before PR
+claude-ci all --comprehensive
+```
+
+**📋 Traditional Approach (when needed):**
+```bash
 # Run exact CI checks locally (Docker - matches GitHub Actions exactly!)
 ./scripts/run-ci-docker.sh
-
-# Alternative: Quick pre-push validation (essential checks only - 30 seconds)
-./scripts/quick-pre-push.sh
 
 # Alternative: Run CI checks with Make (uses local Python)
 make lint
 
-# Run tests with coverage
+# Run full test suite with coverage
 pytest --cov=src --cov-report=html --cov-report=term-missing
 
 # Update coverage metrics
@@ -175,6 +193,12 @@ pytest tests/test_validators.py -v
 # If pre-commit made changes:
 git add -A && git commit --amend --no-edit
 ```
+
+**⚡ Speed Comparison:**
+- `claude-ci test`: 10-30 seconds (smart selection)
+- `pytest` full suite: 3-5 minutes
+- `claude-ci all --quick`: 30 seconds
+- `./scripts/run-ci-docker.sh`: 5+ minutes
 
 ### NEW: Unified Claude CI Command Hub
 Single command interface for all CI operations with consistent output:
@@ -381,12 +405,14 @@ This provides clear, actionable feedback for resolving pre-commit failures effic
 ### Development Workflow:
 When | Ask Claude to...
 ---|---
-Small fix | read files → plan → patch → test → pre-commit → /review → commit
-New feature | TDD: write failing tests → commit → implement until green → pre-commit
-High coverage | analyze uncovered lines → write specific tests → verify >85%
-Refactor | generate checklist → test baseline → refactor → test again → pre-commit
-Debug | reproduce issue → add logging → isolate → fix → add regression test
-After edits | run claude-post-edit.sh → fix issues → continue work
+After file edit | `claude-ci check <file>` → fix issues → continue
+Small fix | read files → plan → patch → `claude-ci test` → `claude-ci pre-commit` → /review → commit
+New feature | TDD: write failing tests → commit → implement → `claude-ci all --quick` → iterate
+High coverage | `claude-ci test --all` → analyze uncovered lines → write tests → verify >85%
+Refactor | `claude-ci all` baseline → refactor → `claude-ci all` → compare results
+Debug | reproduce → add logging → `claude-ci test` → fix → add regression test
+Before commit | `claude-ci pre-commit --fix` → review changes → commit
+Before PR | `claude-ci all --comprehensive` → `claude-ci review` → create PR
 
 ### NEW: Git Hooks & Automation:
 ```bash
@@ -406,6 +432,17 @@ After edits | run claude-post-edit.sh → fix issues → continue work
 ```
 
 **Before EVERY commit/push:**
+
+**🚀 Quick Method (Recommended):**
+```bash
+# Single command that does everything
+claude-ci all
+
+# Or for comprehensive validation
+claude-ci all --comprehensive
+```
+
+**📋 Manual Method (for understanding):**
 1. Run `./scripts/run-ci-docker.sh` (or `make lint`) to match GitHub CI exactly
 2. Run `pre-commit run --all-files`
 3. Run `pytest --cov=src --cov-report=term-missing`
@@ -573,6 +610,313 @@ Now changing coverage baselines requires updating only one file! 🎉
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # ✅ Sufficient for gh CLI read operations
 ```
+
+## 6.4 🔧 CI Integration for Claude Code
+
+Claude Code has specialized CI tools that catch errors early and provide structured feedback. Use these commands throughout your development workflow.
+
+### Quick Reference
+
+| Command | Purpose | When to Use | Typical Duration |
+|---------|---------|-------------|------------------|
+| `claude-ci check <file>` | Validate single file | After editing any Python file | ~1 second |
+| `claude-ci check <file> --fix` | Auto-fix formatting | When validation shows fixable issues | ~2 seconds |
+| `claude-ci test` | Run smart test selection | Before committing changes | 10-30 seconds |
+| `claude-ci test --all` | Run full test suite | When smart selection insufficient | 3-5 minutes |
+| `claude-ci pre-commit` | Pre-commit validation | Before git commit | 30-60 seconds |
+| `claude-ci pre-commit --fix` | Auto-fix + validate | When pre-commit fails | 45-90 seconds |
+| `claude-ci review` | Local PR review | Before creating PR | 2-3 minutes |
+| `claude-ci all` | Complete validation | Final check before PR | 3-5 minutes |
+| `claude-ci all --quick` | Quick validation | Rapid iteration | 30 seconds |
+| `claude-ci all --comprehensive` | Full validation | Critical changes | 10+ minutes |
+
+### CI Commands in Detail
+
+#### Check Individual Files
+After editing any Python file, validate immediately:
+```bash
+claude-ci check src/module.py
+```
+
+Expected output:
+```json
+{
+  "status": "PASSED",
+  "checks": {
+    "black": "PASSED",
+    "isort": "PASSED", 
+    "flake8": "PASSED",
+    "mypy": "PASSED"
+  },
+  "duration": "0.8s",
+  "next_action": "File is clean, proceed with development"
+}
+```
+
+If issues are found:
+```json
+{
+  "status": "FAILED",
+  "checks": {
+    "black": "FAILED",
+    "isort": "PASSED",
+    "flake8": "FAILED",
+    "mypy": "PASSED"
+  },
+  "auto_fixable": true,
+  "fix_command": "claude-ci check src/module.py --fix",
+  "issues": [
+    {
+      "tool": "black",
+      "message": "File would be reformatted"
+    },
+    {
+      "tool": "flake8", 
+      "line": 45,
+      "code": "E501",
+      "message": "line too long (92 > 88 characters)"
+    }
+  ]
+}
+```
+
+#### Smart Test Runner
+Run only tests affected by your changes:
+```bash
+claude-ci test
+```
+
+Output shows intelligent test selection:
+```json
+{
+  "mode": "smart",
+  "files_changed": ["src/storage/vector_db.py"],
+  "tests_selected": [
+    "tests/test_storage/test_vector_db.py",
+    "tests/integration/test_vector_search.py"
+  ],
+  "reason": "Direct test mapping + import detection",
+  "test_results": {
+    "passed": 23,
+    "failed": 0,
+    "skipped": 2
+  },
+  "coverage": {
+    "percentage": 89,
+    "changed_files": 92
+  },
+  "duration": "12.3s",
+  "recommendation": "All tests passed. Good coverage on changes."
+}
+```
+
+#### Pre-Commit Validation
+Before committing, ensure all checks pass:
+```bash
+claude-ci pre-commit
+```
+
+Structured output for parsing:
+```json
+{
+  "overall_status": "FAILED",
+  "checks": [
+    {
+      "hook": "black",
+      "status": "FAILED",
+      "files_failed": ["src/module.py"],
+      "auto_fixable": true
+    },
+    {
+      "hook": "flake8",
+      "status": "FAILED",
+      "issues": [
+        {
+          "file": "src/module.py",
+          "line": 45,
+          "code": "E501",
+          "message": "line too long",
+          "fix_guidance": "Break line at logical point or use parentheses"
+        }
+      ],
+      "auto_fixable": false
+    }
+  ],
+  "fix_command": "claude-ci pre-commit --fix",
+  "recommendation": "Run fix command for auto-fixable issues, then manually fix remaining"
+}
+```
+
+#### Local PR Review
+Simulate full PR review before pushing:
+```bash
+claude-ci review
+```
+
+Comprehensive review output:
+```json
+{
+  "verdict": "REQUEST_CHANGES",
+  "summary": {
+    "files_changed": 5,
+    "lines_added": 127,
+    "lines_removed": 43
+  },
+  "issues": {
+    "blocking": [
+      {
+        "severity": "high",
+        "file": "src/api/handler.py",
+        "line": 67,
+        "issue": "Missing error handling for database connection",
+        "suggestion": "Add try-except block around connection.execute()"
+      }
+    ],
+    "non_blocking": [
+      {
+        "severity": "low",
+        "file": "tests/test_api.py",
+        "issue": "Test coverage below target (82% < 85%)",
+        "suggestion": "Add tests for error conditions"
+      }
+    ]
+  },
+  "ci_checks": {
+    "lint": "PASSED",
+    "tests": "PASSED",
+    "coverage": "WARNING",
+    "type_check": "PASSED"
+  },
+  "next_action": "Fix blocking issues before creating PR"
+}
+```
+
+### Progressive Validation Strategy
+
+Use progressive validation for efficiency:
+
+#### 1. Quick Check (seconds)
+```bash
+claude-ci all --quick
+```
+- Basic format and syntax validation
+- Import checks
+- Fast type checking
+- Use during active development
+
+#### 2. Standard Check (1-2 minutes)
+```bash
+claude-ci all
+```
+- Full linting suite
+- Smart test selection
+- Pre-commit hooks
+- Coverage analysis
+- Use before commits
+
+#### 3. Comprehensive Check (5+ minutes)
+```bash
+claude-ci all --comprehensive
+```
+- Everything in standard
+- Full test suite
+- Integration tests
+- Performance benchmarks
+- PR review simulation
+- Use before creating PR
+
+### Integration with Development Workflow
+
+Updated workflow with CI checkpoints:
+
+| When | Claude Command Sequence |
+|------|------------------------|
+| After file edit | `claude-ci check <file>` → fix issues → continue |
+| After multiple edits | `claude-ci all --quick` → address failures |
+| Before testing | `claude-ci test` → check coverage impact |
+| Pre-commit | `claude-ci pre-commit --fix` → review changes |
+| Pre-PR | `claude-ci all --comprehensive` → ensure clean |
+| PR blocked | `claude-ci review` → fix blocking issues |
+
+### CI Troubleshooting
+
+#### Common Issues and Solutions
+
+**Format errors after edit:**
+```bash
+# See what would change
+claude-ci check src/module.py
+
+# Auto-fix formatting
+claude-ci check src/module.py --fix
+
+# Verify fix worked
+claude-ci check src/module.py
+```
+
+**Pre-commit keeps failing:**
+```bash
+# Get detailed error report
+claude-ci pre-commit | jq '.checks[] | select(.status=="FAILED")'
+
+# Try auto-fix first
+claude-ci pre-commit --fix
+
+# Check what remains
+claude-ci pre-commit | jq '.issues'
+```
+
+**Coverage regression:**
+```bash
+# Check current coverage
+claude-ci test --all | jq '.coverage'
+
+# Find uncovered lines
+pytest --cov=src --cov-report=term-missing | grep -A 10 "TOTAL"
+
+# Run specific test file
+pytest tests/test_module.py -v --cov=src.module
+```
+
+**Review shows REQUEST_CHANGES:**
+```bash
+# Get blocking issues only
+claude-ci review | jq '.issues.blocking'
+
+# Check specific file issues
+claude-ci review | jq '.issues.blocking[] | select(.file=="src/module.py")'
+
+# After fixes, verify
+claude-ci review | jq '.verdict'
+```
+
+### CI Error Reference
+
+| Error | Meaning | Fix |
+|-------|---------|-----|
+| `E501 line too long` | Line exceeds 88 chars | Break at logical point or use parentheses |
+| `F401 imported but unused` | Unnecessary import | Remove the import |
+| `E302 expected 2 blank lines` | Class/function spacing | Add blank line |
+| `I001 import order` | Wrong import order | Run with --fix flag |
+| `B008 function call in argument` | Dangerous default | Use `None` and check in function |
+| `type: ignore` needed | MyPy can't infer type | Add type annotation or ignore with comment |
+
+### Best Practices
+
+1. **Run checks immediately** after edits to catch issues early
+2. **Use --fix flags** for automatic corrections
+3. **Parse JSON output** for specific error details
+4. **Follow progressive validation** to save time
+5. **Address blocking issues first** in review feedback
+6. **Keep coverage above baseline** (currently 78.0%)
+
+### Performance Tips
+
+- Use `claude-ci test` instead of `claude-ci test --all` when possible (80% faster)
+- Run `claude-ci all --quick` frequently during development
+- Save `claude-ci all --comprehensive` for final validation
+- Cache Docker images locally for faster `claude-ci review`
+- Use parallel execution when checking multiple files
 
 ## 7 ▶️ GitHub Actions Overview
 
@@ -919,8 +1263,21 @@ All documents include `graph_metadata` defining relationships:
    ```
 
 4. **ALWAYS run CI checks and tests before pushing:**
+   
+   **🚀 Quick Method with claude-ci (RECOMMENDED):**
    ```bash
-   # Run exact CI checks locally (RECOMMENDED - matches GitHub Actions)
+   # Run comprehensive validation
+   claude-ci all --comprehensive
+   
+   # If issues found, auto-fix what's possible
+   claude-ci pre-commit --fix
+   git add -A
+   git commit --amend --no-edit
+   ```
+
+   **📋 Traditional Method:**
+   ```bash
+   # Run exact CI checks locally (matches GitHub Actions)
    ./scripts/run-ci-docker.sh
 
    # Or use Make (uses local Python)
