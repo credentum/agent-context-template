@@ -5,6 +5,10 @@
 # without creating actual PRs. It works with the extracted ARC-Reviewer module
 # to provide the same validation as GitHub CI.
 #
+# YAML Format Guarantee: When --output-format=yaml is used, this script ensures
+# the output exactly matches GitHub Actions ARC-Reviewer format by calling the
+# ARC-Reviewer module's format_yaml_output() method directly.
+#
 # Usage:
 #   ./scripts/simulate-pr-review.sh [options]
 #
@@ -113,7 +117,7 @@ Coverage Analysis:
   - python -m coverage report --fail-under=<threshold from .coverage-config.json>
 
 Dependencies:
-  - ARC-Reviewer module (src/agents/arc_reviewer.py) - optional, simulated if missing
+  - ARC-Reviewer module (src/agents/arc_reviewer.py) - required for YAML format
   - Python 3.11+ with pytest and coverage
   - Git repository with main branch
   - .coverage-config.json for threshold configuration
@@ -283,20 +287,34 @@ run_arc_reviewer_analysis() {
     export COVERAGE_DATA="$coverage_data"
     export COVERAGE_PASSED="$coverage_passed"
 
-    # Run the ARC-Reviewer
+    # For YAML output, always use ARC-Reviewer's format_yaml_output() method to ensure consistency
     local review_result=""
     if [[ "$output_format" == "yaml" ]]; then
-        # Get YAML output directly
-        review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args 2>/dev/null || generate_simulated_review_with_coverage "$pr_number" "$base_branch" "yaml" "$coverage_data" "$coverage_passed")
+        # Get YAML output directly from ARC-Reviewer module (no fallback for YAML format)
+        if ! review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args 2>/dev/null); then
+            log_error "ARC-Reviewer execution failed - cannot generate proper YAML format"
+            log_error "This may indicate missing dependencies or test failures"
+            log_error "Try running: python -m src.agents.arc_reviewer --pr $pr_number --base $base_branch --verbose"
+            return 1
+        fi
         echo "$review_result"
     elif [[ "$output_format" == "json" ]]; then
-        # Convert YAML to JSON
-        review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args 2>/dev/null || generate_simulated_review_with_coverage "$pr_number" "$base_branch" "yaml" "$coverage_data" "$coverage_passed")
-        echo "$review_result" | python -c "import yaml, json, sys; print(json.dumps(yaml.safe_load(sys.stdin.read()), indent=2))"
+        # Convert ARC-Reviewer YAML to JSON
+        if review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args 2>/dev/null); then
+            echo "$review_result" | python -c "import yaml, json, sys; print(json.dumps(yaml.safe_load(sys.stdin.read()), indent=2))"
+        else
+            log_warning "ARC-Reviewer failed, falling back to simulated review"
+            generate_simulated_review_with_coverage "$pr_number" "$base_branch" "json" "$coverage_data" "$coverage_passed"
+        fi
     else
-        # Generate summary format
-        review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args 2>/dev/null || generate_simulated_review_with_coverage "$pr_number" "$base_branch" "yaml" "$coverage_data" "$coverage_passed")
-        generate_review_summary "$review_result" "$pr_number" "$base_branch"
+        # Generate summary format - use ARC-Reviewer if available, otherwise simulate
+        if review_result=$(python -m src.agents.arc_reviewer --pr "$pr_number" --base "$base_branch" $args 2>/dev/null); then
+            generate_review_summary "$review_result" "$pr_number" "$base_branch"
+        else
+            log_warning "ARC-Reviewer failed, generating summary from simulated review"
+            local simulated_yaml=$(generate_simulated_review_with_coverage "$pr_number" "$base_branch" "yaml" "$coverage_data" "$coverage_passed")
+            generate_review_summary "$simulated_yaml" "$pr_number" "$base_branch"
+        fi
     fi
 
     # Clean up environment variables
