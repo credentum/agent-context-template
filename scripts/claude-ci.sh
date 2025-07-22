@@ -84,10 +84,12 @@ github_actions_output() {
             echo "command=${command}" >> "${GITHUB_OUTPUT}"
             echo "target=${target}" >> "${GITHUB_OUTPUT}"
         else
-            # Use modern GitHub Actions output format
-            echo "status=${status}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
-            echo "command=${command}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
-            echo "target=${target}" >> "${GITHUB_OUTPUT:-/dev/stdout}"
+            # Use modern GitHub Actions output format (only if GITHUB_OUTPUT is set)
+            if [ -n "${GITHUB_OUTPUT:-}" ]; then
+                echo "status=${status}" >> "${GITHUB_OUTPUT}"
+                echo "command=${command}" >> "${GITHUB_OUTPUT}"
+                echo "target=${target}" >> "${GITHUB_OUTPUT}"
+            fi
         fi
         
         # Set summary for GitHub Actions UI
@@ -363,7 +365,10 @@ cmd_review() {
     local first_check=true
     local first_error=true
     
-    pretty_output "review" "INFO" "Running comprehensive PR review simulation..."
+    # Don't output pretty messages in JSON mode to avoid contaminating JSON output
+    if [ "$JSON_OUTPUT" = false ]; then
+        pretty_output "review" "INFO" "Running comprehensive PR review simulation..."
+    fi
     
     # Run pre-commit checks
     if cmd_pre_commit > /dev/null 2>&1; then
@@ -456,7 +461,10 @@ cmd_all() {
     }
     trap cleanup_temp_files EXIT
 
-    pretty_output "all" "INFO" "Running complete CI pipeline..."
+    # Don't output pretty messages in JSON mode to avoid contaminating JSON output
+    if [ "$JSON_OUTPUT" = false ]; then
+        pretty_output "all" "INFO" "Running complete CI pipeline..."
+    fi
 
     # Helper function to capture command output and status
     run_stage() {
@@ -465,7 +473,10 @@ cmd_all() {
         local temp_output
         local stage_result
 
-        pretty_output "all" "INFO" "Running stage: $stage_name"
+        # Don't output pretty messages in JSON mode to avoid contaminating JSON output
+        if [ "$JSON_OUTPUT" = false ]; then
+            pretty_output "all" "INFO" "Running stage: $stage_name"
+        fi
         stages_run="$stages_run $stage_name"
 
         # Capture output from stage with secure temp file
@@ -524,15 +535,21 @@ cmd_all() {
 
     # Progressive validation based on mode
     if [ "$QUICK" = true ]; then
-        pretty_output "all" "INFO" "Quick mode: format check + basic lint"
+        if [ "$JSON_OUTPUT" = false ]; then
+            pretty_output "all" "INFO" "Quick mode: format check + basic lint"
+        fi
         run_stage "pre-commit" "cmd_pre_commit" || true
     elif [ "$COMPREHENSIVE" = true ]; then
-        pretty_output "all" "INFO" "Comprehensive mode: full validation suite"
+        if [ "$JSON_OUTPUT" = false ]; then
+            pretty_output "all" "INFO" "Comprehensive mode: full validation suite"
+        fi
         run_stage "pre-commit" "cmd_pre_commit" || true
         run_stage "test" "cmd_test" || true
         run_stage "review" "cmd_review" || true
     else
-        pretty_output "all" "INFO" "Standard mode: lint + relevant tests + pre-commit"
+        if [ "$JSON_OUTPUT" = false ]; then
+            pretty_output "all" "INFO" "Standard mode: lint + relevant tests + pre-commit"
+        fi
         run_stage "pre-commit" "cmd_pre_commit" || true
         run_stage "test" "cmd_test" || true
     fi
