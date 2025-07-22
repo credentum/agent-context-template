@@ -11,11 +11,11 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 # For running without Locust UI
-import gevent
-from locust import HttpUser, between, events, task
-from locust.env import Environment
-from locust.log import setup_logging
-from locust.stats import stats_history, stats_printer
+import gevent  # type: ignore[import-untyped]
+from locust import HttpUser, between, events, task  # type: ignore[import-untyped]
+from locust.env import Environment  # type: ignore[import-untyped]
+from locust.log import setup_logging  # type: ignore[import-untyped]
+from locust.stats import stats_history, stats_printer  # type: ignore[import-untyped]
 
 
 class DocumentProcessingUser(HttpUser):
@@ -75,7 +75,7 @@ class DocumentProcessingUser(HttpUser):
             )
 
     @task(2)
-    def read_document(self):
+    def read_document(self) -> None:
         """Simulate document reading"""
         # Generate doc_id for simulation (not used in this test)
         _ = f"doc_{random.randint(1, 1000)}"
@@ -104,7 +104,7 @@ class DocumentProcessingUser(HttpUser):
             )
 
     @task(1)
-    def search_documents(self):
+    def search_documents(self) -> None:
         """Simulate document search"""
         # Generate query for simulation (not used in this test)
         _ = f"tag:{random.choice(['design', 'architecture', 'api', 'database'])}"
@@ -139,7 +139,7 @@ class AgentProcessingUser(HttpUser):
     wait_time = between(5, 10)
 
     @task
-    def run_cleanup_agent(self):
+    def run_cleanup_agent(self) -> None:
         """Simulate cleanup agent execution"""
         start_time = time.time()
 
@@ -166,7 +166,7 @@ class AgentProcessingUser(HttpUser):
             )
 
     @task
-    def run_sprint_updater(self):
+    def run_sprint_updater(self) -> None:
         """Simulate sprint updater agent"""
         start_time = time.time()
 
@@ -199,7 +199,7 @@ class EmbeddingProcessingUser(HttpUser):
     wait_time = between(2, 5)
 
     @task
-    def generate_embeddings(self):
+    def generate_embeddings(self) -> None:
         """Simulate embedding generation"""
         doc_size = random.choice([1000, 5000, 10000, 50000])  # bytes
 
@@ -329,7 +329,7 @@ def run_load_test(
         # For UI mode, use standard Locust startup
         import sys
 
-        from locust.main import main
+        from locust.main import main  # type: ignore[import-not-found]
 
         sys.argv = [
             "locust",
@@ -365,7 +365,7 @@ if __name__ == "__main__":
         )
 
         # Save results
-        if args.csv:
+        if args.csv and results is not None:
             import csv
 
             # Write summary
@@ -395,7 +395,7 @@ if __name__ == "__main__":
                     )
 
         # Generate HTML report if requested
-        if args.html:
+        if args.html and results is not None:
             html_content = f"""
             <html>
             <head><title>Load Test Report</title></head>
@@ -437,7 +437,10 @@ if __name__ == "__main__":
                 f.write(html_content)
 
         # Exit with appropriate code
-        exit(0 if results["thresholds_passed"] else 1)
+        if results is not None:
+            exit(0 if results["thresholds_passed"] else 1)
+        else:
+            exit(1)
     else:
         # Run with UI
         run_load_test(

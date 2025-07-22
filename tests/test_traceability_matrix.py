@@ -91,7 +91,7 @@ CRITICAL_FUNCTIONS = {
 class TestTraceabilityMatrix:
     """Test cases for verifying traceability matrix completeness"""
 
-    def test_all_critical_functions_have_tests(self):
+    def test_all_critical_functions_have_tests(self) -> None:
         """Verify all critical functions have at least one test case"""
         missing_tests = []
 
@@ -101,7 +101,7 @@ class TestTraceabilityMatrix:
 
         assert not missing_tests, f"Critical functions missing tests: {missing_tests}"
 
-    def test_all_requirements_covered(self):
+    def test_all_requirements_covered(self) -> None:
         """Verify all requirements are covered by tests"""
         all_requirements: set[str] = set()
         covered_requirements: set[str] = set()
@@ -115,7 +115,7 @@ class TestTraceabilityMatrix:
         uncovered = all_requirements - covered_requirements
         assert not uncovered, f"Requirements not covered by tests: {uncovered}"
 
-    def test_generate_traceability_report(self, tmp_path):
+    def test_generate_traceability_report(self, tmp_path) -> None:
         """Generate a traceability report for documentation"""
         report: dict[str, Any] = {
             "summary": {
@@ -167,7 +167,7 @@ class TestTraceabilityMatrix:
 
         return module_coverage
 
-    def test_test_case_naming_convention(self):
+    def test_test_case_naming_convention(self) -> None:
         """Verify test cases follow naming conventions"""
         invalid_names = []
 

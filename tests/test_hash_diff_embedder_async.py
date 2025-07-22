@@ -107,7 +107,7 @@ def docs_dir(temp_dir):
 class TestEmbeddingTask:
     """Test EmbeddingTask dataclass"""
 
-    def test_embedding_task_creation(self, temp_dir):
+    def test_embedding_task_creation(self, temp_dir) -> None:
         """Test EmbeddingTask creation and attributes"""
         file_path = temp_dir / "test.yaml"
         task = EmbeddingTask(
@@ -126,7 +126,7 @@ class TestEmbeddingTask:
 class TestAsyncHashDiffEmbedder:
     """Comprehensive tests for AsyncHashDiffEmbedder"""
 
-    def test_init_with_default_paths(self):
+    def test_init_with_default_paths(self) -> None:
         """Test initialization with default config paths"""
         # Use non-existent paths to test defaults
         with patch.object(Path, "exists", return_value=False):
@@ -141,7 +141,7 @@ class TestAsyncHashDiffEmbedder:
             assert embedder.batch_size == 100  # Default
             assert embedder.max_retries == 3  # Default
 
-    def test_init_with_custom_config(self, embedder, mock_config, mock_perf_config):
+    def test_init_with_custom_config(self, embedder, mock_config, mock_perf_config) -> None:
         """Test initialization with custom configuration"""
         assert embedder.config == mock_config
         assert embedder.perf_config == mock_perf_config
@@ -153,26 +153,26 @@ class TestAsyncHashDiffEmbedder:
         assert embedder.retry_backoff_factor == 1.5
         assert embedder.request_timeout == 15
 
-    def test_load_config_file_not_found(self):
+    def test_load_config_file_not_found(self) -> None:
         """Test loading config when file doesn't exist"""
         embedder = AsyncHashDiffEmbedder()
         config = embedder._load_config("nonexistent.yaml")
         assert config == {}
 
-    def test_load_perf_config_file_not_found(self):
+    def test_load_perf_config_file_not_found(self) -> None:
         """Test loading perf config when file doesn't exist"""
         embedder = AsyncHashDiffEmbedder()
         config = embedder._load_perf_config("nonexistent.yaml")
         assert config == {"vector_db": {"embedding": {}}}
 
-    def test_load_hash_cache_no_file(self, embedder):
+    def test_load_hash_cache_no_file(self, embedder) -> None:
         """Test loading hash cache when file doesn't exist"""
         # Make sure the cache file doesn't exist
         embedder.hash_cache_path = Path("nonexistent_cache.json")
         cache = embedder._load_hash_cache()
         assert cache == {}
 
-    def test_load_hash_cache_with_file(self, embedder, temp_dir):
+    def test_load_hash_cache_with_file(self, embedder, temp_dir) -> None:
         """Test loading hash cache when file exists"""
         cache_data = {"test.yaml": {"document_id": "test", "content_hash": "abc123"}}
 
@@ -183,7 +183,7 @@ class TestAsyncHashDiffEmbedder:
         cache = embedder._load_hash_cache()
         assert cache == cache_data
 
-    def test_load_hash_cache_invalid_json(self, embedder, temp_dir):
+    def test_load_hash_cache_invalid_json(self, embedder, temp_dir) -> None:
         """Test loading hash cache with invalid JSON"""
         embedder.hash_cache_path.parent.mkdir(parents=True, exist_ok=True)
         with open(embedder.hash_cache_path, "w") as f:
@@ -197,7 +197,7 @@ class TestAsyncConnection:
     """Test async connection functionality"""
 
     @pytest.mark.asyncio
-    async def test_connect_success(self, embedder):
+    async def test_connect_success(self, embedder) -> None:
         """Test successful connection"""
         with patch("src.storage.hash_diff_embedder_async.AsyncQdrantClient") as mock_qdrant:
             with patch("src.storage.hash_diff_embedder_async.AsyncOpenAI") as mock_openai:
@@ -227,7 +227,7 @@ class TestAsyncConnection:
                         mock_client.get_collections.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_connect_no_openai_key(self, embedder):
+    async def test_connect_no_openai_key(self, embedder) -> None:
         """Test connection failure when OpenAI key is missing"""
         with patch("src.storage.hash_diff_embedder_async.AsyncQdrantClient") as mock_qdrant:
             with patch("os.getenv", return_value=None):
@@ -245,7 +245,7 @@ class TestAsyncConnection:
                     assert embedder.openai_client is None
 
     @pytest.mark.asyncio
-    async def test_connect_qdrant_failure(self, embedder):
+    async def test_connect_qdrant_failure(self, embedder) -> None:
         """Test connection failure when Qdrant fails"""
         with patch("src.storage.hash_diff_embedder_async.AsyncQdrantClient") as mock_qdrant:
             with patch("src.core.utils.get_secure_connection_config") as mock_get_config:
@@ -260,7 +260,7 @@ class TestAsyncConnection:
                 assert embedder.client is None
 
     @pytest.mark.asyncio
-    async def test_connect_qdrant_get_collections_failure(self, embedder):
+    async def test_connect_qdrant_get_collections_failure(self, embedder) -> None:
         """Test connection failure when get_collections fails"""
         with patch("src.storage.hash_diff_embedder_async.AsyncQdrantClient") as mock_qdrant:
             with patch("src.core.utils.get_secure_connection_config") as mock_get_config:
@@ -280,7 +280,7 @@ class TestEmbeddingWithRetry:
     """Test embedding with retry logic"""
 
     @pytest.mark.asyncio
-    async def test_embed_with_retry_success(self, embedder):
+    async def test_embed_with_retry_success(self, embedder) -> None:
         """Test successful embedding on first try"""
         # Mock OpenAI client
         mock_response = AsyncMock()
@@ -298,7 +298,7 @@ class TestEmbeddingWithRetry:
         )
 
     @pytest.mark.asyncio
-    async def test_embed_with_retry_rate_limit_success(self, embedder):
+    async def test_embed_with_retry_rate_limit_success(self, embedder) -> None:
         """Test successful embedding after rate limit retry"""
         mock_response = AsyncMock()
         mock_response.data = [AsyncMock()]
@@ -315,7 +315,7 @@ class TestEmbeddingWithRetry:
         assert embedder.openai_client.embeddings.create.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_embed_with_retry_max_retries_exceeded(self, embedder):
+    async def test_embed_with_retry_max_retries_exceeded(self, embedder) -> None:
         """Test failure when max retries exceeded"""
         embedder.openai_client = AsyncMock()
         embedder.openai_client.embeddings.create = AsyncMock(
@@ -328,7 +328,7 @@ class TestEmbeddingWithRetry:
         assert embedder.openai_client.embeddings.create.call_count == embedder.max_retries
 
     @pytest.mark.asyncio
-    async def test_embed_with_retry_non_rate_limit_error(self, embedder):
+    async def test_embed_with_retry_non_rate_limit_error(self, embedder) -> None:
         """Test immediate failure on non-rate-limit error"""
         embedder.openai_client = AsyncMock()
         embedder.openai_client.embeddings.create = AsyncMock(
@@ -345,7 +345,7 @@ class TestProcessEmbeddingTask:
     """Test embedding task processing"""
 
     @pytest.mark.asyncio
-    async def test_process_embedding_task_success(self, embedder, embedding_task):
+    async def test_process_embedding_task_success(self, embedder, embedding_task) -> None:
         """Test successful embedding task processing"""
         # Mock the embedding process
         with patch.object(embedder, "_embed_with_retry", return_value=[0.1, 0.2, 0.3]):
@@ -367,7 +367,7 @@ class TestProcessEmbeddingTask:
             embedder.client.upsert.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_process_embedding_task_with_minimal_data(self, embedder, temp_dir):
+    async def test_process_embedding_task_with_minimal_data(self, embedder, temp_dir) -> None:
         """Test processing task with minimal document data"""
         task = EmbeddingTask(
             file_path=temp_dir / "minimal.yaml",
@@ -386,7 +386,7 @@ class TestProcessEmbeddingTask:
             assert result.startswith("minimal-001-")
 
     @pytest.mark.asyncio
-    async def test_process_embedding_task_failure(self, embedder, embedding_task):
+    async def test_process_embedding_task_failure(self, embedder, embedding_task) -> None:
         """Test embedding task processing failure"""
         with patch.object(embedder, "_embed_with_retry", side_effect=Exception("Embedding failed")):
             result = await embedder._process_embedding_task(embedding_task)
@@ -398,7 +398,7 @@ class TestEmbedDirectory:
     """Test directory embedding functionality"""
 
     @pytest.mark.asyncio
-    async def test_embed_directory_success(self, embedder, docs_dir):
+    async def test_embed_directory_success(self, embedder, docs_dir) -> None:
         """Test successful directory embedding"""
         # Create test documents
         doc1_path = docs_dir / "doc1.yaml"
@@ -430,7 +430,7 @@ class TestEmbedDirectory:
             assert total == 2
 
     @pytest.mark.asyncio
-    async def test_embed_directory_with_cache_hit(self, embedder, docs_dir):
+    async def test_embed_directory_with_cache_hit(self, embedder, docs_dir) -> None:
         """Test directory embedding with cache hits"""
         # Create test document
         doc_path = docs_dir / "cached_doc.yaml"
@@ -453,7 +453,7 @@ class TestEmbedDirectory:
         assert total == 1
 
     @pytest.mark.asyncio
-    async def test_embed_directory_skips_schemas(self, embedder, docs_dir):
+    async def test_embed_directory_skips_schemas(self, embedder, docs_dir) -> None:
         """Test that schemas directory is skipped"""
         # Create schemas directory with file
         schemas_dir = docs_dir / "schemas"
@@ -475,7 +475,7 @@ class TestEmbedDirectory:
             assert total == 2  # Both files counted
 
     @pytest.mark.asyncio
-    async def test_embed_directory_skips_archive(self, embedder, docs_dir):
+    async def test_embed_directory_skips_archive(self, embedder, docs_dir) -> None:
         """Test that archive directory is skipped"""
         # Create archive directory with file
         archive_dir = docs_dir / "archive"
@@ -492,7 +492,7 @@ class TestEmbedDirectory:
             assert total == 1
 
     @pytest.mark.asyncio
-    async def test_embed_directory_invalid_yaml(self, embedder, docs_dir):
+    async def test_embed_directory_invalid_yaml(self, embedder, docs_dir) -> None:
         """Test handling of invalid YAML files"""
         # Create invalid YAML file
         invalid_path = docs_dir / "invalid.yaml"
@@ -505,7 +505,7 @@ class TestEmbedDirectory:
         assert total == 1
 
     @pytest.mark.asyncio
-    async def test_embed_directory_empty_yaml(self, embedder, docs_dir):
+    async def test_embed_directory_empty_yaml(self, embedder, docs_dir) -> None:
         """Test handling of empty YAML files"""
         # Create empty YAML file
         empty_path = docs_dir / "empty.yaml"
@@ -518,7 +518,7 @@ class TestEmbedDirectory:
         assert total == 1
 
     @pytest.mark.asyncio
-    async def test_embed_directory_no_yaml_files(self, embedder, docs_dir):
+    async def test_embed_directory_no_yaml_files(self, embedder, docs_dir) -> None:
         """Test directory with no YAML files"""
         # Create non-YAML file
         txt_file = docs_dir / "readme.txt"
@@ -531,7 +531,7 @@ class TestEmbedDirectory:
         assert total == 0
 
     @pytest.mark.asyncio
-    async def test_embed_directory_batch_processing(self, embedder, docs_dir):
+    async def test_embed_directory_batch_processing(self, embedder, docs_dir) -> None:
         """Test batch processing with small batch size"""
         embedder.batch_size = 2  # Small batch size for testing
 
@@ -548,7 +548,7 @@ class TestEmbedDirectory:
             assert total == 5
 
     @pytest.mark.asyncio
-    async def test_embed_directory_saves_cache(self, embedder, docs_dir):
+    async def test_embed_directory_saves_cache(self, embedder, docs_dir) -> None:
         """Test that cache is saved to disk"""
         # Create test document
         doc_path = docs_dir / "test_doc.yaml"
@@ -585,7 +585,7 @@ class TestMainFunction:
     """Test main function and CLI"""
 
     @pytest.mark.asyncio
-    async def test_main_function_success(self, temp_dir):
+    async def test_main_function_success(self, temp_dir) -> None:
         """Test main function with successful execution"""
         # Create config files
         config_file = temp_dir / "config.yaml"
@@ -635,7 +635,7 @@ class TestMainFunction:
                 mock_embedder.embed_directory.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_main_function_connection_failure(self, temp_dir):
+    async def test_main_function_connection_failure(self, temp_dir) -> None:
         """Test main function when connection fails"""
         docs_dir = temp_dir / "docs"
         docs_dir.mkdir()

@@ -17,10 +17,16 @@ last_referenced: "2025-01-15"
 
 # High-level goals for this sprint
 goals:
-  - "Extract context storage infrastructure into standalone context-store repository"
+  - |
+    Extract context storage infrastructure into standalone
+    context-store repository
   - "Implement MCP server interface for all context operations"
-  - "Refactor agent-context-template to use context-store as external service"
-  - "Achieve clean separation between infrastructure and implementation examples"
+  - |
+    Refactor agent-context-template to use context-store as
+    external service
+  - |
+    Achieve clean separation between infrastructure and
+    implementation examples
 
 # Phases represent major work areas
 phases:
@@ -29,7 +35,9 @@ phases:
     status: pending
     priority: blocking
     component: infrastructure
-    description: "Create context-store repository and extract core storage components"
+    description: |
+      Create context-store repository and extract core storage
+      components
     duration_days: 3
     tasks:
       - title: "Create context-store repository"
@@ -39,8 +47,10 @@ phases:
           ## Acceptance Criteria
           - [ ] Create new GitHub repository: context-store
           - [ ] Initialize with README, LICENSE (MIT), .gitignore
-          - [ ] Set up Python project structure (pyproject.toml, requirements.txt)
-          - [ ] Set up TypeScript project structure (package.json, tsconfig.json)
+          - [ ] Set up Python project structure (pyproject.toml,
+                requirements.txt)
+          - [ ] Set up TypeScript project structure (package.json,
+                tsconfig.json)
           - [ ] Create directory structure as per refactoring plan
 
           ## Implementation Notes
@@ -58,13 +68,18 @@ phases:
 
       - title: "Extract storage components"
         description: |
-          Move storage implementation from agent-context-template to context-store
+          Move storage implementation from agent-context-template to
+          context-store
 
           ## Acceptance Criteria
-          - [ ] Move src/storage/hash_diff_embedder_async.py → context-store/src/storage/hash_diff_embedder.py
-          - [ ] Move src/storage/neo4j_init.py → context-store/src/storage/neo4j_client.py
-          - [ ] Move src/storage/vector_db_init.py → context-store/src/storage/qdrant_client.py
-          - [ ] Move context_kv.py functionality to context-store/src/storage/kv_store.py
+          - [ ] Move src/storage/hash_diff_embedder_async.py →
+                context-store/src/storage/hash_diff_embedder.py
+          - [ ] Move src/storage/neo4j_init.py →
+                context-store/src/storage/neo4j_client.py
+          - [ ] Move src/storage/vector_db_init.py →
+                context-store/src/storage/qdrant_client.py
+          - [ ] Move context_kv.py functionality to
+                context-store/src/storage/kv_store.py
           - [ ] Move all associated tests to context-store/src/storage/tests/
           - [ ] Update imports and remove async where not needed for simplicity
 

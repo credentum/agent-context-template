@@ -17,6 +17,10 @@ context/logs/**/*.yaml
 context/logs/prompts/
 context/archive/**/*.yaml
 
+# Context system cache files
+context/.embeddings_cache/
+context/.graph_cache/
+
 # Database files
 *.db
 *.sqlite

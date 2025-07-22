@@ -15,7 +15,7 @@ from src.core.base_component import BaseComponent, DatabaseComponent
 class TestBaseComponent:
     """Test BaseComponent functionality"""
 
-    def test_init_with_valid_config(self):
+    def test_init_with_valid_config(self) -> None:
         """Test BaseComponent initialization with valid config file"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump({"test": "value"}, f)
@@ -35,7 +35,7 @@ class TestBaseComponent:
         finally:
             os.unlink(config_path)
 
-    def test_init_with_missing_config(self):
+    def test_init_with_missing_config(self) -> None:
         """Test BaseComponent initialization with missing config file"""
 
         class TestComponent(BaseComponent):
@@ -46,7 +46,7 @@ class TestBaseComponent:
         assert component.config == {}
         assert component.config_path == "/nonexistent/path.yaml"
 
-    def test_init_with_invalid_yaml(self):
+    def test_init_with_invalid_yaml(self) -> None:
         """Test BaseComponent initialization with invalid YAML"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("invalid: yaml: content: [")
@@ -63,7 +63,7 @@ class TestBaseComponent:
         finally:
             os.unlink(config_path)
 
-    def test_verbose_logging(self):
+    def test_verbose_logging(self) -> None:
         """Test verbose logging configuration"""
 
         class TestComponent(BaseComponent):
@@ -74,7 +74,7 @@ class TestBaseComponent:
         assert component.verbose is True
         assert component.logger.level == 10  # DEBUG level
 
-    def test_log_error_basic(self):
+    def test_log_error_basic(self) -> None:
         """Test basic error logging"""
 
         class TestComponent(BaseComponent):
@@ -86,7 +86,7 @@ class TestBaseComponent:
             component.log_error("Test error message")
             mock_error.assert_called_once()
 
-    def test_log_error_with_exception(self):
+    def test_log_error_with_exception(self) -> None:
         """Test error logging with exception"""
 
         class TestComponent(BaseComponent):
@@ -100,7 +100,7 @@ class TestBaseComponent:
             component.log_error("Test error", exception=test_exception)
             mock_error.assert_called_once()
 
-    def test_log_warning(self):
+    def test_log_warning(self) -> None:
         """Test warning logging"""
 
         class TestComponent(BaseComponent):
@@ -112,7 +112,7 @@ class TestBaseComponent:
             component.log_warning("Test warning")
             mock_warning.assert_called_once_with("Test warning")
 
-    def test_log_info(self):
+    def test_log_info(self) -> None:
         """Test info logging"""
 
         class TestComponent(BaseComponent):
@@ -124,7 +124,7 @@ class TestBaseComponent:
             component.log_info("Test info")
             mock_info.assert_called_once_with("Test info")
 
-    def test_log_success(self):
+    def test_log_success(self) -> None:
         """Test success logging"""
 
         class TestComponent(BaseComponent):
@@ -136,7 +136,7 @@ class TestBaseComponent:
             component.log_success("Test success")
             mock_info.assert_called_once_with("Success: Test success")
 
-    def test_context_manager_success(self):
+    def test_context_manager_success(self) -> None:
         """Test context manager successful execution"""
 
         class TestComponent(BaseComponent):
@@ -147,7 +147,7 @@ class TestBaseComponent:
         with component as c:
             assert c == component
 
-    def test_context_manager_with_exception(self):
+    def test_context_manager_with_exception(self) -> None:
         """Test context manager with exception during cleanup"""
 
         class TestComponent(BaseComponent):
@@ -164,7 +164,7 @@ class TestBaseComponent:
             mock_log_error.assert_called_once()
 
     @patch("src.core.base_component.get_environment")
-    def test_production_config_validation(self, mock_get_env):
+    def test_production_config_validation(self, mock_get_env) -> None:
         """Test production configuration validation"""
         mock_get_env.return_value = "production"
 
@@ -184,7 +184,7 @@ class TestBaseComponent:
                 "Running in production without proper security configuration"
             )
 
-    def test_close_method(self):
+    def test_close_method(self) -> None:
         """Test close method (default implementation)"""
 
         class TestComponent(BaseComponent):
@@ -199,7 +199,7 @@ class TestBaseComponent:
 class TestDatabaseComponent:
     """Test DatabaseComponent functionality"""
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test DatabaseComponent initialization"""
 
         class TestDBComponent(DatabaseComponent):
@@ -213,7 +213,7 @@ class TestDatabaseComponent:
         assert component.connection is None
         assert component.is_connected is False
 
-    def test_validate_production_config_ssl_disabled(self):
+    def test_validate_production_config_ssl_disabled(self) -> None:
         """Test production config validation with SSL disabled"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump({"test_db": {"host": "localhost", "ssl": False}}, f)
@@ -239,7 +239,7 @@ class TestDatabaseComponent:
         finally:
             os.unlink(config_path)
 
-    def test_validate_production_config_ssl_enabled(self):
+    def test_validate_production_config_ssl_enabled(self) -> None:
         """Test production config validation with SSL enabled"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump({"test_db": {"host": "localhost", "ssl": True}}, f)
@@ -260,7 +260,7 @@ class TestDatabaseComponent:
         finally:
             os.unlink(config_path)
 
-    def test_ensure_connected_when_connected(self):
+    def test_ensure_connected_when_connected(self) -> None:
         """Test ensure_connected when already connected"""
 
         class TestDBComponent(DatabaseComponent):
@@ -274,7 +274,7 @@ class TestDatabaseComponent:
         component.is_connected = True
         assert component.ensure_connected() is True
 
-    def test_ensure_connected_when_not_connected(self):
+    def test_ensure_connected_when_not_connected(self) -> None:
         """Test ensure_connected when not connected"""
 
         class TestDBComponent(DatabaseComponent):
@@ -292,7 +292,7 @@ class TestDatabaseComponent:
             assert result is False
             mock_log_error.assert_called_once_with("Not connected to database")
 
-    def test_validate_production_config_no_service_name(self):
+    def test_validate_production_config_no_service_name(self) -> None:
         """Test production config validation when service name is None"""
 
         class TestDBComponent(DatabaseComponent):
@@ -306,7 +306,7 @@ class TestDatabaseComponent:
         result = component._validate_production_config()
         assert result is True
 
-    def test_validate_production_config_service_not_in_config(self):
+    def test_validate_production_config_service_not_in_config(self) -> None:
         """Test production config validation when service is not in config"""
 
         class TestDBComponent(DatabaseComponent):

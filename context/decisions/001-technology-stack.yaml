@@ -10,13 +10,13 @@ last_modified: '2025-07-15'
 last_referenced: '2025-07-15'
 expires: null
 authors:
-- system
-- assistant
+  - system
+  - assistant
 tags:
-- decision
-- technology
-- infrastructure
-- mcp
+  - decision
+  - technology
+  - infrastructure
+  - mcp
 decision: "# Technology Stack Decisions  (Rev 2025-07-15)\n\n## Datastores\n### \u2022\
   \ Vector DB \u2013 **Qdrant v1.14.x**\nRationale: native hybrid search, self-host,\
   \ hash-diff re-embed, gRPC + REST.\n\n### \u2022 Graph DB \u2013 **Neo4j 5.20 Community**\n\

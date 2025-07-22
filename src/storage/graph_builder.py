@@ -30,11 +30,11 @@ class GraphBuilder:
         self.processed_cache_path = Path("context/.graph_cache/processed.json")
         self.processed_docs: Dict[str, str] = self._load_processed_cache()
 
-    def __enter__(self):
+    def __enter__(self) -> "GraphBuilder":
         """Context manager entry"""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit - ensure cleanup"""
         try:
             self.close()
@@ -43,8 +43,7 @@ class GraphBuilder:
             if self.verbose:
                 click.echo(f"Error during cleanup: {e}", err=True)
 
-        # Return False to propagate any exception that occurred in the with block
-        return False
+        # Don't suppress exceptions - let them propagate
 
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load configuration from .ctxrc.yaml"""
@@ -69,7 +68,7 @@ class GraphBuilder:
                 pass
         return {}
 
-    def _save_processed_cache(self):
+    def _save_processed_cache(self) -> None:
         """Save cache of processed documents"""
         self.processed_cache_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.processed_cache_path, "w") as f:
@@ -115,7 +114,7 @@ class GraphBuilder:
                 click.echo(f"Failed to connect to Neo4j: {error_msg}", err=True)
             return False
 
-    def _create_document_node(self, session, data: Dict[str, Any], file_path: Path) -> str:
+    def _create_document_node(self, session: Any, data: Dict[str, Any], file_path: Path) -> str:
         """Create or update a document node"""
         doc_type = data.get("document_type", "document")
         doc_id = data.get("id", file_path.stem)
@@ -163,7 +162,7 @@ class GraphBuilder:
         # Ensure we return a string
         return str(doc_id)
 
-    def _create_relationships(self, session, data: Dict[str, Any], doc_id: str):
+    def _create_relationships(self, session: Any, data: Dict[str, Any], doc_id: str) -> None:
         """Create relationships based on document content"""
         doc_type = data.get("document_type")
 
@@ -256,17 +255,44 @@ class GraphBuilder:
         # Graph metadata relationships
         graph_meta = data.get("graph_metadata", {})
         if graph_meta:
+            # Define allowed relationship types for security
+            ALLOWED_REL_TYPES = {
+                "RELATES_TO",
+                "IMPLEMENTS",
+                "FOLLOWS",
+                "PREPARES",
+                "CONSTRAINS",
+                "REQUIRES",
+                "DEFINES",
+                "DEPENDS_ON",
+                "REFERENCES",
+                "CONTAINS",
+                "EXTENDS",
+                "MODIFIES",
+            }
+
             relationships = graph_meta.get("relationships", [])
             for rel in relationships:
-                rel_type = rel.get("type", "RELATES_TO")
+                rel_type = rel.get("type", "RELATES_TO").upper()
+
+                # Validate relationship type to prevent injection
+                if rel_type not in ALLOWED_REL_TYPES:
+                    if self.verbose:
+                        click.echo(
+                            f"Warning: Skipping invalid relationship type: {rel_type}", err=True
+                        )
+                    continue
+
                 target = rel.get("target")
                 if target:
-                    session.run(
-                        f"""
+                    # Use parameterized query with validated rel_type
+                    query = f"""
                         MATCH (d1:Document {{id: $source_id}})
                         MATCH (d2:Document {{id: $target_id}})
                         MERGE (d1)-[:{rel_type}]->(d2)
-                    """,
+                    """
+                    session.run(
+                        query,
                         source_id=doc_id,
                         target_id=target,
                     )

@@ -69,8 +69,8 @@ class BaseComponent(ABC):
         self,
         message: str,
         exception: Optional[Exception] = None,
-        sensitive_values: Optional[list] = None,
-    ):
+        sensitive_values: Optional[list[str]] = None,
+    ) -> None:
         """Log error with sanitization"""
         sanitized_msg = sanitize_error_message(message, sensitive_values)
 
@@ -83,14 +83,14 @@ class BaseComponent(ABC):
         if self.verbose:
             click.echo(f"❌ {sanitized_msg}", err=True)
 
-    def log_warning(self, message: str):
+    def log_warning(self, message: str) -> None:
         """Log warning"""
         self.logger.warning(message)
 
         if self.verbose:
             click.echo(f"⚠️  {message}", err=True)
 
-    def log_info(self, message: str):
+    def log_info(self, message: str) -> None:
         """Log info"""
         self.logger.info(message)
 

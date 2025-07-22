@@ -50,7 +50,7 @@ from src.validators.kv_validators import (
 class TestBoundaryConditions:
     """Test boundary conditions and edge cases"""
 
-    def test_empty_file_handling(self):
+    def test_empty_file_handling(self) -> None:
         """Test handling of empty files"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml") as f:
             f.write("")
@@ -61,7 +61,7 @@ class TestBoundaryConditions:
                 content = yaml.safe_load(file)
             assert content is None, "Empty file should parse as None"
 
-    def test_huge_file_handling(self):
+    def test_huge_file_handling(self) -> None:
         """Test handling of very large files"""
         # Create a file with 10MB of data
         large_content = "x" * (10 * 1024 * 1024)
@@ -72,7 +72,7 @@ class TestBoundaryConditions:
         hash_value = embedder._compute_content_hash(large_content)
         assert len(hash_value) == 64, "Large files should still produce valid hash"
 
-    def test_binary_file_handling(self):
+    def test_binary_file_handling(self) -> None:
         """Test handling of binary files"""
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".bin") as f:
             # Write binary data
@@ -87,7 +87,7 @@ class TestBoundaryConditions:
             except UnicodeDecodeError:
                 pass  # Expected
 
-    def test_special_characters_in_paths(self):
+    def test_special_characters_in_paths(self) -> None:
         """Test handling of special characters in file paths"""
         special_names = [
             "file with spaces.yaml",
@@ -107,7 +107,7 @@ class TestBoundaryConditions:
                 content = yaml.safe_load(file_path.read_text())
                 assert content["content"] == "test"
 
-    def test_concurrent_file_access(self):
+    def test_concurrent_file_access(self) -> None:
         """Test handling of concurrent file access"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("test: content")
@@ -131,7 +131,7 @@ class TestBoundaryConditions:
 class TestErrorRecovery:
     """Test error recovery and graceful degradation"""
 
-    def test_network_timeout_handling(self):
+    def test_network_timeout_handling(self) -> None:
         """Test handling of network timeouts"""
         with patch("qdrant_client.QdrantClient") as mock_client:
             mock_client.side_effect = TimeoutError("Connection timeout")
@@ -142,7 +142,7 @@ class TestErrorRecovery:
             result = embedder.connect()
             assert result is False, "Should return False on timeout"
 
-    def test_disk_full_handling(self):
+    def test_disk_full_handling(self) -> None:
         """Test handling of disk full errors"""
         embedder = HashDiffEmbedder()
 
@@ -155,7 +155,7 @@ class TestErrorRecovery:
             with pytest.raises(OSError, match="No space left on device"):
                 embedder._save_hash_cache()
 
-    def test_invalid_json_recovery(self):
+    def test_invalid_json_recovery(self) -> None:
         """Test recovery from invalid JSON"""
         invalid_json_samples = [
             '{"key": "value"',  # Missing closing brace
@@ -175,7 +175,7 @@ class TestErrorRecovery:
         # At least 4 out of 5 should fail (Infinity/NaN might be accepted)
         assert failed_count >= 4, f"Only {failed_count} samples failed, expected at least 4"
 
-    def test_partial_write_recovery(self):
+    def test_partial_write_recovery(self) -> None:
         """Test recovery from partial writes"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             # Write partial YAML
@@ -199,7 +199,7 @@ class TestErrorRecovery:
 class TestValidationEdgeCases:
     """Test validation edge cases"""
 
-    def test_validate_redis_key_edge_cases(self):
+    def test_validate_redis_key_edge_cases(self) -> None:
         """Test Redis key validation edge cases"""
         edge_cases = [
             ("", False),  # Empty key
@@ -217,7 +217,7 @@ class TestValidationEdgeCases:
             result = validate_redis_key(key)
             assert result == expected, f"Key '{key}' validation failed"
 
-    def test_validate_metric_name_edge_cases(self):
+    def test_validate_metric_name_edge_cases(self) -> None:
         """Test metric name sanitization edge cases"""
         edge_cases = [
             ("metric.name", "metric.name"),
@@ -235,7 +235,7 @@ class TestValidationEdgeCases:
             result = sanitize_metric_name(input_name)
             assert result == expected, f"Sanitization of '{input_name}' failed"
 
-    def test_validate_time_range_edge_cases(self):
+    def test_validate_time_range_edge_cases(self) -> None:
         """Test time range validation edge cases"""
         now = datetime.utcnow()
 
@@ -258,7 +258,7 @@ class TestValidationEdgeCases:
     if HAS_HYPOTHESIS:
 
         @given(st.text())
-        def test_redis_key_property(self, key):
+        def test_redis_key_property(self, key) -> None:
             """Property: validation should be deterministic and handle all strings"""
             # Should not raise exceptions
             try:
@@ -275,7 +275,7 @@ class TestValidationEdgeCases:
 
         @given(st.text())
         @settings(max_examples=200)
-        def test_metric_name_sanitization_property(self, name):
+        def test_metric_name_sanitization_property(self, name) -> None:
             """Property: sanitization should always produce valid metric names"""
             sanitized = sanitize_metric_name(name)
 
@@ -304,7 +304,7 @@ class TestValidationEdgeCases:
             st.datetimes(min_value=datetime(2020, 1, 1), max_value=datetime(2030, 1, 1)),
             st.datetimes(min_value=datetime(2020, 1, 1), max_value=datetime(2030, 1, 1)),
         )
-        def test_time_range_validation_property(self, start, end):
+        def test_time_range_validation_property(self, start, end) -> None:
             """Property: validation should handle all datetime pairs consistently"""
             try:
                 result = validate_time_range(start, end)
@@ -328,7 +328,7 @@ class TestValidationEdgeCases:
 class TestConcurrencyAndRaceConditions:
     """Test concurrent operations and race conditions"""
 
-    def test_concurrent_hash_cache_access(self):
+    def test_concurrent_hash_cache_access(self) -> None:
         """Test concurrent access to hash cache"""
         embedder = HashDiffEmbedder()
         # Clear any existing cache to ensure test isolation
@@ -346,7 +346,7 @@ class TestConcurrencyAndRaceConditions:
                 f"{list(embedder.hash_cache.keys())}"
             )
 
-    def test_file_lock_contention(self):
+    def test_file_lock_contention(self) -> None:
         """Test file lock contention scenarios"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".lock", delete=False) as f:
             lock_path = f.name
@@ -367,7 +367,7 @@ class TestConcurrencyAndRaceConditions:
 class TestPerformanceEdgeCases:
     """Test performance-related edge cases"""
 
-    def test_memory_efficient_large_data(self):
+    def test_memory_efficient_large_data(self) -> None:
         """Test memory-efficient handling of large data"""
         # Instead of loading entire file into memory
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
@@ -391,7 +391,7 @@ class TestPerformanceEdgeCases:
 
             assert chunks_read > 0, "Should read at least one chunk"
 
-    def test_cache_overflow_handling(self):
+    def test_cache_overflow_handling(self) -> None:
         """Test cache overflow scenarios"""
         embedder = HashDiffEmbedder()
 
@@ -410,7 +410,7 @@ class TestPerformanceEdgeCases:
 class TestSecurityEdgeCases:
     """Test security-related edge cases"""
 
-    def test_path_traversal_prevention(self):
+    def test_path_traversal_prevention(self) -> None:
         """Test prevention of path traversal attacks"""
         dangerous_paths = [
             "../../../etc/passwd",
@@ -434,7 +434,7 @@ class TestSecurityEdgeCases:
             except Exception:
                 pass  # Some paths might not resolve
 
-    def test_injection_prevention(self):
+    def test_injection_prevention(self) -> None:
         """Test prevention of injection attacks"""
         dangerous_inputs = [
             "'; DROP TABLE users; --",

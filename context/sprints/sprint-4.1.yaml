@@ -26,7 +26,7 @@ phases:
     description: "Author a reproducible Docker Compose stack pinned to Qdrant v1.14.x\n\
       and Neo4j 5.20.\n\n## Acceptance Criteria\n- [x] File `infra/docker-compose.yml`\
       \ exists.\n- [x] `make up` starts Qdrant (6333) and Neo4j (7474/7687); `make\n\
-      \  down` stops & removes volumes.\n- [x] Named volumes `qdrant_data`, `neo4j_data`\
+      \      down` stops & removes volumes.\n- [x] Named volumes `qdrant_data`, `neo4j_data`\
       \ created.\n- [x] Neo4j runs with `NEO4J_AUTH=none` for dev.\n- [x] README updates\
       \ include quick-start prerequisites.\n\n## Implementation Notes\n- mkdir -p\
       \ infra\n- Populate compose with pinned images and volumes\n- Ensure platform-agnostic\
@@ -50,10 +50,10 @@ phases:
     description: "Create a bash script verifying Qdrant and Neo4j are healthy after\n\
       `make up`.\n\n## Acceptance Criteria\n- [ ] `infra/healthcheck.sh` exits 0 on\
       \ healthy stack.\n- [ ] Script checks:\n  curl localhost:6333/collections =>\
-      \ `[]`\n  python -c \"from neo4j import GraphDatabase;\n  GraphDatabase.driver('bolt://localhost:7687').verify_connectivity()\"\
-      \n- [ ] Neo4j driver added to `requirements-dev.txt`.\n- [ ] CONTRIBUTING updated\
-      \ with run instructions.\n\n## Implementation Notes\n- chmod +x infra/healthcheck.sh\n\
-      - add to Makefile: make health\n"
+      \ `[]`\n  python -c \"from neo4j import GraphDatabase;\n  GraphDatabase.driver('bolt://localhost:7687').\n\
+      \  verify_connectivity()\"\n- [ ] Neo4j driver added to `requirements-dev.txt`.\n\
+      - [ ] CONTRIBUTING updated with run instructions.\n\n## Implementation Notes\n\
+      - chmod +x infra/healthcheck.sh\n- add to Makefile: make health\n"
     labels:
     - sprint-current
     - phase:4.1
@@ -109,9 +109,9 @@ phases:
   description: Validate infrastructure with real data processing
   tasks:
   - title: Embedder sanity test with README.md
-    description: 'Index README.md via embed pipeline and confirm both vector and graph
+    description: 'Index README.md via embed pipeline and confirm both vector
 
-      entries exist.
+      and graph entries exist.
 
 
       ## Acceptance Criteria
@@ -146,7 +146,9 @@ phases:
   description: Improve local development workflow
   tasks:
   - title: Makefile convenience targets
-    description: 'Provide `make up`, `make down`, `make health` for local development.
+    description: 'Provide `make up`, `make down`, `make health` for local
+
+      development.
 
 
       ## Acceptance Criteria
@@ -199,23 +201,23 @@ phases:
   component: agents
   description: Fix critical bugs affecting user experience
   tasks:
-  - title: Fix Sprint Issue Linker Label Batching to Prevent Multiple Comments
-    description: "Fix the sprint issue linker's `_sync_issue_labels()` method that\n\
-      currently makes individual GitHub API calls for each label operation,\ncausing\
-      \ multiple comments when creating/updating issues with many\nlabels.\n\n## Problem\
-      \ Analysis\nThe current implementation calls `gh issue edit` separately for\
-      \ each\nlabel:\n- One subprocess call per label to add (lines 527-530)\n- One\
-      \ subprocess call per label to remove (lines 532-535)\n- With 8-12+ labels per\
-      \ task, this creates 8-12+ GitHub API calls\n- Each call can trigger comment\
-      \ creation, leading to comment spam\n\n## Acceptance Criteria\n- [ ] Batch all\
-      \ label additions into single `gh issue edit --add-label\n  label1,label2,label3`\
+  - title: Fix Sprint Issue Linker Label Batching
+    description: "Fix the sprint issue linker's `_sync_issue_labels()` method\nthat\
+      \ currently makes individual GitHub API calls for each label\noperation, causing\
+      \ multiple comments when creating/updating\nissues with many labels.\n\n## Problem\
+      \ Analysis\nThe current implementation calls `gh issue edit` separately for\n\
+      each label:\n- One subprocess call per label to add (lines 527-530)\n- One subprocess\
+      \ call per label to remove (lines 532-535)\n- With 8-12+ labels per task, this\
+      \ creates 8-12+ GitHub API\n  calls\n- Each call can trigger comment creation,\
+      \ leading to comment\n  spam\n\n## Acceptance Criteria\n- [ ] Batch all label\
+      \ additions into single `gh issue edit\n  --add-label label1,label2,label3`\
       \ call\n- [ ] Batch all label removals into single `gh issue edit\n  --remove-label\
       \ label1,label2,label3` call\n- [ ] Reduce API calls from ~10+ per issue to\
-      \ maximum 2 per issue\n- [ ] Add exponential backoff retry logic for GitHub\
-      \ API failures\n- [ ] Add label count warnings when approaching GitHub limits\n\
+      \ maximum 2 per\n  issue\n- [ ] Add exponential backoff retry logic for GitHub\
+      \ API\n  failures\n- [ ] Add label count warnings when approaching GitHub limits\n\
       - [ ] Test with high-label-count scenarios (sprint 4.1 tasks)\n- [ ] Verify\
       \ no duplicate comments are created\n- [ ] Ensure bidirectional sync still works\
-      \ correctly\n- [ ] Preserve existing dry-run and verbose logging functionality\n\
+      \ correctly\n- [ ] Preserve existing dry-run and verbose logging\n  functionality\n\
       \n## Implementation Notes\n- Modify `_sync_issue_labels()` method in\n  `src/agents/sprint_issue_linker.py`\n\
       - GitHub CLI supports comma-separated labels: `--add-label\n  label1,label2,label3`\n\
       - Add comprehensive unit tests for batching behavior\n- Test with current sprint-4.1\
@@ -235,13 +237,17 @@ phases:
   status: pending
   priority: high
   component: testing
-  description: Test and validate bidirectional sync between sprint YAML and GitHub
-    issues
+  description: 'Test and validate bidirectional sync between sprint YAML and
+
+    GitHub issues
+
+    '
   tasks:
   - title: Bidirectional Workflow Validation Test
-    description: 'Test task to validate bidirectional sync between sprint YAML and
+    description: 'Test task to validate bidirectional sync between sprint YAML
 
-      GitHub issues.
+      and GitHub issues.
+
 
       This task should be automatically created as a GitHub issue and then
 
@@ -305,8 +311,8 @@ phases:
   description: Test and validate Sprint Update workflow duplicate prevention
   tasks:
   - title: Test Sprint Update Workflow Duplicate Prevention
-    description: "Test task to validate that the Sprint Update workflow no longer\n\
-      creates duplicate PRs when both pull_request.closed and\nissues.closed events\
+    description: "Test task to validate that the Sprint Update workflow no\nlonger\
+      \ creates duplicate PRs when both pull_request.closed and\nissues.closed events\
       \ fire simultaneously.\n\n## Problem Being Fixed\n- Sprint Update workflow previously\
       \ created duplicate PRs when:\n  1. A PR is merged (pull_request.closed event)\n\
       \  2. An issue is auto-closed by the PR (issues.closed event)\n- This caused\
@@ -319,7 +325,7 @@ phases:
       \ issue\n3. Merge PR and observe Sprint Update workflow behavior\n4. Verify\
       \ only one Sprint Update PR is created\n5. Confirm duplicate prevention logic\
       \ activates correctly\n\n## Implementation Notes\n- This task validates the\
-      \ fix in .github/workflows/sprint-update.yml\n- Tests the duplicate run detection\
+      \ fix in\n  .github/workflows/sprint-update.yml\n- Tests the duplicate run detection\
       \ logic added to prevent race\n  conditions\n- Confirms GitHub Actions workflow\
       \ concurrency handling\n- Will be removed after successful validation\n\n##\
       \ Success Criteria\n- [ ] No duplicate Sprint Update PRs created\n- [ ] Workflow\
@@ -335,6 +341,7 @@ phases:
     - automation
     dependencies: []
     estimate: 1 hour
+    github_issue: null
 team:
 - role: lead
   agent: pm_agent

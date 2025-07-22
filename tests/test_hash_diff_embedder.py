@@ -9,6 +9,7 @@ import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
@@ -20,26 +21,28 @@ from src.storage.hash_diff_embedder import DocumentHash, HashDiffEmbedder
 class TestHashDiffEmbedder:
     """Test HashDiffEmbedder class"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test fixtures"""
         self.temp_dir = tempfile.mkdtemp()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up temp files"""
         import shutil
 
         shutil.rmtree(self.temp_dir)
 
-    def create_config_file(self):
+    def create_config_file(self, config: Dict[str, Any]) -> str:
         """Create temporary config file"""
         config_path = Path(self.temp_dir) / ".ctxrc.yaml"
         with open(config_path, "w") as f:
-            yaml.dump(self.test_config, f)
+            yaml.dump(config, f)
         return str(config_path)
 
     @patch("builtins.open", new_callable=mock_open)
     @patch("yaml.safe_load")
-    def test_load_config_success(self, mock_yaml_load, mock_file, test_config):
+    def test_load_config_success(
+        self, mock_yaml_load: Mock, mock_file: Mock, test_config: Dict[str, Any]
+    ) -> None:
         """Test successful config loading"""
         mock_yaml_load.return_value = test_config
 
@@ -49,11 +52,11 @@ class TestHashDiffEmbedder:
         assert embedder.embedding_model == "text-embedding-ada-002"
 
     @patch("click.echo")
-    def test_load_config_file_not_found(self, mock_echo):
+    def test_load_config_file_not_found(self, mock_echo: Mock) -> None:
         """Test config loading when file doesn't exist"""
 
         # Only patch the specific file we're testing
-        def side_effect(path, *args, **kwargs):
+        def side_effect(path: str, *args: Any, **kwargs: Any) -> Any:
             if "nonexistent.yaml" in str(path):
                 raise FileNotFoundError()
             return mock_open()(path, *args, **kwargs)
@@ -74,13 +77,13 @@ class TestHashDiffEmbedder:
 
     @patch("builtins.open", new_callable=mock_open)
     @patch("yaml.safe_load", return_value=None)
-    def test_load_config_empty_yaml(self, mock_yaml_load, mock_file):
+    def test_load_config_empty_yaml(self, mock_yaml_load: Mock, mock_file: Mock) -> None:
         """Test config loading with empty YAML"""
         embedder = HashDiffEmbedder()
 
         assert embedder.config == {}
 
-    def test_compute_content_hash(self):
+    def test_compute_content_hash(self) -> None:
         """Test content hash computation"""
         embedder = HashDiffEmbedder()
 
@@ -108,7 +111,7 @@ class TestHashDiffEmbedder:
             f"but found invalid characters in: {hash1}"
         )
 
-    def test_compute_embedding_hash(self):
+    def test_compute_embedding_hash(self) -> None:
         """Test embedding hash computation"""
         embedder = HashDiffEmbedder()
 
@@ -136,7 +139,9 @@ class TestHashDiffEmbedder:
     @patch("pathlib.Path.exists", return_value=True)
     @patch("builtins.open", new_callable=mock_open)
     @patch("json.load")
-    def test_load_hash_cache_success(self, mock_json_load, mock_file, mock_exists):
+    def test_load_hash_cache_success(
+        self, mock_json_load: Mock, mock_file: Mock, mock_exists: Mock
+    ) -> None:
         """Test successful hash cache loading"""
         cache_data = {
             "doc1": {
@@ -162,7 +167,7 @@ class TestHashDiffEmbedder:
         assert embedder.hash_cache["doc1"].document_id == "doc1", "Document ID should match"
 
     @patch("pathlib.Path.exists", return_value=False)
-    def test_load_hash_cache_no_file(self, mock_exists):
+    def test_load_hash_cache_no_file(self, mock_exists: Mock) -> None:
         """Test hash cache loading when file doesn't exist"""
         embedder = HashDiffEmbedder()
 
@@ -172,7 +177,9 @@ class TestHashDiffEmbedder:
     @patch("builtins.open", new_callable=mock_open)
     @patch("json.load", side_effect=json.JSONDecodeError("error", "doc", 0))
     @patch("click.echo")
-    def test_load_hash_cache_invalid_json(self, mock_echo, mock_json_load, mock_file, mock_exists):
+    def test_load_hash_cache_invalid_json(
+        self, mock_echo: Mock, mock_json_load: Mock, mock_file: Mock, mock_exists: Mock
+    ) -> None:
         """Test hash cache loading with invalid JSON"""
         embedder = HashDiffEmbedder()
 
@@ -182,7 +189,7 @@ class TestHashDiffEmbedder:
     @patch("pathlib.Path.mkdir")
     @patch("builtins.open", new_callable=mock_open)
     @patch("json.dump")
-    def test_save_hash_cache(self, mock_json_dump, mock_file, mock_mkdir):
+    def test_save_hash_cache(self, mock_json_dump: Mock, mock_file: Mock, mock_mkdir: Mock) -> None:
         """Test saving hash cache"""
         embedder = HashDiffEmbedder()
         embedder.hash_cache = {
@@ -206,7 +213,13 @@ class TestHashDiffEmbedder:
 
     @patch("src.storage.hash_diff_embedder.openai.OpenAI")
     @patch("src.storage.hash_diff_embedder.QdrantClient")
-    def test_connect_success(self, mock_qdrant_client, mock_openai, test_config, monkeypatch):
+    def test_connect_success(
+        self,
+        mock_qdrant_client: Mock,
+        mock_openai: Mock,
+        test_config: Dict[str, Any],
+        monkeypatch: Any,
+    ) -> None:
         """Test successful connection"""
         # Set OpenAI API key from test config
         monkeypatch.setenv("OPENAI_API_KEY", test_config["openai"]["api_key"])
@@ -233,7 +246,7 @@ class TestHashDiffEmbedder:
         mock_qdrant_client.assert_called_once_with(host="localhost", port=6333, timeout=5)
         mock_openai.assert_called_once_with(api_key=test_config["openai"]["api_key"])
 
-    def test_document_hash_dataclass(self):
+    def test_document_hash_dataclass(self) -> None:
         """Test DocumentHash dataclass"""
         doc_hash = DocumentHash(
             document_id="test_id",
@@ -255,7 +268,7 @@ class TestHashDiffEmbedder:
 class TestYAMLParsing:
     """Test YAML parsing functionality across the codebase"""
 
-    def test_safe_yaml_parsing(self):
+    def test_safe_yaml_parsing(self) -> None:
         """Test that safe_load is used for YAML parsing"""
         yaml_content = """
         test:
@@ -274,14 +287,14 @@ class TestYAMLParsing:
         assert result["test"]["number"] == 123
         assert result["test"]["list"] == ["item1", "item2"]
 
-    def test_yaml_parsing_invalid_content(self):
+    def test_yaml_parsing_invalid_content(self) -> None:
         """Test YAML parsing with invalid content"""
         invalid_yaml = "key: value\n  invalid: indentation:"
 
         with pytest.raises(yaml.YAMLError):
             yaml.safe_load(invalid_yaml)
 
-    def test_yaml_parsing_empty_content(self):
+    def test_yaml_parsing_empty_content(self) -> None:
         """Test YAML parsing with empty content"""
         empty_yaml = ""
         result = yaml.safe_load(empty_yaml)
@@ -292,14 +305,14 @@ class TestYAMLParsing:
 class TestErrorHandling:
     """Test error handling and edge cases"""
 
-    def test_compute_content_hash_with_none(self):
+    def test_compute_content_hash_with_none(self) -> None:
         """Test content hash computation with None input"""
         embedder = HashDiffEmbedder()
 
         with pytest.raises(AttributeError, match="'NoneType' object has no attribute"):
-            embedder._compute_content_hash(None)
+            embedder._compute_content_hash(None)  # type: ignore[arg-type]
 
-    def test_compute_content_hash_with_empty_string(self):
+    def test_compute_content_hash_with_empty_string(self) -> None:
         """Test content hash computation with empty string"""
         embedder = HashDiffEmbedder()
 
@@ -308,7 +321,7 @@ class TestErrorHandling:
         assert len(hash_value) == 64
         assert all(c in "0123456789abcdef" for c in hash_value)
 
-    def test_compute_content_hash_with_unicode(self):
+    def test_compute_content_hash_with_unicode(self) -> None:
         """Test content hash computation with Unicode content"""
         embedder = HashDiffEmbedder()
 
@@ -320,7 +333,7 @@ class TestErrorHandling:
         hash_value2 = embedder._compute_content_hash(unicode_content)
         assert hash_value == hash_value2
 
-    def test_compute_embedding_hash_with_invalid_types(self):
+    def test_compute_embedding_hash_with_invalid_types(self) -> None:
         """Test embedding hash computation with various input types"""
         embedder = HashDiffEmbedder()
 
@@ -328,20 +341,20 @@ class TestErrorHandling:
         # Test that it handles various types without error
 
         # String gets serialized
-        hash1 = embedder._compute_embedding_hash("not a list")
+        hash1 = embedder._compute_embedding_hash("not a list")  # type: ignore[arg-type]
         assert len(hash1) == 64
 
         # Dict gets serialized
-        hash2 = embedder._compute_embedding_hash({"key": "value"})
+        hash2 = embedder._compute_embedding_hash({"key": "value"})  # type: ignore[arg-type]
         assert len(hash2) == 64
 
         # None might cause issues with json.dumps
         try:
-            embedder._compute_embedding_hash(None)
+            embedder._compute_embedding_hash(None)  # type: ignore[arg-type]
         except TypeError:
             pass  # Expected for None
 
-    def test_compute_embedding_hash_with_empty_list(self):
+    def test_compute_embedding_hash_with_empty_list(self) -> None:
         """Test embedding hash computation with empty list"""
         embedder = HashDiffEmbedder()
 
@@ -349,7 +362,7 @@ class TestErrorHandling:
         hash_value = embedder._compute_embedding_hash([])
         assert len(hash_value) == 64
 
-    def test_load_config_with_malformed_yaml(self):
+    def test_load_config_with_malformed_yaml(self) -> None:
         """Test config loading with malformed YAML file"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("key: value\n  bad: indentation:")
@@ -362,7 +375,7 @@ class TestErrorHandling:
         finally:
             os.unlink(config_path)
 
-    def test_load_hash_cache_with_corrupted_file(self):
+    def test_load_hash_cache_with_corrupted_file(self) -> None:
         """Test hash cache loading with corrupted JSON file"""
         # First create a valid embedder with default config
         embedder = HashDiffEmbedder()
@@ -389,7 +402,7 @@ class TestErrorHandling:
         finally:
             os.unlink(cache_path)
 
-    def test_save_hash_cache_with_permission_error(self):
+    def test_save_hash_cache_with_permission_error(self) -> None:
         """Test saving hash cache when permission is denied"""
         embedder = HashDiffEmbedder()
         embedder.hash_cache = {
@@ -409,11 +422,13 @@ class TestErrorHandling:
                 embedder._save_hash_cache()
 
     @patch("src.storage.hash_diff_embedder.QdrantClient")
-    def test_connect_with_timeout(self, mock_qdrant_client):
+    def test_connect_with_timeout(self, mock_qdrant_client: Mock) -> None:
         """Test connection with timeout error"""
         from qdrant_client.http.exceptions import ResponseHandlingException
 
-        mock_qdrant_client.side_effect = ResponseHandlingException("Connection timeout")
+        mock_qdrant_client.side_effect = ResponseHandlingException(
+            "Connection timeout"
+        )  # type: ignore[arg-type]
 
         embedder = HashDiffEmbedder()
         embedder.config = {"qdrant": {"host": "localhost", "port": 6333}}
@@ -423,16 +438,16 @@ class TestErrorHandling:
             assert result is False
             mock_echo.assert_called_with("Failed to connect: Connection timeout", err=True)
 
-    def test_document_hash_with_invalid_data(self):
+    def test_document_hash_with_invalid_data(self) -> None:
         """Test DocumentHash dataclass with invalid data types"""
         # This should work - dataclass doesn't validate types at runtime
         doc_hash = DocumentHash(
-            document_id=123,  # Should be string
-            file_path=None,  # Should be string
-            content_hash=[],  # Should be string
-            embedding_hash={},  # Should be string
-            last_embedded=datetime.now(),  # Should be string
-            vector_id=True,  # Should be string
+            document_id=123,  # type: ignore[arg-type]  # Should be string
+            file_path=None,  # type: ignore[arg-type]  # Should be string
+            content_hash=[],  # type: ignore[arg-type]  # Should be string
+            embedding_hash={},  # type: ignore[arg-type]  # Should be string
+            last_embedded=datetime.now(),  # type: ignore[arg-type]  # Should be string
+            vector_id=True,  # type: ignore[arg-type]  # Should be string
         )
 
         # Dataclass creation succeeds but values are wrong types
@@ -444,7 +459,7 @@ class TestEmbeddingErrorScenarios:
     """Test error scenarios in embedding operations"""
 
     @patch("src.storage.hash_diff_embedder.openai.OpenAI")
-    def test_openai_rate_limit_handling(self, mock_openai_class):
+    def test_openai_rate_limit_handling(self, mock_openai_class: Mock) -> None:
         """Test handling of OpenAI rate limit errors"""
         import openai
 
@@ -475,7 +490,7 @@ class TestEmbeddingErrorScenarios:
                 assert mock_embeddings.create.call_count == 3
 
     @patch("src.storage.hash_diff_embedder.QdrantClient")
-    def test_qdrant_connection_failure(self, mock_qdrant_client):
+    def test_qdrant_connection_failure(self, mock_qdrant_client: Mock) -> None:
         """Test handling of Qdrant connection failures"""
         # Mock connection failure
         mock_qdrant_client.side_effect = Exception("Connection refused")
@@ -486,7 +501,7 @@ class TestEmbeddingErrorScenarios:
         result = embedder.connect()
         assert result is False
 
-    def test_corrupted_document_handling(self):
+    def test_corrupted_document_handling(self) -> None:
         """Test handling of corrupted YAML documents"""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create corrupted YAML
@@ -499,7 +514,7 @@ class TestEmbeddingErrorScenarios:
             # Should handle gracefully
             assert result is None
 
-    def test_empty_document_handling(self):
+    def test_empty_document_handling(self) -> None:
         """Test handling of empty documents"""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create empty file
@@ -512,7 +527,7 @@ class TestEmbeddingErrorScenarios:
             # Should handle gracefully
             assert result is None
 
-    def test_file_permission_error(self):
+    def test_file_permission_error(self) -> None:
         """Test handling of file permission errors"""
         embedder = HashDiffEmbedder()
 
@@ -544,7 +559,7 @@ class TestEmbeddingErrorScenarios:
                 except (PermissionError, OSError):
                     pass  # Already cleaned up
 
-    def test_large_document_handling(self):
+    def test_large_document_handling(self) -> None:
         """Test handling of very large documents"""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create moderately sized document for faster tests (100KB instead of 1MB)
@@ -562,7 +577,7 @@ class TestEmbeddingErrorScenarios:
             assert content_hash == hash2
 
     @patch("src.storage.hash_diff_embedder.QdrantClient")
-    def test_concurrent_embedding_safety(self, mock_qdrant_client):
+    def test_concurrent_embedding_safety(self, mock_qdrant_client: Mock) -> None:
         """Test thread safety of embedding operations"""
         import concurrent.futures
         import threading
@@ -574,14 +589,14 @@ class TestEmbeddingErrorScenarios:
         access_count = 0
         lock = threading.Lock()
 
-        def increment_access():
+        def increment_access() -> int:
             nonlocal access_count
             with lock:
                 access_count += 1
                 return access_count
 
         # Simulate concurrent hash cache access
-        embedder._save_hash_cache = lambda: increment_access()
+        embedder._save_hash_cache = lambda: increment_access()  # type: ignore[assignment]
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = []

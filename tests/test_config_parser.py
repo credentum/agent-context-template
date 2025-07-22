@@ -11,7 +11,7 @@ import yaml
 class TestConfigParser:
     """Test suite for .ctxrc.yaml configuration parsing"""
 
-    def test_valid_config(self):
+    def test_valid_config(self) -> None:
         """Test parsing of valid configuration"""
         config_content = """
 system:
@@ -67,7 +67,7 @@ agents:
         assert "cleanup" in config["agents"]
         assert config["agents"]["cleanup"]["expire_after_days"] == 30
 
-    def test_qdrant_version_validation(self):
+    def test_qdrant_version_validation(self) -> None:
         """Test Qdrant version pinning validation"""
         config = {"qdrant": {"version": "1.14.2"}}
 
@@ -78,7 +78,7 @@ agents:
         config["qdrant"]["version"] = "1.15.0"
         assert not config["qdrant"]["version"].startswith("1.14.")
 
-    def test_missing_required_sections(self):
+    def test_missing_required_sections(self) -> None:
         """Test handling of missing required sections"""
         incomplete_config = {
             "system": {"schema_version": "1.0.0"}
@@ -94,7 +94,7 @@ agents:
         assert "storage" in missing
         assert "agents" in missing
 
-    def test_agent_configuration(self):
+    def test_agent_configuration(self) -> None:
         """Test agent-specific configuration parsing"""
         agent_config: Dict[str, Any] = {
             "agents": {
@@ -117,7 +117,7 @@ agents:
         pm_agent: Dict[str, Any] = agent_config["agents"]["pm_agent"]
         assert pm_agent["sprint_duration_days"] == 14
 
-    def test_evaluation_thresholds(self):
+    def test_evaluation_thresholds(self) -> None:
         """Test evaluation configuration validation"""
         eval_config = {"evaluation": {"cosine_threshold": 0.85, "schema_compliance_threshold": 1.0}}
 
@@ -128,14 +128,14 @@ agents:
         compliance = eval_config["evaluation"]["schema_compliance_threshold"]
         assert compliance == 1.0  # Should be 100% compliant
 
-    def test_security_configuration(self):
+    def test_security_configuration(self) -> None:
         """Test security configuration options"""
         security_config = {"security": {"sigstore_enabled": True, "ipfs_pinning": False}}
 
         assert security_config["security"]["sigstore_enabled"] is True
         assert security_config["security"]["ipfs_pinning"] is False
 
-    def test_mcp_configuration(self):
+    def test_mcp_configuration(self) -> None:
         """Test Model Context Protocol configuration"""
         mcp_config: Dict[str, Any] = {
             "mcp": {"contracts_path": "context/mcp_contracts", "rpc_timeout_seconds": 30}

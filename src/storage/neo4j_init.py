@@ -338,7 +338,7 @@ class Neo4jInitializer:
                 click.echo(f"✗ Failed to verify setup: {e2}", err=True)
                 return False
 
-    def close(self):
+    def close(self) -> None:
         """Close the driver connection"""
         if self.driver:
             self.driver.close()
@@ -356,7 +356,7 @@ def main(
     skip_constraints: bool,
     skip_indexes: bool,
     skip_schema: bool,
-):
+) -> None:
     """Initialize Neo4j graph database for the Agent-First Context System"""
 
     click.echo("=== Neo4j Graph Database Initialization ===\n")
