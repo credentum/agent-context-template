@@ -75,6 +75,7 @@ coverage.xml
 coverage.svg
 coverage-summary.json
 .coverage
+.coverage.*
 
 # Reports directory (contains temporary files)
 reports/logs/
