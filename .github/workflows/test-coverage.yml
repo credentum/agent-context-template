@@ -26,19 +26,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Debug - List files after checkout
-        run: |
-          echo "=== Current directory ==="
-          pwd
-          echo "=== All .json files in root ==="
-          ls -la *.json || echo "No .json files found"
-          echo "=== All files starting with .coverage ==="
-          ls -la .coverage* || echo "No .coverage* files found"
-          echo "=== Git status ==="
-          git status --porcelain
-          echo "=== Git tracked files with 'coverage' ==="
-          git ls-files | grep coverage | head -20
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -77,8 +64,10 @@ jobs:
       - name: Clean coverage data
         run: |
           echo "🧹 Cleaning any existing coverage data..."
-          rm -f .coverage* coverage.xml coverage.json
-          find . -name ".coverage*" -type f -delete 2>/dev/null || true
+          # Remove coverage data files but preserve .coverage-config.json
+          rm -f .coverage coverage.xml coverage.json
+          # Only delete .coverage.* files (like .coverage.hostname) but not .coverage-config.json
+          find . -name ".coverage.*" -type f -delete 2>/dev/null || true
           echo "✅ Coverage data cleaned"
 
       - name: Run tests with coverage
@@ -99,21 +88,9 @@ jobs:
 
       - name: Enforce coverage thresholds
         run: |
-          # Debug: Check if config file exists
-          echo "Current directory: $(pwd)"
-          echo "Files in root:"
-          ls -la | grep -E "(coverage|\.coverage)" || true
-          echo "Checking for .coverage-config.json:"
-          if [ -f ".coverage-config.json" ]; then
-            echo "✅ .coverage-config.json found"
-            cat .coverage-config.json
-          else
-            echo "❌ .coverage-config.json NOT found"
-          fi
-
           # Use coverage.py's built-in fail_under check with centralized threshold
           THRESHOLD=$(python scripts/get_coverage_threshold.py)
-          echo "Coverage threshold: $THRESHOLD"
+          echo "Enforcing coverage threshold: $THRESHOLD%"
           python -m coverage report --fail-under=$THRESHOLD
 
       - name: Check mutation testing baseline
