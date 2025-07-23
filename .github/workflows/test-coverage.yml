@@ -4,8 +4,8 @@ name: Coverage Analysis
 "on":
   # push:
   #   branches: [main, develop]  # Disabled for faster development
-  pull_request:
-    branches: [main]
+  # pull_request:
+  #   branches: [main]  # Disabled - not working properly
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
