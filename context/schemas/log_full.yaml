@@ -26,6 +26,7 @@ log_type: enum('execution', 'analysis', 'contract', 'trace', 'debug',
 source: str(required=False)
 data: any(required=False)
 
+---
 # Sub-schema definitions
 graph_metadata:
   node_type: str(required=True)

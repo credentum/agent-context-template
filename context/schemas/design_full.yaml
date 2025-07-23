@@ -20,6 +20,7 @@ references: list(include('reference'), required=False)
 # Optional graph metadata
 graph_metadata: include('graph_metadata', required=False)
 
+---
 # Sub-schema definitions
 reference:
   type: enum('internal', 'external', 'config', required=True)

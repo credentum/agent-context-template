@@ -22,6 +22,7 @@ impacts: list(str(), required=False)
 # Optional graph metadata
 graph_metadata: include('graph_metadata', required=False)
 
+---
 # Sub-schema definitions
 alternative:
   name: str(required=True)

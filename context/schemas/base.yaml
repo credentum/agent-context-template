@@ -18,6 +18,7 @@ tags: list(str(), required=False)
 # Optional graph metadata
 graph_metadata: include('graph_metadata', required=False)
 
+---
 # Sub-schema definitions
 graph_metadata:
   node_type: str(required=True)

@@ -30,6 +30,7 @@ data: any(required=False)
 # Allow any additional fields for flexibility (MCP contracts, logs, etc.)
 any(str(), required=False): any(required=False)
 
+---
 # Sub-schema definitions
 graph_metadata:
   node_type: str(required=True)
