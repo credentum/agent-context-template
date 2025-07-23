@@ -281,7 +281,7 @@ class TestHashDiffEmbedderCoverage:
                 embed_calls.append(file_path)
                 return f"vec_{file_path.name}"
 
-            with patch.object(embedder, 'embed_document', side_effect=mock_embed) as mock_embed_doc:
+            with patch.object(embedder, "embed_document", side_effect=mock_embed):
                 embedded, total = embedder.embed_directory(Path(temp_dir))
 
                 # Should only process doc1.yaml and docs/doc2.yaml

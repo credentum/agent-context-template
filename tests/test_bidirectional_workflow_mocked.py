@@ -207,9 +207,11 @@ class MockedBidirectionalWorkflowTest(unittest.TestCase):
         sprint_data = self._load_sprint_data()
         self.assertIsNotNone(sprint_data, "Sprint data should be loadable")
         # Check for either 'metadata' or other top-level keys that indicate valid structure
-        has_valid_structure = any(
-            key in sprint_data for key in ["metadata", "phases", "goals", "title"]
-        ) if sprint_data else False
+        has_valid_structure = (
+            any(key in sprint_data for key in ["metadata", "phases", "goals", "title"])
+            if sprint_data
+            else False
+        )
         self.assertTrue(has_valid_structure, "Sprint should have valid structure")
         if sprint_data:
             self.assertIn("phases", sprint_data, "Sprint should have phases")

@@ -147,7 +147,6 @@ class TestConcurrencyBenchmarks:
         """Benchmark concurrent hash cache operations"""
         from concurrent.futures import ThreadPoolExecutor
 
-        embedder = HashDiffEmbedder()
         # Use a simple dict for testing concurrent operations
         test_cache: Dict[str, str] = {}
 
@@ -160,15 +159,15 @@ class TestConcurrencyBenchmarks:
                 for i in range(100):
                     if i % 2 == 0:
                         # Write operation
-                        future = executor.submit(
-                            test_cache.__setitem__, f"key_{i}", f"value_{i}"
-                        )
+                        future = executor.submit(test_cache.__setitem__, f"key_{i}", f"value_{i}")
                     else:
                         # Read operation
                         # Read operation - just access the cache
                         key = f"key_{i-1}"
+
                         def read_op() -> None:
                             _ = test_cache.get(key, None)
+
                         future = executor.submit(read_op)
                     futures.append(future)
 

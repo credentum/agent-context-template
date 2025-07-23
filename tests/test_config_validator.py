@@ -312,7 +312,8 @@ class TestConfigValidator:
         )
 
         # Test with non-numeric value (covers line 163)
-        config["search"]["ranking"]["temporal_decay_rate"] = "not-a-number"  # type: ignore[assignment]
+        # Test with non-numeric value
+        config["search"]["ranking"]["temporal_decay_rate"] = "not-a-number"  # type: ignore
         config_path = self.create_config_file("performance3.yaml", config)
         self.validator.errors = []
 

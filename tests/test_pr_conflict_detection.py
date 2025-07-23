@@ -396,7 +396,6 @@ class TestPRConflictDetection:
 
         # Step 3: Auto-merge decision
         auto_update_conflicts = test_scenario["auto_update_conflicts"]
-        test_coverage = test_scenario["test_coverage"]
 
         if auto_update_conflicts:
             ready_to_merge = False
