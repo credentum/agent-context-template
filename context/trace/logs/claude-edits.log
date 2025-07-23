@@ -402,3 +402,15 @@
 [2025-07-23 17:25:02] File: tests/test_edge_cases.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
 [2025-07-23 17:38:13] File: /workspaces/agent-context-template/tmp/tmpk0qpt533.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
 [2025-07-23 18:38:21] File: context/decisions/001-technology-stack.yaml, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-23 23:48:10] File: /app/tmp/tmpqc709rm_.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-23 23:50:18] File: /app/tmp/tmp7n2kvstn.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-23 23:50:19] File: /app/tmp/tmpo7d2om1h.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-23 23:50:21] File: src/core/__init__.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 23:50:28] File: tests/test_claude_ci.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 23:51:17] File: scripts/verify-ci-results.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 23:51:18] File: /tmp/pytest-of-root/pytest-0/test_multiple_file_validation0/file1.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 23:51:19] File: /tmp/pytest-of-root/pytest-0/test_multiple_file_validation0/file2.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 23:51:19] File: /tmp/pytest-of-root/pytest-0/test_summary_output0/test.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 23:51:20] File: /tmp/pytest-of-root/pytest-0/test_fix_mode_flag0/fixme.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 23:51:22] File: /tmp/pytest-of-root/pytest-0/test_exit_codes0/good.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 23:51:23] File: /tmp/pytest-of-root/pytest-0/test_exit_codes0/bad.py, Status: error, Issues: 3, Fixed: 0, Remaining: 3
