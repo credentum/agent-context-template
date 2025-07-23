@@ -331,3 +331,15 @@
 [2025-07-23 16:35:46] File: /tmp/pytest-of-root/pytest-2/test_fix_mode_flag0/fixme.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
 [2025-07-23 16:35:50] File: /tmp/pytest-of-root/pytest-2/test_exit_codes0/good.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
 [2025-07-23 16:35:52] File: /tmp/pytest-of-root/pytest-2/test_exit_codes0/bad.py, Status: error, Issues: 3, Fixed: 0, Remaining: 3
+[2025-07-23 16:45:51] File: /app/tmp/tmpmtycy1z8.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-23 16:48:36] File: /app/tmp/tmpxrmtwx5f.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-23 16:48:37] File: /app/tmp/tmpjbwco0k1.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-23 16:48:38] File: src/core/__init__.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 16:48:46] File: tests/test_claude_ci.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 16:49:36] File: /tmp/pytest-of-root/pytest-0/test_multiple_file_validation0/file1.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 16:49:37] File: /tmp/pytest-of-root/pytest-0/test_multiple_file_validation0/file2.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 16:49:37] File: /tmp/pytest-of-root/pytest-0/test_summary_output0/test.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 16:49:38] File: /tmp/pytest-of-root/pytest-0/test_fix_mode_flag0/fixme.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 16:49:42] File: /tmp/pytest-of-root/pytest-0/test_exit_codes0/good.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-23 16:49:43] File: /tmp/pytest-of-root/pytest-0/test_exit_codes0/bad.py, Status: error, Issues: 3, Fixed: 0, Remaining: 3
+[2025-07-23 16:51:03] File: /app/tmp/tmp23cw34_d.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
