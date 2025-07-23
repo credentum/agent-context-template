@@ -1,0 +1,276 @@
+---
+name: Verify Local CI Results
+
+on:
+  # Triggered when local CI posts results
+  repository_dispatch:
+    types: [ci-results-posted]
+
+  # Also check on PR events to ensure results exist
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+  # Allow manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to verify'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  verify-results:
+    name: Verify Local CI Results
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyGithub requests
+
+      - name: Extract PR information
+        id: pr-info
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+            echo "head_sha=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
+            echo "pr_number=${{ github.event.client_payload.pr_number }}" >> $GITHUB_OUTPUT
+            echo "head_sha=${{ github.event.client_payload.sha }}" >> $GITHUB_OUTPUT
+          else
+            # Workflow dispatch
+            echo "pr_number=${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
+            # Get SHA from PR if provided
+            if [[ -n "${{ inputs.pr_number }}" ]]; then
+              SHA=$(gh pr view ${{ inputs.pr_number }} --json headRefOid -q .headRefOid)
+              echo "head_sha=${SHA}" >> $GITHUB_OUTPUT
+            else
+              echo "head_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Fetch CI Results
+        id: fetch-results
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # For Phase 1, we'll look for results in:
+          # 1. Check runs created by post-ci-results.py
+          # 2. PR comments with CI results
+          # 3. Artifacts (future phase)
+
+          SHA="${{ steps.pr-info.outputs.head_sha }}"
+          PR_NUMBER="${{ steps.pr-info.outputs.pr_number }}"
+
+          echo "Looking for CI results for SHA: ${SHA:0:8}"
+
+          # Try to find check runs first
+          CHECK_RUNS=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/commits/${SHA}/check-runs" \
+            --jq '.check_runs[] | select(.name == "Local CI Results") | {id: .id, conclusion: .conclusion, output: .output}')
+
+          if [[ -n "$CHECK_RUNS" ]]; then
+            echo "Found check run with local CI results"
+            echo "$CHECK_RUNS" > ci-results.json
+            echo "source=check_run" >> $GITHUB_OUTPUT
+          elif [[ -n "$PR_NUMBER" ]]; then
+            # Try to find PR comment with results
+            echo "Looking for CI results in PR #$PR_NUMBER comments"
+
+            # Get comments and look for our CI results comment
+            COMMENT=$(gh pr view $PR_NUMBER --json comments \
+              --jq '.comments[] | select(.body | contains("🤖 Local CI Results")) | .body' | head -1)
+
+            if [[ -n "$COMMENT" ]]; then
+              echo "Found CI results in PR comment"
+              # Extract JSON from comment (between ```json and ```)
+              echo "$COMMENT" | sed -n '/```json/,/```/{//!p}' > ci-results.json
+              echo "source=pr_comment" >> $GITHUB_OUTPUT
+            else
+              echo "No CI results found"
+              echo "source=none" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "No CI results found"
+            echo "source=none" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Verify CI Results
+        id: verify
+        if: steps.fetch-results.outputs.source != 'none'
+        run: |
+          # Create verify script inline for Phase 1
+          cat > verify_results.py << 'EOF'
+          import json
+          import sys
+          import os
+
+          def verify_results(results_file):
+              """Verify CI results meet quality thresholds."""
+              try:
+                  with open(results_file, 'r') as f:
+                      results = json.load(f)
+              except Exception as e:
+                  print(f"Error reading results: {e}")
+                  return False, "Could not parse CI results"
+
+              # Handle both direct results and check run format
+              if 'output' in results:
+                  # This is a check run format, extract the actual results
+                  # For now, we'll just check the conclusion
+                  passed = results.get('conclusion') == 'success'
+                  message = results.get('output', {}).get('summary', 'No details available')
+                  return passed, message
+
+              # Direct results format
+              if 'checks' not in results:
+                  return False, "Invalid results format: missing 'checks' field"
+
+              checks = results['checks']
+              failures = []
+
+              # Verify coverage threshold
+              if 'coverage' in checks:
+                  coverage = checks['coverage']
+                  if not coverage.get('passed', False):
+                      failures.append(
+                          f"Coverage {coverage.get('percentage', 0):.1f}% is below threshold "
+                          f"{coverage.get('threshold', 85.0):.1f}%"
+                      )
+
+              # Verify tests passed
+              if 'tests' in checks:
+                  tests = checks['tests']
+                  if not tests.get('passed', False):
+                      failures.append(
+                          f"{tests.get('failed', 0)} tests failed out of {tests.get('total', 0)}"
+                      )
+
+              # Verify linting passed
+              if 'linting' in checks:
+                  linting = checks['linting']
+                  if not linting.get('passed', False):
+                      failures.append(
+                          f"Linting failed with {len(linting.get('issues', []))} issues"
+                      )
+
+              # Verify type checking passed
+              if 'type_check' in checks:
+                  type_check = checks['type_check']
+                  if not type_check.get('passed', False):
+                      failures.append(
+                          f"Type checking failed with {type_check.get('errors', 0)} errors"
+                      )
+
+              if failures:
+                  return False, "CI checks failed:\n- " + "\n- ".join(failures)
+
+              return True, "All CI checks passed"
+
+          # Run verification
+          passed, message = verify_results('ci-results.json')
+
+          # Set outputs
+          print(f"passed={'true' if passed else 'false'}")
+          print(f"message={message}")
+
+          # Also write to GitHub output
+          with open(os.environ.get('GITHUB_OUTPUT', 'output.txt'), 'a') as f:
+              f.write(f"passed={'true' if passed else 'false'}\n")
+              f.write(f"message={message}\n")
+
+          # Exit with appropriate code
+          sys.exit(0 if passed else 1)
+          EOF
+
+          python verify_results.py || exit 1
+
+      - name: Update PR Status
+        if: always() && steps.pr-info.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.pr-info.outputs.pr_number }}"
+          SHA="${{ steps.pr-info.outputs.head_sha }}"
+
+          if [[ "${{ steps.fetch-results.outputs.source }}" == "none" ]]; then
+            # No results found
+            STATE="pending"
+            DESCRIPTION="Waiting for local CI results to be posted"
+            CONTEXT="Local CI Verification"
+          elif [[ "${{ steps.verify.outputs.passed }}" == "true" ]]; then
+            STATE="success"
+            DESCRIPTION="Local CI results verified - all checks passed"
+            CONTEXT="Local CI Verification"
+          else
+            STATE="failure"
+            DESCRIPTION="Local CI verification failed"
+            CONTEXT="Local CI Verification"
+          fi
+
+          # Post status to commit
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/statuses/${SHA}" \
+            -f state="${STATE}" \
+            -f description="${DESCRIPTION}" \
+            -f context="${CONTEXT}" \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Post Summary
+        if: always()
+        run: |
+          if [[ "${{ steps.fetch-results.outputs.source }}" == "none" ]]; then
+            cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## ⏳ Local CI Results Not Found
+
+          This workflow verifies locally-executed CI results, but no results were found for this PR.
+
+          ### How to post CI results:
+
+          1. Run CI locally:
+             ```bash
+             ./scripts/claude-ci.sh all --output ci-output.json
+             ```
+
+          2. Post results to GitHub:
+             ```bash
+             ./scripts/post-ci-results.py ci-output.json --pr ${{ steps.pr-info.outputs.pr_number }}
+             ```
+
+          The workflow will automatically re-run when results are posted.
+          EOF
+          else
+            cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## 📊 Local CI Verification Results
+
+          **Source**: ${{ steps.fetch-results.outputs.source }}
+          **Status**: ${{ steps.verify.outputs.passed == 'true' && '✅ PASSED' || '❌ FAILED' }}
+
+          ### Details:
+          ${{ steps.verify.outputs.message }}
+
+          ---
+
+          This workflow verified CI results that were executed locally and posted to GitHub.
+          EOF
+          fi
