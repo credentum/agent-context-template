@@ -73,7 +73,7 @@ class MockedBidirectionalWorkflowTest(unittest.TestCase):
 
         # Mock issue view
         elif cmd[:3] == ["gh", "issue", "view"]:
-            issue_number = cmd[3] if len(cmd) > 3 else "1001"
+            issue_number = int(cmd[3]) if len(cmd) > 3 else 1001
 
             if "--json" in cmd and "state" in cmd:
                 return Mock(returncode=0, stdout=json.dumps({"state": "open"}), stderr="")
@@ -122,7 +122,8 @@ class MockedBidirectionalWorkflowTest(unittest.TestCase):
         if not self.sprint_file.exists():
             return None
         with open(self.sprint_file, "r") as f:
-            return yaml.safe_load(f)
+            data = yaml.safe_load(f)
+            return data if isinstance(data, dict) else None
 
     def _save_sprint_data(self, data: Dict[str, Any]):
         """Save sprint data to YAML file"""
@@ -208,13 +209,14 @@ class MockedBidirectionalWorkflowTest(unittest.TestCase):
         # Check for either 'metadata' or other top-level keys that indicate valid structure
         has_valid_structure = any(
             key in sprint_data for key in ["metadata", "phases", "goals", "title"]
-        )
+        ) if sprint_data else False
         self.assertTrue(has_valid_structure, "Sprint should have valid structure")
-        self.assertIn("phases", sprint_data, "Sprint should have phases")
+        if sprint_data:
+            self.assertIn("phases", sprint_data, "Sprint should have phases")
 
         # Count existing issues referenced in sprint
         existing_issue_numbers = []
-        for phase in sprint_data.get("phases", []):
+        for phase in (sprint_data or {}).get("phases", []):
             for task in phase.get("tasks", []):
                 if isinstance(task, dict) and task.get("github_issue"):
                     existing_issue_numbers.append(task["github_issue"])
@@ -267,16 +269,18 @@ class MockedBidirectionalWorkflowTest(unittest.TestCase):
         # Add test task with GitHub issue reference
         self._add_test_task_to_sprint()
         sprint_data = self._load_sprint_data()
+        self.assertIsNotNone(sprint_data, "Sprint data should exist")
 
         # Find and update test task with issue number
-        for phase in sprint_data.get("phases", []):
+        for phase in (sprint_data or {}).get("phases", []):
             if phase.get("phase") == self.test_phase_number:
                 for task in phase.get("tasks", []):
                     if isinstance(task, dict) and self.test_task_title in task.get("title", ""):
                         task["github_issue"] = test_issue_number
                         break
 
-        self._save_sprint_data(sprint_data)
+        if sprint_data:
+            self._save_sprint_data(sprint_data)
 
         # Step 2: Run sprint updater to sync from GitHub
         print("2. Running sprint updater...")
@@ -284,7 +288,7 @@ class MockedBidirectionalWorkflowTest(unittest.TestCase):
 
         # The subprocess.run is already mocked globally, so just call the method
         try:
-            updater.update_from_github()
+            updater.update_sprint()
             # In mocked environment, we simulate successful update
             print("Simulated successful update")
         except Exception as e:

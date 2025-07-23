@@ -12,10 +12,10 @@ from typing import Any, Dict, Optional
 
 # For running without Locust UI
 import gevent  # type: ignore[import-untyped]
-from locust import HttpUser, between, events, task  # type: ignore[import-untyped]
-from locust.env import Environment  # type: ignore[import-untyped]
-from locust.log import setup_logging  # type: ignore[import-untyped]
-from locust.stats import stats_history, stats_printer  # type: ignore[import-untyped]
+from locust import HttpUser, between, events, task  # type: ignore[import-not-found]
+from locust.env import Environment  # type: ignore[import-not-found]
+from locust.log import setup_logging  # type: ignore[import-not-found]
+from locust.stats import stats_history, stats_printer  # type: ignore[import-not-found]
 
 
 class DocumentProcessingUser(HttpUser):

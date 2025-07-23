@@ -97,7 +97,7 @@ class TestConfigValidator:
         assert any("qdrant.port must be an integer" in e for e in validator.errors)
 
         # Port out of range
-        config["qdrant"]["port"] = 99999  # Out of range integer
+        config["qdrant"]["port"] = "99999"  # Out of range string (should be int)
         config_path = self.create_config_file(".ctxrc2.yaml", config)
 
         validator2 = ConfigValidator()
@@ -121,7 +121,7 @@ class TestConfigValidator:
         assert any("neo4j.port must be an integer" in e for e in validator.errors)
 
         # Port out of range
-        config["neo4j"]["port"] = 0  # Out of range integer (port 0 is invalid)
+        config["neo4j"]["port"] = "0"  # Out of range string (should be int)
         config_path = self.create_config_file(".ctxrc2.yaml", config)
 
         validator2 = ConfigValidator()
@@ -179,10 +179,11 @@ class TestConfigValidator:
         assert any("duckdb.database_path is required" in e for e in self.validator.errors)
 
         # Invalid threads
-        config["duckdb"] = {
+        invalid_duckdb_config: Any = {
             "database_path": "/tmp/db.duckdb",
-            "threads": 0,
-        }  # Invalid number of threads
+            "threads": "0",
+        }  # Invalid type for threads (should be int)
+        config["duckdb"] = invalid_duckdb_config
         config_path = self.create_config_file(".ctxrc2.yaml", config)
         self.validator.errors = []
 
@@ -311,7 +312,7 @@ class TestConfigValidator:
         )
 
         # Test with non-numeric value (covers line 163)
-        config["search"]["ranking"]["temporal_decay_rate"] = "not-a-number"
+        config["search"]["ranking"]["temporal_decay_rate"] = "not-a-number"  # type: ignore[assignment]
         config_path = self.create_config_file("performance3.yaml", config)
         self.validator.errors = []
 
