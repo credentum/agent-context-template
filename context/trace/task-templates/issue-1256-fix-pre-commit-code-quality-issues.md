@@ -95,11 +95,11 @@ Estimates based on analysis:
 └── files_affected: ~10-20 (workflows + Python files)
 
 Actuals (to be filled):
-├── tokens_used: ___
-├── time_taken: ___
-├── cost_actual: $___
-├── iterations_needed: ___
-└── context_clears: ___
+├── tokens_used: ~35,000
+├── time_taken: 45 minutes
+├── cost_actual: ~$1.05
+├── iterations_needed: 2
+└── context_clears: 0
 ```
 
 ## 🏷️ Metadata
