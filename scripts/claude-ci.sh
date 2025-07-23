@@ -72,7 +72,7 @@ github_actions_output() {
     local target="${3:-all}"
     local checks="${4:-{}}"
     local errors="${5:-[]}"
-    
+
     if [ "$GITHUB_OUTPUT" = true ]; then
         # Set GitHub Actions step outputs
         if [ -n "${GITHUB_OUTPUT_FILE:-}" ]; then
@@ -91,7 +91,7 @@ github_actions_output() {
                 echo "target=${target}" >> "${GITHUB_OUTPUT}"
             fi
         fi
-        
+
         # Set summary for GitHub Actions UI
         if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
             case "$status" in
@@ -110,7 +110,7 @@ github_actions_output() {
                     ;;
             esac
         fi
-        
+
         # Add annotations for errors (visible in PR checks)
         if [ "$status" = "FAILED" ] && [ "$errors" != "[]" ]; then
             echo "$errors" | jq -r '.[] | select(.file and .line) | "::error file=\(.file),line=\(.line)::\(.message // .error // "Check failed")"' 2>/dev/null || true
@@ -364,12 +364,12 @@ cmd_review() {
     local errors_json="["
     local first_check=true
     local first_error=true
-    
+
     # Don't output pretty messages in JSON mode to avoid contaminating JSON output
     if [ "$JSON_OUTPUT" = false ]; then
         pretty_output "review" "INFO" "Running comprehensive PR review simulation..."
     fi
-    
+
     # Run pre-commit checks
     if cmd_pre_commit > /dev/null 2>&1; then
         if [ "$first_check" = true ]; then
@@ -393,7 +393,7 @@ cmd_review() {
             errors_json="${errors_json}, {\"stage\": \"pre-commit\", \"message\": \"Pre-commit checks failed\"}"
         fi
     fi
-    
+
     # Run test suite
     if cmd_test > /dev/null 2>&1; then
         if [ "$first_check" = true ]; then
@@ -417,14 +417,14 @@ cmd_review() {
             errors_json="${errors_json}, {\"stage\": \"tests\", \"message\": \"Test suite failed\"}"
         fi
     fi
-    
+
     checks_json="${checks_json}}"
     errors_json="${errors_json}]"
 
     local end_time=$(date +%s)
     local duration="$((end_time - start_time))s"
     local next_action="PR review simulation completed successfully"
-    
+
     if [ "$overall_status" = "FAILED" ]; then
         next_action="Fix failed checks before PR submission"
     fi

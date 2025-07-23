@@ -14,4 +14,3 @@ Note: /workspaces/agent-context-template/context/trace/logs/claude-edits.log was
    344→[2025-07-23 16:49:43] File: /tmp/pytest-of-root/pytest-0/test_exit_codes0/bad.py, Status: error, Issues: 3, Fixed: 0, Remaining: 3
    345→[2025-07-23 16:51:03] File: /app/tmp/tmp23cw34_d.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
    346→[2025-07-23 16:52:36] File: /app/tmp/tmps56y1uxe.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
-

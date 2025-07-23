@@ -64,7 +64,7 @@ The updates will be made in the following order:
 
 ### CI Commands in Detail
 - claude-ci check
-- claude-ci test  
+- claude-ci test
 - claude-ci pre-commit
 - claude-ci review
 - claude-ci all

@@ -38,14 +38,14 @@ You are a senior DevOps engineer specializing in GitHub Actions and CI/CD pipeli
 GitHub Issue #1063: Align GitHub Actions with Claude Local CI
 Current situation: 20+ GitHub workflows with embedded CI logic that differs from local claude-ci.sh commands, causing:
 - Different results between local and GitHub CI
-- Duplicate maintenance of CI logic  
+- Duplicate maintenance of CI logic
 - Complex workflows that are hard to debug
 - Confusion when local checks pass but GitHub fails
 
 The existing claude-ci.sh script provides unified commands:
 - claude-ci check <file> - Validate single file
 - claude-ci test - Smart test selection
-- claude-ci pre-commit - Pre-commit validation  
+- claude-ci pre-commit - Pre-commit validation
 - claude-ci all - Complete CI pipeline
 - claude-ci review - PR review simulation
 
@@ -65,7 +65,7 @@ Current workflows like ci-optimized.yml (802 lines) embed complex logic that sho
 
 **Technical Constraints**
 • Expected diff ≤ 500 LoC across multiple workflow files
-• Context budget: ≤ 15k tokens (mainly workflow YAML changes)  
+• Context budget: ≤ 15k tokens (mainly workflow YAML changes)
 • Performance budget: Maintain or improve current CI performance
 • Code quality: YAML validation, consistent job names, proper error handling
 • CI compliance: All Docker CI checks must continue to pass
@@ -80,7 +80,7 @@ Return complete implementation with:
 ## 🔍 Verification & Testing
 - `./scripts/claude-ci.sh all --github-output` (GitHub Actions compatibility)
 - `pytest --cov=src --cov-report=term-missing` (test suite + coverage)
-- `pre-commit run --all-files` (code quality)  
+- `pre-commit run --all-files` (code quality)
 - **Issue-specific tests**: Compare old vs new workflow results during parallel execution
 - **Integration tests**: Verify GitHub Actions can parse claude-ci JSON output properly
 

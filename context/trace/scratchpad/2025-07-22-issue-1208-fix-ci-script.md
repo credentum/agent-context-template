@@ -20,7 +20,7 @@
 ### 2. Implementation Steps
 1. **Remove `set -e` directive** (line 5)
    - This stops the script from exiting on first error
-   
+
 2. **Modify run_check() function** (lines 24-46)
    - Already tracks failures with FAILED counter
    - Already returns proper exit codes
@@ -39,7 +39,7 @@
    ```bash
    # Add long line to trigger flake8 E501
    echo "# This is a very long line that exceeds the maximum line length and will trigger flake8 E501 error for testing purposes only" >> src/test_file.py
-   
+
    # Add formatting issue for Black
    echo "x=1+2" >> src/test_file.py
    ```

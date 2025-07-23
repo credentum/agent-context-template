@@ -9,4 +9,3 @@ try:
     print(round(line_rate * 100, 2))
 except Exception:
     print(0)
-

@@ -39,14 +39,14 @@ The issue requests consolidation of 20+ GitHub Actions workflows to use the same
    - Add step summaries for GitHub Actions UI
    - Format errors for GitHub's annotations
 
-### Phase 2: Create Unified Workflows  
+### Phase 2: Create Unified Workflows
 1. **ci-unified.yml** (new):
    - Replace ci-optimized.yml complex logic
    - Simple delegation to `./scripts/claude-ci.sh all`
    - Maintain same triggers and permissions
 
 2. **pr-review-unified.yml** (new):
-   - Use `./scripts/claude-ci.sh review` 
+   - Use `./scripts/claude-ci.sh review`
    - Parse JSON output and post as PR comment
    - Replace complex review logic
 
@@ -58,13 +58,13 @@ The issue requests consolidation of 20+ GitHub Actions workflows to use the same
 
 2. **Gradual migration**:
    - Phase 1: Create unified alongside existing
-   - Phase 2: Verify identical results  
+   - Phase 2: Verify identical results
    - Phase 3: Switch to unified as primary
    - Phase 4: Archive legacy workflows
 
-### Phase 4: Consolidation  
+### Phase 4: Consolidation
 **Target workflow reduction**:
-- ci-optimized.yml (802 lines) → ci-unified.yml (~50 lines)  
+- ci-optimized.yml (802 lines) → ci-unified.yml (~50 lines)
 - test.yml (82 lines) → (merged into unified)
 - test-suite.yml (200+ lines) → (merged into unified)
 - lint-verification.yml (102 lines) → (merged into unified)
@@ -77,7 +77,7 @@ The issue requests consolidation of 20+ GitHub Actions workflows to use the same
 
 ## Success Criteria Validation
 - [ ] claude-ci.sh supports --github-output flag
-- [ ] New ci-unified.yml delegates to claude-ci scripts  
+- [ ] New ci-unified.yml delegates to claude-ci scripts
 - [ ] Identical results between local and GitHub runs
 - [ ] Legacy workflows archived after successful migration
 - [ ] Documentation updated with new architecture
