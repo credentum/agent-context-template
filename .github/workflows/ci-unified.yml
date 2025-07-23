@@ -54,6 +54,8 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+          pip install pre-commit
+          pip install pre-commit
 
       - name: Create required directories
         run: |
@@ -95,6 +97,8 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+          pip install pre-commit
+          pip install pre-commit
 
       - name: Restore context directories
         run: |
@@ -149,6 +153,8 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+          pip install pre-commit
+          pip install pre-commit
 
       - name: Restore context directories
         run: |
@@ -234,6 +240,8 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+          pip install pre-commit
+          pip install pre-commit
 
       - name: Install comprehensive testing dependencies
         run: |
