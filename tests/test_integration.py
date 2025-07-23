@@ -5,6 +5,7 @@ Integration tests for vector and graph database components
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Generator
 from unittest.mock import Mock, patch
 
 import pytest
@@ -21,7 +22,7 @@ class TestIntegration:
     """Integration tests combining multiple components"""
 
     @pytest.fixture
-    def test_dir(self) -> None:
+    def test_dir(self) -> Generator[Path, None, None]:
         """Create test directory with sample documents"""
         temp_dir = tempfile.mkdtemp()
         test_path = Path(temp_dir)

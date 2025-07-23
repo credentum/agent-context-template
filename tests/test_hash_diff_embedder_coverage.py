@@ -281,16 +281,15 @@ class TestHashDiffEmbedderCoverage:
                 embed_calls.append(file_path)
                 return f"vec_{file_path.name}"
 
-            embedder.embed_document = mock_embed
+            with patch.object(embedder, 'embed_document', side_effect=mock_embed) as mock_embed_doc:
+                embedded, total = embedder.embed_directory(Path(temp_dir))
 
-            embedded, total = embedder.embed_directory(Path(temp_dir))
-
-            # Should only process doc1.yaml and docs/doc2.yaml
-            assert total == 2
-            assert embedded == 2
-            assert len(embed_calls) == 2
-            assert any("doc1.yaml" in str(p) for p in embed_calls)
-            assert any("doc2.yaml" in str(p) for p in embed_calls)
+                # Should only process doc1.yaml and docs/doc2.yaml
+                assert total == 2
+                assert embedded == 2
+                assert len(embed_calls) == 2
+                assert any("doc1.yaml" in str(p) for p in embed_calls)
+                assert any("doc2.yaml" in str(p) for p in embed_calls)
 
     @patch("src.storage.hash_diff_embedder.QdrantClient")
     @patch("click.echo")

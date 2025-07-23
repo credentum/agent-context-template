@@ -13,6 +13,7 @@ import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict
 
 import pytest
 import yaml
@@ -374,7 +375,7 @@ class TestSnapshotVerification:
 
     def test_snapshot_format(self):
         """Test snapshot file format and structure"""
-        snapshot = {
+        snapshot: Dict[str, Any] = {
             "metadata": {
                 "version": "1.0",
                 "created_at": datetime.utcnow().isoformat(),
@@ -401,43 +402,51 @@ class TestSnapshotVerification:
         assert "checksums" in snapshot
 
         # Validate metadata
-        metadata: dict[str, any] = snapshot["metadata"]
+        metadata: Dict[str, Any] = snapshot["metadata"]
         assert metadata["version"] == "1.0"
         assert "created_at" in metadata
 
         # Validate document counts
-        documents: dict[str, any] = snapshot["documents"]
-        by_type: dict[str, any] = documents["by_type"]
+        documents: Dict[str, Any] = snapshot["documents"]
+        by_type: Dict[str, Any] = documents["by_type"]
         total = sum(by_type.values())
         assert total == documents["total_count"]
 
     def test_snapshot_comparison(self):
         """Test comparing snapshots for changes"""
-        snapshot1 = {
+        snapshot1: Dict[str, Any] = {
             "documents": {"total_count": 10, "checksum": "abc123"},
             "timestamp": "2024-01-15T10:00:00Z",
         }
 
-        snapshot2 = {
+        snapshot2: Dict[str, Any] = {
             "documents": {"total_count": 12, "checksum": "def456"},
             "timestamp": "2024-01-15T11:00:00Z",
         }
 
         # Compare snapshots
-        docs1: dict[str, any] = snapshot1["documents"]
-        docs2: dict[str, any] = snapshot2["documents"]
+        docs1: Dict[str, Any] = snapshot1["documents"]
+        docs2: Dict[str, Any] = snapshot2["documents"]
+
+        # Extract typed values for arithmetic operations
+        count1: int = docs1["total_count"]
+        count2: int = docs2["total_count"]
+        checksum1: str = docs1["checksum"]
+        checksum2: str = docs2["checksum"]
+        timestamp1: str = snapshot1["timestamp"]
+        timestamp2: str = snapshot2["timestamp"]
+
         changes = {
-            "documents_added": docs2["total_count"] - docs1["total_count"],
-            "checksum_changed": docs1["checksum"] != docs2["checksum"],
+            "documents_added": count2 - count1,
+            "checksum_changed": checksum1 != checksum2,
             "time_elapsed": (
-                datetime.fromisoformat(snapshot2["timestamp"])
-                - datetime.fromisoformat(snapshot1["timestamp"])
+                datetime.fromisoformat(timestamp2) - datetime.fromisoformat(timestamp1)
             ).total_seconds(),
         }
 
         assert changes["documents_added"] == 2
         assert changes["checksum_changed"] is True
-        assert changes["time_elapsed"] == 3600  # 1 hour
+        assert changes["time_elapsed"] == 3600  # type: ignore[unreachable]  # 1 hour
 
 
 class TestErrorRecovery:
@@ -465,17 +474,22 @@ class TestErrorRecovery:
     def test_missing_configuration_fallback(self):
         """Test fallback behavior with missing configuration"""
         # Default configuration
-        default_config = {
+        default_config: Dict[str, Any] = {
             "agents": {"cleanup_agent": {"retention_days": 30, "enabled": True}},
             "system": {"project_name": "unnamed_project"},
         }
 
         # Simulate missing config scenario
-        config = None
+        config: Any = None
 
         # Apply fallback
         if config is None:
             config = default_config
 
-        assert config["agents"]["cleanup_agent"]["retention_days"] == 30
-        assert config["system"]["project_name"] == "unnamed_project"
+        # Type assertions for nested dictionary access
+        agents: Dict[str, Any] = config["agents"]
+        cleanup_agent: Dict[str, Any] = agents["cleanup_agent"]
+        assert cleanup_agent["retention_days"] == 30
+
+        system: Dict[str, Any] = config["system"]
+        assert system["project_name"] == "unnamed_project"

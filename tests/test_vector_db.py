@@ -5,6 +5,7 @@ Tests for vector database components
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Generator
 from unittest.mock import Mock, patch
 
 import pytest
@@ -86,7 +87,7 @@ class TestHashDiffEmbedder:
     """Test hash-based embedder"""
 
     @pytest.fixture
-    def test_dir(self) -> None:
+    def test_dir(self) -> Generator[Path, None, None]:
         """Create test directory structure"""
         temp_dir = tempfile.mkdtemp()
         yield Path(temp_dir)

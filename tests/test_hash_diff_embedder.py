@@ -426,9 +426,7 @@ class TestErrorHandling:
         """Test connection with timeout error"""
         from qdrant_client.http.exceptions import ResponseHandlingException
 
-        mock_qdrant_client.side_effect = ResponseHandlingException(
-            "Connection timeout"
-        )  # type: ignore[arg-type]
+        mock_qdrant_client.side_effect = ResponseHandlingException(Exception("Connection timeout"))
 
         embedder = HashDiffEmbedder()
         embedder.config = {"qdrant": {"host": "localhost", "port": 6333}}
@@ -451,7 +449,7 @@ class TestErrorHandling:
         )
 
         # Dataclass creation succeeds but values are wrong types
-        assert doc_hash.document_id == 123
+        assert str(doc_hash.document_id) == "123"  # Convert to string for comparison
         assert doc_hash.file_path is None
 
 

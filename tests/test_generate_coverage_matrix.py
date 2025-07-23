@@ -14,7 +14,7 @@ import pytest
 # Import the script modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from generate_coverage_matrix import (  # noqa: E402  # type: ignore[import-not-found]
+from generate_coverage_matrix import (  # noqa: E402  # type: ignore[import]
     DEFAULT_CONFIG,
     CoverageAnalyzer,
     CoverageDataValidator,

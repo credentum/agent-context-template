@@ -14,6 +14,8 @@ Tests verify:
 6. Error handling and fallback scenarios
 """
 
+from typing import Any, Dict, List, Optional, Union
+
 import pytest
 import yaml
 
@@ -54,7 +56,7 @@ This PR tests the AI-monitored auto-merge functionality.
         pr_body = self.test_pr_data["body"]
 
         # Test YAML parsing logic similar to workflow
-        yaml_match = re.search(r"^---\s*\n([\s\S]*?)\n---", pr_body, re.MULTILINE)
+        yaml_match = re.search(r"^---\s*\n([\s\S]*?)\n---", str(pr_body), re.MULTILINE)
         assert yaml_match is not None, "Should find YAML frontmatter"
 
         yaml_content = yaml_match.group(1)
@@ -271,8 +273,9 @@ The PR looks good to merge!
 
         for scenario in error_scenarios:
             # Each scenario should have a defined fallback action
-            assert "expected_action" in scenario
-            assert scenario["expected_action"] in [
+            scenario_dict: Dict[str, Any] = scenario  # type: ignore[assignment]
+            assert "expected_action" in scenario_dict
+            assert scenario_dict["expected_action"] in [
                 "wait_for_review",
                 "wait_for_ci",
                 "manual_resolution",
@@ -282,7 +285,7 @@ The PR looks good to merge!
     def test_workflow_performance_improvements(self):
         """Test performance improvements over legacy workflows"""
         # Legacy approach: Multiple workflow coordination
-        legacy_workflows = [
+        legacy_workflows: List[Dict[str, Union[str, int, bool]]] = [
             {"name": "auto-merge.yml", "poll_interval": 30, "timeout": 1800},
             {"name": "smart-auto-merge.yml", "event_driven": True},
             {"name": "auto-merge-notifier.yml", "coordination_overhead": True},
@@ -297,7 +300,7 @@ The PR looks good to merge!
         }
 
         # Performance advantages
-        total_legacy_overhead = sum(w.get("poll_interval", 0) for w in legacy_workflows)
+        total_legacy_overhead = sum(int(w.get("poll_interval", 0)) for w in legacy_workflows)
         new_overhead = 0  # Real-time event-driven
 
         assert new_overhead < total_legacy_overhead, "New workflow should have less overhead"
@@ -356,14 +359,18 @@ The PR looks good to merge!
         }
 
         # Should still detect auto-merge via labels
-        has_auto_merge_label = any(label["name"] == "auto-merge" for label in legacy_pr["labels"])
+        has_auto_merge_label = any(
+            label.get("name") == "auto-merge" if isinstance(label, dict) else False
+            for label in legacy_pr["labels"]
+        )
 
         assert has_auto_merge_label, "Should support legacy label-based auto-merge"
 
         # Test text-based detection for very old PRs
         text_based_pr = {"body": "Please auto-merge this when ready", "labels": []}
 
-        has_text_indicator = "auto-merge" in text_based_pr["body"].lower()
+        body = text_based_pr["body"]
+        has_text_indicator = "auto-merge" in body.lower() if isinstance(body, str) else False
         assert has_text_indicator, "Should support text-based auto-merge detection"
 
 
