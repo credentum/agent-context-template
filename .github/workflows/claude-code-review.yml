@@ -24,6 +24,7 @@ jobs:
   claude-pr-review:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # Add timeout to prevent infinite hanging
     permissions:
       contents: read
       pull-requests: write      # allow comment / approval
@@ -835,3 +836,18 @@ jobs:
           else
             echo "No automation data found for this PR"
           fi
+
+      # ---------- Fallback Status for Timeout/Failure ----------
+      - name: Create Fallback ARC-Reviewer Status
+        if: failure() || cancelled()
+        run: |
+          echo "🚨 Claude review workflow failed or timed out - creating fallback status"
+
+          # Create a basic failing ARC-Reviewer status
+          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            --field state=failure \
+            --field target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --field description="Claude review workflow timed out or failed" \
+            --field context="ARC-Reviewer"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
