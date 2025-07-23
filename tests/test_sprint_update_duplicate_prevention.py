@@ -15,6 +15,7 @@ Tests ensure the duplicate prevention logic works correctly:
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any, Dict, List
 from unittest.mock import patch
 
 import yaml
@@ -123,7 +124,7 @@ class TestSprintUpdateDuplicatePrevention:
     def test_duplicate_detection_logic_recent_success(self, mock_subprocess):
         """Test duplicate detection identifies recent successful runs"""
         # Mock gh run list output with a recent successful run
-        mock_runs = [
+        mock_runs: List[Dict[str, Any]] = [
             {
                 "id": "12345",
                 "createdAt": (datetime.now() - timedelta(minutes=2)).isoformat() + "Z",
@@ -160,7 +161,7 @@ class TestSprintUpdateDuplicatePrevention:
     def test_duplicate_detection_logic_active_runs(self, mock_subprocess):
         """Test duplicate detection identifies active runs"""
         # Mock gh run list output with an active run
-        mock_runs = [
+        mock_runs: List[Dict[str, Any]] = [
             {
                 "id": "12347",
                 "createdAt": datetime.now().isoformat() + "Z",

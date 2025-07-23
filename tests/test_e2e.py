@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
+from typing import Generator
 from unittest.mock import patch
 
 import pytest
@@ -30,7 +31,7 @@ class TestEndToEnd:
     """End-to-end tests for complete workflows"""
 
     @pytest.fixture
-    def test_project(self, tmp_path) -> None:
+    def test_project(self, tmp_path) -> Generator[Path, None, None]:
         """Create a complete test project structure"""
         # Create directory structure
         (tmp_path / "context").mkdir()
@@ -123,7 +124,7 @@ class TestEndToEnd:
             original_cwd = os.getcwd()
         except FileNotFoundError:
             # Current working directory was deleted, use project root
-            original_cwd = Path(__file__).parent.parent
+            original_cwd = str(Path(__file__).parent.parent)
 
         os.chdir(tmp_path)
 
@@ -134,7 +135,7 @@ class TestEndToEnd:
             os.chdir(original_cwd)
         except (FileNotFoundError, OSError):
             # If original directory no longer exists, go to project root
-            os.chdir(Path(__file__).parent.parent)
+            os.chdir(str(Path(__file__).parent.parent))
 
     def test_config_validation_workflow(self, test_project) -> None:
         """Test configuration validation workflow"""

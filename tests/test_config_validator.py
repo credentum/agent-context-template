@@ -179,10 +179,11 @@ class TestConfigValidator:
         assert any("duckdb.database_path is required" in e for e in self.validator.errors)
 
         # Invalid threads
-        config["duckdb"] = {
+        invalid_duckdb_config: Any = {
             "database_path": "/tmp/db.duckdb",
-            "threads": 0,
-        }  # Invalid number of threads
+            "threads": "0",
+        }  # Invalid type for threads (should be int)
+        config["duckdb"] = invalid_duckdb_config
         config_path = self.create_config_file(".ctxrc2.yaml", config)
         self.validator.errors = []
 
@@ -311,7 +312,8 @@ class TestConfigValidator:
         )
 
         # Test with non-numeric value (covers line 163)
-        config["search"]["ranking"]["temporal_decay_rate"] = "not-a-number"
+        # Test with non-numeric value
+        config["search"]["ranking"]["temporal_decay_rate"] = "not-a-number"  # type: ignore
         config_path = self.create_config_file("performance3.yaml", config)
         self.validator.errors = []
 

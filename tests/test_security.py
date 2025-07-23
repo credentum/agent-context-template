@@ -212,12 +212,12 @@ class TestInputValidation:
         for num in valid_numbers:
             assert isinstance(num, int) and 1 <= num <= 999
 
-        for num in invalid_numbers:
-            if isinstance(num, int):
-                assert not (1 <= num <= 999)
+        for value in invalid_numbers:
+            if isinstance(value, int):
+                assert not (1 <= value <= 999)
             else:
                 # String inputs should be rejected
-                assert not isinstance(num, int)
+                assert not isinstance(value, int)
 
     def test_yaml_path_validation(self) -> None:
         """Test YAML file path validation"""

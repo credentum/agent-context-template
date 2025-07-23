@@ -194,9 +194,9 @@ class TestPerformanceBenchmarks:
     def test_search_performance(self):
         """Test search and filtering performance"""
         # Create test dataset
-        items = []
+        items: list[Dict[str, Any]] = []
         for i in range(10000):
-            item = {
+            item: Dict[str, Any] = {
                 "id": i,
                 "name": f"item_{i}",
                 "category": f"category_{i % 20}",
@@ -215,7 +215,14 @@ class TestPerformanceBenchmarks:
             # Search for items with tag_2 and specific id pattern
             # Note: items where id % 5 >= 3 will have tag_2
             # Use id % 50 == 3 to ensure we get items with tag_2
-            results = [item for item in items if "tag_2" in item["tags"] and item["id"] % 50 == 3]
+            results = [
+                item
+                for item in items
+                if isinstance(item.get("tags"), list)
+                and "tag_2" in item["tags"]
+                and isinstance(item.get("id"), int)
+                and item["id"] % 50 == 3
+            ]
             # Items like 3, 53, 103, etc. will match (they have id%5=3, so tag_2 is present)
             assert len(results) > 0, f"Expected some results but found {len(results)}"
 
@@ -240,8 +247,8 @@ class TestPerformanceBenchmarks:
             values = []
             for i in range(1000):
                 key = f"cache:key:{i}"
-                value = cache.get(key)
-                values.append(value)
+                cached_value: Dict[str, Any] | None = cache.get(key)
+                values.append(cached_value)
 
         # Test cache validation
         with timing_assert(0.1, "Validate 1000 cache entries"):

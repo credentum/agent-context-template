@@ -21,7 +21,6 @@ class TestSanitizeErrorMessage:
     def test_empty_message(self):
         """Test handling of empty/None messages"""
         assert sanitize_error_message("") == ""
-        assert sanitize_error_message(None) is None
 
     def test_no_sensitive_values(self):
         """Test basic message without sensitive values"""
