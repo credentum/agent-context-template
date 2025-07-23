@@ -115,7 +115,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [setup, quick-validation]
     if: needs.quick-validation.outputs.status == 'PASSED'
-    
     services:
       redis:
         image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55
@@ -174,13 +173,7 @@ jobs:
             echo "Coverage extracted: ${coverage_pct}%"
           elif [ -f coverage.xml ]; then
             # Extract from XML if JSON not available
-            coverage_pct=$(python -c "
-import xml.etree.ElementTree as ET
-tree = ET.parse('coverage.xml')
-root = tree.getroot()
-line_rate = float(root.attrib.get('line-rate', '0'))
-print(round(line_rate * 100, 2))
-")
+            coverage_pct=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); line_rate = float(root.attrib.get('line-rate', '0')); print(round(line_rate * 100, 2))")
             echo "coverage-pct=${coverage_pct}" >> $GITHUB_OUTPUT
             echo "Coverage extracted from XML: ${coverage_pct}%"
           else
@@ -199,7 +192,7 @@ print(round(line_rate * 100, 2))
             coverage.json
             htmlcov/
 
-  # Comprehensive validation for critical PRs - equivalent to: claude-ci all --comprehensive  
+  # Comprehensive validation for critical PRs - equivalent to: claude-ci all --comprehensive
   comprehensive-ci:
     name: "🔬 Comprehensive CI"
     runs-on: ubuntu-latest
@@ -208,7 +201,6 @@ print(round(line_rate * 100, 2))
       github.event_name == 'pull_request' && 
       (contains(github.event.pull_request.labels.*.name, 'priority-high') ||
        contains(github.event.pull_request.labels.*.name, 'breaking-change'))
-    
     services:
       redis:
         image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55
