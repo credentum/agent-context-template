@@ -1,4 +1,3 @@
----
 # Full schema for design documents
 
 # Base fields
@@ -21,18 +20,16 @@ references: list(include('reference'), required=False)
 # Optional graph metadata
 graph_metadata: include('graph_metadata', required=False)
 
----
+# Sub-schema definitions
 reference:
   type: enum('internal', 'external', 'config', required=True)
   path: str(required=False)
   url: str(required=False)
 
----
 graph_metadata:
   node_type: str(required=True)
   relationships: list(include('relationship'), required=False)
 
----
 relationship:
   type: str(required=True)
   target: str(required=True)

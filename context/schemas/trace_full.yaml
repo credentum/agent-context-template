@@ -1,4 +1,3 @@
----
 # Full schema for trace documents (expanded from trace.yaml + base.yaml)
 # Used when include directive isn't supported
 
@@ -31,12 +30,11 @@ data: any(required=False)
 # Allow any additional fields for flexibility (MCP contracts, logs, etc.)
 any(str(), required=False): any(required=False)
 
----
+# Sub-schema definitions
 graph_metadata:
   node_type: str(required=True)
   relationships: list(include('relationship'), required=False)
 
----
 relationship:
   type: str(required=True)
   target: str(required=True)

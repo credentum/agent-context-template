@@ -1,4 +1,3 @@
----
 # Full schema for log documents (expanded from log.yaml + base.yaml)
 # Used when include directive isn't supported
 
@@ -27,12 +26,11 @@ log_type: enum('execution', 'analysis', 'contract', 'trace', 'debug',
 source: str(required=False)
 data: any(required=False)
 
----
+# Sub-schema definitions
 graph_metadata:
   node_type: str(required=True)
   relationships: list(include('relationship'), required=False)
 
----
 relationship:
   type: str(required=True)
   target: str(required=True)
