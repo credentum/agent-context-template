@@ -288,7 +288,7 @@ if HAS_HYPOTHESIS:
             _ = len(document["history"])
             # Future operations should not modify archived docs
 
-        def invariants(self) -> None:  # type: ignore[override]
+        def invariants(self) -> None:
             """Check invariants that should always hold"""
             # Note: Bundle objects are not directly iterable in hypothesis
             # In a real implementation, we would track documents separately

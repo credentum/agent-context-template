@@ -8,6 +8,7 @@ import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -269,11 +270,11 @@ goals:
 
         # Test with invalid content
         with pytest.raises(AttributeError, match="'NoneType' object has no attribute"):
-            embedder._compute_content_hash(None)
+            embedder._compute_content_hash(None)  # type: ignore[arg-type]
 
         # Test that embedding hash accepts various types (uses json.dumps internally)
         # This should not raise an error as json.dumps handles strings
-        hash_result = embedder._compute_embedding_hash("not a list")
+        hash_result = embedder._compute_embedding_hash("not a list")  # type: ignore[arg-type]
         assert isinstance(hash_result, str)
         assert len(hash_result) == 64  # SHA-256 hash
 
@@ -294,7 +295,7 @@ goals:
         with patch("click.echo"):
             # Attempt to embed a document
             try:
-                embedder.embed_document("test content", "test_doc")
+                embedder.embed_document(Path("test_doc"), force=True)
             except Exception as e:
                 assert "API rate limit exceeded" in str(e)
 
@@ -388,32 +389,38 @@ class TestEmbeddingConfiguration:
 
     def test_embedding_model_configuration(self):
         """Test different embedding model configurations"""
-        configs = [
+        configs: List[Dict[str, Any]] = [
             {"model": "text-embedding-ada-002", "dimensions": 1536, "max_tokens": 8191},
             {"model": "text-embedding-3-small", "dimensions": 1536, "max_tokens": 8191},
             {"model": "text-embedding-3-large", "dimensions": 3072, "max_tokens": 8191},
         ]
 
         for config in configs:
-            assert config["dimensions"] > 0
-            assert config["max_tokens"] > 0
-            assert config["model"].startswith("text-embedding")
+            dimensions: int = config["dimensions"]
+            max_tokens: int = config["max_tokens"]
+            model: str = config["model"]
+            assert dimensions > 0
+            assert max_tokens > 0
+            assert model.startswith("text-embedding")
 
     def test_collection_configuration(self):
         """Test Qdrant collection configuration"""
-        collection_config = {
+        collection_config: Dict[str, Any] = {
             "vectors": {"size": 1536, "distance": "Cosine"},
             "optimizers_config": {"indexing_threshold": 20000, "memmap_threshold": 50000},
             "hnsw_config": {"m": 16, "ef_construct": 100, "full_scan_threshold": 10000},
         }
 
         # Validate vector configuration
-        assert collection_config["vectors"]["size"] in [1536, 3072]
-        assert collection_config["vectors"]["distance"] in ["Cosine", "Euclidean", "Dot"]
+        vectors_config: Dict[str, Any] = collection_config["vectors"]
+        assert vectors_config["size"] in [1536, 3072]
+        assert vectors_config["distance"] in ["Cosine", "Euclidean", "Dot"]
 
         # Validate optimizer settings
-        assert collection_config["optimizers_config"]["indexing_threshold"] > 0
-        assert collection_config["hnsw_config"]["m"] >= 4
+        optimizers_config: Dict[str, Any] = collection_config["optimizers_config"]
+        assert optimizers_config["indexing_threshold"] > 0
+        hnsw_config: Dict[str, Any] = collection_config["hnsw_config"]
+        assert hnsw_config["m"] >= 4
 
 
 class TestEmbeddingMonitoring:
@@ -421,13 +428,13 @@ class TestEmbeddingMonitoring:
 
     def test_embedding_metrics_collection(self):
         """Test collection of embedding metrics"""
-        metrics = {
+        metrics: Dict[str, float] = {
             "documents_processed": 0,
             "embeddings_created": 0,
             "embeddings_cached": 0,
             "errors": 0,
-            "total_time_ms": 0,
-            "average_time_per_doc_ms": 0,
+            "total_time_ms": 0.0,
+            "average_time_per_doc_ms": 0.0,
         }
 
         # Simulate processing
@@ -447,7 +454,7 @@ class TestEmbeddingMonitoring:
         metrics["average_time_per_doc_ms"] = (
             metrics["total_time_ms"] / metrics["documents_processed"]
             if metrics["documents_processed"] > 0
-            else 0
+            else 0.0
         )
 
         # Verify metrics

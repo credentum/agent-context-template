@@ -37,8 +37,8 @@ class BidirectionalWorkflowTest(unittest.TestCase):
         self.test_task_title = "Bidirectional Workflow Validation Test"
         self.test_phase_number = 8
         self.original_sprint_data = None
-        self.test_issue_number = None
-        self.created_issues = []  # Track issues created during testing
+        self.test_issue_number: Optional[int] = None
+        self.created_issues: List[int] = []  # Track issues created during testing
 
         # Backup original sprint data
         if self.sprint_file.exists():
@@ -80,7 +80,8 @@ class BidirectionalWorkflowTest(unittest.TestCase):
             cmd = ["gh", "issue", "view", str(issue_number), "--json", "state"]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             data = json.loads(result.stdout)
-            return data.get("state", "unknown").lower()
+            state = data.get("state", "unknown")
+            return str(state).lower()
         except Exception:
             return "unknown"
 
@@ -176,7 +177,7 @@ class BidirectionalWorkflowTest(unittest.TestCase):
         with open(self.sprint_file, "w") as f:
             yaml.dump(sprint_data, f, default_flow_style=False, sort_keys=False)
 
-        return sprint_data
+        return sprint_data  # type: ignore[no-any-return]
 
     def _find_test_task_in_sprint(self) -> Optional[Dict[str, Any]]:
         """Find the test task in the sprint YAML"""
@@ -242,6 +243,7 @@ class BidirectionalWorkflowTest(unittest.TestCase):
         print("3. Verifying GitHub issue creation...")
         test_task = self._find_test_task_in_sprint()
         self.assertIsNotNone(test_task, "Test task should exist in sprint YAML")
+        assert test_task is not None  # Type narrowing for MyPy
         self.assertIn("github_issue", test_task, "Test task should have github_issue number")
 
         issue_number = test_task["github_issue"]
@@ -278,6 +280,7 @@ class BidirectionalWorkflowTest(unittest.TestCase):
 
         # Step 1: Close the GitHub issue
         print(f"1. Closing GitHub issue #{issue_number}...")
+        assert issue_number is not None  # Type narrowing for MyPy
         self._close_issue(issue_number, "Testing bidirectional sync - closing for test")
 
         # Verify issue is closed
@@ -292,6 +295,7 @@ class BidirectionalWorkflowTest(unittest.TestCase):
 
         # Step 3: Reopen issue to test reverse sync
         print(f"3. Reopening GitHub issue #{issue_number}...")
+        assert issue_number is not None  # Type narrowing for MyPy
         self._reopen_issue(issue_number, "Testing bidirectional sync - reopening for test")
 
         state = self._get_issue_state(issue_number)
@@ -334,6 +338,7 @@ class BidirectionalWorkflowTest(unittest.TestCase):
 
         # Step 3: Verify labels were updated
         print("3. Verifying label updates...")
+        assert issue_number is not None  # Type narrowing for MyPy
         labels = self._get_issue_labels(issue_number)
         expected_new_labels = ["status:testing", "automation"]
 
@@ -352,6 +357,7 @@ class BidirectionalWorkflowTest(unittest.TestCase):
             self.test_yaml_to_github_sync()
 
         issue_number = self.test_issue_number
+        assert issue_number is not None  # Type narrowing for MyPy
         initial_state = self._get_issue_state(issue_number)
 
         # Step 1: Remove test task from sprint YAML
@@ -387,6 +393,7 @@ class BidirectionalWorkflowTest(unittest.TestCase):
 
         # Step 3: Verify orphaned issue was handled
         print("3. Verifying orphaned issue handling...")
+        assert issue_number is not None  # Type narrowing for MyPy
         final_state = self._get_issue_state(issue_number)
 
         # The issue should either be closed or handled appropriately

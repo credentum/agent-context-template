@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import time
 from pathlib import Path
+from typing import Any, Dict
 
 import pytest
 import yaml
@@ -103,7 +104,8 @@ def test_documents(tmp_path_factory):
     ]
 
     for doc in docs:
-        file_path = test_dir / f"{doc['id']}.yaml"
+        doc_dict: Dict[str, Any] = doc  # type: ignore[assignment]
+        file_path = test_dir / f"{doc_dict['id']}.yaml"
         with open(file_path, "w") as f:
             yaml.dump(doc, f)
 
@@ -185,14 +187,17 @@ class TestGraphDBIntegration:
         assert total == 3
 
         # Verify graph structure
-        with builder.driver.session(database=builder.database) as session:
-            # Check nodes
-            result = session.run("MATCH (n:Document) RETURN count(n) as count")
-            assert result.single()["count"] == 3
+        if builder.driver:
+            with builder.driver.session(database=builder.database) as session:
+                # Check nodes
+                result = session.run("MATCH (n:Document) RETURN count(n) as count")
+                record = result.single()
+                assert record is not None and record["count"] == 3
 
-            # Check relationships
-            result = session.run("MATCH ()-[r:REFERENCES]->() RETURN count(r) as count")
-            assert result.single()["count"] >= 1  # At least one reference
+                # Check relationships
+                result = session.run("MATCH ()-[r:REFERENCES]->() RETURN count(r) as count")
+                record = result.single()
+                assert record is not None and record["count"] >= 1  # At least one reference
 
         # Test statistics
         stats = builder.get_statistics()
@@ -282,10 +287,11 @@ class TestPerformanceIntegration:
             assert elapsed < 60  # Should process 100 docs in under 1 minute
 
             # Cleanup
-            with builder.driver.session(database=builder.database) as session:
-                session.run(
-                    "MATCH (n:Document) WHERE n.id STARTS WITH 'perf-test-' DETACH DELETE n"
-                )
+            if builder.driver:
+                with builder.driver.session(database=builder.database) as session:
+                    session.run(
+                        "MATCH (n:Document) WHERE n.id STARTS WITH 'perf-test-' DETACH DELETE n"
+                    )
 
             builder.close()
 

@@ -383,7 +383,7 @@ class TestValidateRedisKey:
         invalid_keys: list[Any] = [123, [], {}, 3.14, True]
 
         for key in invalid_keys:
-            assert validate_redis_key(key) is False  # type: ignore[arg-type]
+            assert validate_redis_key(key) is False
 
     def test_key_length_limit(self) -> None:
         """Test key length validation"""

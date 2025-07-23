@@ -27,7 +27,7 @@ except ImportError:
     def assume(*args, **kwargs):
         pass
 
-    class st:
+    class st:  # type: ignore[no-redef]
         @staticmethod
         def text(*args, **kwargs):
             pass
@@ -390,7 +390,8 @@ class TestPropertyBasedMetrics:
 
             # Property: Value should be non-negative for counters
             if event["type"] == "counter":
-                assert event["value"] >= 0
+                value_num = event["value"]
+                assert isinstance(value_num, (int, float)) and value_num >= 0
 
 
 if __name__ == "__main__":

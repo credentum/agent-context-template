@@ -287,7 +287,8 @@ class TestNetworkChaos:
                 try:
                     response = requests.post(url, json=data)
                     if response.status_code == 200:
-                        return response.json()
+                        result: dict = response.json()
+                        return result
                 except ConnectionError as e:
                     last_error = e
                     time.sleep(0.1 * (attempt + 1))

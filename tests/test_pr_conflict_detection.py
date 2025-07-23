@@ -396,20 +396,14 @@ class TestPRConflictDetection:
 
         # Step 3: Auto-merge decision
         auto_update_conflicts = test_scenario["auto_update_conflicts"]
-        test_coverage = test_scenario["test_coverage"]
 
         if auto_update_conflicts:
             ready_to_merge = False
             block_reason = "auto_update_conflicts"
-        elif conflicts_exist:
+        else:
+            # We know conflicts_exist is True from the assertion above
             ready_to_merge = False
             block_reason = conflict_reason
-        elif not test_coverage:
-            ready_to_merge = False
-            block_reason = "missing_test_coverage"
-        else:
-            ready_to_merge = True
-            block_reason = "none"
 
         # Final verification
         assert not ready_to_merge, "Should not be ready to merge due to conflicts"
