@@ -11,10 +11,26 @@ from pathlib import Path
 
 def get_coverage_threshold():
     """Get the minimum coverage threshold (baseline - tolerance_buffer)."""
-    config_path = Path(".coverage-config.json")
+    # Try multiple possible locations for the config file
+    possible_paths = [
+        Path(".coverage-config.json"),  # Current directory
+        Path(__file__).parent.parent / ".coverage-config.json",  # Project root
+        Path.cwd() / ".coverage-config.json",  # Explicit current working directory
+    ]
 
-    if not config_path.exists():
-        print("Error: .coverage-config.json not found", file=sys.stderr)
+    config_path = None
+    for path in possible_paths:
+        if path.exists():
+            config_path = path
+            break
+
+    if config_path is None:
+        print(
+            f"Error: .coverage-config.json not found in any of: {[str(p) for p in possible_paths]}",
+            file=sys.stderr,
+        )
+        print(f"Current working directory: {Path.cwd()}", file=sys.stderr)
+        print(f"Script location: {Path(__file__).parent}", file=sys.stderr)
         sys.exit(1)
 
     try:

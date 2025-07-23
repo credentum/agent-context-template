@@ -17,10 +17,10 @@ constraints: list(required=False)
 graph_metadata: include('graph_metadata', required=False)
 
 ---
+# Sub-schema definitions
 graph_metadata:
   relationships: list(include('relationship'), required=False)
 
----
 relationship:
   type: str()
   target: str()

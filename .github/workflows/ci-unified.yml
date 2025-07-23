@@ -54,6 +54,8 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+          pip install pre-commit
+          pip install pre-commit
 
       - name: Create required directories
         run: |
@@ -95,6 +97,8 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+          pip install pre-commit
+          pip install pre-commit
 
       - name: Restore context directories
         run: |
@@ -115,7 +119,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [setup, quick-validation]
     if: needs.quick-validation.outputs.status == 'PASSED'
-    
     services:
       redis:
         image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55
@@ -150,6 +153,8 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+          pip install pre-commit
+          pip install pre-commit
 
       - name: Restore context directories
         run: |
@@ -174,13 +179,7 @@ jobs:
             echo "Coverage extracted: ${coverage_pct}%"
           elif [ -f coverage.xml ]; then
             # Extract from XML if JSON not available
-            coverage_pct=$(python -c "
-import xml.etree.ElementTree as ET
-tree = ET.parse('coverage.xml')
-root = tree.getroot()
-line_rate = float(root.attrib.get('line-rate', '0'))
-print(round(line_rate * 100, 2))
-")
+            coverage_pct=$(python scripts/extract_coverage_xml.py)
             echo "coverage-pct=${coverage_pct}" >> $GITHUB_OUTPUT
             echo "Coverage extracted from XML: ${coverage_pct}%"
           else
@@ -199,16 +198,15 @@ print(round(line_rate * 100, 2))
             coverage.json
             htmlcov/
 
-  # Comprehensive validation for critical PRs - equivalent to: claude-ci all --comprehensive  
+  # Comprehensive validation for critical PRs - equivalent to: claude-ci all --comprehensive
   comprehensive-ci:
     name: "🔬 Comprehensive CI"
     runs-on: ubuntu-latest
     needs: [setup, full-ci]
     if: |
-      github.event_name == 'pull_request' && 
+      github.event_name == 'pull_request' &&
       (contains(github.event.pull_request.labels.*.name, 'priority-high') ||
        contains(github.event.pull_request.labels.*.name, 'breaking-change'))
-    
     services:
       redis:
         image: redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55
@@ -242,6 +240,8 @@ print(round(line_rate * 100, 2))
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+          pip install pre-commit
+          pip install pre-commit
 
       - name: Install comprehensive testing dependencies
         run: |
@@ -271,12 +271,11 @@ print(round(line_rate * 100, 2))
         run: |
           echo "## 🚀 Unified CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
           # Determine overall status
           quick_status="${{ needs.quick-validation.result }}"
           full_status="${{ needs.full-ci.result }}"
           comp_status="${{ needs.comprehensive-ci.result }}"
-          
+
           get_emoji() {
             case $1 in
               "success") echo "✅" ;;
@@ -286,20 +285,19 @@ print(round(line_rate * 100, 2))
               *) echo "❓" ;;
             esac
           }
-          
           echo "| Stage | Status | Claude Command |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|----------------|" >> $GITHUB_STEP_SUMMARY
           echo "| Quick Validation | $(get_emoji "$quick_status") | \`claude-ci all --quick\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Full CI | $(get_emoji "$full_status") | \`claude-ci all\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Comprehensive | $(get_emoji "$comp_status") | \`claude-ci all --comprehensive\` |" >> $GITHUB_STEP_SUMMARY
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Key Benefits:**" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **Identical local/GitHub behavior** - Same scripts everywhere" >> $GITHUB_STEP_SUMMARY
           echo "- 📦 **Single source of truth** - CI logic in claude-ci.sh only" >> $GITHUB_STEP_SUMMARY
           echo "- 🔄 **Easy debugging** - Run exact same commands locally" >> $GITHUB_STEP_SUMMARY
           echo "- 🎯 **Simplified workflows** - 90% reduction in YAML complexity" >> $GITHUB_STEP_SUMMARY
-          
+
           # Set job status based on required checks
           if [[ "$quick_status" == "success" && ("$full_status" == "success" || "$full_status" == "skipped") ]]; then
             echo "✅ CI Pipeline completed successfully"

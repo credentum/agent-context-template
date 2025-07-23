@@ -100,7 +100,7 @@ if [ -d ".git" ]; then
     # Check for merge conflicts (secure version)
     # Get merge base safely
     MERGE_BASE=$(git merge-base HEAD origin/main 2>/dev/null || true)
-    
+
     if [ -n "$MERGE_BASE" ]; then
         # Perform merge tree check safely
         MERGE_OUTPUT=$(git merge-tree "$MERGE_BASE" HEAD origin/main 2>/dev/null || true)
@@ -135,7 +135,7 @@ WORKFLOW_FILE=".github/workflows/ai-pr-monitor.yml"
 if [ -f "$WORKFLOW_FILE" ]; then
     # Secure Python execution with proper error handling
     YAML_CHECK_CMD="python -c 'import sys, yaml; \ntry: \n    with open(sys.argv[1], \"r\") as f: \n        yaml.safe_load(f); \n    print(\"YAML syntax valid\"); \n    sys.exit(0) \nexcept Exception as e: \n    print(f\"YAML syntax error: {e}\"); \n    sys.exit(1)' '$WORKFLOW_FILE'"
-    
+
     run_check "AI Workflow YAML Syntax" "$YAML_CHECK_CMD"
 else
     echo -e "  ${RED}✗ AI workflow file not found${NC}"

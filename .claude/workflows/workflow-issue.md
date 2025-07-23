@@ -413,7 +413,7 @@ dependencies: {identified}
      ```bash
      # Create logs directory if it doesn't exist
      mkdir -p context/trace/logs
-     
+
      # Add completion log entry
      echo "$(date): Issue #[ISSUE_NUMBER] workflow completed - creating PR" >> context/trace/logs/workflow-completions.log
      ```
@@ -497,7 +497,7 @@ dependencies: {identified}
    ```bash
    # Check that all documentation files are in the PR
    gh pr view [PR_NUMBER] --json files --jq '.files[].path' | grep -E "(task-templates|logs|scratchpad)"
-   
+
    # Expected files:
    # - context/trace/task-templates/issue-[ISSUE_NUMBER]-*.md
    # - context/trace/scratchpad/*-issue-[ISSUE_NUMBER]-*.md

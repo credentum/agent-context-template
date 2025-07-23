@@ -22,7 +22,7 @@ jobs:
   pr-review:
     name: "🔍 PR Review Simulation"
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871b0ad9019b8ad7c6f7e9a0556
         with:
@@ -45,6 +45,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install -r requirements-test.txt
+          pip install pre-commit
 
       - name: Setup Docker for PR review
         run: |
@@ -63,19 +64,19 @@ jobs:
         id: review
         run: |
           echo "🔍 Running PR review using claude-ci review --github-output"
-          
+
           # Capture only stdout for clean JSON, stderr to log
           if ./scripts/claude-ci.sh review --github-output > review-output.json 2>review-errors.log; then
             echo "✅ PR Review completed successfully"
             echo "status=PASSED" >> $GITHUB_OUTPUT
-            
+
             # Display review results
             echo "Review results:"
             cat review-output.json
           else
             echo "❌ PR Review identified issues"
             echo "status=FAILED" >> $GITHUB_OUTPUT
-            
+
             # Display both output and errors for debugging
             echo "Review output (failed):"
             cat review-output.json || echo "No JSON output captured"
@@ -104,3 +105,4 @@ jobs:
             test-results/
             coverage*.xml
             review-output.json
+            review-errors.log

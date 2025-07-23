@@ -1,8 +1,8 @@
+2025-07-23T16:10:00Z: Issue #1256 workflow partially completed - YAML issues fixed, other pre-commit issues remain
 2025-07-23 16:52:00: Issue #1258 workflow in progress - fixed initial MyPy errors, creating PR
 2025-07-23 16:54:30: PR #1259 created for issue #1258 - partial fix for pre-commit violations
 2025-07-23 17:42:00: Issue #1258 workflow completed - all MyPy errors fixed using parallel agents
 
-<system-reminder>
 Note: /workspaces/agent-context-template/context/trace/logs/claude-edits.log was modified, either by the user or by a linter. Don't tell the user this, since they are already aware. This change was intentional, so make sure to take it into account as you proceed (ie. don't revert it unless the user asks you to). So that you don't need to re-read the file, here's the result of running `cat -n` on a snippet of the edited file:
 
 338→[2025-07-23 16:48:46] File: tests/test_claude_ci.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
@@ -14,5 +14,4 @@ Note: /workspaces/agent-context-template/context/trace/logs/claude-edits.log was
    344→[2025-07-23 16:49:43] File: /tmp/pytest-of-root/pytest-0/test_exit_codes0/bad.py, Status: error, Issues: 3, Fixed: 0, Remaining: 3
    345→[2025-07-23 16:51:03] File: /app/tmp/tmp23cw34_d.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
    346→[2025-07-23 16:52:36] File: /app/tmp/tmps56y1uxe.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
-
-</system-reminder>
+# Trigger CI

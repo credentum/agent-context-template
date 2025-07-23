@@ -644,7 +644,7 @@ Expected output:
   "status": "PASSED",
   "checks": {
     "black": "PASSED",
-    "isort": "PASSED", 
+    "isort": "PASSED",
     "flake8": "PASSED",
     "mypy": "PASSED"
   },
@@ -671,7 +671,7 @@ If issues are found:
       "message": "File would be reformatted"
     },
     {
-      "tool": "flake8", 
+      "tool": "flake8",
       "line": 45,
       "code": "E501",
       "message": "line too long (92 > 88 characters)"
@@ -1263,12 +1263,12 @@ All documents include `graph_metadata` defining relationships:
    ```
 
 4. **ALWAYS run CI checks and tests before pushing:**
-   
+
    **🚀 Quick Method with claude-ci (RECOMMENDED):**
    ```bash
    # Run comprehensive validation
    claude-ci all --comprehensive
-   
+
    # If issues found, auto-fix what's possible
    claude-ci pre-commit --fix
    git add -A

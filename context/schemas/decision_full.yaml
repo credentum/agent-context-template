@@ -24,16 +24,15 @@ impacts: list(str(), required=False)
 graph_metadata: include('graph_metadata', required=False)
 
 ---
+# Sub-schema definitions
 alternative:
   name: str(required=True)
   reason_rejected: str(required=True)
 
----
 graph_metadata:
   node_type: str(required=True)
   relationships: list(include('relationship'), required=False)
 
----
 relationship:
   type: str(required=True)
   target: str(required=True)
