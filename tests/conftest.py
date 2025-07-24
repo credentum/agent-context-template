@@ -4,9 +4,23 @@ Pytest configuration and shared fixtures
 """
 
 import os
+import sys
 from pathlib import Path
 
 import pytest
+
+# Add scripts directory to Python path for test imports
+# This is a cleaner approach than sys.path manipulation in each test file
+scripts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts")
+if scripts_dir not in sys.path:
+    sys.path.insert(0, scripts_dir)
+
+# Add dashboards/ci-analytics to path for metrics.py imports
+ci_analytics_dir = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "dashboards", "ci-analytics"
+)
+if ci_analytics_dir not in sys.path:
+    sys.path.insert(0, ci_analytics_dir)
 
 
 @pytest.fixture(autouse=True)

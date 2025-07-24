@@ -29,6 +29,7 @@ neo4j_data/
 
 # Python
 __pycache__/
+.mypy_cache/
 *.py[cod]
 *$py.class
 *.so
@@ -91,3 +92,7 @@ lint-results.log
 
 # Package installation artifacts
 =*
+
+# DuckDB files
+*.duckdb
+context/.duckdb/

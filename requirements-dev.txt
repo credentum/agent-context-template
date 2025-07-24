@@ -13,3 +13,7 @@ jsonschema>=4.0.0
 types-jsonschema>=4.0.0
 yamllint>=1.30.0
 neo4j>=5.0.0
+
+# CI optimization dependencies
+psutil>=5.9.0
+aioredis>=2.0.0

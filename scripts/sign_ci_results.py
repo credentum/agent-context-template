@@ -16,8 +16,7 @@ from typing import Optional
 try:
     import gnupg
 except ImportError:
-    print("Error: python-gnupg not installed. Run: pip install python-gnupg")
-    sys.exit(1)
+    gnupg = None  # Handle missing dependency gracefully
 
 
 class CIResultSigner:
@@ -31,6 +30,9 @@ class CIResultSigner:
             private_key: Base64-encoded private key or None to use from env
             fingerprint: Key fingerprint for verification or None to use from env
         """
+        if gnupg is None:
+            raise ImportError("python-gnupg not installed. Run: pip install python-gnupg")
+
         self.gpg_home = tempfile.mkdtemp()
         self.gpg = gnupg.GPG(gnupghome=self.gpg_home)
 
@@ -166,6 +168,10 @@ def sign_ci_results_data(results: dict) -> tuple[dict, str]:
 
 def main():
     """CLI interface for testing signing functionality."""
+    if gnupg is None:
+        print("Error: python-gnupg not installed. Run: pip install python-gnupg")
+        sys.exit(1)
+
     import argparse
 
     parser = argparse.ArgumentParser(description="Sign CI results with GPG")

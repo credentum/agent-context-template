@@ -416,3 +416,12 @@
 [2025-07-23 23:51:23] File: /tmp/pytest-of-root/pytest-0/test_exit_codes0/bad.py, Status: error, Issues: 3, Fixed: 0, Remaining: 3
 [2025-07-23 23:52:22] File: /app/tmp/tmpc48bfuc9.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
 [2025-07-24 15:06:26] File: scripts/post-ci-results.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-24 18:36:58] File: /workspaces/agent-context-template/tmp/tmpm_x4gta8.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-24 18:41:32] File: /workspaces/agent-context-template/tmp/tmpiyw0qpd8.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-24 18:43:25] File: /workspaces/agent-context-template/tmp/tmpx60mrs0m.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-24 18:45:21] File: /workspaces/agent-context-template/tmp/tmpd0k6djem.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-24 18:45:24] File: /workspaces/agent-context-template/tmp/tmpm4z1h8n_.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-24 18:45:28] File: src/core/__init__.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-24 20:02:29] File: scripts/ci-hardware-detector.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-24 20:02:34] File: scripts/incremental-build-analyzer.py, Status: error, Issues: 2, Fixed: 0, Remaining: 2
+[2025-07-24 20:02:41] File: scripts/incremental-build-analyzer.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0

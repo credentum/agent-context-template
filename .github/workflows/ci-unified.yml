@@ -23,6 +23,11 @@ permissions:
 env:
   PYTHON_VERSION: "3.11"
   CACHE_VERSION: "v2025-07-22"
+  # CI Optimization Features (Phase 4)
+  CI_OPTIMIZATION_ENABLED: "true"
+  CI_CACHE_ENABLED: "true"
+  CI_INCREMENTAL_ENABLED: "true"
+  CI_ANALYTICS_ENABLED: "true"
 
 jobs:
   # Shared setup for all CI jobs
@@ -56,6 +61,12 @@ jobs:
           pip install -r requirements-test.txt
           pip install pre-commit
           pip install pre-commit
+          # Install optimization dependencies
+          pip install redis psutil
+          if [ "$CI_OPTIMIZATION_ENABLED" = "true" ]; then
+            echo "Installing CI optimization dependencies..."
+            pip install aioredis
+          fi
 
       - name: Create required directories
         run: |
@@ -99,6 +110,12 @@ jobs:
           pip install -r requirements-test.txt
           pip install pre-commit
           pip install pre-commit
+          # Install optimization dependencies
+          pip install redis psutil
+          if [ "$CI_OPTIMIZATION_ENABLED" = "true" ]; then
+            echo "Installing CI optimization dependencies..."
+            pip install aioredis
+          fi
 
       - name: Restore context directories
         run: |
@@ -106,6 +123,21 @@ jobs:
           mkdir -p context/.embeddings_cache context/trace context/archive
           mkdir -p context/mcp_contracts context/logs/{cleanup,eval,kv,prompts,signatures}
           mkdir -p .claude/hooks
+
+      - name: Initialize CI Optimization
+        if: env.CI_OPTIMIZATION_ENABLED == 'true'
+        run: |
+          echo "🔧 Initializing CI optimization features..."
+          # Initialize cache manager
+          if [ "$CI_CACHE_ENABLED" = "true" ]; then
+            ./scripts/ci-cache-manager.py stats || echo "Cache initialization skipped (no existing cache)"
+          fi
+          # Detect hardware capabilities
+          ./scripts/ci-hardware-detector.py --output /tmp/hardware-capabilities.json detect || echo "Hardware detection failed"
+          # Analyze incremental build requirements
+          if [ "$CI_INCREMENTAL_ENABLED" = "true" ]; then
+            ./scripts/incremental-build-analyzer.py scan --output /tmp/dependency-graph.json || echo "Incremental analysis skipped"
+          fi
 
       - name: Run Quick Validation
         id: quick
@@ -155,6 +187,12 @@ jobs:
           pip install -r requirements-test.txt
           pip install pre-commit
           pip install pre-commit
+          # Install optimization dependencies
+          pip install redis psutil
+          if [ "$CI_OPTIMIZATION_ENABLED" = "true" ]; then
+            echo "Installing CI optimization dependencies..."
+            pip install aioredis
+          fi
 
       - name: Restore context directories
         run: |
@@ -187,6 +225,19 @@ jobs:
             echo "No coverage file found"
           fi
 
+      - name: Collect Optimization Metrics
+        if: env.CI_ANALYTICS_ENABLED == 'true'
+        run: |
+          echo "📊 Collecting CI optimization metrics..."
+          if [ -f /tmp/hardware-capabilities.json ]; then
+            echo "Hardware capabilities detected"
+          fi
+          if [ -f /tmp/dependency-graph.json ]; then
+            echo "Dependency graph available for incremental builds"
+          fi
+          # Record build metrics if analytics is enabled
+          ./dashboards/ci-analytics/metrics.py summary --hours 1 || echo "Analytics collection skipped"
+
       - name: Upload test artifacts
         uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029
         if: always()
@@ -197,6 +248,8 @@ jobs:
             coverage*.xml
             coverage.json
             htmlcov/
+            /tmp/hardware-capabilities.json
+            /tmp/dependency-graph.json
 
   # Comprehensive validation for critical PRs - equivalent to: claude-ci all --comprehensive
   comprehensive-ci:
@@ -242,6 +295,12 @@ jobs:
           pip install -r requirements-test.txt
           pip install pre-commit
           pip install pre-commit
+          # Install optimization dependencies
+          pip install redis psutil
+          if [ "$CI_OPTIMIZATION_ENABLED" = "true" ]; then
+            echo "Installing CI optimization dependencies..."
+            pip install aioredis
+          fi
 
       - name: Install comprehensive testing dependencies
         run: |

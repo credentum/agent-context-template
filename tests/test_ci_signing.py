@@ -6,15 +6,13 @@ Tests for CI result signing and verification functionality.
 import importlib.util
 import json
 import os
-import sys
 import tempfile
 import time
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-# Add scripts directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+# Scripts path is added in conftest.py
 
 spec = importlib.util.spec_from_file_location(
     "post_ci_results",
@@ -28,7 +26,7 @@ sign_results_if_available = post_ci_results.sign_results_if_available
 try:
     spec_sign = importlib.util.spec_from_file_location(
         "sign_ci_results",
-        os.path.join(os.path.dirname(__file__), "..", "scripts", "sign-ci-results.py"),
+        os.path.join(os.path.dirname(__file__), "..", "scripts", "sign_ci_results.py"),
     )
     sign_ci_results = importlib.util.module_from_spec(spec_sign)
     spec_sign.loader.exec_module(sign_ci_results)
@@ -103,8 +101,8 @@ mQENBGb1234BCAC1234testkeyfortesting5678public90AB
 
                 # Mock successful signing
                 mock_signature = Mock()
-                mock_signature.__str__.return_value = "TESTSIGNATURE123"
-                mock_signature.__bool__.return_value = True
+                mock_signature.__str__ = Mock(return_value="TESTSIGNATURE123")
+                mock_signature.__bool__ = Mock(return_value=True)
                 mock_gpg.sign.return_value = mock_signature
 
                 # Test signing
