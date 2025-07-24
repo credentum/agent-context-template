@@ -3,6 +3,7 @@
 Tests for CI result signing and verification functionality.
 """
 
+import importlib.util
 import json
 import os
 import sys
@@ -15,12 +16,32 @@ from unittest.mock import Mock, patch
 # Add scripts directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
-# Import post-ci-results for retry testing
-from post_ci_results import ResultCache, sign_results_if_available  # noqa: E402
+spec = importlib.util.spec_from_file_location(
+    "post_ci_results",
+    os.path.join(os.path.dirname(__file__), "..", "scripts", "post-ci-results.py"),
+)
+post_ci_results = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(post_ci_results)
+ResultCache = post_ci_results.ResultCache
+sign_results_if_available = post_ci_results.sign_results_if_available
 
 try:
-    from sign_ci_results import CIResultSigner, sign_ci_results_data
-    from verify_ci_results import CIResultsVerifier
+    spec_sign = importlib.util.spec_from_file_location(
+        "sign_ci_results",
+        os.path.join(os.path.dirname(__file__), "..", "scripts", "sign-ci-results.py"),
+    )
+    sign_ci_results = importlib.util.module_from_spec(spec_sign)
+    spec_sign.loader.exec_module(sign_ci_results)
+    CIResultSigner = sign_ci_results.CIResultSigner
+    sign_ci_results_data = sign_ci_results.sign_ci_results_data
+
+    spec_verify = importlib.util.spec_from_file_location(
+        "verify_ci_results",
+        os.path.join(os.path.dirname(__file__), "..", "scripts", "verify-ci-results.py"),
+    )
+    verify_ci_results = importlib.util.module_from_spec(spec_verify)
+    spec_verify.loader.exec_module(verify_ci_results)
+    CIResultsVerifier = verify_ci_results.CIResultsVerifier
 
     SIGNING_AVAILABLE = True
 except ImportError:

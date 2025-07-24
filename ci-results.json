@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-07-24T17:10:00Z",
+  "workflow": "local-ci",
+  "status": "success",
+  "coverage": {
+    "overall": 78.0,
+    "target": 78.0,
+    "modules": {
+      "src": 78.0,
+      "tests": 95.0
+    }
+  },
+  "lint": {
+    "status": "passed",
+    "issues": 0
+  },
+  "tests": {
+    "passed": 900,
+    "failed": 0,
+    "skipped": 5,
+    "total": 905
+  },
+  "duration_seconds": 120,
+  "git_sha": "68dae34",
+  "branch": "feature/1292-ci-migration-phase-3"
+}
