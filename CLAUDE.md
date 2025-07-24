@@ -452,16 +452,21 @@ claude-ci all --comprehensive
    - Missing document start markers (`---`)
    - Trailing spaces and whitespace issues
 
-**NEW: Enhanced Pre-Push Hook System:**
-- **Automatic validation**: Pre-push hooks run CI checks before push
-- **Fast alternative**: `./scripts/quick-pre-push.sh` (30 seconds vs 5 minutes)
-- **Timeout protection**: Hooks timeout after 5 minutes to prevent hanging
-- **Better error messages**: Detailed troubleshooting guidance
-- **Multiple bypass options**:
-  - `SKIP_HOOKS=1 git push` (for debugging)
-  - `EMERGENCY_PUSH=1 git push` (for emergencies)
-  - `git push --no-verify` (standard bypass)
-- **Robust failure handling**: Distinguishes between timeouts and real failures
+**NEW: CI Migration Phase 3 - Local CI Before Push:**
+- **Git hooks installation**: Run `./scripts/install-git-hooks.sh` to enable local CI
+- **Automatic pre-push validation**: CI runs locally before allowing push (30s vs 5min on GitHub)
+- **Migration modes**:
+  - `traditional`: GitHub CI only (current default)
+  - `parallel`: Both local and GitHub CI (validation phase)
+  - `verifier-only`: Local CI with GitHub verification (target state)
+- **Quick validation**: `./scripts/quick-pre-push.sh` for essential checks only
+- **Bypass options**:
+  - `SKIP_CI=1 git push` (skip CI checks only)
+  - `SKIP_HOOKS=1 git push` (skip all hooks)
+  - `git push --no-verify` (standard git bypass)
+- **Workflow migration**: `python -m src.tools.migrate_workflow` converts workflows to verifier pattern
+- **Real-time monitoring**: `./scripts/monitor-ci-migration.sh` tracks migration progress
+- **Full documentation**: See `docs/ci-migration-complete-guide.md`
 
 Use /clear between distinct tasks to avoid context bleed.
 

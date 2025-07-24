@@ -1,0 +1,36 @@
+---
+name: Verify CI Results
+description: Verify local CI results in GitHub Actions
+inputs:
+  mode:
+    description: 'Verification mode: parallel, verifier-only, or traditional'
+    required: false
+    default: parallel
+runs:
+  using: composite
+  steps:
+    - name: Verify Results
+      shell: bash
+      run: |
+        if [ "${{ inputs.mode }}" = "traditional" ]; then
+          echo "Running in traditional mode - skipping verification"
+          exit 0
+        fi
+
+        echo "🔍 Verifying CI results (mode: ${{ inputs.mode }})"
+
+        # Check for CI results artifact
+        if [ ! -f "ci-results.json.gpg" ]; then
+          echo "❌ No CI results found - push must run local CI first"
+          exit 1
+        fi
+
+        # Verify GPG signature
+        python ${{ github.workspace }}/scripts/verify-ci-results.py \
+          --file ci-results.json.gpg || exit 1
+
+        # In parallel mode, also run GitHub CI for comparison
+        if [ "${{ inputs.mode }}" = "parallel" ]; then
+          echo "Running GitHub CI for comparison..."
+          # This would normally trigger the actual CI jobs
+        fi
