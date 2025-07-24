@@ -53,7 +53,7 @@ class WorkflowMigrator:
             content = yaml.safe_load(f)
             if content is None:
                 return {}
-            return content
+            return dict(content)
 
     def identify_ci_jobs(self, workflow: Dict[str, Any]) -> List[str]:
         """Identify jobs that are CI-related"""

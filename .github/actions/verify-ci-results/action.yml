@@ -1,3 +1,4 @@
+---
 name: Verify CI Results
 description: Verify local CI results in GitHub Actions
 inputs:
@@ -8,14 +9,28 @@ inputs:
 runs:
   using: composite
   steps:
-  - name: Verify Results
-    shell: bash
-    run: "\nif [ \"${{ inputs.mode }}\" = \"traditional\" ]; then\n  echo \"Running\
-      \ in traditional mode - skipping verification\"\n  exit 0\nfi\n\necho \"\U0001F50D\
-      \ Verifying CI results (mode: ${{ inputs.mode }})\"\n\n# Check for CI results\
-      \ artifact\nif [ ! -f \"ci-results.json.gpg\" ]; then\n  echo \"\u274C No CI\
-      \ results found - push must run local CI first\"\n  exit 1\nfi\n\n# Verify GPG\
-      \ signature\npython scripts/verify-ci-results.py --file ci-results.json.gpg\
-      \ || exit 1\n\n# In parallel mode, also run GitHub CI for comparison\nif [ \"\
-      ${{ inputs.mode }}\" = \"parallel\" ]; then\n  echo \"Running GitHub CI for\
-      \ comparison...\"\n  # This would normally trigger the actual CI jobs\nfi\n"
+    - name: Verify Results
+      shell: bash
+      run: |
+        if [ "${{ inputs.mode }}" = "traditional" ]; then
+          echo "Running in traditional mode - skipping verification"
+          exit 0
+        fi
+
+        echo "🔍 Verifying CI results (mode: ${{ inputs.mode }})"
+
+        # Check for CI results artifact
+        if [ ! -f "ci-results.json.gpg" ]; then
+          echo "❌ No CI results found - push must run local CI first"
+          exit 1
+        fi
+
+        # Verify GPG signature
+        python scripts/verify-ci-results.py \
+          --file ci-results.json.gpg || exit 1
+
+        # In parallel mode, also run GitHub CI for comparison
+        if [ "${{ inputs.mode }}" = "parallel" ]; then
+          echo "Running GitHub CI for comparison..."
+          # This would normally trigger the actual CI jobs
+        fi
