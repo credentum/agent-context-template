@@ -157,16 +157,16 @@ Convert workflows to verifier pattern:
 
 ```bash
 # Dry run to see changes
-./scripts/migrate-workflow.py --dry-run
+./scripts/migrate_workflow.py --dry-run
 
 # Migrate specific workflows
-./scripts/migrate-workflow.py --workflows test lint-verification
+./scripts/migrate_workflow.py --workflows test lint-verification
 
 # Migrate all priority workflows
-./scripts/migrate-workflow.py
+./scripts/migrate_workflow.py
 
 # Create verifier action
-./scripts/migrate-workflow.py --create-action
+./scripts/migrate_workflow.py --create-action
 ```
 
 ### Manual Migration

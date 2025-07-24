@@ -50,7 +50,8 @@ class WorkflowMigrator:
     def parse_workflow(self, workflow_path: Path) -> Dict[str, Any]:
         """Parse YAML workflow file"""
         with open(workflow_path, "r") as f:
-            return yaml.safe_load(f)
+            content = yaml.safe_load(f)
+            return content if content is not None else {}
 
     def identify_ci_jobs(self, workflow: Dict[str, Any]) -> List[str]:
         """Identify jobs that are CI-related"""

@@ -464,7 +464,7 @@ claude-ci all --comprehensive
   - `SKIP_CI=1 git push` (skip CI checks only)
   - `SKIP_HOOKS=1 git push` (skip all hooks)
   - `git push --no-verify` (standard git bypass)
-- **Workflow migration**: `./scripts/migrate-workflow.py` converts workflows to verifier pattern
+- **Workflow migration**: `./scripts/migrate_workflow.py` converts workflows to verifier pattern
 - **Real-time monitoring**: `./scripts/monitor-ci-migration.sh` tracks migration progress
 - **Full documentation**: See `docs/ci-migration-complete-guide.md`
 
