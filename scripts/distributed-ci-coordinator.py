@@ -126,7 +126,7 @@ class DistributedCICoordinator:
         self.redis_url = redis_url
         self.node_id = node_id or f"coordinator-{socket.gethostname()}-{uuid.uuid4().hex[:8]}"
         self.logger = logging.getLogger(__name__)
-        self.redis: Optional[aioredis.Redis] = None
+        self.redis: Optional[aioredis.Redis] = None  # type: ignore[misc]
 
         # Internal state
         self.runners: Dict[str, RunnerInfo] = {}
@@ -185,7 +185,7 @@ class DistributedCICoordinator:
             if runner_id in self.runners:
                 self.runners[runner_id].last_heartbeat = time.time()
 
-                await self.redis.hset(
+                await self.redis.hset(  # type: ignore[union-attr]
                     "ci:runners", runner_id, json.dumps(asdict(self.runners[runner_id]))
                 )
                 return True
@@ -453,7 +453,7 @@ class CIRunner:
         self.runner_id = runner_id
         self.coordinator_url = coordinator_url
         self.logger = logging.getLogger(__name__)
-        self.redis: Optional[aioredis.Redis] = None
+        self.redis: Optional[aioredis.Redis] = None  # type: ignore[misc]
         self.running = False
 
         # Runner configuration

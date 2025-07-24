@@ -53,7 +53,7 @@ class SystemCapabilities:
     def __post_init__(self):
         # Convert set to list for JSON serialization
         if isinstance(self.capabilities, set):
-            self.capabilities = list(self.capabilities)
+            object.__setattr__(self, "capabilities", list(self.capabilities))
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -94,7 +94,7 @@ class CIHardwareDetector:
 
     def detect_nvidia_gpus(self) -> List[GPUInfo]:
         """Detect NVIDIA GPUs using nvidia-smi."""
-        gpus = []
+        gpus: List[GPUInfo] = []
 
         try:
             # Check if nvidia-smi is available
@@ -161,7 +161,7 @@ class CIHardwareDetector:
 
     def detect_amd_gpus(self) -> List[GPUInfo]:
         """Detect AMD GPUs using rocm-smi or similar tools."""
-        gpus = []
+        gpus: List[GPUInfo] = []
 
         try:
             # Check for ROCm tools
@@ -210,7 +210,7 @@ class CIHardwareDetector:
 
     def detect_intel_gpus(self) -> List[GPUInfo]:
         """Detect Intel GPUs."""
-        gpus = []
+        gpus: List[GPUInfo] = []
 
         try:
             # Check lspci for Intel graphics
@@ -472,7 +472,7 @@ class CIHardwareDetector:
         return system_caps
 
     def can_run_job(
-        self, job_requirements: List[str], system_caps: SystemCapabilities = None
+        self, job_requirements: List[str], system_caps: Optional[SystemCapabilities] = None
     ) -> Tuple[bool, List[str]]:
         """
         Check if system can run a job with given requirements.
@@ -493,7 +493,9 @@ class CIHardwareDetector:
         can_run = len(missing) == 0
         return can_run, missing
 
-    def get_optimal_runner_config(self, job_requirements: List[str] = None) -> Dict[str, Any]:
+    def get_optimal_runner_config(
+        self, job_requirements: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """Get optimal runner configuration for given job requirements."""
         system_caps = self.detect_all_capabilities()
 

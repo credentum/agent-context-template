@@ -32,13 +32,13 @@ class FileNode:
     def __post_init__(self):
         # Convert Path to string for JSON serialization
         if isinstance(self.path, Path):
-            self.path = str(self.path)
+            object.__setattr__(self, "path", str(self.path))
 
         # Ensure sets are converted to lists for JSON serialization
         if isinstance(self.dependencies, set):
-            self.dependencies = list(self.dependencies)
+            object.__setattr__(self, "dependencies", list(self.dependencies))
         if isinstance(self.dependents, set):
-            self.dependents = list(self.dependents)
+            object.__setattr__(self, "dependents", list(self.dependents))
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -88,7 +88,7 @@ class IncrementalBuildAnalyzer:
     - Cache-aware rebuilding
     """
 
-    def __init__(self, project_root: Path = None):
+    def __init__(self, project_root: Optional[Path] = None):
         self.project_root = project_root or Path.cwd()
         self.logger = logging.getLogger(__name__)
         self._setup_logging()
@@ -402,7 +402,7 @@ class IncrementalBuildAnalyzer:
         return affected
 
     def determine_rebuild_targets(
-        self, changed_files: Set[str] = None, base_ref: str = "HEAD~1"
+        self, changed_files: Optional[Set[str]] = None, base_ref: str = "HEAD~1"
     ) -> Dict[str, List[str]]:
         """
         Determine what needs to be rebuilt based on changes.
@@ -426,7 +426,7 @@ class IncrementalBuildAnalyzer:
         }
 
         # Categorize by language for targeted rebuilds
-        language_groups = {}
+        language_groups: Dict[str, List[str]] = {}
         for file_path in affected_files:
             if file_path in self.file_graph:
                 language = self.file_graph[file_path].language
@@ -434,7 +434,7 @@ class IncrementalBuildAnalyzer:
                     language_groups[language] = []
                 language_groups[language].append(file_path)
 
-        rebuild_analysis["by_language"] = language_groups
+        rebuild_analysis["by_language"] = dict(language_groups)
 
         return rebuild_analysis
 
@@ -443,7 +443,7 @@ class IncrementalBuildAnalyzer:
         commands = []
 
         # Group by language and generate appropriate commands
-        language_groups = {}
+        language_groups: Dict[str, List[str]] = {}
         for file_path in affected_files:
             if file_path in self.file_graph:
                 language = self.file_graph[file_path].language

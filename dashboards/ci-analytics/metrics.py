@@ -85,7 +85,7 @@ class CIMetricsCollector:
     - Historical trend analysis
     """
 
-    def __init__(self, db_path: Path = None):
+    def __init__(self, db_path: Optional[Path] = None):
         self.db_path = db_path or Path(".ci-analytics.db")
         self.logger = logging.getLogger(__name__)
         self._setup_logging()
@@ -569,7 +569,7 @@ class CIMetricsCollector:
             total_deleted = build_count + cache_count + resource_count
             self.logger.info(f"Cleaned up {total_deleted} old metric records")
 
-            return total_deleted
+            return int(total_deleted)
 
         except Exception as e:
             self.logger.error(f"Failed to cleanup old metrics: {e}")
