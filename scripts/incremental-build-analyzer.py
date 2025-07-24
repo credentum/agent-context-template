@@ -34,15 +34,17 @@ class FileNode:
         if isinstance(self.path, Path):
             object.__setattr__(self, "path", str(self.path))
 
-        # Ensure sets are converted to lists for JSON serialization
-        if isinstance(self.dependencies, set):
-            object.__setattr__(self, "dependencies", list(self.dependencies))
-        if isinstance(self.dependents, set):
-            object.__setattr__(self, "dependents", list(self.dependents))
-
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
-        return asdict(self)
+        data = asdict(self)
+        # Convert sets to lists for JSON serialization
+        data["dependencies"] = (
+            list(self.dependencies) if isinstance(self.dependencies, set) else self.dependencies
+        )
+        data["dependents"] = (
+            list(self.dependents) if isinstance(self.dependents, set) else self.dependents
+        )
+        return data
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "FileNode":
