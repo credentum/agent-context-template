@@ -43,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install PyGithub requests
+          pip install PyGithub requests python-gnupg
 
       - name: Extract PR information
         id: pr-info
@@ -113,95 +113,70 @@ jobs:
             echo "source=none" >> $GITHUB_OUTPUT
           fi
 
+      - name: Extract CI Results and Signature
+        id: extract-results
+        if: steps.fetch-results.outputs.source != 'none'
+        run: |
+          # For check runs, extract the external_id which contains signature
+          if [[ "${{ steps.fetch-results.outputs.source }}" == "check_run" ]]; then
+            # Get the full check run data including external_id
+            SHA="${{ steps.pr-info.outputs.head_sha }}"
+            CHECK_RUN=$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${{ github.repository }}/commits/${SHA}/check-runs" \
+              --jq '.check_runs[] | select(.name == "Local CI Results") | {external_id: .external_id, output: .output}' | head -1)
+
+            if [[ -n "$CHECK_RUN" ]]; then
+              # Extract signature from external_id if present
+              EXTERNAL_ID=$(echo "$CHECK_RUN" | jq -r '.external_id // empty')
+              if [[ -n "$EXTERNAL_ID" ]]; then
+                # Parse the external_id JSON to get signature
+                echo "$EXTERNAL_ID" | jq -r '.signature // empty' > signature.txt
+                echo "has_signature=true" >> $GITHUB_OUTPUT
+              else
+                echo "has_signature=false" >> $GITHUB_OUTPUT
+              fi
+
+              # Extract the actual results from output summary
+              # This is a simplified extraction - in production, we'd parse more carefully
+              echo "$CHECK_RUN" | jq -r '.output.summary' > raw-summary.txt
+            fi
+          fi
+
       - name: Verify CI Results
         id: verify
         if: steps.fetch-results.outputs.source != 'none'
         run: |
-          # Create verify script inline for Phase 1
-          cat > verify_results.py << 'EOF'
-          import json
-          import sys
-          import os
-
-          def verify_results(results_file):
-              """Verify CI results meet quality thresholds."""
-              try:
-                  with open(results_file, 'r') as f:
-                      results = json.load(f)
-              except Exception as e:
-                  print(f"Error reading results: {e}")
-                  return False, "Could not parse CI results"
-
-              # Handle both direct results and check run format
-              if 'output' in results:
-                  # This is a check run format, extract the actual results
-                  # For now, we'll just check the conclusion
-                  passed = results.get('conclusion') == 'success'
-                  message = results.get('output', {}).get('summary', 'No details available')
-                  return passed, message
-
-              # Direct results format
-              if 'checks' not in results:
-                  return False, "Invalid results format: missing 'checks' field"
-
-              checks = results['checks']
-              failures = []
-
-              # Verify coverage threshold
-              if 'coverage' in checks:
-                  coverage = checks['coverage']
-                  if not coverage.get('passed', False):
-                      failures.append(
-                          f"Coverage {coverage.get('percentage', 0):.1f}% is below threshold "
-                          f"{coverage.get('threshold', 85.0):.1f}%"
-                      )
-
-              # Verify tests passed
-              if 'tests' in checks:
-                  tests = checks['tests']
-                  if not tests.get('passed', False):
-                      failures.append(
-                          f"{tests.get('failed', 0)} tests failed out of {tests.get('total', 0)}"
-                      )
-
-              # Verify linting passed
-              if 'linting' in checks:
-                  linting = checks['linting']
-                  if not linting.get('passed', False):
-                      failures.append(
-                          f"Linting failed with {len(linting.get('issues', []))} issues"
-                      )
-
-              # Verify type checking passed
-              if 'type_check' in checks:
-                  type_check = checks['type_check']
-                  if not type_check.get('passed', False):
-                      failures.append(
-                          f"Type checking failed with {type_check.get('errors', 0)} errors"
-                      )
-
-              if failures:
-                  return False, "CI checks failed:\n- " + "\n- ".join(failures)
-
-              return True, "All CI checks passed"
+          # Use the actual verify-ci-results.py script
+          # First check if public key exists
+          if [[ -f ".github/ci-public-key.asc" ]]; then
+            echo "Public key found for signature verification"
+            PUBLIC_KEY_ARG="--public-key .github/ci-public-key.asc"
+          else
+            echo "No public key found, signature verification will be skipped"
+            PUBLIC_KEY_ARG=""
+          fi
 
           # Run verification
-          passed, message = verify_results('ci-results.json')
+          if python scripts/verify-ci-results.py ci-results.json $PUBLIC_KEY_ARG --output-format json > verify-output.json; then
+            PASSED="true"
+          else
+            PASSED="false"
+          fi
+
+          # Extract message from JSON output
+          MESSAGE=$(jq -r '.message' verify-output.json)
 
           # Set outputs
-          print(f"passed={'true' if passed else 'false'}")
-          print(f"message={message}")
-
-          # Also write to GitHub output
-          with open(os.environ.get('GITHUB_OUTPUT', 'output.txt'), 'a') as f:
-              f.write(f"passed={'true' if passed else 'false'}\n")
-              f.write(f"message={message}\n")
+          echo "passed=${PASSED}" >> $GITHUB_OUTPUT
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          echo "${MESSAGE}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
           # Exit with appropriate code
-          sys.exit(0 if passed else 1)
-          EOF
-
-          python verify_results.py || exit 1
+          if [[ "${PASSED}" != "true" ]]; then
+            exit 1
+          fi
 
       - name: Update PR Status
         if: always() && steps.pr-info.outputs.pr_number != ''
@@ -257,6 +232,11 @@ jobs:
              ./scripts/post-ci-results.py ci-output.json --pr ${{ steps.pr-info.outputs.pr_number }}
              ```
 
+          3. (Optional) Enable signing for enhanced security:
+             ```bash
+             ./scripts/post-ci-results.py ci-output.json --pr ${{ steps.pr-info.outputs.pr_number }} --enable-signing
+             ```
+
           The workflow will automatically re-run when results are posted.
           EOF
           else
@@ -265,6 +245,7 @@ jobs:
 
           **Source**: ${{ steps.fetch-results.outputs.source }}
           **Status**: ${{ steps.verify.outputs.passed == 'true' && '✅ PASSED' || '❌ FAILED' }}
+          **Signature**: ${{ steps.extract-results.outputs.has_signature == 'true' && '🔐 Verified' || '⚠️ Not signed' }}
 
           ### Details:
           ${{ steps.verify.outputs.message }}

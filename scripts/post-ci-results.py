@@ -4,6 +4,11 @@ Post CI results to GitHub PR using Checks API or Status API.
 
 This script parses claude-ci.sh output and posts standardized results
 to GitHub for verification by the ci-local-verifier workflow.
+
+Enhanced with:
+- Cryptographic signing of results using GPG
+- Retry logic with exponential backoff for reliability
+- Local caching of results between retries
 """
 
 import argparse
@@ -13,7 +18,38 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Tuple
+
+try:
+    from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+except ImportError:
+    print("Warning: tenacity not installed. Retry functionality disabled.", file=sys.stderr)
+
+    # Define dummy decorators if tenacity not available
+    def retry(*args, **kwargs):
+        def decorator(func):
+            return func
+
+        return decorator
+
+    def retry_if_exception_type(x):
+        return None
+
+    def stop_after_attempt(x):
+        return None
+
+    def wait_exponential(**kwargs):
+        return None
+
+
+# Import signing functionality
+try:
+    from sign_ci_results import sign_ci_results_data
+
+    SIGNING_AVAILABLE = True
+except ImportError:
+    print("Warning: CI signing not available. Results will be unsigned.", file=sys.stderr)
+    SIGNING_AVAILABLE = False
 
 
 def parse_claude_ci_output(output_file: str) -> Dict[str, Any]:
@@ -108,8 +144,58 @@ def get_current_branch() -> str:
         return "unknown"
 
 
-def post_to_github_checks(results: Dict[str, Any], repo: str, token: str) -> bool:
-    """Post results to GitHub using Checks API."""
+class ResultCache:
+    """Cache CI results locally between retry attempts."""
+
+    def __init__(self, cache_dir: Path = Path.home() / ".cache" / "ci-results"):
+        self.cache_dir = cache_dir
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    def save(self, results: Dict[str, Any], key: str) -> Path:
+        """Save results to cache with given key."""
+        cache_file = self.cache_dir / f"{key}.json"
+        with open(cache_file, "w") as f:
+            json.dump(results, f, indent=2)
+        return cache_file
+
+    def load(self, key: str) -> Optional[Dict[str, Any]]:
+        """Load results from cache by key."""
+        cache_file = self.cache_dir / f"{key}.json"
+        if cache_file.exists():
+            with open(cache_file, "r") as f:
+                return json.load(f)
+        return None
+
+    def cleanup(self, key: str) -> None:
+        """Remove cached results."""
+        cache_file = self.cache_dir / f"{key}.json"
+        if cache_file.exists():
+            cache_file.unlink()
+
+
+def sign_results_if_available(results: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
+    """Sign results if signing is available, otherwise return unchanged."""
+    if not SIGNING_AVAILABLE:
+        return results, None
+
+    try:
+        results_with_metadata, signature = sign_ci_results_data(results)
+        print("✓ Results signed successfully")
+        return results_with_metadata, signature
+    except Exception as e:
+        print(f"Warning: Failed to sign results: {e}", file=sys.stderr)
+        return results, None
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=2, min=2, max=8),
+    retry=retry_if_exception_type(subprocess.CalledProcessError),
+)
+def post_to_github_checks(
+    results: Dict[str, Any], repo: str, token: str, signature: Optional[str] = None
+) -> bool:
+    """Post results to GitHub using Checks API with retry logic."""
     # For Phase 1, we'll use gh CLI which handles auth automatically
     commit_sha = results["commit_sha"]
 
@@ -125,8 +211,32 @@ def post_to_github_checks(results: Dict[str, Any], repo: str, token: str) -> boo
         f"**Branch**: {results['branch']}",
         f"**Commit**: {commit_sha[:8]}",
         "",
-        "## Check Results",
     ]
+
+    # Add signature status if available
+    if signature:
+        summary_lines.extend(
+            [
+                "## 🔐 Security",
+                "**Signed**: ✅ Results cryptographically signed",
+                f"**Fingerprint**: {results.get('signed_with_fingerprint', 'N/A')[:16]}...",
+                "",
+            ]
+        )
+    else:
+        summary_lines.extend(
+            [
+                "## 🔐 Security",
+                "**Signed**: ❌ Results not signed (signature not configured)",
+                "",
+            ]
+        )
+
+    summary_lines.extend(
+        [
+            "## Check Results",
+        ]
+    )
 
     for check_name, check_data in results["checks"].items():
         status = "✅" if check_data.get("passed") else "❌"
@@ -192,19 +302,46 @@ def post_to_github_checks(results: Dict[str, Any], repo: str, token: str) -> boo
     if annotations:
         cmd.extend(["--field", f"output[annotations]={json.dumps(annotations)}"])
 
+    # Add signature data as external_id for verification
+    if signature:
+        external_data = {
+            "signature": signature,
+            "version": results.get("signature_version", "1.0"),
+        }
+        cmd.extend(["--field", f"external_id={json.dumps(external_data)}"])
+
     try:
         subprocess.run(cmd, capture_output=True, text=True, check=True)
-        print(f"Successfully posted check run: {conclusion}")
+        print(f"✓ Successfully posted check run: {conclusion}")
+
+        # Log retry information if this wasn't the first attempt
+        attempt = getattr(post_to_github_checks, "retry_statistics", {}).get("attempt_number", 1)
+        if attempt > 1:
+            print(f"  (succeeded after {attempt} attempts)")
+
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Error posting to GitHub: {e}", file=sys.stderr)
+        attempt_num = getattr(post_to_github_checks, "retry_statistics", {}).get(
+            "attempt_number", 1
+        )
+        print(
+            f"Error posting to GitHub (attempt {attempt_num}/3): {e}",
+            file=sys.stderr,
+        )
         print(f"stdout: {e.stdout}", file=sys.stderr)
         print(f"stderr: {e.stderr}", file=sys.stderr)
-        return False
+        raise  # Re-raise to trigger retry
 
 
-def post_as_pr_comment(results: Dict[str, Any], repo: str, pr_number: str) -> bool:
-    """Post results as a PR comment (fallback method)."""
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=2, min=2, max=8),
+    retry=retry_if_exception_type(subprocess.CalledProcessError),
+)
+def post_as_pr_comment(
+    results: Dict[str, Any], repo: str, pr_number: str, signature: Optional[str] = None
+) -> bool:
+    """Post results as a PR comment (fallback method) with retry logic."""
     # Build comment body
     comment_lines = [
         "## 🤖 Local CI Results",
@@ -213,9 +350,25 @@ def post_as_pr_comment(results: Dict[str, Any], repo: str, pr_number: str) -> bo
         f"**Commit**: {results['commit_sha'][:8]}",
         f"**Branch**: {results['branch']}",
         "",
-        "### Check Results",
-        "",
     ]
+
+    # Add signature status
+    if signature:
+        comment_lines.extend(
+            [
+                "### 🔐 Security",
+                "✅ **Signed**: Results cryptographically signed",
+                f"**Fingerprint**: {results.get('signed_with_fingerprint', 'N/A')[:16]}...",
+                "",
+            ]
+        )
+
+    comment_lines.extend(
+        [
+            "### Check Results",
+            "",
+        ]
+    )
 
     all_passed = True
     for check_name, check_data in results["checks"].items():
@@ -259,6 +412,21 @@ def post_as_pr_comment(results: Dict[str, Any], repo: str, pr_number: str) -> bo
         ]
     )
 
+    # Add signature if available
+    if signature:
+        comment_lines.extend(
+            [
+                "",
+                "<details>",
+                "<summary>🔐 Signature</summary>",
+                "",
+                "```",
+                signature,
+                "```",
+                "</details>",
+            ]
+        )
+
     comment_body = "\n".join(comment_lines)
 
     # Post comment using gh CLI
@@ -266,24 +434,43 @@ def post_as_pr_comment(results: Dict[str, Any], repo: str, pr_number: str) -> bo
 
     try:
         subprocess.run(cmd, capture_output=True, text=True, check=True)
-        print(f"Successfully posted PR comment to #{pr_number}")
+        print(f"✓ Successfully posted PR comment to #{pr_number}")
+
+        # Log retry information
+        attempt = getattr(post_as_pr_comment, "retry_statistics", {}).get("attempt_number", 1)
+        if attempt > 1:
+            print(f"  (succeeded after {attempt} attempts)")
+
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Error posting PR comment: {e}", file=sys.stderr)
-        return False
+        attempt_num = getattr(post_as_pr_comment, "retry_statistics", {}).get("attempt_number", 1)
+        print(
+            f"Error posting PR comment (attempt {attempt_num}/3): {e}",
+            file=sys.stderr,
+        )
+        raise  # Re-raise to trigger retry
 
 
-def save_results_artifact(results: Dict[str, Any], output_dir: str = ".") -> str:
+def save_results_artifact(
+    results: Dict[str, Any], output_dir: str = ".", signature: Optional[str] = None
+) -> str:
     """Save results to a JSON file for artifact storage."""
     filename = (
         f"ci-results-{results['commit_sha'][:8]}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
     )
     filepath = Path(output_dir) / filename
 
-    with open(filepath, "w") as f:
-        json.dump(results, f, indent=2)
+    # Include signature in saved artifact
+    artifact_data = {
+        "results": results,
+        "signature": signature,
+        "signed": signature is not None,
+    }
 
-    print(f"Results saved to: {filepath}")
+    with open(filepath, "w") as f:
+        json.dump(artifact_data, f, indent=2)
+
+    print(f"✓ Results saved to: {filepath}")
     return str(filepath)
 
 
@@ -307,10 +494,36 @@ def main():
     )
     parser.add_argument("--artifact-dir", default=".", help="Directory to save artifacts")
 
+    parser.add_argument(
+        "--enable-signing",
+        action="store_true",
+        help="Enable cryptographic signing of results (requires CI_SIGNING_KEY)",
+    )
+    parser.add_argument(
+        "--cache-key",
+        help="Cache key for retry attempts (auto-generated if not provided)",
+    )
+
     args = parser.parse_args()
 
-    # Parse CI results
-    results = parse_claude_ci_output(args.output_file)
+    # Initialize cache
+    cache = ResultCache()
+    cache_key = args.cache_key or f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{os.getpid()}"
+
+    # Try to load from cache first (in case of retry)
+    results = cache.load(cache_key)
+    if results:
+        print("Loaded results from cache (retry attempt)")
+    else:
+        # Parse CI results
+        results = parse_claude_ci_output(args.output_file)
+        # Cache for potential retries
+        cache.save(results, cache_key)
+
+    # Sign results if requested
+    signature = None
+    if args.enable_signing or os.environ.get("CI_ENABLE_SIGNING", "").lower() == "true":
+        results, signature = sign_results_if_available(results)
 
     # Detect repository if not provided
     if not args.repo:
@@ -332,33 +545,42 @@ def main():
 
     # Save artifact if requested
     if args.save_artifact:
-        save_results_artifact(results, args.artifact_dir)
+        save_results_artifact(results, args.artifact_dir, signature)
 
     # Post results
     success = False
 
-    if args.method in ["checks", "both"]:
-        # Check if we have required permissions
-        token = os.environ.get("GITHUB_TOKEN", "")
-        if not token:
-            print("Warning: GITHUB_TOKEN not set, using gh CLI auth", file=sys.stderr)
+    try:
+        if args.method in ["checks", "both"]:
+            # Check if we have required permissions
+            token = os.environ.get("GITHUB_TOKEN", "")
+            if not token:
+                print("Warning: GITHUB_TOKEN not set, using gh CLI auth", file=sys.stderr)
 
-        success = post_to_github_checks(results, args.repo, token)
+            success = post_to_github_checks(results, args.repo, token, signature)
 
-    if args.method in ["comment", "both"] and args.pr:
-        success = post_as_pr_comment(results, args.repo, args.pr) or success
-    elif args.method == "comment" and not args.pr:
-        print("Error: --pr required when using comment method", file=sys.stderr)
-        sys.exit(1)
+        if args.method in ["comment", "both"] and args.pr:
+            success = post_as_pr_comment(results, args.repo, args.pr, signature) or success
+        elif args.method == "comment" and not args.pr:
+            print("Error: --pr required when using comment method", file=sys.stderr)
+            sys.exit(1)
 
-    if success:
-        print("Results posted successfully!")
+        if success:
+            print("✅ Results posted successfully!")
 
-        # Output overall status for scripting
-        all_passed = all(check.get("passed", False) for check in results["checks"].values())
-        sys.exit(0 if all_passed else 1)
-    else:
-        print("Failed to post results", file=sys.stderr)
+            # Clean up cache on success
+            cache.cleanup(cache_key)
+
+            # Output overall status for scripting
+            all_passed = all(check.get("passed", False) for check in results["checks"].values())
+            sys.exit(0 if all_passed else 1)
+        else:
+            print("❌ Failed to post results after all retry attempts", file=sys.stderr)
+            sys.exit(2)
+
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}", file=sys.stderr)
+        print("Cached results are available for manual retry", file=sys.stderr)
         sys.exit(2)
 
 

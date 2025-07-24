@@ -4,22 +4,39 @@ Verify CI results meet quality thresholds.
 
 This script is used by the ci-local-verifier workflow to validate
 that posted CI results meet the project's quality standards.
+
+Enhanced with:
+- Cryptographic signature verification for result integrity
+- Support for both signed and unsigned results (backward compatible)
 """
 
 import argparse
 import json
 import sys
-from typing import Any, Dict, List, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+# Import signing functionality
+try:
+    from sign_ci_results import CIResultSigner
+
+    SIGNING_AVAILABLE = True
+except ImportError:
+    print("Warning: CI signing not available for verification.", file=sys.stderr)
+    SIGNING_AVAILABLE = False
 
 
 class CIResultsVerifier:
     """Verify CI results against configured thresholds."""
 
-    def __init__(self, config_file: str = ".coverage-config.json"):
+    def __init__(
+        self, config_file: str = ".coverage-config.json", public_key_path: Optional[str] = None
+    ):
         """Initialize verifier with configuration."""
         self.config = self._load_config(config_file)
         self.failures: List[str] = []
         self.warnings: List[str] = []
+        self.public_key_path = public_key_path or ".github/ci-public-key.asc"
 
     def _load_config(self, config_file: str) -> Dict[str, Any]:
         """Load coverage and quality configuration."""
@@ -33,6 +50,7 @@ class CIResultsVerifier:
                     "allow_test_failures": False,
                     "allow_lint_warnings": True,
                     "require_type_check": True,
+                    "require_signature": config.get("require_signature", False),  # New option
                 }
         except FileNotFoundError:
             # Default configuration if config file doesn't exist
@@ -43,17 +61,77 @@ class CIResultsVerifier:
                 "allow_test_failures": False,
                 "allow_lint_warnings": True,
                 "require_type_check": True,
+                "require_signature": False,  # Default to not required for backward compatibility
             }
 
-    def verify_results(self, results: Dict[str, Any]) -> Tuple[bool, str]:
+    def verify_signature(
+        self, results: Dict[str, Any], signature: Optional[str]
+    ) -> Tuple[bool, str]:
+        """
+        Verify GPG signature of results.
+
+        Returns:
+            Tuple of (valid: bool, message: str)
+        """
+        if not SIGNING_AVAILABLE:
+            return False, "Signature verification not available (python-gnupg not installed)"
+
+        if not signature:
+            return False, "No signature provided"
+
+        # Load public key
+        if not Path(self.public_key_path).exists():
+            return False, f"Public key not found at {self.public_key_path}"
+
+        try:
+            with open(self.public_key_path, "r") as f:
+                public_key = f.read()
+
+            # Verify signature
+            with CIResultSigner() as signer:
+                is_valid = signer.verify_signature(results, signature, public_key)
+
+                if is_valid:
+                    fingerprint = results.get("signed_with_fingerprint", "unknown")
+                    return True, f"Signature valid (fingerprint: {fingerprint[:16]}...)"
+                else:
+                    return False, "Signature verification failed"
+
+        except Exception as e:
+            return False, f"Error verifying signature: {e}"
+
+    def verify_results(
+        self, results: Dict[str, Any], signature: Optional[str] = None
+    ) -> Tuple[bool, str]:
         """
         Verify CI results meet quality thresholds.
+
+        Args:
+            results: CI results dictionary
+            signature: Optional GPG signature for verification
 
         Returns:
             Tuple of (passed: bool, message: str)
         """
         self.failures = []
         self.warnings = []
+
+        # Handle both direct results and wrapped results (from artifact files)
+        if "results" in results and "signature" in results:
+            # This is a wrapped result from save_results_artifact
+            signature = results.get("signature")
+            results = results.get("results", {})
+
+        # Verify signature if required or if signature is provided
+        if self.config.get("require_signature") or signature:
+            sig_valid, sig_message = self.verify_signature(results, signature)
+            if self.config.get("require_signature") and not sig_valid:
+                self.failures.append(f"Signature verification failed: {sig_message}")
+            elif signature and not sig_valid:
+                self.warnings.append(f"Signature verification failed: {sig_message}")
+            elif sig_valid:
+                # Add success message as a note (not warning/failure)
+                self.warnings.append(f"✅ {sig_message}")
 
         # Validate result format
         if "checks" not in results:
@@ -173,19 +251,28 @@ class CIResultsVerifier:
 
 
 def verify_from_file(
-    results_file: str, config_file: str = ".coverage-config.json"
+    results_file: str,
+    config_file: str = ".coverage-config.json",
+    public_key_path: Optional[str] = None,
 ) -> Tuple[bool, str]:
     """Verify results from a JSON file."""
     try:
         with open(results_file, "r") as f:
-            results = json.load(f)
+            data = json.load(f)
     except FileNotFoundError:
         return False, f"Results file '{results_file}' not found"
     except json.JSONDecodeError as e:
         return False, f"Invalid JSON in results file: {e}"
 
-    verifier = CIResultsVerifier(config_file)
-    return verifier.verify_results(results)
+    verifier = CIResultsVerifier(config_file, public_key_path)
+
+    # Handle both formats: direct results or wrapped with signature
+    if isinstance(data, dict) and "results" in data and "signature" in data:
+        # Wrapped format from save_results_artifact
+        return verifier.verify_results(data["results"], data.get("signature"))
+    else:
+        # Direct results format
+        return verifier.verify_results(data)
 
 
 def main():
@@ -197,13 +284,19 @@ def main():
         help="Path to coverage/quality configuration file",
     )
     parser.add_argument(
+        "--public-key",
+        default=None,
+        help="Path to GPG public key for signature verification "
+        "(default: .github/ci-public-key.asc)",
+    )
+    parser.add_argument(
         "--output-format", choices=["text", "json"], default="text", help="Output format"
     )
 
     args = parser.parse_args()
 
     # Verify results
-    passed, message = verify_from_file(args.results_file, args.config)
+    passed, message = verify_from_file(args.results_file, args.config, args.public_key)
 
     # Output results
     if args.output_format == "json":
