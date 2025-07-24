@@ -53,3 +53,7 @@ pytest-benchmark>=4.0.0
 
 # Schema validation (needed for workflow tests)
 jsonschema>=4.0.0
+
+# CI signing and posting dependencies
+python-gnupg>=0.5.0
+tenacity>=8.0.0
