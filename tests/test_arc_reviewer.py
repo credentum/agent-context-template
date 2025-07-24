@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 import yaml
 
 from src.agents.arc_reviewer import ARCReviewer
@@ -363,6 +364,21 @@ class TestARCReviewer:
             assert "schema_version: '1.0'" in captured.out
             assert "verdict: APPROVE" in captured.out
 
+    def test_review_and_output_request_changes_exits(self, capsys):
+        """Test that review_and_output exits with code 1 when verdict is REQUEST_CHANGES."""
+        reviewer = ARCReviewer()
+        with patch.object(reviewer, "review_pr") as mock_review:
+            mock_review.return_value = {
+                "schema_version": "1.0",
+                "verdict": "REQUEST_CHANGES",
+                "summary": "Issues found",
+            }
+            with pytest.raises(SystemExit) as exc_info:
+                reviewer.review_and_output(pr_number=123)
+            assert exc_info.value.code == 1
+            captured = capsys.readouterr()
+            assert "verdict: REQUEST_CHANGES" in captured.out
+
     def test_main_function(self):
         """Test main function CLI interface."""
         import sys
@@ -384,5 +400,5 @@ class TestARCReviewer:
 
             mock_reviewer_class.assert_called_once_with(verbose=True)
             mock_reviewer.review_and_output.assert_called_once_with(
-                pr_number=123, base_branch="main"
+                pr_number=123, base_branch="main", runtime_test=False
             )
