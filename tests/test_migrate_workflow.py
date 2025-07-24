@@ -1,15 +1,12 @@
 """Tests for workflow migration tool"""
 
-import sys
+import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import yaml
 
-# Add scripts directory to path for import
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-from migrate_workflow import WorkflowMigrator  # noqa: E402
+from src.tools.migrate_workflow import WorkflowMigrator
 
 
 class TestWorkflowMigrator:
@@ -143,8 +140,14 @@ class TestWorkflowMigrator:
         """Test creating verifier composite action"""
         action_dir = Path(self.temp_dir) / ".github" / "actions" / "verify-ci-results"
 
-        with patch("pathlib.Path.cwd", return_value=Path(self.temp_dir)):
+        # Change to temp directory to test action creation
+
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(self.temp_dir)
             self.migrator.create_verifier_action()
+        finally:
+            os.chdir(old_cwd)
 
         action_file = action_dir / "action.yml"
         assert action_file.exists()
