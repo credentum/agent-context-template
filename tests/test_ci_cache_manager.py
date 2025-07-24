@@ -2,23 +2,17 @@
 
 import json
 import os
-
-# Import the module under test
-import sys
 import tempfile
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
-# Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+import pytest
 
-# Import after path setup to avoid E402
+# Import the module under test
 try:
     from ci_cache_manager import CICacheManager, LocalCacheBackend, RedisCacheBackend
 except ImportError:
     # If import fails, skip this test module
-    import pytest
-
     pytest.skip("ci_cache_manager module not found", allow_module_level=True)
 
 

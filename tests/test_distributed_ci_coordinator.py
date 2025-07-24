@@ -1,20 +1,13 @@
 """Unit tests for Distributed CI Coordinator."""
 
 import json
-import os
-
-# Import the module under test
-import sys
 import unittest
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-# Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
-
-# Import after path setup to avoid E402
+# Import the module under test
 try:
     from distributed_ci_coordinator import CIJob, DistributedCICoordinator, Runner
 except ImportError:

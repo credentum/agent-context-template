@@ -2,7 +2,6 @@
 
 import json
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, Set
@@ -11,10 +10,8 @@ from unittest.mock import patch
 
 import pytest
 
-# Import the script modules
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-
-from generate_coverage_matrix import (  # noqa: E402  # type: ignore[import]
+# Import the script modules (path added in conftest.py)
+from generate_coverage_matrix import (  # type: ignore[import]
     DEFAULT_CONFIG,
     CoverageAnalyzer,
     CoverageDataValidator,

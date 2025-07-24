@@ -1,17 +1,13 @@
 """Unit tests for Incremental Build Analyzer."""
 
 import os
-
-# Import the module under test
-import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
-# Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+import pytest
 
-# Import after path setup to avoid E402
+# Import the module under test
 try:
     from incremental_build_analyzer import (
         DependencyChange,
@@ -24,8 +20,6 @@ try:
     )
 except ImportError:
     # If import fails, skip this test module
-    import pytest
-
     pytest.skip("incremental_build_analyzer module not found", allow_module_level=True)
 
 

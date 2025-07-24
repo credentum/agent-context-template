@@ -3,20 +3,11 @@
 import json
 import os
 import sqlite3
-
-# Import the module under test
-import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta
 
-# No mock imports needed for this test
-
-# Add parent directories to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "dashboards", "ci-analytics"))
-
-# Import after path setup to avoid E402
+# Import the module under test
 try:
     from metrics import CIMetric, CIMetricsCollector
 except ImportError:

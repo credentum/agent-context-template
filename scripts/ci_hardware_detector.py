@@ -77,6 +77,8 @@ class CIHardwareDetector:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self._setup_logging()
+        # Whitelist of allowed commands for security
+        self.allowed_commands = {"nvidia-smi", "rocm-smi", "lspci", "docker", "nvcc", "clinfo"}
 
     def _setup_logging(self) -> None:
         """Setup logging configuration."""
@@ -85,9 +87,21 @@ class CIHardwareDetector:
         )
 
     def _run_command(self, command: List[str], capture_output: bool = True) -> Optional[str]:
-        """Run a command and return output."""
+        """Run a command and return output with security validation."""
+        # Security check: validate command against whitelist
+        if not command:
+            return None
+
+        cmd_name = command[0]
+        if cmd_name not in self.allowed_commands:
+            self.logger.warning(f"Command '{cmd_name}' not in whitelist, skipping for security")
+            return None
+
         try:
-            result = subprocess.run(command, capture_output=capture_output, text=True, timeout=30)
+            # Use shell=False (default) for security
+            result = subprocess.run(
+                command, capture_output=capture_output, text=True, timeout=30, shell=False
+            )
             return result.stdout if result.returncode == 0 else None
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
             return None

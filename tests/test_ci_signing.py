@@ -6,15 +6,13 @@ Tests for CI result signing and verification functionality.
 import importlib.util
 import json
 import os
-import sys
 import tempfile
 import time
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-# Add scripts directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+# Scripts path is added in conftest.py
 
 spec = importlib.util.spec_from_file_location(
     "post_ci_results",

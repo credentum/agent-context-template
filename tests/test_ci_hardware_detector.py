@@ -2,21 +2,16 @@
 
 import json
 import os
-
-# Import the module under test
-import sys
 import unittest
 from unittest.mock import Mock, patch
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+import pytest
 
-# Import after path setup to avoid E402
+# Import the module under test
 try:
-    from ci_hardware_detector import CIHardwareDetector, HardwareCapabilities  # noqa: E402
+    from ci_hardware_detector import CIHardwareDetector, HardwareCapabilities
 except ImportError:
     # If import fails, skip this test module
-    import pytest
-
     pytest.skip("ci_hardware_detector module not found", allow_module_level=True)
 
 
