@@ -426,6 +426,12 @@ class ARCReviewer:
         results = self.review_pr(pr_number, base_branch, runtime_test=runtime_test)
         print(self.format_yaml_output(results))
 
+        # Exit with non-zero code if verdict is REQUEST_CHANGES
+        if results.get("verdict") == "REQUEST_CHANGES":
+            import sys
+
+            sys.exit(1)
+
 
 def main():
     """Command line interface for ARC-Reviewer."""
