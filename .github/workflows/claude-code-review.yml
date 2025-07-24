@@ -43,6 +43,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-test.txt
+          pip install -r requirements-dev.txt
           pip install pre-commit
           pip install yamale
           npm install -g ajv-cli
@@ -220,14 +221,26 @@ jobs:
                   if 'reviewer' not in data:
                       data['reviewer'] = "ARC-Reviewer"
                   if 'verdict' not in data:
-                      data['verdict'] = "UNKNOWN"
+                      # Determine verdict based on coverage and blocking issues
+                      has_blockers = (data.get('issues', {}).get('blocking', []) and
+                                     len(data.get('issues', {}).get('blocking', [])) > 0)
+                      coverage_ok = (data.get('coverage', {}).get('current_pct', 0) >=
+                                   float("${{ env.COVERAGE_BASELINE }}"))
+
+                      if has_blockers or not coverage_ok:
+                          data['verdict'] = "REQUEST_CHANGES"
+                      else:
+                          data['verdict'] = "APPROVE"
                   if 'summary' not in data:
                       data['summary'] = "Code review completed"
                   if 'coverage' not in data:
+                      # Use actual coverage if available
+                      actual_coverage = float("${{ env.COVERAGE_PCT }}" or "0")
+                      meets_baseline = actual_coverage >= float("${{ env.COVERAGE_BASELINE }}")
                       data['coverage'] = {
-                          'current_pct': 0.0,
-                          'status': "UNKNOWN",
-                          'meets_baseline': False
+                          'current_pct': actual_coverage,
+                          'status': "PASS" if meets_baseline else "FAIL",
+                          'meets_baseline': meets_baseline
                       }
                   if 'issues' not in data:
                       data['issues'] = {
@@ -252,20 +265,24 @@ jobs:
           except yaml.YAMLError as e:
               print(f"❌ YAML parsing failed: {e}")
               # Create minimal valid YAML as fallback
+              # Use actual coverage in fallback
+              actual_coverage = float("${{ env.COVERAGE_PCT }}" or "0")
+              meets_baseline = actual_coverage >= float("${{ env.COVERAGE_BASELINE }}")
+
               fallback_data = {
                   'schema_version': "1.0",
                   'pr_number': int("${{ github.event.pull_request.number }}"),
                   'timestamp': datetime.utcnow().isoformat() + 'Z',
                   'reviewer': "ARC-Reviewer",
-                  'verdict': "APPROVE",
+                  'verdict': "APPROVE" if meets_baseline else "REQUEST_CHANGES",
                   'summary': "Format correction applied - review completed",
                   'coverage': {
-                      'current_pct': 0.0,
-                      'status': "UNKNOWN",
-                      'meets_baseline': False
+                      'current_pct': actual_coverage,
+                      'status': "PASS" if meets_baseline else "FAIL",
+                      'meets_baseline': meets_baseline
                   },
                   'issues': {
-                      'blocking': [],
+                      'blocking': [] if meets_baseline else [{'description': f'Coverage below baseline: {actual_coverage}% < ${{ env.COVERAGE_BASELINE }}%', 'category': 'coverage'}],
                       'warnings': [{'description': 'Original review format was invalid', 'category': 'format'}],
                       'nits': []
                   },
@@ -343,7 +360,24 @@ jobs:
           else
             # Run coverage and capture output (exclude integration/e2e tests like main test workflow)
             echo "Running coverage analysis..."
-            pytest tests/ --cov=src --cov-report=term --cov-report=json -m "not integration and not e2e" || true
+
+            # Ensure dependencies are available
+            if ! python -c "import gnupg" 2>/dev/null; then
+              echo "Installing missing python-gnupg dependency..."
+              pip install python-gnupg
+            fi
+
+            if ! python -c "import tenacity" 2>/dev/null; then
+              echo "Installing missing tenacity dependency..."
+              pip install tenacity
+            fi
+
+            # Run tests with better error handling
+            if pytest tests/ --cov=src --cov-report=term --cov-report=json -m "not integration and not e2e" --tb=short; then
+              echo "✓ Tests completed successfully"
+            else
+              echo "⚠️ Some tests failed, but coverage may still be available"
+            fi
 
             # Debug: Check if coverage.json was created
             if [ -f coverage.json ]; then
