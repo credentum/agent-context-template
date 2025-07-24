@@ -91,12 +91,12 @@ Estimates based on analysis:
 ├── complexity: Very High (multiple new systems)
 └── files_affected: 15 (new optimization infrastructure)
 
-Actuals (to be filled):
-├── tokens_used: ___
-├── time_taken: ___
-├── cost_actual: $___
-├── iterations_needed: ___
-└── context_clears: ___
+Actuals (filled):
+├── tokens_used: ~47,000
+├── time_taken: 2.5 hours
+├── cost_actual: ~$140
+├── iterations_needed: 3 (initial + 2 linting fixes)
+└── context_clears: 0
 ```
 
 ## 🏷️ Metadata
