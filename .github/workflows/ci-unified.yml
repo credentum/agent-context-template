@@ -133,10 +133,10 @@ jobs:
             ./scripts/ci-cache-manager.py stats || echo "Cache initialization skipped (no existing cache)"
           fi
           # Detect hardware capabilities
-          ./scripts/ci-hardware-detector.py --output /tmp/hardware-capabilities.json detect || echo "Hardware detection failed"
+          ./scripts/ci_hardware_detector.py detect --output /tmp/hardware-capabilities.json || echo "Hardware detection failed"
           # Analyze incremental build requirements
           if [ "$CI_INCREMENTAL_ENABLED" = "true" ]; then
-            ./scripts/incremental-build-analyzer.py scan --output /tmp/dependency-graph.json || echo "Incremental analysis skipped"
+            ./scripts/incremental_build_analyzer.py scan --output /tmp/dependency-graph.json || echo "Incremental analysis skipped"
           fi
 
       - name: Run Quick Validation

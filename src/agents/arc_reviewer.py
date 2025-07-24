@@ -255,8 +255,65 @@ class ARCReviewer:
 
         return issues
 
+    def _check_runtime_errors(self, changed_files: List[str]) -> List[Dict[str, Any]]:
+        """
+        Check for runtime errors in Python scripts.
+
+        Args:
+            changed_files: List of changed file paths
+
+        Returns:
+            List of runtime issues found
+        """
+        runtime_issues = []
+
+        for file_path in changed_files:
+            if not file_path.endswith(".py"):
+                continue
+
+            # Skip test files for runtime validation
+            if "test" in file_path or file_path.startswith("tests/"):
+                continue
+
+            # Check if it's an executable script
+            full_path = self.repo_root / file_path
+            if not full_path.exists():
+                continue
+
+            # Try to run the script with --help to detect basic runtime errors
+            if file_path.startswith("scripts/"):
+                cmd = ["python", str(full_path), "--help"]
+                exit_code, stdout, stderr = self._run_command(cmd)
+
+                if exit_code != 0 and "usage:" not in stderr.lower():
+                    # Check for specific known issues
+                    if "unrecognized arguments" in stderr:
+                        runtime_issues.append(
+                            {
+                                "severity": "high",
+                                "file": file_path,
+                                "line": 0,
+                                "message": (
+                                    f"Script has command line parsing error: {stderr.strip()}"
+                                ),
+                                "category": "runtime_error",
+                            }
+                        )
+                    elif "AttributeError" in stderr or "ImportError" in stderr:
+                        runtime_issues.append(
+                            {
+                                "severity": "high",
+                                "file": file_path,
+                                "line": 0,
+                                "message": f"Script has runtime error: {stderr.strip()}",
+                                "category": "runtime_error",
+                            }
+                        )
+
+        return runtime_issues
+
     def review_pr(
-        self, pr_number: Optional[int] = None, base_branch: str = "main"
+        self, pr_number: Optional[int] = None, base_branch: str = "main", runtime_test: bool = False
     ) -> Dict[str, Any]:
         """
         Perform complete PR review and return structured results.
@@ -264,6 +321,7 @@ class ARCReviewer:
         Args:
             pr_number: PR number (optional, used for metadata)
             base_branch: Base branch to compare against
+            runtime_test: Enable runtime validation of Python scripts
 
         Returns:
             Dictionary with review results
@@ -321,6 +379,13 @@ class ARCReviewer:
         security_issues = self._check_security(changed_files)
         blocking_issues.extend(security_issues)
 
+        # Runtime validation checks (if enabled)
+        if runtime_test:
+            if self.verbose:
+                print("🏃 Performing runtime validation...")
+            runtime_issues = self._check_runtime_errors(changed_files)
+            blocking_issues.extend(runtime_issues)
+
         # Determine verdict
         verdict = "APPROVE" if not blocking_issues else "REQUEST_CHANGES"
 
@@ -354,9 +419,11 @@ class ARCReviewer:
         """Format review results as YAML string matching workflow output."""
         return yaml.dump(review_data, default_flow_style=False, sort_keys=False)
 
-    def review_and_output(self, pr_number: Optional[int] = None, base_branch: str = "main") -> None:
+    def review_and_output(
+        self, pr_number: Optional[int] = None, base_branch: str = "main", runtime_test: bool = False
+    ) -> None:
         """Perform review and print YAML output."""
-        results = self.review_pr(pr_number, base_branch)
+        results = self.review_pr(pr_number, base_branch, runtime_test=runtime_test)
         print(self.format_yaml_output(results))
 
 
@@ -370,11 +437,16 @@ def main():
     parser.add_argument("--pr", type=int, help="PR number (optional)")
     parser.add_argument("--base", default="main", help="Base branch to compare against")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    parser.add_argument(
+        "--runtime-test", action="store_true", help="Enable runtime validation of Python scripts"
+    )
 
     args = parser.parse_args()
 
     reviewer = ARCReviewer(verbose=args.verbose)
-    reviewer.review_and_output(pr_number=args.pr, base_branch=args.base)
+    reviewer.review_and_output(
+        pr_number=args.pr, base_branch=args.base, runtime_test=args.runtime_test
+    )
 
 
 if __name__ == "__main__":

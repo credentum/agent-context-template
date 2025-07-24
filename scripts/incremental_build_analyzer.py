@@ -34,6 +34,12 @@ class FileNode:
         if isinstance(self.path, Path):
             object.__setattr__(self, "path", str(self.path))
 
+        # Ensure dependencies and dependents are sets (not lists) for runtime operations
+        if not isinstance(self.dependencies, set):
+            object.__setattr__(self, "dependencies", set(self.dependencies))
+        if not isinstance(self.dependents, set):
+            object.__setattr__(self, "dependents", set(self.dependents))
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         data = asdict(self)
