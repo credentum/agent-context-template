@@ -94,11 +94,11 @@ Estimates based on analysis:
 └── files_affected: 3-4
 
 Actuals (to be filled):
-├── tokens_used: ___
-├── time_taken: ___
-├── cost_actual: $___
-├── iterations_needed: ___
-└── context_clears: ___
+├── tokens_used: ~12k
+├── time_taken: 25 minutes
+├── cost_actual: $0.20
+├── iterations_needed: 1
+└── context_clears: 0
 ```
 
 ## 🏷️ Metadata
