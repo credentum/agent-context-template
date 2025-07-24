@@ -37,7 +37,7 @@ Commands:
   check <file>    Validate single file (format, lint, types)
   test           Run smart test selection
   pre-commit     Run pre-commit validation
-  review         Simulate PR review locally
+  review         Simulate PR review locally (includes ARC-Reviewer)
   all            Run complete CI pipeline
   help           Show this help message
 
@@ -64,7 +64,7 @@ Examples:
 Progressive Validation Modes:
   --quick        Format check, basic lint, minimal tests (seconds)
   (default)      Full lint, relevant tests, pre-commit (minutes)
-  --comprehensive Everything including full tests, coverage, review (full)
+  --comprehensive Everything including full tests, coverage, ARC-Reviewer (full)
 
 EOF
     exit 0
@@ -309,6 +309,65 @@ pretty_output() {
     fi
 }
 
+# Run ARC-Reviewer and convert YAML output to JSON
+run_arc_reviewer() {
+    local arc_script="$PROJECT_ROOT/src/agents/arc_reviewer.py"
+
+    # Check if ARC-Reviewer script exists
+    if [ ! -f "$arc_script" ]; then
+        if [ "$VERBOSE" = true ]; then
+            echo "ARC-Reviewer not found at $arc_script" >&2
+        fi
+        return 1
+    fi
+
+    # Check if Python is available
+    if ! command -v python3 >/dev/null 2>&1; then
+        if [ "$VERBOSE" = true ]; then
+            echo "Python3 not found, skipping ARC-Reviewer" >&2
+        fi
+        return 1
+    fi
+
+    # Run ARC-Reviewer and capture YAML output
+    local arc_yaml_output
+    arc_yaml_output=$(python3 "$arc_script" 2>/dev/null)
+    local arc_exit_code=$?
+
+    if [ $arc_exit_code -ne 0 ]; then
+        if [ "$VERBOSE" = true ]; then
+            echo "ARC-Reviewer failed with exit code $arc_exit_code" >&2
+        fi
+        return $arc_exit_code
+    fi
+
+    # Convert YAML to JSON using Python (more reliable than yq)
+    local json_output
+    json_output=$(python3 -c "
+import sys
+import yaml
+import json
+
+try:
+    yaml_data = '''${arc_yaml_output}'''
+    data = yaml.safe_load(yaml_data)
+    print(json.dumps(data))
+except Exception as e:
+    print(json.dumps({'error': str(e)}), file=sys.stderr)
+    sys.exit(1)
+" 2>/dev/null)
+
+    if [ $? -ne 0 ]; then
+        if [ "$VERBOSE" = true ]; then
+            echo "Failed to convert ARC-Reviewer YAML to JSON" >&2
+        fi
+        return 1
+    fi
+
+    echo "$json_output"
+    return 0
+}
+
 # Check command - validate single file
 cmd_check() {
     local file="$1"
@@ -474,6 +533,62 @@ cmd_review() {
         fi
     fi
 
+    # Run ARC-Reviewer for comprehensive code review
+    if [ "$JSON_OUTPUT" = false ]; then
+        pretty_output "review" "INFO" "Running ARC-Reviewer analysis..."
+    fi
+
+    local arc_result
+    arc_result=$(run_arc_reviewer)
+    local arc_exit_code=$?
+
+    if [ $arc_exit_code -eq 0 ] && [ -n "$arc_result" ]; then
+        # Parse ARC results and add to checks
+        local arc_verdict arc_coverage arc_issues
+        arc_verdict=$(echo "$arc_result" | jq -r '.verdict // "UNKNOWN"' 2>/dev/null || echo "UNKNOWN")
+        arc_coverage=$(echo "$arc_result" | jq -r '.coverage.current_pct // 0' 2>/dev/null || echo "0")
+        arc_issues=$(echo "$arc_result" | jq -c '.issues // {}' 2>/dev/null || echo "{}")
+
+        # Add ARC check status
+        local arc_status="PASSED"
+        if [ "$arc_verdict" = "REQUEST_CHANGES" ]; then
+            arc_status="FAILED"
+            overall_status="FAILED"
+        fi
+
+        if [ "$first_check" = true ]; then
+            checks_json="${checks_json}\"arc-reviewer\": \"${arc_status}\", \"coverage\": ${arc_coverage}"
+            first_check=false
+        else
+            checks_json="${checks_json}, \"arc-reviewer\": \"${arc_status}\", \"coverage\": ${arc_coverage}"
+        fi
+
+        # Add ARC issues to errors if any
+        if [ "$arc_verdict" = "REQUEST_CHANGES" ]; then
+            local arc_summary
+            arc_summary=$(echo "$arc_result" | jq -r '.summary // "ARC-Reviewer found issues"' 2>/dev/null)
+
+            if [ "$first_error" = true ]; then
+                errors_json="${errors_json}{\"stage\": \"arc-reviewer\", \"message\": \"${arc_summary}\", \"details\": ${arc_issues}}"
+                first_error=false
+            else
+                errors_json="${errors_json}, {\"stage\": \"arc-reviewer\", \"message\": \"${arc_summary}\", \"details\": ${arc_issues}}"
+            fi
+        fi
+    else
+        # ARC-Reviewer failed to run or returned no output
+        if [ "$first_check" = true ]; then
+            checks_json="${checks_json}\"arc-reviewer\": \"SKIPPED\""
+            first_check=false
+        else
+            checks_json="${checks_json}, \"arc-reviewer\": \"SKIPPED\""
+        fi
+
+        if [ "$VERBOSE" = true ]; then
+            echo "Warning: ARC-Reviewer skipped (exit code: $arc_exit_code)" >&2
+        fi
+    fi
+
     checks_json="${checks_json}}"
     errors_json="${errors_json}]"
 
@@ -597,7 +712,7 @@ cmd_all() {
         run_stage "pre-commit" "cmd_pre_commit" || true
     elif [ "$COMPREHENSIVE" = true ]; then
         if [ "$JSON_OUTPUT" = false ]; then
-            pretty_output "all" "INFO" "Comprehensive mode: full validation suite"
+            pretty_output "all" "INFO" "Comprehensive mode: full validation suite with ARC-Reviewer"
         fi
         run_stage "pre-commit" "cmd_pre_commit" || true
         run_stage "test" "cmd_test" || true
