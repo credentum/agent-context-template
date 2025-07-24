@@ -16,6 +16,8 @@ ALL_MODE=false
 COMPREHENSIVE=false
 QUICK=false
 GITHUB_OUTPUT=false
+POST_RESULTS=false
+SAVE_OUTPUT=""
 
 # Colors for terminal output (disabled in JSON mode)
 RED='\033[0;31m'
@@ -48,6 +50,8 @@ Options:
   --pretty       Human-readable output
   --github-output Enable GitHub Actions output format
   --verbose      Show detailed output
+  --post-results Post results to GitHub PR (requires --output)
+  --output FILE  Save JSON output to file
 
 Examples:
   claude-ci check src/main.py
@@ -55,6 +59,7 @@ Examples:
   claude-ci pre-commit --fix
   claude-ci all --quick --github-output
   claude-ci review --comprehensive
+  claude-ci all --output results.json --post-results
 
 Progressive Validation Modes:
   --quick        Format check, basic lint, minimal tests (seconds)
@@ -118,6 +123,9 @@ github_actions_output() {
     fi
 }
 
+# Store last output for saving
+LAST_JSON_OUTPUT=""
+
 # JSON output helper - robust JSON generation using jq
 json_output() {
     local command="$1"
@@ -141,12 +149,47 @@ json_output() {
 
     if [ "$JSON_OUTPUT" = true ]; then
         # Use jq to ensure proper JSON formatting
-        jq -n \
+        # Build a more comprehensive result for post-ci-results.py
+        local comprehensive_checks="$checks"
+
+        # For the 'all' command, parse out specific check types
+        if [ "$command" = "all" ] && echo "$checks" | jq -e 'has("test")' >/dev/null 2>&1; then
+            # Extract test data if available
+            local test_data=$(echo "$checks" | jq -c '.test // {}')
+            local coverage_data=$(echo "$checks" | jq -c '.coverage // {}')
+            local lint_data=$(echo "$checks" | jq -c '.["pre-commit"] // {}')
+
+            # Build comprehensive checks object
+            comprehensive_checks=$(jq -n \
+                --argjson test "$test_data" \
+                --argjson coverage "$coverage_data" \
+                --argjson lint "$lint_data" \
+                '{
+                    "tests": {
+                        "passed": ($test.tests == "PASSED"),
+                        "total": 0,
+                        "failed": 0,
+                        "skipped": 0,
+                        "duration": "0s"
+                    },
+                    "coverage": {
+                        "passed": ($coverage.coverage == "PASSED" or $coverage.coverage >= 85),
+                        "percentage": ($coverage.coverage // 0),
+                        "threshold": 85.0
+                    },
+                    "linting": {
+                        "passed": ($lint["pre-commit"] == "PASSED"),
+                        "issues": []
+                    }
+                }')
+        fi
+
+        LAST_JSON_OUTPUT=$(jq -n \
             --arg command "$command" \
             --arg status "$status" \
             --arg target "$target" \
             --arg duration "$duration" \
-            --argjson checks "$checks" \
+            --argjson checks "$comprehensive_checks" \
             --argjson errors "$errors" \
             --arg next_action "$next_action" \
             '{
@@ -156,8 +199,21 @@ json_output() {
                 "duration": $duration,
                 "checks": $checks,
                 "errors": $errors,
-                "next_action": $next_action
-            }'
+                "next_action": $next_action,
+                "version": "1.0",
+                "timestamp": (now | strftime("%Y-%m-%dT%H:%M:%SZ")),
+                "summary": {
+                    "passed": ($status == "PASSED"),
+                    "stages_run": ($target | split(" ") | length)
+                }
+            }')
+
+        echo "$LAST_JSON_OUTPUT"
+
+        # Save to file if requested
+        if [ -n "$SAVE_OUTPUT" ]; then
+            echo "$LAST_JSON_OUTPUT" > "$SAVE_OUTPUT"
+        fi
     fi
 }
 
@@ -627,6 +683,18 @@ while [[ $# -gt 0 ]]; do
             VERBOSE=true
             shift
             ;;
+        --post-results)
+            POST_RESULTS=true
+            shift
+            ;;
+        --output)
+            if [ $# -lt 2 ]; then
+                echo "Error: --output requires a file argument" >&2
+                exit 1
+            fi
+            SAVE_OUTPUT="$2"
+            shift 2
+            ;;
         -*)
             echo "Unknown option: $1" >&2
             exit 1
@@ -694,6 +762,7 @@ validate_dependencies() {
 validate_dependencies
 
 # Execute command
+EXIT_CODE=0
 case "$COMMAND" in
     check)
         if [ -z "$TARGET_FILE" ]; then
@@ -701,22 +770,55 @@ case "$COMMAND" in
             json_output "check" "FAILED" "" "0s" "{}" "[{\"message\": \"No file specified\"}]" "Specify file to check"
             exit 1
         fi
-        cmd_check "$TARGET_FILE"
+        cmd_check "$TARGET_FILE" || EXIT_CODE=$?
         ;;
     test)
-        cmd_test
+        cmd_test || EXIT_CODE=$?
         ;;
     pre-commit)
-        cmd_pre_commit
+        cmd_pre_commit || EXIT_CODE=$?
         ;;
     review)
-        cmd_review
+        cmd_review || EXIT_CODE=$?
         ;;
     all)
-        cmd_all
+        cmd_all || EXIT_CODE=$?
         ;;
     *)
         echo "Unknown command: $COMMAND" >&2
         exit 1
         ;;
 esac
+
+# Post results to GitHub if requested
+if [ "$POST_RESULTS" = true ] && [ -n "$SAVE_OUTPUT" ]; then
+    if [ "$JSON_OUTPUT" = false ]; then
+        echo "Error: --post-results requires JSON output mode" >&2
+        exit 1
+    fi
+
+    # Detect PR number from current branch
+    PR_NUMBER=""
+    if command -v gh >/dev/null 2>&1; then
+        PR_NUMBER=$(gh pr view --json number -q .number 2>/dev/null || echo "")
+    fi
+
+    # Post results using post-ci-results.py
+    POST_ARGS=""
+    if [ -n "$PR_NUMBER" ]; then
+        POST_ARGS="--pr $PR_NUMBER"
+    fi
+
+    if [ -f "$SCRIPT_DIR/post-ci-results.py" ]; then
+        if [ "$VERBOSE" = true ]; then
+            echo "Posting CI results to GitHub..." >&2
+        fi
+        "$SCRIPT_DIR/post-ci-results.py" "$SAVE_OUTPUT" $POST_ARGS || {
+            echo "Warning: Failed to post results to GitHub" >&2
+        }
+    else
+        echo "Warning: post-ci-results.py not found, skipping result posting" >&2
+    fi
+fi
+
+exit $EXIT_CODE
