@@ -1352,3 +1352,17 @@ All documents include `graph_metadata` defining relationships:
 - Better error messages with specific troubleshooting guidance
 - Multiple bypass options for different scenarios
 - Fast validation script for quick iteration
+
+**Issue #1303: Local CI Pipeline - ARC Reviewer & Test Failures (RESOLVED)**
+- ✅ **ARC Reviewer Integration**: Fixed exit code handling - now exits with code 1 on REQUEST_CHANGES
+- ✅ **Test Failure Propagation**: Verified test failures properly exit with non-zero codes
+- ✅ **CI Pipeline Logic**: All stages run for complete diagnostics, but overall exit code reflects failures
+- ✅ **Clear Error Messages**: Structured JSON output shows exactly which checks failed
+- ✅ **Performance**: Quick mode < 30s, Comprehensive mode < 5min as required
+- ✅ **Integration Tests**: Added tests to verify CI properly blocks on failures
+
+**What was fixed:**
+- `src/agents/arc_reviewer.py` now calls `sys.exit(1)` when verdict is REQUEST_CHANGES
+- `scripts/claude-ci.sh` already had correct exit code propagation (verified)
+- Local CI now matches GitHub CI behavior exactly
+- Blocking issues prevent PR creation with clear error messages
