@@ -20,8 +20,12 @@ def load_schema(filepath: str) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
     Returns:
         Dictionary containing the loaded schema or list of documents for multi-doc
     """
-    with open(filepath, "r") as f:
-        content = f.read()
+    try:
+        with open(filepath, "r") as f:
+            content = f.read()
+    except IOError as e:
+        warnings.warn(f"Failed to read schema file {filepath}: {e}")
+        raise
 
     # Check if it's a multi-document YAML (legacy format)
     if "\n---\n" in content or (content.startswith("---\n") and content.count("\n---\n") > 0):

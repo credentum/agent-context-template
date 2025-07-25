@@ -8,7 +8,7 @@ import json
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 
 class WorkflowValidator:
@@ -38,14 +38,14 @@ class WorkflowValidator:
         with open(self.state_file, "w") as f:
             json.dump(self.state, f, indent=2)
 
-    def validate_phase_prerequisites(self, phase: int) -> tuple[bool, List[str]]:
+    def validate_phase_prerequisites(self, phase: int) -> Tuple[bool, List[str]]:
         """Check if prerequisites for a phase are met."""
         errors = []
 
         # Phase 1 requires issue to be fetched
         if phase == 1:
             if not self._check_issue_accessible():
-                errors.append("Cannot access issue #{self.issue_number}")
+                errors.append(f"Cannot access issue #{self.issue_number}")
 
         # Phase 2 requires Phase 1 completion
         elif phase == 2:
@@ -77,7 +77,7 @@ class WorkflowValidator:
 
         return len(errors) == 0, errors
 
-    def validate_phase_outputs(self, phase: int) -> tuple[bool, List[str]]:
+    def validate_phase_outputs(self, phase: int) -> Tuple[bool, List[str]]:
         """Validate outputs produced by a phase."""
         errors = []
 
