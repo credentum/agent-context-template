@@ -1,3 +1,4 @@
+---
 # Full schema for trace documents (expanded from trace.yaml + base.yaml)
 # Used when include directive isn't supported
 

@@ -329,17 +329,37 @@ run_arc_reviewer() {
         return 1
     fi
 
-    # Run ARC-Reviewer and capture YAML output
+    # Run ARC-Reviewer and capture YAML output with timeout
+    # IMPORTANT: ARC-Reviewer exits with code 1 when verdict is REQUEST_CHANGES
+    # but still outputs valid YAML that we need to capture
     local arc_yaml_output
-    arc_yaml_output=$(python3 "$arc_script" 2>/dev/null)
+    local arc_stderr
+    arc_stderr=$(mktemp)
+    # Use timeout to prevent hanging (default 300 seconds = 5 minutes)
+    # ARC reviewer runs the full test suite which can take 2-3+ minutes
+    local arc_timeout="${ARC_TIMEOUT:-300}"
+    arc_yaml_output=$(timeout "$arc_timeout" python3 "$arc_script" 2>"$arc_stderr")
     local arc_exit_code=$?
 
-    if [ $arc_exit_code -ne 0 ]; then
+    # Check for actual errors vs REQUEST_CHANGES verdict
+    # Exit codes: 0=APPROVE, 1=REQUEST_CHANGES, 124=timeout, other=error
+    if [ $arc_exit_code -eq 124 ]; then
+        if [ "$VERBOSE" = true ]; then
+            echo "ARC-Reviewer timed out after ${arc_timeout}s" >&2
+        fi
+        rm -f "$arc_stderr"
+        # Return timeout as JSON for proper handling
+        echo "{\"error\": \"ARC-Reviewer timed out after ${arc_timeout} seconds (runs full test suite)\", \"verdict\": \"TIMEOUT\"}"
+        return 0
+    elif [ $arc_exit_code -gt 1 ] || [ -z "$arc_yaml_output" ]; then
         if [ "$VERBOSE" = true ]; then
             echo "ARC-Reviewer failed with exit code $arc_exit_code" >&2
+            cat "$arc_stderr" >&2
         fi
-        return $arc_exit_code
+        rm -f "$arc_stderr"
+        return 2
     fi
+    rm -f "$arc_stderr"
 
     # Convert YAML to JSON using Python (more reliable than yq)
     local json_output
@@ -553,7 +573,8 @@ cmd_review() {
     arc_result=$(run_arc_reviewer)
     local arc_exit_code=$?
 
-    if [ $arc_exit_code -eq 0 ] && [ -n "$arc_result" ]; then
+    # Process ARC results regardless of exit code (exit 1 = REQUEST_CHANGES)
+    if [ -n "$arc_result" ]; then
         # Parse ARC results and add to checks
         local arc_verdict arc_coverage arc_issues
         arc_verdict=$(echo "$arc_result" | jq -r '.verdict // "UNKNOWN"' 2>/dev/null || echo "UNKNOWN")
@@ -565,6 +586,9 @@ cmd_review() {
         if [ "$arc_verdict" = "REQUEST_CHANGES" ]; then
             arc_status="FAILED"
             overall_status="FAILED"
+        elif [ "$arc_verdict" = "TIMEOUT" ]; then
+            arc_status="TIMEOUT"
+            overall_status="FAILED"
         fi
 
         if [ "$first_check" = true ]; then
@@ -575,9 +599,13 @@ cmd_review() {
         fi
 
         # Add ARC issues to errors if any
-        if [ "$arc_verdict" = "REQUEST_CHANGES" ]; then
+        if [ "$arc_verdict" = "REQUEST_CHANGES" ] || [ "$arc_verdict" = "TIMEOUT" ]; then
             local arc_summary
-            arc_summary=$(echo "$arc_result" | jq -r '.summary // "ARC-Reviewer found issues"' 2>/dev/null)
+            if [ "$arc_verdict" = "TIMEOUT" ]; then
+                arc_summary=$(echo "$arc_result" | jq -r '.error // "ARC-Reviewer timed out"' 2>/dev/null)
+            else
+                arc_summary=$(echo "$arc_result" | jq -r '.summary // "ARC-Reviewer found issues"' 2>/dev/null)
+            fi
 
             if [ "$first_error" = true ]; then
                 errors_json="${errors_json}{\"stage\": \"arc-reviewer\", \"message\": \"${arc_summary}\", \"details\": ${arc_issues}}"

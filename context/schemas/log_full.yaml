@@ -1,3 +1,4 @@
+---
 # Full schema for log documents (expanded from log.yaml + base.yaml)
 # Used when include directive isn't supported
 
