@@ -9,7 +9,10 @@ import pytest
 
 # Import the module under test
 try:
-    from ci_hardware_detector import CIHardwareDetector, HardwareCapabilities
+    from ci_hardware_detector import (  # type: ignore[import-not-found]
+        CIHardwareDetector,
+        HardwareCapabilities,
+    )
 except ImportError:
     # If import fails, skip this test module
     pytest.skip("ci_hardware_detector module not found", allow_module_level=True)
