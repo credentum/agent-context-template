@@ -14,10 +14,44 @@ PYTEST_TIMEOUT="${PYTEST_TIMEOUT:-300}"  # 5 minutes default
 CLEANUP_GRACE_PERIOD="${CLEANUP_GRACE_PERIOD:-5}"
 VERBOSE="${VERBOSE:-false}"
 
-# Import load monitor functions
-source "${SCRIPT_DIR}/load-monitor.sh" || {
-    echo "Error: Could not source load-monitor.sh" >&2
-    exit 1
+# Load monitoring functions (simplified versions)
+get_load() {
+    if command -v uptime >/dev/null 2>&1; then
+        uptime | awk -F'load average:' '{print $2}' | awk -F',' '{print $1}' | xargs
+    elif [ -f /proc/loadavg ]; then
+        awk '{print $1}' /proc/loadavg
+    else
+        echo "0"
+    fi
+}
+
+check_load() {
+    local current_load
+    current_load=$(get_load)
+    local load_int
+    load_int=$(echo "$current_load" | awk '{print int($1)}')
+
+    if [ "$load_int" -ge "$MAX_LOAD" ]; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+suggest_workers() {
+    local current_load
+    current_load=$(get_load)
+    local load_int
+    load_int=$(echo "$current_load" | awk '{print int($1)}')
+
+    # Simple logic for worker allocation
+    if [ "$load_int" -gt 8 ]; then
+        echo "1"
+    elif [ "$load_int" -gt 4 ]; then
+        echo "2"
+    else
+        echo "auto"
+    fi
 }
 
 # Track PIDs for cleanup
