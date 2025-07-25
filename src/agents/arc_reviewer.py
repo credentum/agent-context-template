@@ -224,7 +224,23 @@ class ARCReviewer:
             full_path = self.repo_root / file_path
             if full_path.exists():
                 try:
+                    # First check for document start marker
                     with open(full_path, "r") as f:
+                        first_line = f.readline().strip()
+                        if first_line != "---":
+                            issues.append(
+                                {
+                                    "description": (
+                                        "Missing document start marker (---) in YAML file"
+                                    ),
+                                    "file": file_path,
+                                    "line": 1,
+                                    "category": "context_integrity",
+                                    "fix_guidance": "Add '---' as the first line of the YAML file",
+                                }
+                            )
+                        # Reset file pointer
+                        f.seek(0)
                         content = yaml.safe_load(f)
 
                     if isinstance(content, dict) and "schema_version" not in content:
@@ -290,8 +306,8 @@ class ARCReviewer:
         secret_patterns = ["password", "secret", "key", "token", "api_key"]
 
         for file_path in changed_files:
-            # Skip security scanning tools to avoid false positives
-            if "arc_reviewer" in file_path or "security" in file_path:
+            # Skip this file itself to avoid false positives from the patterns list
+            if file_path.endswith("arc_reviewer.py"):
                 continue
 
             if file_path.endswith((".py", ".yaml", ".yml", ".json")):
@@ -301,26 +317,45 @@ class ARCReviewer:
                         with open(full_path, "r", encoding="utf-8") as f:
                             content = f.read().lower()
 
-                        for pattern in secret_patterns:
-                            if f'"{pattern}"' in content or f"'{pattern}'" in content:
-                                # Additional context check to reduce false positives
-                                # Skip if it's in a list of patterns or part of error messages
-                                if f'["{pattern}"' in content or f"'{pattern}'" in content:
-                                    continue
-                                if "error" in content or "message" in content:
-                                    continue
+                        # Check line by line for more accurate detection
+                        lines = content.split("\n")
+                        for i, line in enumerate(lines):
+                            line_lower = line.lower()
+                            for pattern in secret_patterns:
+                                # Look for pattern in quotes with assignment
+                                if (
+                                    f'"{pattern}"' in line_lower or f"'{pattern}'" in line_lower
+                                ) and ("=" in line or ":" in line):
+                                    # Skip if it's in a patterns list definition
+                                    if "patterns" in line_lower and "[" in line:
+                                        continue
+                                    # Skip if it's clearly a variable name
+                                    if f"{pattern}_" in line_lower or f"_{pattern}" in line_lower:
+                                        continue
+                                    # Skip if it's in test data (dictionary literal)
+                                    if (
+                                        "{" in line
+                                        and "}" in line
+                                        and file_path.startswith("tests/")
+                                    ):
+                                        continue
+                                    # Skip if it's just a dictionary key without actual secret value
+                                    if f'"{pattern}":' in line and (
+                                        "value" in line or "[" in line or "{" in line
+                                    ):
+                                        continue
 
-                                issues.append(
-                                    {
-                                        "description": f"Potential hardcoded secret: {pattern}",
-                                        "file": file_path,
-                                        "line": 0,
-                                        "category": "security",
-                                        "fix_guidance": (
-                                            "Use environment variables or secrets " "management"
-                                        ),
-                                    }
-                                )
+                                    issues.append(
+                                        {
+                                            "description": f"Potential hardcoded secret: {pattern}",
+                                            "file": file_path,
+                                            "line": i + 1,
+                                            "category": "security",
+                                            "fix_guidance": (
+                                                "Use environment variables or secrets management"
+                                            ),
+                                        }
+                                    )
                     except (UnicodeDecodeError, FileNotFoundError):
                         pass  # Skip files that can't be read as text
 
