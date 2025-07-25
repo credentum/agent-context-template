@@ -5,6 +5,7 @@ Supports both legacy multi-document format and new single-document format.
 """
 
 import warnings
+from pathlib import Path
 from typing import Any, Dict, List, Union
 
 import yaml
@@ -20,7 +21,16 @@ def load_schema(filepath: str) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
     Returns:
         Dictionary containing the loaded schema or list of documents for multi-doc
     """
+    # Add file size limit to prevent DoS (10MB max for schema files)
+    MAX_SCHEMA_SIZE = 10 * 1024 * 1024  # 10MB
+
     try:
+        file_path = Path(filepath)
+        file_size = file_path.stat().st_size
+
+        if file_size > MAX_SCHEMA_SIZE:
+            raise ValueError(f"Schema file too large: {file_size} bytes (max: {MAX_SCHEMA_SIZE})")
+
         with open(filepath, "r") as f:
             content = f.read()
     except IOError as e:

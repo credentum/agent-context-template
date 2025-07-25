@@ -5,6 +5,7 @@ This can be integrated into the workflow execution to enforce compliance.
 """
 
 import json
+import re
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -15,12 +16,26 @@ class WorkflowValidator:
     """Validates and enforces workflow compliance for sub-agents."""
 
     def __init__(self, issue_number: int, workflow_dir: Path = Path(".")):
+        # Validate issue_number to prevent injection
+        if not isinstance(issue_number, int) or issue_number <= 0 or issue_number > 999999:
+            raise ValueError(f"Invalid issue number: {issue_number}")
+
         self.issue_number = issue_number
-        self.workflow_dir = workflow_dir
-        self.state_file = workflow_dir / f".workflow-state-{issue_number}.json"
+        self.workflow_dir = Path(workflow_dir).resolve()
+
+        # Validate workflow_dir is within expected bounds
+        if not self.workflow_dir.is_dir():
+            raise ValueError(f"Invalid workflow directory: {workflow_dir}")
+
+        # Secure state file path to prevent traversal
+        safe_filename = f".workflow-state-{issue_number}.json"
+        if not re.match(r"^\.workflow-state-\d+\.json$", safe_filename):
+            raise ValueError("Invalid state filename")
+
+        self.state_file = self.workflow_dir / safe_filename
         self.state = self._load_state()
 
-    def _load_state(self) -> dict:
+    def _load_state(self) -> Dict[str, Any]:
         """Load workflow state from file."""
         if self.state_file.exists():
             with open(self.state_file, "r") as f:
@@ -33,7 +48,7 @@ class WorkflowValidator:
             "validation_errors": [],
         }
 
-    def _save_state(self):
+    def _save_state(self) -> None:
         """Save workflow state to file."""
         with open(self.state_file, "w") as f:
             json.dump(self.state, f, indent=2)
@@ -117,8 +132,13 @@ class WorkflowValidator:
 
         return len(errors) == 0, errors
 
-    def record_phase_start(self, phase: int, agent_type: str):
-        """Record the start of a phase."""
+    def record_phase_start(self, phase: int, agent_type: str) -> None:
+        """Record the start of a phase.
+
+        Args:
+            phase: Phase number (0-5)
+            agent_type: Type of agent executing the phase
+        """
         self.state["current_phase"] = phase
         phase_record = {
             "phase": phase,
@@ -134,8 +154,13 @@ class WorkflowValidator:
         self.state["phases_completed"].append(phase_record)
         self._save_state()
 
-    def record_phase_completion(self, phase: int, outputs: Dict[str, Any]):
-        """Record successful completion of a phase."""
+    def record_phase_completion(self, phase: int, outputs: Dict[str, Any]) -> None:
+        """Record successful completion of a phase.
+
+        Args:
+            phase: Phase number that was completed
+            outputs: Dictionary of outputs produced by the phase
+        """
         for p in self.state["phases_completed"]:
             if p["phase"] == phase:
                 p["status"] = "completed"
@@ -144,8 +169,13 @@ class WorkflowValidator:
                 break
         self._save_state()
 
-    def record_phase_failure(self, phase: int, errors: List[str]):
-        """Record phase failure."""
+    def record_phase_failure(self, phase: int, errors: List[str]) -> None:
+        """Record phase failure.
+
+        Args:
+            phase: Phase number that failed
+            errors: List of error messages explaining the failure
+        """
         for p in self.state["phases_completed"]:
             if p["phase"] == phase:
                 p["status"] = "failed"
@@ -165,8 +195,12 @@ class WorkflowValidator:
 
     def _check_issue_accessible(self) -> bool:
         """Check if the issue can be accessed."""
+        # issue_number already validated in __init__
         result = subprocess.run(
-            ["gh", "issue", "view", str(self.issue_number)], capture_output=True
+            ["gh", "issue", "view", str(self.issue_number)],
+            capture_output=True,
+            shell=False,  # Explicitly disable shell
+            text=True,
         )
         return result.returncode == 0
 
@@ -203,10 +237,17 @@ class WorkflowValidator:
 
     def _check_pr_created(self) -> bool:
         """Check if PR was created."""
+        # Use exact branch pattern instead of wildcard to prevent injection
+        # issue_number already validated in __init__
         result = subprocess.run(
-            ["gh", "pr", "list", "--head", f"*{self.issue_number}*"], capture_output=True
+            ["gh", "pr", "list", "--head", f"fix/{self.issue_number}-", "--limit", "10"],
+            capture_output=True,
+            shell=False,  # Explicitly disable shell
+            text=True,
         )
-        return len(result.stdout.decode().strip()) > 0
+        output = result.stdout.strip()
+        # Check if any PR contains our issue number
+        return f"fix/{self.issue_number}-" in output or f"feature/{self.issue_number}-" in output
 
 
 def enforce_workflow_phase(issue_number: int, phase: int, agent_type: str) -> WorkflowValidator:

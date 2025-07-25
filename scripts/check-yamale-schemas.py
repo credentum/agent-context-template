@@ -30,9 +30,22 @@ def main():
         print("Usage: check-yamale-schemas.py <file1> [file2] ...")
         sys.exit(1)
 
+    # Get the repository root for validation
+    script_dir = Path(__file__).parent.resolve()
+    repo_root = script_dir.parent
+    allowed_dir = repo_root / "context" / "schemas"
+
     all_valid = True
     for filepath in sys.argv[1:]:
-        path = Path(filepath)
+        path = Path(filepath).resolve()
+
+        # Validate path is within allowed directory
+        try:
+            path.relative_to(allowed_dir)
+        except ValueError:
+            print(f"Error: File {filepath} is outside allowed schemas directory")
+            sys.exit(1)
+
         if path.exists() and path.suffix in [".yaml", ".yml"]:
             if not check_yaml_file(path):
                 all_valid = False
