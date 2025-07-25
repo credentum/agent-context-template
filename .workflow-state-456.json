@@ -1,0 +1,14 @@
+{
+  "issue_number": 456,
+  "current_phase": 1,
+  "phases_completed": [
+    {
+      "phase": 1,
+      "agent_type": "task-planner",
+      "started_at": "2025-07-25T23:15:05.280733",
+      "status": "in_progress"
+    }
+  ],
+  "created_at": "2025-07-25T23:05:37.550586",
+  "validation_errors": []
+}
