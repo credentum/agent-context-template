@@ -2,13 +2,13 @@
 name: Sprint Update
 
 "on":
-  # Re-enabled with improved duplicate prevention
-  issues:
-    types: [opened, closed, reopened, labeled, unlabeled]
-  pull_request:
-    types: [closed]
-  schedule:
-    - cron: '0 9 * * 1-5'  # 9 AM UTC on weekdays
+  # EMERGENCY DISABLE - Creating duplicate issues in infinite loop
+  # issues:
+  #   types: [opened, closed, reopened, labeled, unlabeled]
+  # pull_request:
+  #   types: [closed]
+  # schedule:
+  #   - cron: '0 9 * * 1-5'  # 9 AM UTC on weekdays
   workflow_dispatch:
     inputs:
       sprint_id:
