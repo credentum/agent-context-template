@@ -7,7 +7,7 @@ created_date: '2025-07-14'
 sprint_number: 41
 start_date: '2025-07-14'
 end_date: '2025-07-21'
-last_modified: '2025-07-24'
+last_modified: '2025-07-25'
 last_referenced: '2025-07-16'
 goals:
 - Establish reproducible local development infrastructure
@@ -273,7 +273,132 @@ phases:
     - automation
     dependencies: []
     estimate: 2 hours
-    github_issue: 116
+    github_issue: 1001
+  - title: '[Sprint 41] Phase 8: Bidirectional Workflow Validation Test'
+    description: Test task to validate bidirectional sync between sprint YAML and
+      GitHub issues.
+    status: pending
+    priority: high
+    assignee: '@claude-ai'
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:testing
+    - priority:high
+    - type:test
+    validation_criteria:
+    - Task created in YAML generates GitHub issue
+    - GitHub issue status updates reflect in YAML
+    - Task completion in YAML closes GitHub issue
+    - Label changes sync bidirectionally
+    github_issue: 1001
+  - title: '[Sprint 41] Phase 8: Bidirectional Workflow Validation Test'
+    description: Test task to validate bidirectional sync between sprint YAML and
+      GitHub issues.
+    status: pending
+    priority: high
+    assignee: '@claude-ai'
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:testing
+    - priority:high
+    - type:test
+    validation_criteria:
+    - Task created in YAML generates GitHub issue
+    - GitHub issue status updates reflect in YAML
+    - Task completion in YAML closes GitHub issue
+    - Label changes sync bidirectionally
+  - title: Bidirectional Workflow Validation Test
+    description: 'Test task to validate bidirectional sync.
+
+
+      ## Test Scenarios
+
+      - [x] Task created in YAML generates GitHub issue
+
+      - [ ] GitHub issue status updates reflect in YAML
+
+      - [ ] Task completion in YAML closes GitHub issue
+
+      - [ ] Label changes sync bidirectionally
+
+
+      ## Implementation Notes
+
+      - This is a temporary test task
+
+      - Will be removed after validation
+
+      - Should not affect production workflows'
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:testing
+    - priority:high
+    - type:test
+    dependencies: []
+    estimate: 2 hours
+  - title: Bidirectional Workflow Validation Test
+    description: 'Test task to validate bidirectional sync.
+
+
+      ## Test Scenarios
+
+      - [x] Task created in YAML generates GitHub issue
+
+      - [ ] GitHub issue status updates reflect in YAML
+
+      - [ ] Task completion in YAML closes GitHub issue
+
+      - [ ] Label changes sync bidirectionally
+
+
+      ## Implementation Notes
+
+      - This is a temporary test task
+
+      - Will be removed after validation
+
+      - Should not affect production workflows'
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:testing
+    - priority:high
+    - type:test
+    dependencies: []
+    estimate: 2 hours
+  - title: Bidirectional Workflow Validation Test
+    description: 'Test task to validate bidirectional sync.
+
+
+      ## Test Scenarios
+
+      - [x] Task created in YAML generates GitHub issue
+
+      - [ ] GitHub issue status updates reflect in YAML
+
+      - [ ] Task completion in YAML closes GitHub issue
+
+      - [ ] Label changes sync bidirectionally
+
+
+      ## Implementation Notes
+
+      - This is a temporary test task
+
+      - Will be removed after validation
+
+      - Should not affect production workflows'
+    labels:
+    - sprint-current
+    - phase:4.1
+    - component:testing
+    - priority:high
+    - type:test
+    dependencies: []
+    estimate: 2 hours
 - phase: 9
   name: Sprint Update Workflow Testing
   status: pending
@@ -312,7 +437,7 @@ phases:
     - automation
     dependencies: []
     estimate: 1 hour
-    github_issue: null
+    github_issue: 1002
 team:
 - role: lead
   agent: pm_agent

@@ -335,8 +335,9 @@ run_arc_reviewer() {
     local arc_yaml_output
     local arc_stderr
     arc_stderr=$(mktemp)
-    # Use timeout to prevent hanging (default 60 seconds)
-    local arc_timeout="${ARC_TIMEOUT:-60}"
+    # Use timeout to prevent hanging (default 300 seconds = 5 minutes)
+    # ARC reviewer runs the full test suite which can take 2-3+ minutes
+    local arc_timeout="${ARC_TIMEOUT:-300}"
     arc_yaml_output=$(timeout "$arc_timeout" python3 "$arc_script" 2>"$arc_stderr")
     local arc_exit_code=$?
 
@@ -348,7 +349,7 @@ run_arc_reviewer() {
         fi
         rm -f "$arc_stderr"
         # Return timeout as JSON for proper handling
-        echo '{"error": "ARC-Reviewer timed out after '${arc_timeout}' seconds", "verdict": "TIMEOUT"}'
+        echo "{\"error\": \"ARC-Reviewer timed out after ${arc_timeout} seconds (runs full test suite)\", \"verdict\": \"TIMEOUT\"}"
         return 0
     elif [ $arc_exit_code -gt 1 ] || [ -z "$arc_yaml_output" ]; then
         if [ "$VERBOSE" = true ]; then

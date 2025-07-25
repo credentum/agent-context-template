@@ -440,3 +440,5 @@
 [2025-07-25 00:48:51] File: /tmp/pytest-of-root/pytest-2/test_exit_codes0/good.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
 [2025-07-25 00:48:52] File: /tmp/pytest-of-root/pytest-2/test_exit_codes0/bad.py, Status: error, Issues: 3, Fixed: 0, Remaining: 3
 [2025-07-25 00:52:02] File: /workspaces/agent-context-template/tmp/tmpcwbkn7kn.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-25 01:38:36] File: /app/tmp/tmp4qld8sn7.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
+[2025-07-25 01:39:25] File: /app/tmp/tmpsvl7antd.py, Status: error, Issues: 1, Fixed: 0, Remaining: 1
