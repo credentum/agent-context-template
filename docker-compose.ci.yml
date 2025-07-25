@@ -36,6 +36,14 @@ services:
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
     command: /bin/bash scripts/test-comprehensive-ci.sh
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   # Run specific checks individually
   ci-black:
@@ -199,6 +207,14 @@ services:
       - ./.coverage-config.json:/app/.coverage-config.json:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
       - ./pytest.ini:/app/pytest.ini:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     environment:
       - PYTHONPATH=/app
       - CI=true
@@ -225,6 +241,14 @@ services:
       - ./.claude:/app/.claude:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
       - ./pytest.ini:/app/pytest.ini:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     environment:
       - PYTHONPATH=/app
       - CI=true
@@ -251,6 +275,14 @@ services:
       - ./.claude:/app/.claude:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
       - ./pytest.ini:/app/pytest.ini:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     environment:
       - PYTHONPATH=/app
       - CI=true
