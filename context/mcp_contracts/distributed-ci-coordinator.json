@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0.0",
+  "contract_id": "mcp-distributed-ci-coordinator",
+  "tool_name": "distributed-ci-coordinator",
+  "description": "Coordinates distributed CI execution across multiple workers with Redis backend",
+  "executable": "python scripts/distributed_ci_coordinator.py",
+  "language": "python",
+  "capabilities": [
+    "distributed_coordination",
+    "redis_backend_integration",
+    "worker_management",
+    "task_scheduling",
+    "load_balancing"
+  ],
+  "parameters": {
+    "required": [],
+    "properties": {
+      "workers": {
+        "type": "integer",
+        "description": "Number of worker processes",
+        "minimum": 1,
+        "maximum": 32,
+        "default": 4
+      },
+      "redis_url": {
+        "type": "string",
+        "description": "Redis connection URL",
+        "default": "redis://localhost:6379"
+      },
+      "timeout": {
+        "type": "integer",
+        "description": "Worker timeout in seconds",
+        "default": 300
+      }
+    }
+  },
+  "security": {
+    "input_sanitization": true,
+    "command_injection_protection": true,
+    "timeout_enforcement": true,
+    "privilege_isolation": true,
+    "output_sanitization": true
+  },
+  "usage_examples": [
+    "python scripts/distributed_ci_coordinator.py --workers 8",
+    "python scripts/distributed_ci_coordinator.py --redis-url redis://remote:6379"
+  ],
+  "created_date": "2025-07-25",
+  "last_modified": "2025-07-25",
+  "status": "active"
+}

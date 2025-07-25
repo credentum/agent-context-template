@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "contract_id": "mcp-check-yamale-schemas",
+  "tool_name": "check-yamale-schemas",
+  "description": "Custom YAML validator for Yamale schema files with multi-document format support",
+  "executable": "python scripts/check-yamale-schemas.py",
+  "language": "python",
+  "capabilities": [
+    "yaml_syntax_validation",
+    "multi_document_parsing",
+    "path_traversal_protection",
+    "schema_file_validation"
+  ],
+  "parameters": {
+    "required": ["files"],
+    "properties": {
+      "files": {
+        "type": "array",
+        "description": "List of YAML schema files to validate",
+        "items": {
+          "type": "string",
+          "pattern": "^context/schemas/.*\\.(yaml|yml)$"
+        }
+      }
+    }
+  },
+  "security": {
+    "input_sanitization": true,
+    "command_injection_protection": true,
+    "timeout_enforcement": false,
+    "privilege_isolation": true,
+    "output_sanitization": true
+  },
+  "usage_examples": [
+    "python scripts/check-yamale-schemas.py context/schemas/sprint.yaml",
+    "python scripts/check-yamale-schemas.py context/schemas/*.yaml"
+  ],
+  "created_date": "2025-07-25",
+  "last_modified": "2025-07-25",
+  "status": "active"
+}
