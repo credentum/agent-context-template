@@ -818,10 +818,26 @@ jobs:
                       import subprocess
                       import json
 
-                      # Ensure labels exist
-                      for label in ['from-code-review', 'sprint-triage', 'phase=backlog']:
-                          subprocess.run(['gh', 'label', 'create', label, '--force'],
-                                       capture_output=True, text=True)
+                      # Validate and ensure labels exist
+                      import os
+                      import sys
+
+                      # Add scripts directory to path for validation utility
+                      script_dir = os.path.join(os.environ.get('GITHUB_WORKSPACE', '.'), 'scripts')
+                      if os.path.exists(script_dir):
+                          sys.path.insert(0, script_dir)
+                          try:
+                              from validate_labels import ensure_label_exists
+                              validated_labels = []
+                              for label in ['from-code-review', 'sprint-current', 'phase:4.1']:
+                                  validated_label = ensure_label_exists(label)
+                                  validated_labels.append(validated_label)
+                          except ImportError:
+                              # Fallback if validation script not available
+                              validated_labels = ['from-code-review', 'sprint-current', 'phase:4.1']
+                      else:
+                          # Fallback labels
+                          validated_labels = ['from-code-review', 'sprint-current', 'phase:4.1']
 
                       # Build issue content
                       checklist = []
@@ -854,7 +870,7 @@ jobs:
                           'gh', 'issue', 'create',
                           '--title', f'[PR #{pr_num}] ARC-Reviewer Follow-ups',
                           '--body-file', 'issue_body.md',
-                          '--label', 'from-code-review,sprint-triage,phase=backlog'
+                          '--label', ','.join(validated_labels)
                       ], capture_output=True, text=True)
 
                       if result.returncode == 0:
