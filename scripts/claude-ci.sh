@@ -287,7 +287,7 @@ run_review_with_fixes() {
     # Parse the output for issues
     local verdict=$(echo "$output" | grep "verdict:" | cut -d' ' -f2)
 
-    if [ "$verdict" = "REQUEST_CHANGES" ] && [ "$AUTO_FIX_ALL" = true ]; then
+    if [[ "$verdict" = "REQUEST_CHANGES" || "$verdict" = "REQUEST CHANGES" ]] && [ "$AUTO_FIX_ALL" = true ]; then
         echo -e "${YELLOW}ARC found issues, attempting fixes...${NC}"
 
         # Extract and fix specific issues
@@ -309,8 +309,8 @@ run_review_with_fixes() {
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
 
-    if [ "$verdict" = "APPROVED" ]; then
-        json_output "PASSED" "review" '{"verdict": "APPROVED"}' "$duration" "Ready for PR"
+    if [ "$verdict" = "APPROVE" ] || [ "$verdict" = "APPROVED" ]; then
+        json_output "PASSED" "review" '{"verdict": "APPROVE"}' "$duration" "Ready for PR"
         return 0
     else
         # Extract blocking issues for GitHub
@@ -408,6 +408,7 @@ run_file_check() {
 run_all() {
     local start_time=$(date +%s)
     local all_passed=true
+    local failed_checks=()
 
     echo -e "${GREEN}Running comprehensive CI validation${NC}"
 
@@ -417,13 +418,60 @@ run_all() {
             all_passed=false
         fi
     else
-        # Standard validation
+        # 1. Run linting checks (pre-commit includes black, isort, flake8, yamllint)
+        echo -e "${BLUE}Running linting checks...${NC}"
         if ! pre-commit run --all-files >/dev/null 2>&1; then
             all_passed=false
+            failed_checks+=("linting")
+            echo -e "${RED}✗ Linting checks failed${NC}"
+        else
+            echo -e "${GREEN}✓ Linting checks passed${NC}"
         fi
 
+        # 2. Run MyPy type checking
+        echo -e "${BLUE}Running type checking...${NC}"
+        if ! mypy src/ tests/ >/dev/null 2>&1; then
+            all_passed=false
+            failed_checks+=("type-checking")
+            echo -e "${RED}✗ Type checking failed${NC}"
+        else
+            echo -e "${GREEN}✓ Type checking passed${NC}"
+        fi
+
+        # 3. Run tests (quick mode uses smart selection, otherwise full suite)
+        echo -e "${BLUE}Running tests...${NC}"
+        if [ "$QUICK_MODE" = true ]; then
+            if [ -f "./scripts/claude-test-changed.sh" ]; then
+                if ! ./scripts/claude-test-changed.sh >/dev/null 2>&1; then
+                    all_passed=false
+                    failed_checks+=("tests")
+                    echo -e "${RED}✗ Tests failed${NC}"
+                else
+                    echo -e "${GREEN}✓ Tests passed${NC}"
+                fi
+            else
+                if ! pytest -x >/dev/null 2>&1; then
+                    all_passed=false
+                    failed_checks+=("tests")
+                    echo -e "${RED}✗ Tests failed${NC}"
+                else
+                    echo -e "${GREEN}✓ Tests passed${NC}"
+                fi
+            fi
+        else
+            if ! pytest --cov=src --cov-report=term-missing >/dev/null 2>&1; then
+                all_passed=false
+                failed_checks+=("tests")
+                echo -e "${RED}✗ Tests failed${NC}"
+            else
+                echo -e "${GREEN}✓ Tests passed${NC}"
+            fi
+        fi
+
+        # 4. Run ARC reviewer
         if ! run_review_with_fixes; then
             all_passed=false
+            failed_checks+=("arc-reviewer")
         fi
     fi
 
@@ -433,8 +481,52 @@ run_all() {
     if [ "$all_passed" = true ]; then
         json_output "PASSED" "all" '{"status": "clean"}' "$duration" "Ready for PR"
     else
-        json_output "FAILED" "all" '{"status": "issues remain"}' "$duration" "Manual fixes needed"
+        local failed_list=$(IFS=','; echo "${failed_checks[*]}")
+        json_output "FAILED" "all" "{\"status\": \"issues remain\", \"failed_checks\": \"$failed_list\"}" "$duration" "Fix ${#failed_checks[@]} failing check(s): $failed_list"
         exit 1
+    fi
+}
+
+# Test command implementation
+run_tests() {
+    local start_time=$(date +%s)
+    local test_cmd="pytest"
+
+    if [ "$RUN_ALL_TESTS" = true ]; then
+        echo -e "${BLUE}Running full test suite...${NC}"
+        test_cmd="pytest --cov=src --cov-report=term-missing"
+    else
+        echo -e "${BLUE}Running smart test selection...${NC}"
+        # Use the smart test runner if available
+        if [ -f "./scripts/claude-test-changed.sh" ]; then
+            ./scripts/claude-test-changed.sh
+            local exit_code=$?
+            local end_time=$(date +%s)
+            local duration=$((end_time - start_time))
+
+            if [ $exit_code -eq 0 ]; then
+                json_output "PASSED" "test" '{"mode": "smart"}' "$duration" "All tests passed"
+                return 0
+            else
+                json_output "FAILED" "test" '{"mode": "smart"}' "$duration" "Test failures detected"
+                return 1
+            fi
+        else
+            test_cmd="pytest"
+        fi
+    fi
+
+    # Run pytest
+    if $test_cmd; then
+        local end_time=$(date +%s)
+        local duration=$((end_time - start_time))
+        json_output "PASSED" "test" '{}' "$duration" "All tests passed"
+        return 0
+    else
+        local end_time=$(date +%s)
+        local duration=$((end_time - start_time))
+        json_output "FAILED" "test" '{}' "$duration" "Test failures detected"
+        return 1
     fi
 }
 
@@ -447,6 +539,9 @@ case $COMMAND in
             exit 2
         fi
         run_file_check "$TARGET_FILE"
+        ;;
+    test)
+        run_tests
         ;;
     fix-all)
         run_fix_all

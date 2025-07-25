@@ -11,7 +11,7 @@ from unittest.mock import patch
 import pytest
 
 # Import the script modules (path added in conftest.py)
-from generate_coverage_matrix import (  # type: ignore[import]
+from generate_coverage_matrix import (  # type: ignore[import-not-found]
     DEFAULT_CONFIG,
     CoverageAnalyzer,
     CoverageDataValidator,

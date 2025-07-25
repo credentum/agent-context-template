@@ -398,7 +398,9 @@ class TestARCReviewer:
 
             main()
 
-            mock_reviewer_class.assert_called_once_with(verbose=True)
+            mock_reviewer_class.assert_called_once_with(
+                verbose=True, timeout=120, skip_coverage=False
+            )
             mock_reviewer.review_and_output.assert_called_once_with(
                 pr_number=123, base_branch="main", runtime_test=False
             )
