@@ -18,6 +18,8 @@ spec = importlib.util.spec_from_file_location(
     "post_ci_results",
     os.path.join(os.path.dirname(__file__), "..", "scripts", "post-ci-results.py"),
 )
+if spec is None or spec.loader is None:
+    raise ImportError("Could not load post-ci-results.py")
 post_ci_results = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(post_ci_results)
 ResultCache = post_ci_results.ResultCache
@@ -28,6 +30,8 @@ try:
         "sign_ci_results",
         os.path.join(os.path.dirname(__file__), "..", "scripts", "sign_ci_results.py"),
     )
+    if spec_sign is None or spec_sign.loader is None:
+        raise ImportError("Could not load sign_ci_results.py")
     sign_ci_results = importlib.util.module_from_spec(spec_sign)
     spec_sign.loader.exec_module(sign_ci_results)
     CIResultSigner = sign_ci_results.CIResultSigner
@@ -37,6 +41,8 @@ try:
         "verify_ci_results",
         os.path.join(os.path.dirname(__file__), "..", "scripts", "verify-ci-results.py"),
     )
+    if spec_verify is None or spec_verify.loader is None:
+        raise ImportError("Could not load verify-ci-results.py")
     verify_ci_results = importlib.util.module_from_spec(spec_verify)
     spec_verify.loader.exec_module(verify_ci_results)
     CIResultsVerifier = verify_ci_results.CIResultsVerifier
@@ -101,8 +107,9 @@ mQENBGb1234BCAC1234testkeyfortesting5678public90AB
 
                 # Mock successful signing
                 mock_signature = Mock()
-                mock_signature.__str__ = Mock(return_value="TESTSIGNATURE123")
-                mock_signature.__bool__ = Mock(return_value=True)
+                mock_signature.configure_mock(
+                    **{"__str__.return_value": "TESTSIGNATURE123", "__bool__.return_value": True}
+                )
                 mock_gpg.sign.return_value = mock_signature
 
                 # Test signing
