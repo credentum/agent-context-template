@@ -85,12 +85,12 @@ Estimates based on analysis:
 ├── complexity: medium (integration of existing systems)
 └── files_affected: 3-5 files (workflow coordinator, docs, tests)
 
-Actuals (to be filled):
-├── tokens_used: ___
-├── time_taken: ___
-├── cost_actual: $___
-├── iterations_needed: ___
-└── context_clears: ___
+Actuals (filled during execution):
+├── tokens_used: ~12,000 tokens
+├── time_taken: ~2 hours
+├── cost_actual: ~$0.60
+├── iterations_needed: 1 (successful on first attempt)
+└── context_clears: 0 (stayed within budget)
 ```
 
 ## 🏷️ Metadata
