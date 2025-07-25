@@ -9,14 +9,14 @@ from datetime import datetime, timedelta
 
 # Import the module under test
 try:
-    from metrics import CIMetric, CIMetricsCollector
+    from metrics import CIMetric, CIMetricsCollector  # type: ignore[import-not-found]
 except ImportError:
     # Define mock classes for testing when metrics.py doesn't have these exports
     from dataclasses import dataclass
     from typing import Any, Dict, Optional
 
     @dataclass
-    class CIMetric:
+    class CIMetric:  # type: ignore[no-redef]
         timestamp: datetime
         workflow_name: str
         job_name: str
@@ -40,7 +40,7 @@ except ImportError:
                 "metadata": self.metadata or {},
             }
 
-    class CIMetricsCollector:
+    class CIMetricsCollector:  # type: ignore[no-redef]
         def __init__(self, db_path="metrics.db"):
             self.db_path = db_path
             self._init_database()

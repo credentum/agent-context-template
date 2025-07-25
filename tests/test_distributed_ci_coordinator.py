@@ -9,7 +9,11 @@ import pytest
 
 # Import the module under test
 try:
-    from distributed_ci_coordinator import CIJob, DistributedCICoordinator, Runner
+    from distributed_ci_coordinator import (  # type: ignore[import-not-found]
+        CIJob,
+        DistributedCICoordinator,
+        Runner,
+    )
 except ImportError:
     # If import fails, skip this test module
     pytest.skip("distributed_ci_coordinator module not found", allow_module_level=True)

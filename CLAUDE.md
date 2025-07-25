@@ -201,7 +201,7 @@ git add -A && git commit --amend --no-edit
 - `./scripts/run-ci-docker.sh`: 5+ minutes
 
 ### NEW: Unified Claude CI Command Hub
-Single command interface for all CI operations with consistent output:
+Single command interface for all CI operations with auto-fix capabilities:
 
 ```bash
 # Quick file validation after edits
@@ -209,6 +209,9 @@ Single command interface for all CI operations with consistent output:
 
 # Auto-fix formatting issues
 ./scripts/claude-ci.sh check src/module.py --fix
+
+# Fix ALL issues automatically
+./scripts/claude-ci.sh fix-all
 
 # Run smart test selection
 ./scripts/claude-ci.sh test
@@ -222,11 +225,14 @@ Single command interface for all CI operations with consistent output:
 # Pre-commit with auto-fix
 ./scripts/claude-ci.sh pre-commit --fix
 
-# Local PR review simulation
+# Local PR review with ARC-Reviewer
 ./scripts/claude-ci.sh review
 
-# Complete CI pipeline (standard mode)
-./scripts/claude-ci.sh all
+# Complete CI pipeline with auto-fix
+./scripts/claude-ci.sh all --auto-fix-all
+
+# Full automation with GitHub issues
+./scripts/claude-ci.sh all --auto-fix-all --create-issues
 
 # Quick validation (seconds)
 ./scripts/claude-ci.sh all --quick
@@ -242,15 +248,19 @@ Single command interface for all CI operations with consistent output:
 - **Single interface**: One command for all CI operations
 - **Consistent output**: JSON format by default for Claude integration
 - **Progressive validation**: Quick → Standard → Comprehensive modes
-- **Auto-fixing**: Built-in support for fixable issues
-- **Integration**: Leverages existing claude-*.sh scripts
+- **Auto-fixing**: Fixes all possible issues automatically
+- **GitHub integration**: Creates issues for unfixable problems
+- **ARC-Reviewer**: Integrated PR review with blocking issue detection
+- **Security scanning**: Detects hardcoded secrets and credentials
 - **Help system**: `./scripts/claude-ci.sh help` for full documentation
 
 **Recommended Usage:**
 - **After edits**: `claude-ci check <file> --fix`
-- **Before commit**: `claude-ci all`
+- **Fix everything**: `claude-ci fix-all`
+- **Before commit**: `claude-ci all --auto-fix-all`
 - **Quick validation**: `claude-ci all --quick`
-- **PR preparation**: `claude-ci all --comprehensive`
+- **PR preparation**: `claude-ci all --auto-fix-all --create-issues`
+- **CI failure**: `claude-ci fix-all` then retry
 
 ### NEW: Smart Test Runner for Claude Code
 Run only tests relevant to your recent changes for faster feedback:

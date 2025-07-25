@@ -9,7 +9,7 @@ import pytest
 
 # Import the module under test
 try:
-    from incremental_build_analyzer import (
+    from incremental_build_analyzer import (  # type: ignore[import-not-found]
         DependencyChange,
         DependencyGraph,
         DockerfileAnalyzer,

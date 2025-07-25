@@ -256,7 +256,7 @@ class TestNetworkChaos:
             for attempt in range(max_retries):
                 try:
                     response = requests.get(url, timeout=5)
-                    return response.text
+                    return str(response.text)
                 except requests.Timeout:
                     if attempt == max_retries - 1:
                         return None

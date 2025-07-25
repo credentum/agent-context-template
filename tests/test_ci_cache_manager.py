@@ -10,7 +10,11 @@ import pytest
 
 # Import the module under test
 try:
-    from ci_cache_manager import CICacheManager, LocalCacheBackend, RedisCacheBackend
+    from ci_cache_manager import (  # type: ignore[import-not-found]
+        CICacheManager,
+        LocalCacheBackend,
+        RedisCacheBackend,
+    )
 except ImportError:
     # If import fails, skip this test module
     pytest.skip("ci_cache_manager module not found", allow_module_level=True)
