@@ -1337,6 +1337,78 @@ All documents include `graph_metadata` defining relationships:
    - Ensure validators handle edge cases
    - Look for potential security issues
 
+## 📊 CI Load Management
+
+To prevent server overload during CI test execution (experienced in issue #1303 with load 25+), the CI pipeline now includes automatic load monitoring and test throttling.
+
+### Configuration
+Environment variables control load management behavior:
+
+```bash
+# Maximum acceptable system load (default: 8)
+export MAX_LOAD=8
+
+# Enable/disable test throttling (default: true)
+export TEST_THROTTLE_ENABLED=true
+
+# Test timeout in seconds (default: 300)
+export PYTEST_TIMEOUT=300
+
+# Cleanup grace period before SIGKILL (default: 5)
+export CLEANUP_GRACE_PERIOD=5
+```
+
+### How It Works
+
+1. **Pre-flight Check**: Before running tests, the system load is checked
+   - If load > MAX_LOAD, tests are delayed with clear error message
+   - Use `VERBOSE=true` for detailed load information
+
+2. **Dynamic Worker Allocation**: pytest workers are adjusted based on current load
+   - High load (>8): 1 worker only
+   - Medium load (4-8): 2 workers
+   - Low load (<4): auto (pytest decides)
+
+3. **Process Cleanup**: Orphaned processes are cleaned up on timeout
+   - SIGTERM sent first with grace period
+   - SIGKILL follows if processes don't terminate
+
+### Manual Load Monitoring
+
+```bash
+# Check if it's safe to run tests
+./scripts/load-monitor.sh check
+
+# Get current system load
+./scripts/load-monitor.sh get_load
+
+# Suggest optimal pytest worker count
+./scripts/load-monitor.sh suggest-workers
+
+# Monitor load over time (60s duration, 5s intervals)
+./scripts/load-monitor.sh monitor 60 5
+```
+
+### Disabling Load Management
+
+If you need to bypass load checking (not recommended on shared servers):
+
+```bash
+# Disable for current session
+export TEST_THROTTLE_ENABLED=false
+
+# Or run with override
+TEST_THROTTLE_ENABLED=false claude-ci test
+```
+
+### Docker Resource Limits
+
+When using Docker CI, containers are limited to:
+- CPU: 2 cores max (0.5 reserved)
+- Memory: 2GB max (512MB reserved)
+
+This prevents runaway containers from consuming all server resources.
+
 ## 🔧 Recently Resolved Issues
 
 **Issue #171: Local Docker CI Environment & Dependencies (RESOLVED)**

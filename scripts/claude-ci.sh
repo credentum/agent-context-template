@@ -412,6 +412,17 @@ cmd_check() {
 cmd_test() {
     local start_time=$(date +%s)
 
+    # Check system load before running tests
+    if [ "${TEST_THROTTLE_ENABLED:-true}" = "true" ] && [ -f "$SCRIPT_DIR/load-monitor.sh" ]; then
+        if ! MAX_LOAD="${MAX_LOAD:-8}" "$SCRIPT_DIR/load-monitor.sh" check; then
+            local current_load
+            current_load=$(MAX_LOAD="${MAX_LOAD:-8}" "$SCRIPT_DIR/load-monitor.sh" get_load 2>/dev/null || echo "unknown")
+            json_output "test" "FAILED" "pre-check" "0s" "{\"load_check\": \"FAILED\"}" "[{\"message\": \"System load too high: $current_load (max: ${MAX_LOAD:-8})\"}]" "Wait for load to decrease or increase MAX_LOAD"
+            pretty_output "test" "FAILED" "System load too high to run tests"
+            return 1
+        fi
+    fi
+
     # Dependencies already validated at startup
     local test_args=""
     if [ "$ALL_MODE" = true ]; then

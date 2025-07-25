@@ -266,7 +266,12 @@ EOF
     local pytest_output
     local pytest_exit_code
 
-    pytest_output=$(pytest "${pytest_args[@]}" 2>&1) || pytest_exit_code=$?
+    # Use safe test runner if available and throttling is enabled
+    if [ "${TEST_THROTTLE_ENABLED:-true}" = "true" ] && [ -f "$SCRIPT_DIR/safe-test-runner.sh" ]; then
+        pytest_output=$("$SCRIPT_DIR/safe-test-runner.sh" "${pytest_args[@]}" 2>&1) || pytest_exit_code=$?
+    else
+        pytest_output=$(pytest "${pytest_args[@]}" 2>&1) || pytest_exit_code=$?
+    fi
 
     # Parse results
     # TODO: Consider using pytest-json-report plugin for more reliable parsing
