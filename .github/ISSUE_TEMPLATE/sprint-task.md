@@ -2,7 +2,7 @@
 name: Sprint Task (Claude Code Ready)
 about: Create a task optimized for Claude Code execution
 title: '[SPRINT-X.Y] Task Title'
-labels: ['sprint-current', 'claude-ready', 'phase:?', 'component:?']
+labels: ['sprint-current', 'claude-ready']
 assignees: ''
 ---
 
