@@ -1,28 +1,23 @@
-schema_version: 1.0.0
-document_type: sprint
-id: sprint-41
-title: 'Sprint 4.1: Infrastructure Bring-Up'
-status: in_progress
 created_date: '2025-07-14'
-sprint_number: 41
-start_date: '2025-07-14'
+document_type: sprint
 end_date: '2025-07-21'
-last_modified: '2025-07-25'
-last_referenced: '2025-07-16'
 goals:
 - Establish reproducible local development infrastructure
 - Set up CI service containers for reliable testing
 - Implement health checks and automation for infrastructure
 - Ensure platform-agnostic Docker setup
+id: sprint-41
+last_modified: '2025-07-25'
+last_referenced: '2025-07-16'
 phases:
-- phase: 1
-  name: Docker Infrastructure Setup
-  status: completed
-  priority: high
-  component: infra
+- component: infra
   description: Create reproducible Docker Compose stack for Qdrant and Neo4j
+  name: Docker Infrastructure Setup
+  phase: 1
+  priority: high
+  status: completed
   tasks:
-  - title: Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
+  - dependencies: []
     description: "Author a reproducible Docker Compose stack pinned to\nQdrant v1.14.x\
       \ and Neo4j 5.20.\n\n## Acceptance Criteria\n- [x] File `infra/docker-compose.yml`\
       \ exists.\n- [x] `make up` starts Qdrant (6333) and Neo4j (7474/7687);\n   \
@@ -31,22 +26,23 @@ phases:
       - [x] README updates include quick-start prerequisites.\n\n## Implementation\
       \ Notes\n- mkdir -p infra\n- Populate compose with pinned images and volumes\n\
       - Ensure platform-agnostic (linux/amd64 & linux/arm64) tags\n  if available.\n"
+    estimate: 4 hours
+    github_issue: 28
     labels:
     - sprint-current
     - phase:4.1
     - component:infra
     - priority:high
-    dependencies: []
-    estimate: 4 hours
-    github_issue: 28
-- phase: 2
-  name: Health Check Implementation
-  status: pending
-  priority: high
-  component: infra
+    title: Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
+- component: infra
   description: Add health check scripts to verify infrastructure status
+  name: Health Check Implementation
+  phase: 2
+  priority: high
+  status: pending
   tasks:
-  - title: Add infra/healthcheck.sh smoke test
+  - dependencies:
+    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
     description: "Create a bash script verifying Qdrant and Neo4j are healthy\nafter\
       \ `make up`.\n\n## Acceptance Criteria\n- [ ] `infra/healthcheck.sh` exits 0\
       \ on healthy stack.\n- [ ] Script checks:\n  curl localhost:6333/collections\
@@ -54,69 +50,70 @@ phases:
       \  verify_connectivity()\"\n- [ ] Neo4j driver added to `requirements-dev.txt`.\n\
       - [ ] CONTRIBUTING updated with run instructions.\n\n## Implementation Notes\n\
       - chmod +x infra/healthcheck.sh\n- add to Makefile: make health\n"
+    estimate: 2 hours
+    github_issue: 29
     labels:
     - sprint-current
     - phase:4.1
     - component:infra
     - priority:high
-    dependencies:
-    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
-    estimate: 2 hours
-    github_issue: 29
-- phase: 3
-  name: CI Integration
-  status: pending
-  priority: high
-  component: ci
+    title: Add infra/healthcheck.sh smoke test
+- component: ci
   description: Configure GitHub Actions to use service containers
+  name: CI Integration
+  phase: 3
+  priority: high
+  status: pending
   tasks:
-  - title: Configure GitHub Actions service containers
+  - dependencies:
+    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
     description: "Spin up Qdrant and Neo4j as service containers in CI to run\nall\
       \ test jobs against live stores.\n\n## Acceptance Criteria\n- [ ] `ci.yml` includes\
       \ `services:` for Qdrant v1.14.x and\n  Neo4j 5.20.\n- [ ] Tests run green on\
       \ live services.\n- [ ] Docker layers cached; total CI spin-up < 4 minutes.\n\
       \n## Implementation Notes\n- Use GitHub Actions service-container syntax\n-\
       \ Ensure ports match compose stack.\n"
+    estimate: 3 hours
+    github_issue: 30
     labels:
     - sprint-current
     - phase:4.1
     - component:ci
     - priority:high
-    dependencies:
-    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
-    estimate: 3 hours
-    github_issue: 30
-- phase: 4
-  name: Validation & Testing
-  status: pending
-  priority: medium
-  component: vector
+    title: Configure GitHub Actions service containers
+- component: vector
   description: Validate infrastructure with real data processing
+  name: Validation & Testing
+  phase: 4
+  priority: medium
+  status: pending
   tasks:
-  - title: Embedder sanity test with README.md
+  - dependencies:
+    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
+    - Configure GitHub Actions service containers
     description: "Index README.md via embed pipeline and confirm both vector\nand\
       \ graph entries exist.\n\n## Acceptance Criteria\n- [ ] New test `tests/smoke/test_embed_readme.py`\
       \ passes.\n- [ ] Qdrant vector count >= 1; corresponding Neo4j node\n  present.\n\
       \n## Implementation Notes\n- pytest -k test_embed_readme\n- use qdrant_client\
       \ & neo4j driver inside test.\n"
+    estimate: 2 hours
+    github_issue: 31
     labels:
     - sprint-current
     - phase:4.1
     - component:vector
     - priority:medium
-    dependencies:
-    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
-    - Configure GitHub Actions service containers
-    estimate: 2 hours
-    github_issue: 31
-- phase: 5
-  name: Developer Experience
-  status: pending
-  priority: low
-  component: dx
+    title: Embedder sanity test with README.md
+- component: dx
   description: Improve local development workflow
+  name: Developer Experience
+  phase: 5
+  priority: low
+  status: pending
   tasks:
-  - title: Makefile convenience targets
+  - dependencies:
+    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
+    - Add infra/healthcheck.sh smoke test
     description: 'Provide `make up`, `make down`, `make health` for local
 
       development.
@@ -134,45 +131,43 @@ phases:
       - .PHONY: up down health
 
       '
+    estimate: 1 hour
+    github_issue: 32
     labels:
     - sprint-current
     - phase:4.1
     - component:dx
     - priority:low
-    dependencies:
-    - Draft docker-compose.yml for Qdrant v1.14.x & Neo4j 5.20
-    - Add infra/healthcheck.sh smoke test
-    estimate: 1 hour
-    github_issue: 32
-- phase: 6
-  name: Security
-  status: pending
-  priority: medium
-  component: security
+    title: Makefile convenience targets
+- component: security
   description: Implement supply-chain security for infrastructure
+  name: Security
+  phase: 6
+  priority: medium
+  status: pending
   tasks:
-  - title: Sigstore sign compose & images
+  - dependencies: []
     description: "Begin supply-chain integrity chain for infra artefacts using\nSigstore/cosign.\n\
       \n## Acceptance Criteria\n- [ ] cosign signatures committed under\n  `context/logs/signatures/infra/`.\n\
       - [ ] CI step verifies signatures before tests execute.\n\n## Implementation\
       \ Notes\n- cosign sign --key k.json docker.io/qdrant/qdrant@sha256:...\n- cosign\
       \ verify ...\n"
+    estimate: 3 hours
+    github_issue: 33
     labels:
     - sprint-current
     - phase:4.1
     - component:security
     - priority:medium
-    dependencies: []
-    estimate: 3 hours
-    github_issue: 33
-- phase: 7
-  name: Bug Fixes
-  status: pending
-  priority: high
-  component: agents
+    title: Sigstore sign compose & images
+- component: agents
   description: Fix critical bugs affecting user experience
+  name: Bug Fixes
+  phase: 7
+  priority: high
+  status: pending
   tasks:
-  - title: Fix Sprint Issue Linker Label Batching
+  - dependencies: []
     description: "Fix the sprint issue linker's `_sync_issue_labels()` method\nthat\
       \ currently makes individual GitHub API calls for each label\noperation, causing\
       \ multiple comments when creating/updating\nissues with many labels.\n\n## Problem\
@@ -193,6 +188,8 @@ phases:
       - GitHub CLI supports comma-separated labels: `--add-label\n  label1,label2,label3`\n\
       - Add comprehensive unit tests for batching behavior\n- Test with current sprint-4.1\
       \ tasks that have extensive labels\n"
+    estimate: 3 hours
+    github_issue: 79
     labels:
     - sprint-current
     - phase:4.1
@@ -200,11 +197,14 @@ phases:
     - priority:high
     - type:bug
     - scope:github-api
-    dependencies: []
-    estimate: 3 hours
-    github_issue: 79
-- phase: 8
+    title: Fix Sprint Issue Linker Label Batching
+- component: testing
   name: Bidirectional Workflow Testing
-  status: pending
+  phase: 8
   priority: high
-  component: testing
+  status: pending
+schema_version: 1.0.0
+sprint_number: 41
+start_date: '2025-07-14'
+status: in_progress
+title: 'Sprint 4.1: Infrastructure Bring-Up'
