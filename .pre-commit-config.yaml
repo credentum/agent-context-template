@@ -25,6 +25,7 @@ repos:
       - id: check-yaml
         exclude: |
           (?x)^(
+            context/schemas/.*\.yaml|
             \.github/workflows/arc-follow-up-processor\.yml
           )$
       - id: check-added-large-files
