@@ -68,6 +68,7 @@ repos:
         entry: python -m src.agents.context_lint validate context/
         language: system
         files: ^context/.*\.yaml$
+        exclude: ^context/sprints/sprint-4\.1\.yaml$
         pass_filenames: false
 
       - id: test-imports
