@@ -1,22 +1,31 @@
 """Unit tests for Distributed CI Coordinator."""
 
 import json
+
+# Import the module under test
+import sys
 import unittest
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-# Import the module under test
+# Add scripts directory to path
+scripts_dir = Path(__file__).parent.parent / "scripts"
+sys.path.insert(0, str(scripts_dir))
+
 try:
-    from distributed_ci_coordinator import (  # type: ignore[import-not-found]
+    from distributed_ci_coordinator import (
         CIJob,
-        DistributedCICoordinator,
-        Runner,
     )
-except ImportError:
+    from distributed_ci_coordinator import CIRunner as Runner  # type: ignore[import-not-found]
+    from distributed_ci_coordinator import (
+        DistributedCICoordinator,
+    )
+except ImportError as e:
     # If import fails, skip this test module
-    pytest.skip("distributed_ci_coordinator module not found", allow_module_level=True)
+    pytest.skip(f"distributed_ci_coordinator module not found: {e}", allow_module_level=True)
 
 
 class TestCIJob(unittest.TestCase):

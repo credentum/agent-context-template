@@ -19,11 +19,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 try:
-    import aioredis
+    import redis.asyncio as aioredis
 
     REDIS_AVAILABLE = True
 except ImportError:
-    REDIS_AVAILABLE = False
+    try:
+        import aioredis
+
+        REDIS_AVAILABLE = True
+    except ImportError:
+        REDIS_AVAILABLE = False
 
 
 class JobStatus(Enum):

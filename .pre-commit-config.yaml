@@ -5,7 +5,7 @@ repos:
     rev: 25.1.0
     hooks:
       - id: black
-        language_version: python3.11
+        language_version: python3
         exclude: tests/test_formatting_issues\.py
 
   - repo: https://github.com/pre-commit/mirrors-mypy
