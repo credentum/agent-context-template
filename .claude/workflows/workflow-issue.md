@@ -44,6 +44,43 @@ claude workflow workflow-issue --issue 123 --priority high --component api --max
 ## EXECUTE WORKFLOW
 Please follow these steps in order. **Actually perform each action** - don't just describe what should be done.
 
+## 🛡️ WORKFLOW ENFORCEMENT INTEGRATION
+**CRITICAL: This workflow now includes automatic enforcement validation at each phase!**
+
+### Enforcement Overview
+- Each phase now starts with `enforce_workflow_phase()` to validate prerequisites
+- Each phase ends with `complete_workflow_phase()` to validate outputs
+- State is persisted across all agent executions in `.workflow-state-{issue_number}.json`
+- Failed validations prevent progression to next phase
+- Resume capability available from any failed phase
+
+### Resume from Failed Phase
+If workflow was interrupted or validation failed:
+```python
+# Check current workflow state
+from .claude.workflows.workflow_validator import WorkflowValidator
+validator = WorkflowValidator(issue_number)
+print(f"Current phase: {validator.state['current_phase']}")
+print(f"Completed phases: {[p['phase'] for p in validator.state['phases_completed'] if p['status'] == 'completed']}")
+
+# Resume from last successful phase or retry failed phase
+# The enforcement system will automatically detect where to resume
+```
+
+### Agent Integration Points
+- **Phase 0**: issue-investigator agent with validation hooks
+- **Phase 1**: task-planner agent with validation hooks
+- **Phase 2**: main-claude with validation hooks
+- **Phase 3**: test-runner agent with validation hooks
+- **Phase 4**: pr-manager agent with validation hooks
+- **Phase 5**: pr-manager agent with validation hooks
+
+### Error Handling Strategy
+1. **Validation Failure**: Fix prerequisites and retry phase
+2. **Agent Failure**: Resume from last checkpoint
+3. **State Corruption**: Restore from state file
+4. **Process Interruption**: Resume from workflow state
+
 ## 📋 DOCUMENTATION STRATEGY
 **CRITICAL: All documentation must be committed BEFORE or DURING the PR, not after!**
 
@@ -79,6 +116,16 @@ Please follow these steps in order. **Actually perform each action** - don't jus
 - The problem spans multiple components or systems
 - You discover the issue is significantly larger than described
 
+#### Step 0.0: Workflow Enforcement Setup
+**EXECUTE NOW:**
+```python
+# Initialize workflow enforcement for this issue
+from .claude.workflows.workflow_validator import enforce_workflow_phase, complete_workflow_phase
+
+# Enforce Phase 0 prerequisites before starting
+validator = enforce_workflow_phase(issue_number, 0, "issue-investigator")
+```
+
 #### Step 0.1: Assess Investigation Need
 **EXECUTE NOW:**
 1. Review the issue description for clarity of scope
@@ -87,7 +134,7 @@ Please follow these steps in order. **Actually perform each action** - don't jus
 4. Consider if you can confidently estimate the implementation effort
 
 **Decision Point:**
-- If scope is clear → Skip to Phase 1
+- If scope is clear → Skip to Phase 1 (but complete Phase 0 enforcement first)
 - If scope is unclear → Continue with investigation
 
 #### Step 0.2: Create Investigation Issue (If Not Exists)
@@ -166,9 +213,50 @@ Investigation revealed 3 interconnected problems:
 Proceeding with #1043 as first implementation.
 ```
 
+#### Step 0.6: Complete Phase 0 Enforcement
+**EXECUTE NOW:**
+```python
+# Complete Phase 0 with investigation outputs
+phase_0_outputs = {
+    "investigation_completed": True,
+    "root_cause_identified": True,
+    "decomposed_issues": [], # List of any sub-issues created
+    "scope_clarity": "clear" or "decomposed",
+    "next_phase": 1
+}
+
+try:
+    complete_workflow_phase(validator, 0, phase_0_outputs)
+    print("✅ Phase 0 (Investigation) completed successfully")
+except ValueError as e:
+    print(f"❌ Phase 0 validation failed: {e}")
+    print("Fix validation errors before proceeding to Phase 1")
+    # Handle failure: review requirements and retry
+```
+
+**Error Handling:**
+- If validation fails, review Phase 0 outputs and ensure all investigation artifacts are created
+- Check that investigation findings are properly documented
+- Ensure state persistence is working correctly
+- Use resume capability if process was interrupted
+
 ### Phase 1: Analysis & Planning
 
-#### Step 1: Issue Analysis
+#### Step 1.0: Enforce Phase 1 Prerequisites
+**EXECUTE NOW:**
+```python
+# Enforce Phase 1 prerequisites before starting planning
+try:
+    validator = enforce_workflow_phase(issue_number, 1, "task-planner")
+    print("✅ Phase 1 prerequisites validated, proceeding with planning")
+except ValueError as e:
+    print(f"❌ Cannot start Phase 1: {e}")
+    print("Complete required previous phases before proceeding")
+    # Resume from last completed phase or handle missing prerequisites
+    return
+```
+
+#### Step 1.1: Issue Analysis
 **EXECUTE NOW:**
 1. First, extract the issue number from the command arguments
 2. Run: `gh issue view [ISSUE_NUMBER]` to get issue details
@@ -314,15 +402,61 @@ dependencies: {identified}
    - This ensures documentation is included in the eventual PR
    - Prevents the issue of documentation being created after PR push
 
-#### Step 5: Context Management Setup
+#### Step 1.5: Context Management Setup
 1. Monitor context window usage throughout execution
 2. Use `/clear` if context approaches 25k tokens
 3. Reference task template for prompt technique guidance
 4. Track actual vs. estimated budget in real-time
 
+#### Step 1.6: Complete Phase 1 Enforcement
+**EXECUTE NOW:**
+```python
+# Complete Phase 1 with planning outputs
+phase_1_outputs = {
+    "task_template_created": True,
+    "task_template_path": f"context/trace/task-templates/issue-{issue_number}-*.md",
+    "scratchpad_created": True,
+    "scratchpad_path": f"context/trace/scratchpad/*-issue-{issue_number}-*.md",
+    "documentation_committed": True,
+    "execution_plan_complete": True,
+    "context_budget_estimated": True,
+    "next_phase": 2
+}
+
+try:
+    complete_workflow_phase(validator, 1, phase_1_outputs)
+    print("✅ Phase 1 (Analysis & Planning) completed successfully")
+except ValueError as e:
+    print(f"❌ Phase 1 validation failed: {e}")
+    print("Fix validation errors before proceeding to Phase 2")
+    # Handle failure: ensure all documentation is created and committed
+    # Check that task template and scratchpad files exist
+    # Verify git commits were made
+```
+
+**Error Handling:**
+- If validation fails, ensure task template and scratchpad files are created
+- Verify documentation was committed to git
+- Check that all required planning artifacts exist
+- Use state persistence to resume from validation failure point
+
 ### Phase 2: Implementation
 
-#### Step 6: Branch Creation & Development
+#### Step 2.0: Enforce Phase 2 Prerequisites
+**EXECUTE NOW:**
+```python
+# Enforce Phase 2 prerequisites before starting implementation
+try:
+    validator = enforce_workflow_phase(issue_number, 2, "main-claude")
+    print("✅ Phase 2 prerequisites validated, proceeding with implementation")
+except ValueError as e:
+    print(f"❌ Cannot start Phase 2: {e}")
+    print("Complete Phase 1 (Planning) and ensure all task templates are created")
+    # Resume from Phase 1 or handle missing prerequisites
+    return
+```
+
+#### Step 2.1: Branch Creation & Development
 **EXECUTE NOW:**
 1. **Create and switch to new branch**:
    - Determine if this is a fix or feature based on issue type
@@ -337,9 +471,53 @@ dependencies: {identified}
    - Types: feat, fix, test, docs, refactor, style, chore
 4. **Update CLAUDE.md** if the changes affect development workflow
 
+#### Step 2.2: Complete Phase 2 Enforcement
+**EXECUTE NOW:**
+```python
+# Complete Phase 2 with implementation outputs
+phase_2_outputs = {
+    "branch_created": True,
+    "implementation_complete": True,
+    "commits_made": True,
+    "branch_name": f"fix/{issue_number}-*" or f"feature/{issue_number}-*",
+    "code_changes_applied": True,
+    "task_template_followed": True,
+    "next_phase": 3
+}
+
+try:
+    complete_workflow_phase(validator, 2, phase_2_outputs)
+    print("✅ Phase 2 (Implementation) completed successfully")
+except ValueError as e:
+    print(f"❌ Phase 2 validation failed: {e}")
+    print("Fix validation errors before proceeding to Phase 3")
+    # Handle failure: ensure commits exist and pre-commit passes
+    # Check that implementation matches task template requirements
+```
+
+**Error Handling:**
+- If validation fails, ensure git commits were made on feature branch
+- Verify pre-commit hooks pass
+- Check that implementation follows task template guidance
+- Use state persistence to track implementation progress
+
 ### Phase 3: Testing & Validation
 
-#### Step 7: Local Testing
+#### Step 3.0: Enforce Phase 3 Prerequisites
+**EXECUTE NOW:**
+```python
+# Enforce Phase 3 prerequisites before starting testing
+try:
+    validator = enforce_workflow_phase(issue_number, 3, "test-runner")
+    print("✅ Phase 3 prerequisites validated, proceeding with testing")
+except ValueError as e:
+    print(f"❌ Cannot start Phase 3: {e}")
+    print("Complete Phase 2 (Implementation) and ensure commits exist")
+    # Resume from Phase 2 or handle missing prerequisites
+    return
+```
+
+#### Step 3.1: Local Testing
 **EXECUTE NOW:**
 1. **Run CI checks locally FIRST**:
    - Execute: `./scripts/run-ci-docker.sh`
@@ -357,7 +535,7 @@ dependencies: {identified}
    - If working on MCP tools, test with mock MCP client
    - Run any domain-specific tests
 
-#### Step 8: Quality Verification
+#### Step 3.2: Quality Verification
 **EXECUTE NOW:**
 1. **Final CI verification**:
    - Run: `./scripts/run-ci-docker.sh`
@@ -369,9 +547,56 @@ dependencies: {identified}
    - If embed_doc.py was modified, check hash-diff functionality
    - If GraphRAG was touched, verify Neo4j queries still work
 
+#### Step 3.3: Complete Phase 3 Enforcement
+**EXECUTE NOW:**
+```python
+# Complete Phase 3 with testing outputs
+phase_3_outputs = {
+    "tests_run": True,
+    "ci_passed": True,
+    "pre_commit_passed": True,
+    "coverage_maintained": True,
+    "coverage_percentage": "≥71.82%",
+    "quality_checks_passed": True,
+    "tests_created": True,
+    "ci_artifacts_created": True,
+    "next_phase": 4
+}
+
+try:
+    complete_workflow_phase(validator, 3, phase_3_outputs)
+    print("✅ Phase 3 (Testing & Validation) completed successfully")
+except ValueError as e:
+    print(f"❌ Phase 3 validation failed: {e}")
+    print("Fix validation errors before proceeding to Phase 4")
+    # Handle failure: ensure all tests pass and CI artifacts exist
+    # Check that coverage targets are met
+    # Verify CI execution markers exist
+```
+
+**Error Handling:**
+- If validation fails, ensure all tests were executed successfully
+- Verify CI was run locally and passed
+- Check that test coverage meets requirements
+- Ensure CI artifacts and execution markers are created
+
 ### Phase 4: Deployment & PR Management
 
-#### Step 9: Pre-PR Preparation
+#### Step 4.0: Enforce Phase 4 Prerequisites
+**EXECUTE NOW:**
+```python
+# Enforce Phase 4 prerequisites before starting PR creation
+try:
+    validator = enforce_workflow_phase(issue_number, 4, "pr-manager")
+    print("✅ Phase 4 prerequisites validated, proceeding with PR creation")
+except ValueError as e:
+    print(f"❌ Cannot start Phase 4: {e}")
+    print("Complete Phase 3 (Testing) and ensure CI passes")
+    # Resume from Phase 3 or handle missing prerequisites
+    return
+```
+
+#### Step 4.1: Pre-PR Preparation
 **EXECUTE NOW:**
 
 **🚀 Quick Method (Recommended)**:
@@ -466,6 +691,39 @@ dependencies: {identified}
    - This ensures all documentation files are included in the PR
    - No need for follow-up documentation pushes
 
+#### Step 4.2: Complete Phase 4 Enforcement
+**EXECUTE NOW:**
+```python
+# Complete Phase 4 with PR creation outputs
+phase_4_outputs = {
+    "pr_created": True,
+    "branch_pushed": True,
+    "documentation_included": True,
+    "pr_template_used": True,
+    "labels_applied": True,
+    "assignee_set": True,
+    "task_template_updated": True,
+    "completion_log_created": True,
+    "next_phase": 5
+}
+
+try:
+    complete_workflow_phase(validator, 4, phase_4_outputs)
+    print("✅ Phase 4 (Deployment & PR Management) completed successfully")
+except ValueError as e:
+    print(f"❌ Phase 4 validation failed: {e}")
+    print("Fix validation errors before proceeding to Phase 5")
+    # Handle failure: ensure PR was created successfully
+    # Check that all documentation is included in PR
+    # Verify branch was pushed to remote
+```
+
+**Error Handling:**
+- If validation fails, ensure PR was created successfully
+- Verify all documentation files are included in the PR
+- Check that branch exists on remote and is accessible
+- Ensure PR template was used and all fields completed
+
 #### Step 11: PR Monitoring & Completion
 **EXECUTE NOW:**
 1. **Get PR number and enter monitoring mode**:
@@ -491,7 +749,21 @@ dependencies: {identified}
 
 ### Phase 5: Documentation & Cleanup
 
-#### Step 12: Documentation Verification & Cleanup
+#### Step 5.0: Enforce Phase 5 Prerequisites
+**EXECUTE NOW:**
+```python
+# Enforce Phase 5 prerequisites before starting monitoring
+try:
+    validator = enforce_workflow_phase(issue_number, 5, "pr-manager")
+    print("✅ Phase 5 prerequisites validated, proceeding with monitoring")
+except ValueError as e:
+    print(f"❌ Cannot start Phase 5: {e}")
+    print("Complete Phase 4 (PR Creation) and ensure PR exists")
+    # Resume from Phase 4 or handle missing prerequisites
+    return
+```
+
+#### Step 5.1: Documentation Verification & Cleanup
 **EXECUTE NOW:**
 1. **Verify all documentation is included in PR**:
    ```bash
@@ -524,12 +796,45 @@ dependencies: {identified}
    - Ensure workspace is clean for next task
    - Document any process improvements discovered
 
+#### Step 5.2: Complete Phase 5 Enforcement
+**EXECUTE NOW:**
+```python
+# Complete Phase 5 with final workflow outputs
+phase_5_outputs = {
+    "documentation_verified": True,
+    "pr_monitoring_active": True,
+    "workspace_cleaned": True,
+    "process_improvements_documented": True,
+    "workflow_completed": True,
+    "pr_status_tracked": True,
+    "issue_resolution_complete": True
+}
+
+try:
+    complete_workflow_phase(validator, 5, phase_5_outputs)
+    print("✅ Phase 5 (Documentation & Cleanup) completed successfully")
+    print("🎉 Complete workflow enforcement cycle finished!")
+except ValueError as e:
+    print(f"❌ Phase 5 validation failed: {e}")
+    print("Fix validation errors to complete workflow")
+    # Handle failure: ensure all documentation is verified
+    # Check that PR monitoring is properly set up
+    # Verify cleanup was performed correctly
+```
+
+**Error Handling:**
+- If validation fails, verify all documentation is included in PR
+- Ensure PR monitoring is properly configured
+- Check that workspace cleanup was completed
+- Verify process improvements are documented
+
 **WORKFLOW COMPLETION**:
 - Issue #[ISSUE_NUMBER] has been resolved
 - PR created and submitted for review
 - **All documentation committed and included in PR**
 - Task template, scratchpad, and completion logs are part of the PR
 - Monitoring in place for PR completion
+- **Workflow enforcement active throughout all phases**
 
 **✅ DOCUMENTATION INTEGRITY CHECK:**
 - Task template: ✅ Created in Phase 1, committed before implementation
@@ -543,6 +848,46 @@ dependencies: {identified}
 ## Error Handling
 
 ### Common Issues & Solutions
+
+#### Workflow Enforcement Failures
+- **Problem**: Phase validation fails due to missing prerequisites
+- **Solution**:
+  ```python
+  # Check what's missing
+  validator = WorkflowValidator(issue_number)
+  can_proceed, errors = validator.validate_phase_prerequisites(phase)
+  print("Missing prerequisites:", errors)
+
+  # Fix each error and retry
+  validator = enforce_workflow_phase(issue_number, phase, agent_type)
+  ```
+- **Prevention**: Follow each phase step completely before proceeding
+
+#### State Persistence Issues
+- **Problem**: Workflow state is corrupted or missing
+- **Solution**:
+  ```python
+  # Reset state if corrupted
+  import os
+  os.remove(f".workflow-state-{issue_number}.json")
+
+  # Restart from beginning or manually create state
+  validator = WorkflowValidator(issue_number)
+  ```
+- **Prevention**: Don't manually edit state files
+
+#### Resume from Interruption
+- **Problem**: Workflow was interrupted mid-phase
+- **Solution**:
+  ```python
+  # Check current state
+  validator = WorkflowValidator(issue_number)
+  current_phase = validator.state['current_phase']
+
+  # Resume from current phase
+  validator = enforce_workflow_phase(issue_number, current_phase, agent_type)
+  ```
+- **Prevention**: Use state persistence consistently
 
 #### CI Failures
 - **Problem**: Docker CI checks fail
@@ -684,6 +1029,10 @@ SAFE_BRANCH_NAME=$(echo "fix/${ISSUE_NUMBER}-${TITLE}" | \
 
 ### Workflow Completion Requirements
 - [ ] All acceptance criteria from original issue met
+- [ ] **Workflow enforcement active through all phases**
+- [ ] **State persistence maintained across agent executions**
+- [ ] **Phase prerequisites validated before each phase**
+- [ ] **Phase outputs validated after each phase**
 - [ ] CI checks pass (Docker CI, tests, coverage)
 - [ ] Code quality standards maintained
 - [ ] PR created with comprehensive documentation
@@ -691,6 +1040,7 @@ SAFE_BRANCH_NAME=$(echo "fix/${ISSUE_NUMBER}-${TITLE}" | \
 - [ ] Documentation updated appropriately
 - [ ] Task template updated with actuals
 - [ ] Sprint progress updated
+- [ ] **Workflow state file properly managed**
 
 ### Quality Gates
 - [ ] Coverage ≥ 71.82% maintained
@@ -712,12 +1062,21 @@ SAFE_BRANCH_NAME=$(echo "fix/${ISSUE_NUMBER}-${TITLE}" | \
 
 ### Default Settings
 ```yaml
+# Standard workflow settings
 max_wait_hours: 48
 check_interval_minutes: 15
 auto_template_generation: true
 context_budget_limit: 25000
 require_ci_pass: true
 require_coverage_maintained: true
+
+# Workflow enforcement settings
+workflow_enforcement_enabled: true
+state_persistence_enabled: true
+phase_validation_strict: true
+resume_capability_enabled: true
+validation_error_handling: "strict"  # or "lenient"
+state_file_location: ".workflow-state-{issue_number}.json"
 ```
 
 ### Customization Options
@@ -764,4 +1123,28 @@ claude workflow workflow-issue --issue 456 --auto-template --parallel-agents --m
 claude workflow workflow-issue --issue 789 --priority high --check-interval 5m
 ```
 
-Remember: This workflow is designed for **complete issue resolution** including PR acceptance. It will not complete until the PR is successfully merged or the timeout is reached.
+### Resume Interrupted Workflow
+```bash
+# Resume from last successful phase
+claude workflow workflow-issue --issue 123 --resume
+
+# Resume from specific phase (bypass enforcement for debugging)
+claude workflow workflow-issue --issue 123 --resume-from-phase 3 --skip-validation
+```
+
+### Enforcement Debugging
+```bash
+# Check workflow state
+python .claude/workflows/workflow-validator.py 123 1
+
+# Validate specific phase manually
+python -c "
+from .claude.workflows.workflow_validator import WorkflowValidator
+validator = WorkflowValidator(123)
+can_proceed, errors = validator.validate_phase_prerequisites(2)
+print('Can proceed:', can_proceed)
+print('Errors:', errors)
+"
+```
+
+Remember: This workflow is designed for **complete issue resolution** including PR acceptance with **full enforcement validation**. It will not complete until the PR is successfully merged or the timeout is reached. Each phase is now validated before and after execution to ensure compliance and enable resume capability.
