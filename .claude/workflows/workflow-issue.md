@@ -58,7 +58,7 @@ Please follow these steps in order. **Actually perform each action** - don't jus
 If workflow was interrupted or validation failed:
 ```python
 # Check current workflow state
-from .claude.workflows.workflow_validator import WorkflowValidator
+from workflow_validator import WorkflowValidator
 validator = WorkflowValidator(issue_number)
 print(f"Current phase: {validator.state['current_phase']}")
 print(f"Completed phases: {[p['phase'] for p in validator.state['phases_completed'] if p['status'] == 'completed']}")
@@ -120,7 +120,7 @@ print(f"Completed phases: {[p['phase'] for p in validator.state['phases_complete
 **EXECUTE NOW:**
 ```python
 # Initialize workflow enforcement for this issue
-from .claude.workflows.workflow_validator import enforce_workflow_phase, complete_workflow_phase
+from workflow_validator import enforce_workflow_phase, complete_workflow_phase
 
 # Enforce Phase 0 prerequisites before starting
 validator = enforce_workflow_phase(issue_number, 0, "issue-investigator")
@@ -1139,7 +1139,7 @@ python .claude/workflows/workflow-validator.py 123 1
 
 # Validate specific phase manually
 python -c "
-from .claude.workflows.workflow_validator import WorkflowValidator
+from workflow_validator import WorkflowValidator
 validator = WorkflowValidator(123)
 can_proceed, errors = validator.validate_phase_prerequisites(2)
 print('Can proceed:', can_proceed)
