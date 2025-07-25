@@ -65,10 +65,9 @@ repos:
     hooks:
       - id: context-lint
         name: Context YAML Lint
-        entry: python -m src.agents.context_lint validate context/
-        language: system
+        entry: ./scripts/context-lint-wrapper.sh
+        language: script
         files: ^context/.*\.yaml$
-        exclude: ^context/sprints/sprint-4\.1\.yaml$
         pass_filenames: false
 
       - id: test-imports
