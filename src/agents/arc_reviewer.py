@@ -30,9 +30,17 @@ class ARCReviewer:
     claude-code-review.yml but in a standalone Python module for local execution.
     """
 
-    def __init__(self, verbose: bool = False):
-        """Initialize the ARC-Reviewer."""
+    def __init__(self, verbose: bool = False, timeout: int = 120, skip_coverage: bool = False):
+        """Initialize the ARC-Reviewer.
+
+        Args:
+            verbose: Enable verbose output
+            timeout: Maximum seconds for command execution (default: 120)
+            skip_coverage: Skip coverage check for faster execution
+        """
         self.verbose = verbose
+        self.timeout = timeout
+        self.skip_coverage = skip_coverage
         self.coverage_config = self._load_coverage_config()
         self.repo_root = Path(__file__).parent.parent.parent
 
@@ -55,11 +63,11 @@ class ARCReviewer:
 
         try:
             result = subprocess.run(
-                cmd, cwd=cwd, capture_output=True, text=True, timeout=300  # 5 minute timeout
+                cmd, cwd=cwd, capture_output=True, text=True, timeout=self.timeout
             )
             return result.returncode, result.stdout, result.stderr
         except subprocess.TimeoutExpired:
-            return 1, "", "Command timed out after 5 minutes"
+            return 1, "", f"Command timed out after {self.timeout} seconds"
         except Exception as e:
             return 1, "", str(e)
 
@@ -77,7 +85,58 @@ class ARCReviewer:
 
     def _check_coverage(self) -> Dict[str, Any]:
         """Check test coverage and return coverage data."""
-        # Run pytest with coverage
+        # First check if coverage.json exists and is recent
+        coverage_json_path = self.repo_root / "coverage.json"
+        if coverage_json_path.exists():
+            # Check if file is less than 5 minutes old
+            import time
+
+            file_age = time.time() - coverage_json_path.stat().st_mtime
+            if file_age < 300:  # 5 minutes
+                if self.verbose:
+                    print("📊 Using cached coverage data (< 5 minutes old)")
+                # Skip running pytest, just read existing coverage
+                coverage_data = {
+                    "current_pct": 0.0,
+                    "status": "FAIL",
+                    "meets_baseline": False,
+                    "details": {},
+                }
+                try:
+                    with open(coverage_json_path, "r") as f:
+                        cov_data = json.load(f)
+                        total = cov_data.get("totals", {})
+                        current_pct = total.get("percent_covered", 0.0)
+                        coverage_data["current_pct"] = round(current_pct, 2)
+                        coverage_data["meets_baseline"] = (
+                            current_pct >= self.coverage_config["baseline"]
+                        )
+                        coverage_data["status"] = (
+                            "PASS" if coverage_data["meets_baseline"] else "FAIL"
+                        )
+
+                        # Extract validator-specific coverage
+                        validator_coverage = {}
+                        for filename, file_data in cov_data.get("files", {}).items():
+                            if "validators/" in filename:
+                                validator_coverage[filename] = file_data.get("summary", {}).get(
+                                    "percent_covered", 0.0
+                                )
+                        coverage_data["details"] = {
+                            "validators": validator_coverage,
+                            "total_lines": total.get("num_statements", 0),
+                            "covered_lines": total.get("covered_lines", 0),
+                        }
+                except (json.JSONDecodeError, KeyError) as e:
+                    if self.verbose:
+                        print(f"Warning: Could not parse cached coverage.json: {e}")
+                    # Fall through to run pytest
+                else:
+                    return coverage_data
+
+        # Run pytest with coverage (with reduced timeout for ARC reviewer)
+        if self.verbose:
+            print("📊 Running pytest with coverage...")
         cmd = [
             "python",
             "-m",
@@ -88,6 +147,7 @@ class ARCReviewer:
             "-m",
             "not integration and not e2e",
             "--quiet",
+            "--maxfail=1",  # Stop after first failure to save time
         ]
 
         exit_code, stdout, stderr = self._run_command(cmd)
@@ -334,20 +394,30 @@ class ARCReviewer:
         if self.verbose:
             print(f"📁 Analyzing {len(changed_files)} changed files")
 
-        # Check coverage
-        coverage_data = self._check_coverage()
-        if self.verbose:
-            baseline = self.coverage_config["baseline"]
-            current = coverage_data["current_pct"]
-            print(f"📊 Coverage: {current}% (baseline: {baseline}%)")
+        # Check coverage (unless skipped)
+        if self.skip_coverage:
+            if self.verbose:
+                print("⚡ Skipping coverage check for faster execution")
+            coverage_data = {
+                "current_pct": 0.0,
+                "status": "SKIPPED",
+                "meets_baseline": True,  # Don't fail on skipped coverage
+                "details": {},
+            }
+        else:
+            coverage_data = self._check_coverage()
+            if self.verbose:
+                baseline = self.coverage_config["baseline"]
+                current = coverage_data["current_pct"]
+                print(f"📊 Coverage: {current}% (baseline: {baseline}%)")
 
         # Collect all issues
         blocking_issues: List[Dict[str, Any]] = []
         warning_issues: List[Dict[str, Any]] = []
         nit_issues: List[Dict[str, Any]] = []
 
-        # Coverage check (blocking if below baseline)
-        if not coverage_data["meets_baseline"]:
+        # Coverage check (blocking if below baseline and not skipped)
+        if not coverage_data["meets_baseline"] and coverage_data["status"] != "SKIPPED":
             blocking_issues.append(
                 {
                     "description": (
@@ -446,10 +516,18 @@ def main():
     parser.add_argument(
         "--runtime-test", action="store_true", help="Enable runtime validation of Python scripts"
     )
+    parser.add_argument(
+        "--timeout", type=int, default=120, help="Timeout in seconds for commands (default: 120)"
+    )
+    parser.add_argument(
+        "--skip-coverage", action="store_true", help="Skip coverage check for faster execution"
+    )
 
     args = parser.parse_args()
 
-    reviewer = ARCReviewer(verbose=args.verbose)
+    reviewer = ARCReviewer(
+        verbose=args.verbose, timeout=args.timeout, skip_coverage=args.skip_coverage
+    )
     reviewer.review_and_output(
         pr_number=args.pr, base_branch=args.base, runtime_test=args.runtime_test
     )
