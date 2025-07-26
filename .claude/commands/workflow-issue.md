@@ -1,6 +1,6 @@
 # Workflow Issue Command
 
-Execute the complete issue-to-PR workflow with automatic phase delegation to specialized agents.
+Execute the complete issue-to-PR workflow with automatic phase delegation to specialized agents with full enforcement.
 
 ## Pre-Execution
 
@@ -16,6 +16,19 @@ cat /workspaces/agent-context-template/.claude/workflows/workflow-issue.md
 ```bash
 /workflow-issue 123
 ```
+
+## Implementation
+
+This command executes:
+```bash
+python /workspaces/agent-context-template/scripts/workflow_cli.py workflow-issue {issue_number}
+```
+
+This automatically enables:
+- Workflow enforcement via WorkflowEnforcer
+- Agent delegation with Task() calls
+- State persistence in .workflow-state-{issue_number}.json
+- Phase validation before and after each step
 
 ## What It Does
 
