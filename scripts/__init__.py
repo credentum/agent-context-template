@@ -1,1 +1,1 @@
-"""CI optimization scripts package."""
+"""Scripts package for workflow enforcement and utilities."""
