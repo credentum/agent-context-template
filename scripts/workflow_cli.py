@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).parent))
 from agent_hooks import AgentHooks, WorkflowViolationError  # noqa: E402
 from workflow_enforcer import WorkflowEnforcer  # noqa: E402
+from workflow_executor import WorkflowExecutor  # noqa: E402
 
 
 class WorkflowCLI:
@@ -319,38 +320,17 @@ class WorkflowCLI:
     # Phase execution methods
     def _execute_investigation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute investigation phase."""
+        # Check if we should use direct execution (for slash command)
+        if context.get("use_agents", False):
+            # Use direct executor instead of agent delegation
+            executor = WorkflowExecutor(issue_number)
+            return executor.execute_investigation(context)
+
+        # Original simulation code for direct CLI usage
         if context.get("scope_is_clear", False):
             print("✨ Skipping investigation - scope is clear")
             return {"scope_clarity": "clear", "investigation_completed": True, "skipped": True}
 
-        # Check if we should use agent delegation
-        if context.get("use_agents", False):
-            print("🔍 Delegating to issue-investigator agent...")
-            # This prompt will be interpreted by Claude when executing the slash command
-            prompt = f"""
-Task(
-    description="Investigate issue scope",
-    prompt=\"\"\"
-    Investigate issue #{issue_number}:
-    1. Analyze the reported problem
-    2. Identify root cause
-    3. Assess implementation scope
-    4. Document findings in investigation_report.yaml
-
-    Workflow state file: .workflow-state-{issue_number}.json
-    Use enforcement hooks to validate phase entry and completion.
-    \"\"\",
-    subagent_type="issue-investigator"
-)
-"""
-            print(f"📋 Agent prompt:\n{prompt}")
-            return {
-                "scope_clarity": "delegated_to_agent",
-                "investigation_completed": True,
-                "agent_delegated": True,
-            }
-
-        # Simulate investigation (for direct CLI usage)
         print("🔍 Investigating issue...")
         print("  - Analyzing symptoms")
         print("  - Identifying root cause")
@@ -365,35 +345,14 @@ Task(
 
     def _execute_planning(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute planning phase."""
-        print("📝 Creating task template and scratchpad...")
-
-        # Check if we should use agent delegation
+        # Check if we should use direct execution (for slash command)
         if context.get("use_agents", False):
-            print("📝 Delegating to task-planner agent...")
-            prompt = f"""
-Task(
-    description="Create implementation plan",
-    prompt=\"\"\"
-    Based on investigation for issue #{issue_number}, create:
-    1. Detailed task breakdown
-    2. Implementation phases
-    3. Time estimates
-    4. Save as issue_{issue_number}_tasks.md
+            # Use direct executor instead of agent delegation
+            executor = WorkflowExecutor(issue_number)
+            return executor.execute_planning(context)
 
-    Workflow state file: .workflow-state-{issue_number}.json
-    Use enforcement hooks to validate phase entry and completion.
-    \"\"\",
-    subagent_type="task-planner"
-)
-"""
-            print(f"📋 Agent prompt:\n{prompt}")
-            return {
-                "task_template_created": True,
-                "scratchpad_created": True,
-                "documentation_committed": True,
-                "execution_plan_complete": True,
-                "agent_delegated": True,
-            }
+        # Original simulation code for direct CLI usage
+        print("📝 Creating task template and scratchpad...")
 
         # Simulate planning (for direct CLI usage)
         # Check if files already exist
@@ -437,6 +396,13 @@ Task(
 
     def _execute_implementation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute implementation phase."""
+        # Check if we should use direct execution (for slash command)
+        if context.get("use_agents", False):
+            # Use direct executor instead of agent delegation
+            executor = WorkflowExecutor(issue_number)
+            return executor.execute_implementation(context)
+
+        # Original simulation code for direct CLI usage
         print("💻 Implementing solution...")
 
         # Check branch
@@ -465,36 +431,14 @@ Task(
 
     def _execute_validation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute validation phase."""
-        print("🧪 Running tests and validation...")
-
-        # Check if we should use agent delegation
+        # Check if we should use direct execution (for slash command)
         if context.get("use_agents", False):
-            print("🧪 Delegating to test-runner agent...")
-            prompt = f"""
-Task(
-    description="Validate implementation",
-    prompt=\"\"\"
-    Validate all changes for issue #{issue_number}:
-    1. Run comprehensive test suite
-    2. Ensure coverage targets met
-    3. Create any missing tests
-    4. Document results in validation_report.md
+            # Use direct executor instead of agent delegation
+            executor = WorkflowExecutor(issue_number)
+            return executor.execute_validation(context)
 
-    Workflow state file: .workflow-state-{issue_number}.json
-    Use enforcement hooks to validate phase entry and completion.
-    \"\"\",
-    subagent_type="test-runner"
-)
-"""
-            print(f"📋 Agent prompt:\n{prompt}")
-            return {
-                "tests_run": True,
-                "ci_passed": True,
-                "pre_commit_passed": True,
-                "coverage_maintained": True,
-                "coverage_percentage": "≥71.82%",
-                "agent_delegated": True,
-            }
+        # Original simulation code for direct CLI usage
+        print("🧪 Running tests and validation...")
 
         # Simulate validation (for direct CLI usage)
         print("  - Would run: ./scripts/run-ci-docker.sh")
@@ -512,36 +456,14 @@ Task(
 
     def _execute_pr_creation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute PR creation phase."""
-        print("🚀 Creating pull request...")
-
-        # Check if we should use agent delegation
+        # Check if we should use direct execution (for slash command)
         if context.get("use_agents", False):
-            print("🚀 Delegating to pr-manager agent...")
-            prompt = f"""
-Task(
-    description="Create and configure PR",
-    prompt=\"\"\"
-    Create PR for issue #{issue_number}:
-    1. Create feature branch if needed
-    2. Create PR with proper template
-    3. Configure labels and auto-merge
-    4. Document PR number in pr_status.json
+            # Use direct executor instead of agent delegation
+            executor = WorkflowExecutor(issue_number)
+            return executor.execute_pr_creation(context)
 
-    Workflow state file: .workflow-state-{issue_number}.json
-    Use enforcement hooks to validate phase entry and completion.
-    \"\"\",
-    subagent_type="pr-manager"
-)
-"""
-            print(f"📋 Agent prompt:\n{prompt}")
-            return {
-                "pr_created": True,
-                "branch_pushed": True,
-                "documentation_included": True,
-                "pr_number": "agent_will_provide",
-                "pr_url": "agent_will_provide",
-                "agent_delegated": True,
-            }
+        # Original simulation code for direct CLI usage
+        print("🚀 Creating pull request...")
 
         # Simulate PR creation (for direct CLI usage)
         print("  - Would validate branch")
@@ -559,33 +481,27 @@ Task(
 
     def _execute_monitoring(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute monitoring phase."""
-        print("👀 Setting up PR monitoring...")
-
-        # Check if we should use agent delegation
+        # Check if we should use direct execution (for slash command)
         if context.get("use_agents", False):
-            print("👀 Delegating to pr-manager agent...")
-            prompt = f"""
-Task(
-    description="Monitor PR to completion",
-    prompt=\"\"\"
-    Monitor PR from pr_status.json:
-    1. Track CI status
-    2. Handle any failures
-    3. Coordinate reviews
-    4. Ensure successful merge
+            # Use direct executor instead of agent delegation
+            executor = WorkflowExecutor(issue_number)
+            # Pass PR number from previous phase if available
+            if "pr_number" in context:
+                return executor.execute_monitoring(context)
+            else:
+                # Try to get PR number from enforcer state
+                enforcer = WorkflowEnforcer(issue_number)
+                state = enforcer.get_current_state()
+                if "pr_creation" in state["phases"] and state["phases"]["pr_creation"].get(
+                    "outputs"
+                ):
+                    context["pr_number"] = state["phases"]["pr_creation"]["outputs"].get(
+                        "pr_number"
+                    )
+                return executor.execute_monitoring(context)
 
-    Workflow state file: .workflow-state-{issue_number}.json
-    Use enforcement hooks to validate phase entry and completion.
-    \"\"\",
-    subagent_type="pr-manager"
-)
-"""
-            print(f"📋 Agent prompt:\n{prompt}")
-            return {
-                "pr_monitoring_active": True,
-                "monitoring_started": datetime.now().isoformat(),
-                "agent_delegated": True,
-            }
+        # Original simulation code for direct CLI usage
+        print("👀 Setting up PR monitoring...")
 
         # Simulate monitoring (for direct CLI usage)
         print("  - Would monitor CI checks")

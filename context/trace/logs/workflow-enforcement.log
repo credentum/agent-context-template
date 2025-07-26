@@ -375,3 +375,279 @@
 {"timestamp": "2025-07-26T20:05:01.788754", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7313}
 {"timestamp": "2025-07-26T20:05:02.253285", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
 {"timestamp": "2025-07-26T20:05:02.271543", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:18:49.606484", "hook_type": "post", "phase": "investigation", "agent": null, "success": false, "message": "Phase 'investigation' not in progress", "issue": 1644}
+{"timestamp": "2025-07-26T20:49:58.882815", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 4483}
+{"timestamp": "2025-07-26T20:49:58.893247", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 1994}
+{"timestamp": "2025-07-26T20:49:58.898458", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 6292}
+{"timestamp": "2025-07-26T20:49:58.904345", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 3648}
+{"timestamp": "2025-07-26T20:49:58.910591", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 6392}
+{"timestamp": "2025-07-26T20:49:58.913369", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 6392}
+{"timestamp": "2025-07-26T20:49:58.918281", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7274}
+{"timestamp": "2025-07-26T20:49:58.925927", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 7274}
+{"timestamp": "2025-07-26T20:49:58.930888", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 2873}
+{"timestamp": "2025-07-26T20:49:58.977942", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:49:58.983891", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:50:52.028327", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 8661}
+{"timestamp": "2025-07-26T20:50:52.052753", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 6020}
+{"timestamp": "2025-07-26T20:50:52.064000", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 3329}
+{"timestamp": "2025-07-26T20:50:52.073951", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 6962}
+{"timestamp": "2025-07-26T20:50:52.084170", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 7405}
+{"timestamp": "2025-07-26T20:50:52.086878", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 7405}
+{"timestamp": "2025-07-26T20:50:52.097451", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7445}
+{"timestamp": "2025-07-26T20:50:52.103676", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 7445}
+{"timestamp": "2025-07-26T20:50:52.115284", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 6076}
+{"timestamp": "2025-07-26T20:50:52.214613", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:50:52.220920", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:51:26.985603", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9846}
+{"timestamp": "2025-07-26T20:51:27.005131", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 5053}
+{"timestamp": "2025-07-26T20:51:27.015501", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 5257}
+{"timestamp": "2025-07-26T20:51:27.025097", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 6347}
+{"timestamp": "2025-07-26T20:51:27.035349", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 6755}
+{"timestamp": "2025-07-26T20:51:27.037991", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 6755}
+{"timestamp": "2025-07-26T20:51:27.048044", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7505}
+{"timestamp": "2025-07-26T20:51:27.054100", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 7505}
+{"timestamp": "2025-07-26T20:51:27.066430", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 8559}
+{"timestamp": "2025-07-26T20:51:27.152970", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:51:27.158929", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:51:50.908781", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9574}
+{"timestamp": "2025-07-26T20:51:50.932810", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 1880}
+{"timestamp": "2025-07-26T20:51:50.943209", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 1799}
+{"timestamp": "2025-07-26T20:51:50.952894", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 7027}
+{"timestamp": "2025-07-26T20:51:50.963248", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 3538}
+{"timestamp": "2025-07-26T20:51:50.965806", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 3538}
+{"timestamp": "2025-07-26T20:51:50.975923", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7171}
+{"timestamp": "2025-07-26T20:51:50.982083", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 7171}
+{"timestamp": "2025-07-26T20:51:50.994552", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7991}
+{"timestamp": "2025-07-26T20:51:51.086965", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:51:51.093626", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:52:14.838208", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7105}
+{"timestamp": "2025-07-26T20:52:14.857711", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 8766}
+{"timestamp": "2025-07-26T20:52:14.868150", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 4209}
+{"timestamp": "2025-07-26T20:52:14.877779", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 6848}
+{"timestamp": "2025-07-26T20:52:14.888178", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 3459}
+{"timestamp": "2025-07-26T20:52:14.890778", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 3459}
+{"timestamp": "2025-07-26T20:52:14.900828", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 6013}
+{"timestamp": "2025-07-26T20:52:14.906893", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 6013}
+{"timestamp": "2025-07-26T20:52:14.918504", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7936}
+{"timestamp": "2025-07-26T20:52:15.005292", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:52:15.011273", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:52:39.206378", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 4953}
+{"timestamp": "2025-07-26T20:52:39.225804", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 1364}
+{"timestamp": "2025-07-26T20:52:39.236249", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 7926}
+{"timestamp": "2025-07-26T20:52:39.245851", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 3348}
+{"timestamp": "2025-07-26T20:52:39.256108", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 1062}
+{"timestamp": "2025-07-26T20:52:39.258721", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 1062}
+{"timestamp": "2025-07-26T20:52:39.268651", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 2884}
+{"timestamp": "2025-07-26T20:52:39.274699", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 2884}
+{"timestamp": "2025-07-26T20:52:39.286686", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7441}
+{"timestamp": "2025-07-26T20:52:39.374024", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:52:39.380034", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:53:04.520497", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 1412}
+{"timestamp": "2025-07-26T20:53:04.542807", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 2449}
+{"timestamp": "2025-07-26T20:53:04.553135", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 2903}
+{"timestamp": "2025-07-26T20:53:04.562733", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 1982}
+{"timestamp": "2025-07-26T20:53:04.578967", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 9181}
+{"timestamp": "2025-07-26T20:53:04.582819", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 9181}
+{"timestamp": "2025-07-26T20:53:04.600159", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 3490}
+{"timestamp": "2025-07-26T20:53:04.607558", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 3490}
+{"timestamp": "2025-07-26T20:53:04.618027", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7940}
+{"timestamp": "2025-07-26T20:53:04.754783", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:53:04.761285", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:53:32.100308", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 2710}
+{"timestamp": "2025-07-26T20:53:32.133043", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 3221}
+{"timestamp": "2025-07-26T20:53:32.160151", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 2296}
+{"timestamp": "2025-07-26T20:53:32.178545", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 4528}
+{"timestamp": "2025-07-26T20:53:32.196882", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 4639}
+{"timestamp": "2025-07-26T20:53:32.200653", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 4639}
+{"timestamp": "2025-07-26T20:53:32.218651", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 8948}
+{"timestamp": "2025-07-26T20:53:32.230115", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 8948}
+{"timestamp": "2025-07-26T20:53:32.248176", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 2227}
+{"timestamp": "2025-07-26T20:53:32.422699", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:53:32.430239", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:54:00.086861", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7326}
+{"timestamp": "2025-07-26T20:54:00.109703", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 7018}
+{"timestamp": "2025-07-26T20:54:00.120484", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 2749}
+{"timestamp": "2025-07-26T20:54:00.133038", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 8788}
+{"timestamp": "2025-07-26T20:54:00.145591", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 6582}
+{"timestamp": "2025-07-26T20:54:00.148265", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 6582}
+{"timestamp": "2025-07-26T20:54:00.158740", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 6799}
+{"timestamp": "2025-07-26T20:54:00.166508", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 6799}
+{"timestamp": "2025-07-26T20:54:00.180725", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9209}
+{"timestamp": "2025-07-26T20:54:00.302138", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:54:00.309912", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:54:30.221341", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9630}
+{"timestamp": "2025-07-26T20:54:30.248901", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 7426}
+{"timestamp": "2025-07-26T20:54:30.266667", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 1474}
+{"timestamp": "2025-07-26T20:54:30.281141", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 1440}
+{"timestamp": "2025-07-26T20:54:30.305271", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 6696}
+{"timestamp": "2025-07-26T20:54:30.309826", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 6696}
+{"timestamp": "2025-07-26T20:54:30.336764", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9073}
+{"timestamp": "2025-07-26T20:54:30.354373", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 9073}
+{"timestamp": "2025-07-26T20:54:30.374150", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9831}
+{"timestamp": "2025-07-26T20:54:30.510311", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:54:30.518900", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:55:00.478438", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 4387}
+{"timestamp": "2025-07-26T20:55:00.525923", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 5430}
+{"timestamp": "2025-07-26T20:55:00.549492", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 3569}
+{"timestamp": "2025-07-26T20:55:00.572062", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 5599}
+{"timestamp": "2025-07-26T20:55:00.594146", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 2923}
+{"timestamp": "2025-07-26T20:55:00.600457", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 2923}
+{"timestamp": "2025-07-26T20:55:00.619345", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 8805}
+{"timestamp": "2025-07-26T20:55:00.644097", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 8805}
+{"timestamp": "2025-07-26T20:55:00.668016", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7800}
+{"timestamp": "2025-07-26T20:55:00.835257", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:55:00.842635", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:55:41.277251", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 4385}
+{"timestamp": "2025-07-26T20:55:41.312319", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 5139}
+{"timestamp": "2025-07-26T20:55:41.330588", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 6658}
+{"timestamp": "2025-07-26T20:55:41.378460", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 5674}
+{"timestamp": "2025-07-26T20:55:41.436226", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 1893}
+{"timestamp": "2025-07-26T20:55:41.443375", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 1893}
+{"timestamp": "2025-07-26T20:55:41.492473", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 2881}
+{"timestamp": "2025-07-26T20:55:41.539564", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 2881}
+{"timestamp": "2025-07-26T20:55:41.607807", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 5780}
+{"timestamp": "2025-07-26T20:55:42.094803", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:55:42.119439", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T20:56:31.726645", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 4156}
+{"timestamp": "2025-07-26T20:56:31.765559", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 3031}
+{"timestamp": "2025-07-26T20:56:31.784239", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 8834}
+{"timestamp": "2025-07-26T20:56:31.809009", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 5472}
+{"timestamp": "2025-07-26T20:56:31.826732", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 2467}
+{"timestamp": "2025-07-26T20:56:31.829923", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 2467}
+{"timestamp": "2025-07-26T20:56:31.848725", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7640}
+{"timestamp": "2025-07-26T20:56:31.859895", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 7640}
+{"timestamp": "2025-07-26T20:56:31.878825", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 1641}
+{"timestamp": "2025-07-26T20:56:32.042994", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T20:56:32.052459", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:00:17.324326", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 6858}
+{"timestamp": "2025-07-26T21:00:17.335979", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 5161}
+{"timestamp": "2025-07-26T21:00:17.341524", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 8918}
+{"timestamp": "2025-07-26T21:00:17.346945", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 7458}
+{"timestamp": "2025-07-26T21:00:17.351816", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 4223}
+{"timestamp": "2025-07-26T21:00:17.354405", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 4223}
+{"timestamp": "2025-07-26T21:00:17.359292", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 1698}
+{"timestamp": "2025-07-26T21:00:17.367177", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 1698}
+{"timestamp": "2025-07-26T21:00:17.372125", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7629}
+{"timestamp": "2025-07-26T21:00:17.420836", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:00:17.426632", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:01:10.743342", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7395}
+{"timestamp": "2025-07-26T21:01:10.763439", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 3825}
+{"timestamp": "2025-07-26T21:01:10.777956", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 7465}
+{"timestamp": "2025-07-26T21:01:10.789570", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 2364}
+{"timestamp": "2025-07-26T21:01:10.799885", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 8266}
+{"timestamp": "2025-07-26T21:01:10.802602", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 8266}
+{"timestamp": "2025-07-26T21:01:10.812915", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 3541}
+{"timestamp": "2025-07-26T21:01:10.819293", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 3541}
+{"timestamp": "2025-07-26T21:01:10.834219", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 2542}
+{"timestamp": "2025-07-26T21:01:10.953027", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:01:10.959501", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:01:45.736251", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9421}
+{"timestamp": "2025-07-26T21:01:45.769939", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 5426}
+{"timestamp": "2025-07-26T21:01:45.788712", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 7158}
+{"timestamp": "2025-07-26T21:01:45.803648", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 6431}
+{"timestamp": "2025-07-26T21:01:45.814593", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 6987}
+{"timestamp": "2025-07-26T21:01:45.817336", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 6987}
+{"timestamp": "2025-07-26T21:01:45.827566", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 1639}
+{"timestamp": "2025-07-26T21:01:45.833826", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 1639}
+{"timestamp": "2025-07-26T21:01:45.844173", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 4884}
+{"timestamp": "2025-07-26T21:01:45.944427", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:01:45.950576", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:02:11.503136", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 5347}
+{"timestamp": "2025-07-26T21:02:11.522645", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 5727}
+{"timestamp": "2025-07-26T21:02:11.533239", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 7503}
+{"timestamp": "2025-07-26T21:02:11.542731", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 2067}
+{"timestamp": "2025-07-26T21:02:11.552903", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 9040}
+{"timestamp": "2025-07-26T21:02:11.555558", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 9040}
+{"timestamp": "2025-07-26T21:02:11.567581", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 2893}
+{"timestamp": "2025-07-26T21:02:11.574444", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 2893}
+{"timestamp": "2025-07-26T21:02:11.588451", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 1183}
+{"timestamp": "2025-07-26T21:02:11.678823", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:02:11.685090", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:02:36.867662", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 6888}
+{"timestamp": "2025-07-26T21:02:36.887524", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 1405}
+{"timestamp": "2025-07-26T21:02:36.901704", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 8378}
+{"timestamp": "2025-07-26T21:02:36.918399", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 8411}
+{"timestamp": "2025-07-26T21:02:36.928765", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 3519}
+{"timestamp": "2025-07-26T21:02:36.931396", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 3519}
+{"timestamp": "2025-07-26T21:02:36.941472", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 8881}
+{"timestamp": "2025-07-26T21:02:36.949138", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 8881}
+{"timestamp": "2025-07-26T21:02:36.959976", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 5280}
+{"timestamp": "2025-07-26T21:02:37.062413", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:02:37.070295", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:03:02.050008", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 6550}
+{"timestamp": "2025-07-26T21:03:02.070584", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 9191}
+{"timestamp": "2025-07-26T21:03:02.083174", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 1347}
+{"timestamp": "2025-07-26T21:03:02.093083", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 3470}
+{"timestamp": "2025-07-26T21:03:02.103509", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 8645}
+{"timestamp": "2025-07-26T21:03:02.106179", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 8645}
+{"timestamp": "2025-07-26T21:03:02.116363", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9582}
+{"timestamp": "2025-07-26T21:03:02.122662", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 9582}
+{"timestamp": "2025-07-26T21:03:02.134530", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 2331}
+{"timestamp": "2025-07-26T21:03:02.234370", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:03:02.240922", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:03:27.449042", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 5989}
+{"timestamp": "2025-07-26T21:03:27.468561", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 4985}
+{"timestamp": "2025-07-26T21:03:27.480915", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 9175}
+{"timestamp": "2025-07-26T21:03:27.492989", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 1254}
+{"timestamp": "2025-07-26T21:03:27.503592", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 1034}
+{"timestamp": "2025-07-26T21:03:27.506256", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 1034}
+{"timestamp": "2025-07-26T21:03:27.516431", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 1970}
+{"timestamp": "2025-07-26T21:03:27.522608", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 1970}
+{"timestamp": "2025-07-26T21:03:27.535946", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 5306}
+{"timestamp": "2025-07-26T21:03:27.634090", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:03:27.642184", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:03:52.941662", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 3640}
+{"timestamp": "2025-07-26T21:03:52.963034", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 3705}
+{"timestamp": "2025-07-26T21:03:52.974160", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 9719}
+{"timestamp": "2025-07-26T21:03:52.984694", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 5592}
+{"timestamp": "2025-07-26T21:03:52.994983", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 4608}
+{"timestamp": "2025-07-26T21:03:52.997636", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 4608}
+{"timestamp": "2025-07-26T21:03:53.007692", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 5421}
+{"timestamp": "2025-07-26T21:03:53.013775", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 5421}
+{"timestamp": "2025-07-26T21:03:53.025605", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 6469}
+{"timestamp": "2025-07-26T21:03:53.126875", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:03:53.134574", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:04:18.192206", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 7001}
+{"timestamp": "2025-07-26T21:04:18.211551", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 9256}
+{"timestamp": "2025-07-26T21:04:18.221815", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 9554}
+{"timestamp": "2025-07-26T21:04:18.233044", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 6746}
+{"timestamp": "2025-07-26T21:04:18.244827", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 2162}
+{"timestamp": "2025-07-26T21:04:18.247684", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 2162}
+{"timestamp": "2025-07-26T21:04:18.258028", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 2613}
+{"timestamp": "2025-07-26T21:04:18.264140", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 2613}
+{"timestamp": "2025-07-26T21:04:18.275938", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 5824}
+{"timestamp": "2025-07-26T21:04:18.391914", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:04:18.399786", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:04:44.484538", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 8875}
+{"timestamp": "2025-07-26T21:04:44.507733", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 4685}
+{"timestamp": "2025-07-26T21:04:44.520996", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 1343}
+{"timestamp": "2025-07-26T21:04:44.530874", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 5098}
+{"timestamp": "2025-07-26T21:04:44.541379", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 1592}
+{"timestamp": "2025-07-26T21:04:44.544020", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 1592}
+{"timestamp": "2025-07-26T21:04:44.556125", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 1948}
+{"timestamp": "2025-07-26T21:04:44.562998", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 1948}
+{"timestamp": "2025-07-26T21:04:44.573600", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 8452}
+{"timestamp": "2025-07-26T21:04:44.693643", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:04:44.703495", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:05:11.160231", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 5669}
+{"timestamp": "2025-07-26T21:05:11.184450", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 9304}
+{"timestamp": "2025-07-26T21:05:11.197215", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 9203}
+{"timestamp": "2025-07-26T21:05:11.206813", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 3940}
+{"timestamp": "2025-07-26T21:05:11.217376", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 4012}
+{"timestamp": "2025-07-26T21:05:11.220672", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 4012}
+{"timestamp": "2025-07-26T21:05:11.231590", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 3062}
+{"timestamp": "2025-07-26T21:05:11.241314", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 3062}
+{"timestamp": "2025-07-26T21:05:11.252505", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 3660}
+{"timestamp": "2025-07-26T21:05:11.347863", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:05:11.354128", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:05:54.142729", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9561}
+{"timestamp": "2025-07-26T21:05:54.257463", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 4887}
+{"timestamp": "2025-07-26T21:05:54.360691", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 2196}
+{"timestamp": "2025-07-26T21:05:54.427833", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 2549}
+{"timestamp": "2025-07-26T21:05:54.515062", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 1333}
+{"timestamp": "2025-07-26T21:05:54.532340", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 1333}
+{"timestamp": "2025-07-26T21:05:54.636238", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 2570}
+{"timestamp": "2025-07-26T21:05:54.673895", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 2570}
+{"timestamp": "2025-07-26T21:05:54.692858", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 6877}
+{"timestamp": "2025-07-26T21:05:54.973726", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
+{"timestamp": "2025-07-26T21:05:55.004392", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}

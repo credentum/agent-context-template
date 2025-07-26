@@ -16,6 +16,8 @@ workflow_validator_path = workflow_dir / "workflow-validator.py"
 
 try:
     spec = importlib.util.spec_from_file_location("workflow_validator", workflow_validator_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load spec from {workflow_validator_path}")
     workflow_validator_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(workflow_validator_module)
 
