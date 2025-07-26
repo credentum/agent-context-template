@@ -1,3 +1,7 @@
+---
+schema_version: "1.0.0"
+---
+
 # ────────────────────────────────────────────────────────────────────────
 # TASK: issue-1652-fix-workflow-issue-command
 # Generated from GitHub Issue #1652
