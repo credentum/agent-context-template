@@ -1,6 +1,6 @@
 # Workflow Issue Command
 
-Execute the complete issue-to-PR workflow with automatic phase delegation to specialized agents with full enforcement.
+Execute the complete issue-to-PR workflow with direct phase execution to ensure all changes persist in the repository.
 
 ## Pre-Execution
 
@@ -26,20 +26,23 @@ python /workspaces/agent-context-template/scripts/workflow_cli.py workflow-issue
 
 This automatically enables:
 - Workflow enforcement via WorkflowEnforcer
-- Agent delegation with Task() calls
+- Direct phase execution via WorkflowExecutor (no isolated agents)
 - State persistence in .workflow-state-{issue_number}.json
 - Phase validation before and after each step
+- All changes persist in the actual repository
 
 ## What It Does
 
-After loading the workflow documentation, automatically coordinates the entire issue resolution process:
+After loading the workflow documentation, directly executes each phase in the main context:
 
-1. **Investigation** (issue-investigator agent) - Analyzes scope and root cause
-2. **Planning** (task-planner agent) - Creates detailed implementation plan
-3. **Implementation** (main Claude) - Executes the plan
-4. **Validation** (test-runner agent) - Ensures quality with tests
-5. **PR Creation** (pr-manager agent) - Creates and configures PR
-6. **Monitoring** (pr-manager agent) - Tracks PR to completion
+1. **Investigation** - Analyzes scope and root cause directly
+2. **Planning** - Creates task templates and scratchpad files that persist
+3. **Implementation** - Makes code changes directly in the repository
+4. **Validation** - Runs tests and CI checks on actual code
+5. **PR Creation** - Creates real PR using GitHub CLI
+6. **Monitoring** - Sets up monitoring for the created PR
+
+**Key Change**: Unlike agent delegation, all operations happen directly in the main repository context, ensuring all file changes, git operations, and GitHub actions persist.
 
 ## Options
 
@@ -64,8 +67,16 @@ After loading the workflow documentation, automatically coordinates the entire i
 
 1. Read the workflow documentation from `.claude/workflows/workflow-issue.md`
 2. Parse the issue number and any options provided
-3. Initialize the workflow coordinator agent
-4. Execute phases based on the workflow documentation
+3. Initialize the WorkflowExecutor for direct execution
+4. Execute phases directly in the main repository context
 5. Track progress and handle phase transitions
 
-The workflow coordinator will delegate each phase to the appropriate specialist agent and manage the transitions between phases.
+## Technical Details
+
+The command now uses `WorkflowExecutor` for direct phase execution instead of delegating to isolated agents via the Task tool. This ensures:
+
+- All file operations create real files in the repository
+- Git commands (branch, commit, push) affect the actual repository
+- GitHub CLI operations (PR creation) work with real authentication
+- State persistence works across all phases
+- No changes are lost when phases complete
