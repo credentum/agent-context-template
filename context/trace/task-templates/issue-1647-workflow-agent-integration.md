@@ -109,11 +109,11 @@ Estimates based on analysis:
 └── files_affected: 8
 
 Actuals (to be filled):
-├── tokens_used: ___
-├── time_taken: ___
-├── cost_actual: $___
-├── iterations_needed: ___
-└── context_clears: ___
+├── tokens_used: ~18,000
+├── time_taken: 45 minutes
+├── cost_actual: ~$1.20
+├── iterations_needed: 1
+└── context_clears: 0
 ```
 
 ## 🏷️ Metadata
