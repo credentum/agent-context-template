@@ -92,12 +92,14 @@ class TestAgentHooks:
 
     def test_post_phase_hook_success(self, hooks):
         """Test successful post-phase hook."""
-        # Setup: mark planning as in progress
-        hooks.enforcer.state["phases"]["planning"] = {
-            "status": "in_progress",
-            "started_at": datetime.now().isoformat(),
+        # Setup: complete investigation first
+        hooks.enforcer.state["phases"]["investigation"] = {
+            "status": "completed",
+            "outputs": {"scope_clarity": "clear"},
         }
-        hooks.enforcer._save_state()
+        # Then properly start planning phase
+        can_proceed, _, _ = hooks.enforcer.enforce_phase_entry("planning", "task-planner")
+        assert can_proceed is True
 
         outputs = {
             "task_template_created": True,
@@ -145,15 +147,23 @@ class TestAgentHooks:
 
         @hooks.workflow_decorator("planning", "task-planner")
         def plan_task(context):
-            return {"outputs": "test"}
+            # Return incomplete outputs to trigger post-phase failure
+            return {"task_template_created": True}  # Missing other required outputs
 
         context = {"test": "data"}
 
-        # Should raise WorkflowViolationError due to missing prerequisites
+        # Complete investigation first so pre-phase passes
+        hooks.enforcer.state["phases"]["investigation"] = {
+            "status": "completed",
+            "outputs": {"scope_clarity": "clear"},
+        }
+        hooks.enforcer._save_state()
+
+        # Should raise WorkflowViolationError due to missing outputs in post-phase
         with pytest.raises(WorkflowViolationError) as exc_info:
             plan_task(context)
 
-        assert "Cannot proceed with planning" in str(exc_info.value)
+        assert "Failed to complete planning" in str(exc_info.value)
 
     def test_workflow_decorator_exception_handling(self, hooks):
         """Test workflow decorator handles exceptions properly."""
@@ -300,9 +310,22 @@ class TestAgentHooks:
             assert can_proceed is True
 
             # Test post-phase enforcement
-            # First mark phase as in progress
+            # Need to create a proper state with all required fields
             enforcer_file = tmp_path / ".workflow-state-789.json"
-            state = {"issue_number": 789, "phases": {"investigation": {"status": "in_progress"}}}
+            state = {
+                "issue_number": 789,
+                "created_at": datetime.now().isoformat(),
+                "current_phase": "investigation",
+                "phases": {
+                    "investigation": {
+                        "phase_name": "investigation",
+                        "status": "in_progress",
+                        "started_at": datetime.now().isoformat(),
+                        "agent_type": "issue-investigator",
+                    }
+                },
+                "metadata": {"enforcer_version": "1.0.0", "workflow_version": "1.0.0"},
+            }
             with open(enforcer_file, "w") as f:
                 json.dump(state, f)
 

@@ -1,4 +1,5 @@
 ---
+schema_version: "1.0"
 enforcement:
   allow_bypass: true
   enabled: true
