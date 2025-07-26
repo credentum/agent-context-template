@@ -411,16 +411,21 @@ Task(
             print("  ⚠️  Scratchpad should be created")
 
         # Check for commit
-        result = subprocess.run(
-            ["git", "log", "--oneline", "--grep", f"issue #{issue_number}"],
-            capture_output=True,
-            text=True,
-        )
-        if "docs(trace): add task template" in result.stdout:
-            print("  ✅ Documentation committed")
-            doc_committed = True
-        else:
-            print("  ⚠️  Documentation should be committed")
+        try:
+            result = subprocess.run(
+                ["git", "log", "--oneline", "--grep", f"issue #{issue_number}"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            if "docs(trace): add task template" in result.stdout:
+                print("  ✅ Documentation committed")
+                doc_committed = True
+            else:
+                print("  ⚠️  Documentation should be committed")
+                doc_committed = False
+        except subprocess.CalledProcessError as e:
+            print(f"  ⚠️  Error checking git log: {e}")
             doc_committed = False
 
         return {
@@ -435,14 +440,21 @@ Task(
         print("💻 Implementing solution...")
 
         # Check branch
-        branch = subprocess.run(
-            ["git", "branch", "--show-current"], capture_output=True, text=True
-        ).stdout.strip()
+        try:
+            result = subprocess.run(
+                ["git", "branch", "--show-current"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            branch = result.stdout.strip()
+            print(f"  📌 Current branch: {branch}")
 
-        print(f"  📌 Current branch: {branch}")
-
-        if branch == "main":
-            print("  ⚠️  WARNING: On main branch!")
+            if branch == "main":
+                print("  ⚠️  WARNING: On main branch!")
+        except subprocess.CalledProcessError as e:
+            print(f"  ⚠️  Error checking branch: {e}")
+            branch = "unknown"
 
         return {
             "branch_created": branch != "main",
