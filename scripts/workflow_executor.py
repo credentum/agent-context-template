@@ -4,6 +4,10 @@ Workflow Executor - Direct execution of workflow phases in main context.
 
 This module provides direct implementations of workflow phases to ensure
 all changes persist in the actual repository context.
+
+Note: This module is designed for direct CLI usage and does not currently
+implement MCP contracts. If MCP compatibility is needed in the future,
+consider adding appropriate contracts for tool exposure.
 """
 
 import json
@@ -400,6 +404,7 @@ class WorkflowExecutor:
             result = subprocess.run(
                 ["git", "diff", "--cached", "--quiet"],
                 capture_output=True,
+                text=True,
                 timeout=30,
             )
             if result.returncode != 0:  # There are staged changes

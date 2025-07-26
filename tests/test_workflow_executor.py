@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 # Add scripts directory to path
@@ -97,7 +98,7 @@ class TestWorkflowExecutor(unittest.TestCase):
                 stdout=json.dumps({"title": "test issue"}), returncode=0
             )
 
-            context = {}
+            context: Dict[str, Any] = {}
             result = self.executor.execute_planning(context)
 
             self.assertTrue(result["task_template_created"])
@@ -114,7 +115,7 @@ class TestWorkflowExecutor(unittest.TestCase):
             MagicMock(stdout="", returncode=0),  # git log
         ]
 
-        context = {}
+        context: Dict[str, Any] = {}
         result = self.executor.execute_implementation(context)
 
         self.assertTrue(result["implementation_complete"])
@@ -129,7 +130,7 @@ class TestWorkflowExecutor(unittest.TestCase):
             MagicMock(stdout="commit1\ncommit2", returncode=0),  # git log
         ]
 
-        context = {}
+        context: Dict[str, Any] = {}
         result = self.executor.execute_implementation(context)
 
         self.assertTrue(result["implementation_complete"])
@@ -148,7 +149,7 @@ class TestWorkflowExecutor(unittest.TestCase):
         # Mock pre-commit check
         mock_run.return_value = MagicMock(returncode=0)
 
-        context = {}
+        context: Dict[str, Any] = {}
         result = self.executor.execute_validation(context)
 
         self.assertTrue(result["tests_run"])
@@ -161,7 +162,7 @@ class TestWorkflowExecutor(unittest.TestCase):
         """Test validation without pre-commit available."""
         mock_run.side_effect = FileNotFoundError("pre-commit not found")
 
-        context = {}
+        context: Dict[str, Any] = {}
         result = self.executor.execute_validation(context)
 
         self.assertTrue(result["tests_run"])
@@ -184,7 +185,7 @@ class TestWorkflowExecutor(unittest.TestCase):
         logs_dir = self.temp_dir / "context" / "trace" / "logs"
         logs_dir.mkdir(parents=True)
 
-        context = {}
+        context: Dict[str, Any] = {}
         result = self.executor.execute_pr_creation(context)
 
         self.assertTrue(result["pr_created"])
@@ -196,7 +197,7 @@ class TestWorkflowExecutor(unittest.TestCase):
         """Test PR creation fails when on main branch."""
         mock_run.return_value = MagicMock(stdout="main", returncode=0)
 
-        context = {}
+        context: Dict[str, Any] = {}
         result = self.executor.execute_pr_creation(context)
 
         self.assertFalse(result["pr_created"])
@@ -211,7 +212,7 @@ class TestWorkflowExecutor(unittest.TestCase):
             subprocess.CalledProcessError(1, "git push"),  # git push fails
         ]
 
-        context = {}
+        context: Dict[str, Any] = {}
         result = self.executor.execute_pr_creation(context)
 
         self.assertFalse(result["pr_created"])
@@ -237,7 +238,7 @@ class TestWorkflowExecutor(unittest.TestCase):
 
     def test_execute_monitoring_no_pr_number(self):
         """Test monitoring with missing PR number."""
-        context = {}
+        context: Dict[str, Any] = {}
         result = self.executor.execute_monitoring(context)
 
         self.assertFalse(result["pr_monitoring_active"])
@@ -285,7 +286,7 @@ Other content.
             ),  # git log
         ]
 
-        context = {}
+        context: Dict[str, Any] = {}
         result = self.executor.execute_planning(context)
 
         self.assertTrue(result["documentation_committed"])
@@ -295,7 +296,7 @@ Other content.
         """Test implementation with git error."""
         mock_run.side_effect = subprocess.CalledProcessError(1, "git")
 
-        context = {}
+        context: Dict[str, Any] = {}
         result = self.executor.execute_implementation(context)
 
         self.assertEqual(result["branch_name"], "unknown")
