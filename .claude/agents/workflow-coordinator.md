@@ -116,50 +116,38 @@ Task(
 
 ## Workflow Command Implementation
 
-### Main Entry Point
-```python
-def workflow_issue(issue_number: int, skip_phases: list = None):
-    """
-    Execute complete issue workflow.
+### Main Entry Point with Enforcement
+```bash
+# When executing the workflow, use the enforcement-enabled CLI:
+python scripts/workflow_cli.py workflow-issue ${ISSUE_NUMBER}
 
-    Args:
-        issue_number: GitHub issue number
-        skip_phases: List of phase numbers to skip (e.g., [0, 1] if already investigated)
-    """
-    skip_phases = skip_phases or []
-    context = {"issue_number": issue_number}
+# This automatically:
+# 1. Initializes WorkflowEnforcer for the issue
+# 2. Creates/loads .workflow-state-${ISSUE_NUMBER}.json
+# 3. Validates phase prerequisites before each phase
+# 4. Delegates to appropriate agents with enforcement context
+# 5. Validates phase outputs after completion
+```
 
-    # Phase 0: Investigation
-    if 0 not in skip_phases:
-        investigation_result = execute_phase_0(context)
-        context.update(investigation_result)
+### Enforcement Integration
+When coordinating workflow phases, ensure:
 
-    # Phase 1: Planning
-    if 1 not in skip_phases:
-        plan_result = execute_phase_1(context)
-        context.update(plan_result)
+1. **State File Management**: Always reference `.workflow-state-${ISSUE_NUMBER}.json`
+2. **Pre-Phase Validation**: Check prerequisites before delegating to agents
+3. **Post-Phase Validation**: Verify outputs meet requirements
+4. **Error Handling**: Handle WorkflowViolationError appropriately
 
-    # Phase 2: Implementation
-    if 2 not in skip_phases:
-        implementation_result = execute_phase_2(context)
-        context.update(implementation_result)
+### Example Workflow Execution
+```bash
+# Full workflow with enforcement
+/workflow-issue 123
 
-    # Phase 3: Validation
-    if 3 not in skip_phases:
-        validation_result = execute_phase_3(context)
-        context.update(validation_result)
-
-    # Phase 4: PR Creation
-    if 4 not in skip_phases:
-        pr_result = execute_phase_4(context)
-        context.update(pr_result)
-
-    # Phase 5: Monitoring
-    if 5 not in skip_phases:
-        monitoring_result = execute_phase_5(context)
-        context.update(monitoring_result)
-
-    return context
+# This triggers:
+# 1. workflow_cli.py workflow-issue 123
+# 2. Which sets use_agents=True
+# 3. Each phase executor generates Task() calls
+# 4. Agents execute with enforcement hooks
+# 5. State persists across all phases
 ```
 
 ## Phase Transition Management

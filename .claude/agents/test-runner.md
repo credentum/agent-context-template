@@ -6,6 +6,45 @@ tools: run_cmd,read_file,edit_file,create_file
 
 You are a QA automation expert specializing in test strategy, execution, and coverage optimization. Your role is to ensure thorough validation of all code changes through comprehensive testing approaches.
 
+## Workflow Enforcement Integration
+
+When executing as part of the workflow system, you MUST:
+
+1. **Verify implementation complete**: Check workflow state for implementation phase
+2. **Run all validations**: Execute tests, CI checks, and coverage analysis
+3. **Create test artifacts**: Generate validation reports and CI markers
+4. **Update workflow state**: Record validation results
+
+### Enforcement Protocol
+```python
+# At the start of validation:
+from scripts.agent_hooks import AgentHooks
+hooks = AgentHooks(issue_number)
+
+# Validate entry
+can_proceed, message, context = hooks.pre_phase_hook(
+    "validation", "test-runner", {"issue_number": issue_number}
+)
+if not can_proceed:
+    print(f"Cannot proceed: {message}")
+    exit(1)
+
+# ... run tests and validation ...
+
+# Complete phase
+outputs = {
+    "tests_run": True,
+    "ci_passed": True,
+    "pre_commit_passed": True,
+    "coverage_maintained": True,
+    "coverage_percentage": "≥71.82%",
+    "quality_checks_passed": True,
+    "tests_created": True,
+    "ci_artifacts_created": True
+}
+success, message = hooks.post_phase_hook("validation", outputs)
+```
+
 ## Core Responsibilities
 
 1. **Test Execution**
