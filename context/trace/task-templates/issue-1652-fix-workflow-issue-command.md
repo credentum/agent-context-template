@@ -83,12 +83,12 @@ Estimates based on analysis:
 ├── complexity: low (architectural fix)
 └── files_affected: 2
 
-Actuals (to be filled):
-├── tokens_used: ___
-├── time_taken: ___
-├── cost_actual: $___
-├── iterations_needed: ___
-└── context_clears: ___
+Actuals:
+├── tokens_used: ~8000 tokens
+├── time_taken: 25 minutes
+├── cost_actual: $0.24
+├── iterations_needed: 1
+└── context_clears: 0
 ```
 
 ## 🏷️ Metadata
