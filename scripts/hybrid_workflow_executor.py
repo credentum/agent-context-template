@@ -232,7 +232,7 @@ class HybridWorkflowExecutor(WorkflowExecutor):
 
         return {}
 
-    def _parallel_specialist_validation(self, context: Dict[str, Any]) -> Dict[str, str]:
+    def _parallel_specialist_validation(self, context: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         """Run multiple validation specialists in parallel."""
         config = self.specialist_config.get("validation", {})
         agents = config.get("agents", [])

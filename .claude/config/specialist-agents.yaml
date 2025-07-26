@@ -1,4 +1,5 @@
 ---
+schema_version: "1.0"
 # Specialist Agent Configuration for Hybrid Workflow Executor
 # This file defines which specialist agents are available for each phase
 # and when they should be consulted
