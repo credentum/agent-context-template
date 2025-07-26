@@ -438,7 +438,14 @@ class WorkflowCLI:
         return executor.execute_monitoring(context)
 
     def _check_scope_clarity(self, issue_number: int) -> bool:
-        """Check if issue scope is clear."""
+        """Check if issue scope is clear.
+
+        Args:
+            issue_number: GitHub issue number to check
+
+        Returns:
+            True if scope is clear, False otherwise
+        """
         # Try to read issue
         try:
             result = subprocess.run(

@@ -210,7 +210,13 @@ class TestWorkflowPhaseTransitions(unittest.TestCase):
 
     @patch("subprocess.run")
     def test_workflow_cli_integration(self, mock_run):
-        """Test workflow CLI integration with phase transitions."""
+        """Test workflow CLI integration with phase transitions.
+
+        Validates that:
+        - CLI correctly invokes workflow phases
+        - Scope checking works via subprocess calls
+        - Mocked GitHub API calls are handled
+        """
         from workflow_cli import WorkflowCLI
 
         # Mock git and gh commands

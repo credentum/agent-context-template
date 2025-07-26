@@ -96,3 +96,6 @@ lint-results.log
 # DuckDB files
 *.duckdb
 context/.duckdb/
+
+# Workflow state files
+.workflow-state-*.json

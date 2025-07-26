@@ -141,6 +141,7 @@ class WorkflowEnforcer:
 
         # Initialize new state
         return {
+            "schema_version": "1.0",
             "issue_number": self.issue_number,
             "created_at": datetime.now().isoformat(),
             "current_phase": None,
@@ -343,6 +344,10 @@ class WorkflowEnforcer:
     def skip_phase(self, phase_name: str, reason: str) -> Tuple[bool, str]:
         """
         Mark a phase as skipped with a reason.
+
+        Args:
+            phase_name: Name of the phase to skip
+            reason: Reason for skipping the phase
 
         Returns:
             Tuple of (success, message)
