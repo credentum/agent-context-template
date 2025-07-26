@@ -29,7 +29,15 @@ class TestAgentHooks:
         """Create hooks instance with test config."""
         # Change to temp dir so state files are created there
         with patch("os.getcwd", return_value=str(tmp_path)):
-            return AgentHooks(456)
+            # Use a unique issue number for each test to avoid state conflicts
+            import random
+
+            issue_num = random.randint(1000, 9999)
+            hooks = AgentHooks(issue_num)
+            # Ensure the state is properly initialized
+            if "phases" not in hooks.enforcer.state:
+                hooks.enforcer.state["phases"] = {}
+            return hooks
 
     @pytest.fixture
     def sample_context(self):
@@ -168,12 +176,17 @@ class TestAgentHooks:
 
     def test_extract_outputs_planning(self, hooks, tmp_path):
         """Test output extraction for planning phase."""
-        # Create test files
-        task_template = tmp_path / "context" / "trace" / "task-templates" / "issue-456-test.md"
+        # Create test files with the actual issue number from hooks
+        issue_num = hooks.issue_number
+        task_template = (
+            tmp_path / "context" / "trace" / "task-templates" / f"issue-{issue_num}-test.md"
+        )
         task_template.parent.mkdir(parents=True)
         task_template.write_text("test")
 
-        scratchpad = tmp_path / "context" / "trace" / "scratchpad" / "2025-01-01-issue-456-test.md"
+        scratchpad = (
+            tmp_path / "context" / "trace" / "scratchpad" / f"2025-01-01-issue-{issue_num}-test.md"
+        )
         scratchpad.parent.mkdir(parents=True)
         scratchpad.write_text("test")
 
@@ -259,14 +272,14 @@ class TestAgentHooks:
 
     def test_log_hook_execution(self, hooks, tmp_path):
         """Test hook execution logging."""
-        with patch("os.getcwd", return_value=str(tmp_path)):
-            hooks._log_hook_execution("pre", "planning", "task-planner", True, "Test message")
+        # hooks fixture already patches os.getcwd, so we don't need to patch again
+        hooks._log_hook_execution("pre", "planning", "task-planner", True, "Test message")
 
-            log_file = tmp_path / "context" / "trace" / "logs" / "workflow-enforcement.log"
-            assert log_file.exists()
+        log_file = tmp_path / "context" / "trace" / "logs" / "workflow-enforcement.log"
+        assert log_file.exists()
 
-            with open(log_file) as f:
-                log_entry = json.loads(f.readline())
+        with open(log_file) as f:
+            log_entry = json.loads(f.readline())
 
             assert log_entry["hook_type"] == "pre"
             assert log_entry["phase"] == "planning"
