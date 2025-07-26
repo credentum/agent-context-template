@@ -651,3 +651,4 @@
 {"timestamp": "2025-07-26T21:05:54.692858", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 6877}
 {"timestamp": "2025-07-26T21:05:54.973726", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 999}
 {"timestamp": "2025-07-26T21:05:55.004392", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: task_template_created, scratchpad_created, documentation_committed", "issue": 999}
+{"timestamp": "2025-07-26T21:26:13.887617", "hook_type": "post", "phase": "investigation", "agent": null, "success": false, "message": "Phase 'investigation' not in progress", "issue": 1651}
