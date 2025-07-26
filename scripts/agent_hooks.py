@@ -45,26 +45,15 @@ class AgentHooks:
         if phase_name == "investigation":
             # Check if investigation can be skipped
             if self.enforcer.can_skip_phase("investigation", context):
-                # Mark investigation as skipped but completed
-                outputs = {
-                    "scope_clarity": "clear",
-                    "investigation_completed": True,
-                    "skipped": True,
-                    "reason": "Scope is clear from issue description",
-                }
-                success, message = self.enforcer.complete_phase("investigation", outputs)
-                if not success:
-                    # Create a minimal state entry
-                    self.enforcer.state["phases"]["investigation"] = {
-                        "phase_name": "investigation",
-                        "status": "completed",
-                        "completed_at": datetime.now().isoformat(),
-                        "outputs": outputs,
-                        "skipped": True,
-                    }
-                    self.enforcer._save_state()
-
-                return True, "Investigation skipped - scope is clear", {}
+                # Use the new skip_phase method
+                success, message = self.enforcer.skip_phase(
+                    "investigation", "Scope is clear from issue description"
+                )
+                if success:
+                    return True, message, {"investigation_skipped": True}
+                else:
+                    # Fallback - should not happen
+                    return False, f"Failed to skip investigation: {message}", {}
 
         # Enforce phase entry
         can_proceed, message, context_updates = self.enforcer.enforce_phase_entry(
@@ -87,8 +76,14 @@ class AgentHooks:
         Returns:
             Tuple of (success, message)
         """
-        # Complete the phase
-        success, message = self.enforcer.complete_phase(phase_name, outputs)
+        # Check if phase was skipped
+        if outputs.get("skipped", False):
+            # Phase was already marked as skipped in pre_phase_hook
+            success = True
+            message = f"Phase '{phase_name}' was skipped"
+        else:
+            # Complete the phase normally
+            success, message = self.enforcer.complete_phase(phase_name, outputs)
 
         # Log the completion
         self._log_hook_execution("post", phase_name, None, success, message)

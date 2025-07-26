@@ -75,6 +75,17 @@ class HybridWorkflowExecutor(WorkflowExecutor):
         """Execute investigation phase with optional specialist consultation."""
         print("🔍 Executing investigation phase (hybrid mode)...")
 
+        # Check if investigation was already skipped
+        if context.get("investigation_skipped", False):
+            print("✨ Investigation already skipped - scope is clear")
+            return {
+                "scope_clarity": "clear",
+                "investigation_completed": True,
+                "skipped": True,
+                "root_cause_identified": True,
+                "next_phase": 1,
+            }
+
         # Check if we should use specialist
         if self.enable_specialists and self._should_use_specialist("investigation", context):
             print("  🤖 Consulting issue-investigator specialist...")

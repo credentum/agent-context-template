@@ -141,6 +141,7 @@ class WorkflowEnforcer:
 
         # Initialize new state
         return {
+            "schema_version": "1.0",
             "issue_number": self.issue_number,
             "created_at": datetime.now().isoformat(),
             "current_phase": None,
@@ -339,6 +340,41 @@ class WorkflowEnforcer:
                 return True
 
         return False
+
+    def skip_phase(self, phase_name: str, reason: str) -> Tuple[bool, str]:
+        """
+        Mark a phase as skipped with a reason.
+
+        Args:
+            phase_name: Name of the phase to skip
+            reason: Reason for skipping the phase
+
+        Returns:
+            Tuple of (success, message)
+        """
+        if phase_name not in self.PHASE_ORDER:
+            return False, f"Unknown phase: {phase_name}"
+
+        # Check if phase is already completed or in progress
+        if phase_name in self.state["phases"]:
+            phase_state = self.state["phases"][phase_name]
+            if phase_state["status"] in ["completed", "in_progress"]:
+                return False, f"Phase '{phase_name}' already {phase_state['status']}"
+
+        # Create skipped phase state
+        phase_state = PhaseState(
+            phase_name=phase_name,
+            status="completed",
+            started_at=datetime.now().isoformat(),
+            completed_at=datetime.now().isoformat(),
+            outputs={"skipped": True, "reason": reason},
+        )
+
+        # Update state
+        self.state["phases"][phase_name] = asdict(phase_state)
+        self._save_state()
+
+        return True, f"Phase '{phase_name}' skipped: {reason}"
 
     def resume_workflow(self) -> Optional[str]:
         """

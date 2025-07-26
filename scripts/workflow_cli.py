@@ -134,6 +134,13 @@ class WorkflowCLI:
         enforcer = WorkflowEnforcer(issue_number)
         hooks = AgentHooks(issue_number)
 
+        # Clean up any stale state if not resuming
+        if not args.resume and enforcer.state_file.exists():
+            print("⚠️  Found existing workflow state, resetting...")
+            enforcer.state_file.unlink()
+            enforcer = WorkflowEnforcer(issue_number)  # Reinitialize
+            hooks = AgentHooks(issue_number)
+
         # Check if bypass is allowed
         if args.bypass_enforcement:
             if not enforcer.config["enforcement"]["allow_bypass"]:
@@ -228,12 +235,44 @@ class WorkflowCLI:
             except WorkflowViolationError as e:
                 print(f"❌ Workflow violation: {e}")
                 return 1
-            except Exception as e:
-                print(f"❌ Error in phase {phase_name}: {e}")
+            except subprocess.CalledProcessError as e:
+                print(f"❌ Command failed in phase {phase_name}: {e}")
+                if e.stderr:
+                    print(f"   Error output: {e.stderr}")
                 if not args.bypass_enforcement:
                     # Mark phase as failed
                     if phase_name in enforcer.state["phases"]:
                         enforcer.state["phases"][phase_name]["status"] = "failed"
+                        enforcer.state["phases"][phase_name]["errors"] = [str(e)]
+                        enforcer._save_state()
+                return 1
+            except subprocess.TimeoutExpired as e:
+                print(f"❌ Command timed out in phase {phase_name}: {e}")
+                if not args.bypass_enforcement:
+                    # Mark phase as failed
+                    if phase_name in enforcer.state["phases"]:
+                        enforcer.state["phases"][phase_name]["status"] = "failed"
+                        enforcer.state["phases"][phase_name]["errors"] = ["Command timed out"]
+                        enforcer._save_state()
+                return 1
+            except FileNotFoundError as e:
+                print(f"❌ File not found in phase {phase_name}: {e}")
+                if not args.bypass_enforcement:
+                    # Mark phase as failed
+                    if phase_name in enforcer.state["phases"]:
+                        enforcer.state["phases"][phase_name]["status"] = "failed"
+                        enforcer.state["phases"][phase_name]["errors"] = [f"File not found: {e}"]
+                        enforcer._save_state()
+                return 1
+            except Exception as e:
+                print(f"❌ Unexpected error in phase {phase_name}: {type(e).__name__}: {e}")
+                if not args.bypass_enforcement:
+                    # Mark phase as failed
+                    if phase_name in enforcer.state["phases"]:
+                        enforcer.state["phases"][phase_name]["status"] = "failed"
+                        enforcer.state["phases"][phase_name]["errors"] = [
+                            f"{type(e).__name__}: {str(e)}"
+                        ]
                         enforcer._save_state()
                 return 1
 
@@ -399,7 +438,14 @@ class WorkflowCLI:
         return executor.execute_monitoring(context)
 
     def _check_scope_clarity(self, issue_number: int) -> bool:
-        """Check if issue scope is clear."""
+        """Check if issue scope is clear.
+
+        Args:
+            issue_number: GitHub issue number to check
+
+        Returns:
+            True if scope is clear, False otherwise
+        """
         # Try to read issue
         try:
             result = subprocess.run(

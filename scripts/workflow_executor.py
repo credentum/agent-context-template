@@ -29,9 +29,21 @@ class WorkflowExecutor:
         """Execute investigation phase directly."""
         print("🔍 Executing investigation phase...")
 
+        # Check if investigation was already skipped
+        if context.get("investigation_skipped", False):
+            print("✨ Investigation already skipped - scope is clear")
+            return {
+                "scope_clarity": "clear",
+                "investigation_completed": True,
+                "skipped": True,
+                "root_cause_identified": True,
+                "next_phase": 1,
+            }
+
         # Check if scope is already clear
         if context.get("scope_is_clear", False):
             print("✨ Scope is clear from issue description")
+            # Note: Phase skipping is handled by agent_hooks pre_phase_hook
             return {
                 "scope_clarity": "clear",
                 "investigation_completed": True,
