@@ -12,10 +12,10 @@ from typing import Any, Dict, Optional
 
 # For running without Locust UI
 import gevent  # type: ignore[import-untyped]
-from locust import HttpUser, between, events, task  # type: ignore[import-not-found]
-from locust.env import Environment  # type: ignore[import-not-found]
-from locust.log import setup_logging  # type: ignore[import-not-found]
-from locust.stats import stats_history, stats_printer  # type: ignore[import-not-found]
+from locust import HttpUser, between, events, task
+from locust.env import Environment
+from locust.log import setup_logging
+from locust.stats import stats_history, stats_printer
 
 
 class DocumentProcessingUser(HttpUser):
@@ -287,15 +287,17 @@ def run_load_test(
         env.create_local_runner()
 
         # Configure test
-        env.runner.start(users, spawn_rate=spawn_rate)
+        if env.runner is not None:
+            env.runner.start(users, spawn_rate=spawn_rate)
 
-        # Run for specified time
-        run_seconds = int(run_time.rstrip("s"))
-        gevent.spawn(stats_printer(env.stats))
-        gevent.spawn(stats_history, env.runner)
+            # Run for specified time
+            run_seconds = int(run_time.rstrip("s"))
+            gevent.spawn(stats_printer(env.stats))
+            gevent.spawn(stats_history, env.runner)
 
-        # Wait for test to complete
-        env.runner.greenlet.join(timeout=run_seconds)
+            # Wait for test to complete
+            if env.runner.greenlet is not None:
+                env.runner.greenlet.join(timeout=run_seconds)
 
         # Stop runner
         env.runner.quit()
