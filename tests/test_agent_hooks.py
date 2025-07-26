@@ -274,7 +274,9 @@ class TestAgentHooks:
 
     def test_set_nested_dict(self, hooks):
         """Test setting nested dictionary values."""
-        d = {}
+        from typing import Any
+
+        d: dict[str, Any] = {}
         hooks._set_nested_dict(d, "a.b.c", "value")
         assert d == {"a": {"b": {"c": "value"}}}
 
