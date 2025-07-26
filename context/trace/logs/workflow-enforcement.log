@@ -830,3 +830,21 @@
 {"timestamp": "2025-07-26T23:38:02.536924", "hook_type": "post", "phase": "investigation", "agent": null, "success": true, "message": "Phase 'investigation' was skipped", "issue": 1657}
 {"timestamp": "2025-07-26T23:38:02.537409", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 1657}
 {"timestamp": "2025-07-26T23:38:02.892409", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: documentation_committed", "issue": 1657}
+{"timestamp": "2025-07-26T23:41:25.292817", "hook_type": "post", "phase": "investigation", "agent": null, "success": true, "message": "Phase 'investigation' was skipped", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:25.336114", "hook_type": "post", "phase": "investigation", "agent": null, "success": true, "message": "Phase 'investigation' was skipped", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:25.336464", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:25.336875", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: documentation_committed", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:38.576628", "hook_type": "pre", "phase": "investigation", "agent": "issue-investigator", "success": true, "message": "Entering phase 'investigation'", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:38.598220", "hook_type": "pre", "phase": "investigation", "agent": "issue-investigator", "success": true, "message": "Entering phase 'investigation'", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:38.598873", "hook_type": "post", "phase": "investigation", "agent": null, "success": true, "message": "Phase 'investigation' completed successfully", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:38.599672", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:38.599899", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: scratchpad_created, documentation_committed", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:38.616802", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:38.640953", "hook_type": "pre", "phase": "investigation", "agent": "issue-investigator", "success": true, "message": "Entering phase 'investigation'", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:38.641604", "hook_type": "post", "phase": "investigation", "agent": null, "success": true, "message": "Phase 'investigation' completed successfully", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:38.706880", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:39.966650", "hook_type": "post", "phase": "investigation", "agent": null, "success": true, "message": "Phase 'investigation' was skipped", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:40.057969", "hook_type": "post", "phase": "investigation", "agent": null, "success": true, "message": "Phase 'investigation' was skipped", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:40.058702", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 9999}
+{"timestamp": "2025-07-26T23:41:40.059280", "hook_type": "post", "phase": "planning", "agent": null, "success": false, "message": "Missing required outputs: documentation_committed", "issue": 9999}
+{"timestamp": "2025-07-26T23:42:14.970350", "hook_type": "post", "phase": "investigation", "agent": null, "success": true, "message": "Phase 'investigation' was skipped", "issue": 1657}

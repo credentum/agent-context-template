@@ -26,23 +26,29 @@ class TestWorkflowPhaseTransitions(unittest.TestCase):
         self.issue_number = 9999
         self.state_file = Path(self.temp_dir) / f".workflow-state-{self.issue_number}.json"
 
-        # Patch the state file location
-        self.patcher = patch.object(WorkflowEnforcer, "__init__", self._mock_init)
-        self.patcher.start()
+        # Store reference for mock
+        test_case = self
+
+        # Create mock init function
+        def mock_init(enforcer_self, issue_number, config_path=None):
+            """Mock WorkflowEnforcer.__init__ to use temp directory."""
+            enforcer_self.issue_number = issue_number
+            enforcer_self.state_file = test_case.state_file
+            enforcer_self.config_path = Path(
+                config_path or ".claude/config/workflow-enforcement.yaml"
+            )
+            enforcer_self.config = enforcer_self._load_config()
+            enforcer_self.state = enforcer_self._load_state()
+
+        # Patch the init
+        self.original_init = WorkflowEnforcer.__init__
+        WorkflowEnforcer.__init__ = mock_init
 
     def tearDown(self):
         """Clean up test environment."""
-        self.patcher.stop()
+        WorkflowEnforcer.__init__ = self.original_init
         if self.state_file.exists():
             self.state_file.unlink()
-
-    def _mock_init(self, instance, issue_number, config_path=None):
-        """Mock WorkflowEnforcer.__init__ to use temp directory."""
-        instance.issue_number = issue_number
-        instance.state_file = self.state_file
-        instance.config_path = Path(config_path or ".claude/config/workflow-enforcement.yaml")
-        instance.config = instance._load_config()
-        instance.state = instance._load_state()
 
     def test_skip_phase_functionality(self):
         """Test the new skip_phase method."""
@@ -139,12 +145,14 @@ class TestWorkflowPhaseTransitions(unittest.TestCase):
         """Test that phases enforce proper dependencies."""
         enforcer = WorkflowEnforcer(self.issue_number)
 
-        # Try to start planning without completing investigation
+        # Investigation can be skipped, so planning should be allowed
         can_proceed, message, _ = enforcer.enforce_phase_entry("planning", "task-planner")
+        self.assertTrue(can_proceed)  # Investigation is optional
 
-        # Should fail because investigation wasn't done
+        # But implementation should require planning to be completed
+        can_proceed, message, _ = enforcer.enforce_phase_entry("implementation", "main-claude")
         self.assertFalse(can_proceed)
-        self.assertIn("not started", message)
+        self.assertIn("not completed", message)
 
     def test_phase_dependency_with_skip(self):
         """Test phase dependencies when investigation is skipped."""

@@ -1,0 +1,17 @@
+{
+  "issue_number": 8481,
+  "created_at": "2025-07-26T23:41:38.838218",
+  "current_phase": null,
+  "phases": {
+    "investigation": {
+      "status": "completed"
+    },
+    "planning": {
+      "status": "completed"
+    }
+  },
+  "metadata": {
+    "enforcer_version": "1.0.0",
+    "workflow_version": "1.0.0"
+  }
+}
