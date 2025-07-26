@@ -115,7 +115,9 @@ class TestWorkflowEnforcer:
             "documentation_committed": True,
         }
 
-        success, message = enforcer.complete_phase("planning", outputs)
+        # Mock file existence check for required files
+        with patch.object(enforcer, "_check_file_exists", return_value=True):
+            success, message = enforcer.complete_phase("planning", outputs)
         assert success is True
         assert "completed successfully" in message
         assert enforcer.state["phases"]["planning"]["status"] == "completed"

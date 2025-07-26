@@ -107,7 +107,9 @@ class TestAgentHooks:
             "documentation_committed": True,
         }
 
-        success, message = hooks.post_phase_hook("planning", outputs)
+        # Mock file existence check for required files
+        with patch.object(hooks.enforcer, "_check_file_exists", return_value=True):
+            success, message = hooks.post_phase_hook("planning", outputs)
         assert success is True
         assert "completed successfully" in message
 
@@ -282,10 +284,14 @@ class TestAgentHooks:
 
     def test_log_hook_execution(self, hooks, tmp_path):
         """Test hook execution logging."""
+        # Create the log directory structure first
+        log_dir = tmp_path / "context" / "trace" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+
         # hooks fixture already patches os.getcwd, so we don't need to patch again
         hooks._log_hook_execution("pre", "planning", "task-planner", True, "Test message")
 
-        log_file = tmp_path / "context" / "trace" / "logs" / "workflow-enforcement.log"
+        log_file = log_dir / "workflow-enforcement.log"
         assert log_file.exists()
 
         with open(log_file) as f:
@@ -329,9 +335,15 @@ class TestAgentHooks:
             with open(enforcer_file, "w") as f:
                 json.dump(state, f)
 
-            success, message = enforce_post_phase(
-                789, "investigation", {"scope_clarity": "clear", "investigation_completed": True}
-            )
+            # Need to patch file checks for post-phase validation
+            with patch(
+                "scripts.workflow_enforcer.WorkflowEnforcer._check_file_exists", return_value=True
+            ):
+                success, message = enforce_post_phase(
+                    789,
+                    "investigation",
+                    {"scope_clarity": "clear", "investigation_completed": True},
+                )
             assert success is True
 
     def test_get_workflow_decorator(self, tmp_path):
