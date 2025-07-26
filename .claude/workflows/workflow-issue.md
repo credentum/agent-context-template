@@ -39,6 +39,9 @@ claude workflow workflow-issue --issue 123 --auto-template --parallel-agents
 
 # With custom parameters
 claude workflow workflow-issue --issue 123 --priority high --component api --max-wait 24h
+
+# With hybrid mode (specialist sub-agents)
+claude workflow workflow-issue --issue 123 --hybrid
 ```
 
 ## EXECUTE WORKFLOW
@@ -80,6 +83,58 @@ print(f"Completed phases: {[p['phase'] for p in validator.state['phases_complete
 2. **Agent Failure**: Resume from last checkpoint
 3. **State Corruption**: Restore from state file
 4. **Process Interruption**: Resume from workflow state
+
+## 🔄 HYBRID MODE WITH SPECIALIST SUB-AGENTS
+**NEW: Enhanced workflow execution with specialist consultants!**
+
+### Hybrid Mode Overview
+The hybrid mode enhances the standard WorkflowExecutor with specialist sub-agents that provide expert analysis without handling persistence:
+
+```bash
+# Enable hybrid mode with --hybrid flag
+claude workflow workflow-issue --issue 123 --hybrid
+```
+
+### Specialist Integration Points
+- **Phase 0 (Investigation)**: `issue-investigator` for complex root cause analysis
+- **Phase 1 (Planning)**: `general-purpose` for codebase research and pattern analysis
+- **Phase 3 (Validation)**: `test-runner` + `security-analyzer` in parallel
+- **All Phases**: Graceful fallback if specialists fail
+
+### Benefits of Hybrid Mode
+1. **Enhanced Analysis**: Specialists provide deeper insights for complex issues
+2. **Parallel Processing**: Multiple specialists can run simultaneously (e.g., validation)
+3. **Maintained Persistence**: All state management remains in WorkflowExecutor
+4. **Backward Compatible**: Falls back to basic mode if specialists unavailable
+5. **Configurable**: Customize when specialists are used via `.claude/config/specialist-agents.yaml`
+
+### When to Use Hybrid Mode
+- **Complex Issues**: Issues marked as "high complexity" or "investigation needed"
+- **Large Codebases**: When >10 files affected or cross-module changes
+- **Enhanced Validation**: For critical changes requiring thorough testing
+- **Performance Testing**: When parallel specialist analysis can speed up workflow
+
+### Specialist Configuration
+Configure specialist behavior in `.claude/config/specialist-agents.yaml`:
+```yaml
+specialist_agents:
+  investigation:
+    threshold: complex  # When to use: always, never, complex, large_codebase
+    agents:
+      - type: issue-investigator
+        timeout: 300  # 5 minutes
+```
+
+### Hybrid Mode Example
+```bash
+# For a complex architectural issue
+claude workflow workflow-issue --issue 789 --hybrid --priority high
+
+# Output will show specialist consultations:
+🔍 Executing investigation phase (hybrid mode)...
+  🤖 Consulting issue-investigator specialist...
+  ✅ Specialist provided additional insights
+```
 
 ## 📋 DOCUMENTATION STRATEGY
 **CRITICAL: All documentation must be committed BEFORE or DURING the PR, not after!**
@@ -1121,6 +1176,15 @@ claude workflow workflow-issue --issue 456 --auto-template --parallel-agents --m
 ### For Urgent Issues
 ```bash
 claude workflow workflow-issue --issue 789 --priority high --check-interval 5m
+```
+
+### For Complex Issues with Hybrid Mode
+```bash
+# Use hybrid mode for enhanced analysis with specialist sub-agents
+claude workflow workflow-issue --issue 456 --hybrid
+
+# Combine with other flags for maximum effectiveness
+claude workflow workflow-issue --issue 789 --hybrid --priority high --type feature
 ```
 
 ### Resume Interrupted Workflow

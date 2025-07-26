@@ -15,6 +15,9 @@ cat /workspaces/agent-context-template/.claude/workflows/workflow-issue.md
 
 ```bash
 /workflow-issue 123
+
+# With hybrid mode for enhanced specialist analysis
+/workflow-issue 123 --hybrid
 ```
 
 ## Implementation
@@ -30,6 +33,7 @@ This automatically enables:
 - State persistence in .workflow-state-{issue_number}.json
 - Phase validation before and after each step
 - All changes persist in the actual repository
+- **NEW**: Hybrid mode option with specialist sub-agents (--hybrid)
 
 ## What It Does
 
@@ -49,6 +53,7 @@ After loading the workflow documentation, directly executes each phase in the ma
 - `--skip-phases 0,1` - Skip investigation and planning if already done
 - `--type [bug|feature|hotfix]` - Optimize workflow for issue type
 - `--priority [low|medium|high|critical]` - Adjust execution priority
+- `--hybrid` - **NEW**: Enable hybrid mode with specialist sub-agents for enhanced analysis
 
 ## Example
 
@@ -61,6 +66,12 @@ After loading the workflow documentation, directly executes each phase in the ma
 
 # High-priority feature
 /workflow-issue 789 --type feature --priority high
+
+# Complex issue with hybrid mode for specialist analysis
+/workflow-issue 890 --hybrid --type feature
+
+# Combine hybrid mode with other options
+/workflow-issue 901 --hybrid --priority high --skip-phases 0
 ```
 
 ## Execution Steps
@@ -80,3 +91,31 @@ The command now uses `WorkflowExecutor` for direct phase execution instead of de
 - GitHub CLI operations (PR creation) work with real authentication
 - State persistence works across all phases
 - No changes are lost when phases complete
+
+## Hybrid Mode
+
+When using the `--hybrid` flag, the command uses `HybridWorkflowExecutor` which enhances the base workflow with specialist sub-agents:
+
+### What Hybrid Mode Does
+- Maintains all direct execution benefits of WorkflowExecutor
+- Adds specialist consultants for complex analysis tasks
+- Specialists provide insights without handling persistence
+- Gracefully falls back to basic mode if specialists fail
+
+### Specialist Integration Points
+- **Investigation Phase**: Uses `issue-investigator` for deep root cause analysis
+- **Planning Phase**: Uses `general-purpose` for codebase research and patterns
+- **Validation Phase**: Uses `test-runner` and `security-analyzer` in parallel
+
+### When to Use Hybrid Mode
+- Complex architectural issues requiring deep analysis
+- Large codebases with many affected files (>10)
+- Critical changes needing enhanced validation
+- Issues marked as "high complexity" or "investigation needed"
+
+### Example Output with Hybrid Mode
+```
+🔍 Executing investigation phase (hybrid mode)...
+  🤖 Consulting issue-investigator specialist...
+  ✅ Specialist provided additional insights
+```

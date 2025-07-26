@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 from agent_hooks import AgentHooks, WorkflowViolationError  # noqa: E402
+from hybrid_workflow_executor import HybridWorkflowExecutor  # noqa: E402
 from workflow_enforcer import WorkflowEnforcer  # noqa: E402
 from workflow_executor import WorkflowExecutor  # noqa: E402
 
@@ -54,6 +55,9 @@ class WorkflowCLI:
         issue_parser.add_argument(
             "--use-agents", action="store_true", help="Use agent delegation (for slash commands)"
         )
+        issue_parser.add_argument(
+            "--hybrid", action="store_true", help="Use hybrid mode with specialist sub-agents"
+        )
 
         # Enforce command
         enforce_parser = subparsers.add_parser("enforce", help="Enforcement operations")
@@ -83,6 +87,9 @@ class WorkflowCLI:
         )
         workflow_issue_parser.add_argument(
             "--priority", choices=["low", "medium", "high", "critical"], help="Priority level"
+        )
+        workflow_issue_parser.add_argument(
+            "--hybrid", action="store_true", help="Use hybrid mode with specialist sub-agents"
         )
 
         return parser
@@ -118,6 +125,10 @@ class WorkflowCLI:
         skip_phases = set(args.skip_phases or [])
 
         print(f"🚀 Starting workflow for issue #{issue_number}")
+
+        # Check if hybrid mode is requested
+        if getattr(args, "hybrid", False):
+            print("🔄 Using hybrid mode with specialist sub-agents")
 
         # Initialize enforcer and hooks
         enforcer = WorkflowEnforcer(issue_number)
@@ -177,6 +188,7 @@ class WorkflowCLI:
                 "phase": phase_name,
                 "agent_type": agent_type,
                 "use_agents": args.use_agents,
+                "hybrid_mode": getattr(args, "hybrid", False),
             }
 
             # Special handling for investigation
@@ -319,38 +331,56 @@ class WorkflowCLI:
     # Phase execution methods
     def _execute_investigation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute investigation phase."""
-        # Always use direct executor for real workflow execution
-        executor = WorkflowExecutor(issue_number)
+        # Use hybrid executor if requested
+        if context.get("hybrid_mode", False):
+            executor = HybridWorkflowExecutor(issue_number)
+        else:
+            executor = WorkflowExecutor(issue_number)
         return executor.execute_investigation(context)
 
     def _execute_planning(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute planning phase."""
-        # Always use direct executor for real workflow execution
-        executor = WorkflowExecutor(issue_number)
+        # Use hybrid executor if requested
+        if context.get("hybrid_mode", False):
+            executor = HybridWorkflowExecutor(issue_number)
+        else:
+            executor = WorkflowExecutor(issue_number)
         return executor.execute_planning(context)
 
     def _execute_implementation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute implementation phase."""
-        # Always use direct executor for real workflow execution
-        executor = WorkflowExecutor(issue_number)
+        # Use hybrid executor if requested
+        if context.get("hybrid_mode", False):
+            executor = HybridWorkflowExecutor(issue_number)
+        else:
+            executor = WorkflowExecutor(issue_number)
         return executor.execute_implementation(context)
 
     def _execute_validation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute validation phase."""
-        # Always use direct executor for real workflow execution
-        executor = WorkflowExecutor(issue_number)
+        # Use hybrid executor if requested
+        if context.get("hybrid_mode", False):
+            executor = HybridWorkflowExecutor(issue_number)
+        else:
+            executor = WorkflowExecutor(issue_number)
         return executor.execute_validation(context)
 
     def _execute_pr_creation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute PR creation phase."""
-        # Always use direct executor for real workflow execution
-        executor = WorkflowExecutor(issue_number)
+        # Use hybrid executor if requested
+        if context.get("hybrid_mode", False):
+            executor = HybridWorkflowExecutor(issue_number)
+        else:
+            executor = WorkflowExecutor(issue_number)
         return executor.execute_pr_creation(context)
 
     def _execute_monitoring(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute monitoring phase."""
-        # Always use direct executor for real workflow execution
-        executor = WorkflowExecutor(issue_number)
+        # Use hybrid executor if requested
+        if context.get("hybrid_mode", False):
+            executor = HybridWorkflowExecutor(issue_number)
+        else:
+            executor = WorkflowExecutor(issue_number)
         # Pass PR number from previous phase if available
         if "pr_number" not in context:
             # Try to get PR number from enforcer state

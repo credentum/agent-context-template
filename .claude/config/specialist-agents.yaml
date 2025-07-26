@@ -1,0 +1,100 @@
+---
+schema_version: "1.0"
+# Specialist Agent Configuration for Hybrid Workflow Executor
+# This file defines which specialist agents are available for each phase
+# and when they should be consulted
+
+specialist_agents:
+  # Investigation phase specialists
+  investigation:
+    agents:
+      - type: issue-investigator
+        description: "Deep analysis of complex issues, root cause analysis"
+        timeout: 300  # 5 minutes
+        capabilities:
+          - root_cause_analysis
+          - complexity_assessment
+          - dependency_mapping
+          - risk_identification
+    threshold: complex  # When to use: always, never, complex, large_codebase
+    parallel: false
+    fallback_behavior: continue  # continue, fail, warn
+
+  # Planning phase specialists
+  planning:
+    agents:
+      - type: general-purpose
+        description: "Codebase research and pattern analysis"
+        timeout: 300
+        capabilities:
+          - codebase_search
+          - pattern_analysis
+          - similar_implementations
+          - best_practices
+    threshold: large_codebase
+    parallel: false
+    fallback_behavior: continue
+
+  # Implementation phase - no specialists (direct execution only)
+  implementation:
+    agents: []
+    threshold: never
+    reason: "Implementation requires direct file manipulation"
+
+  # Validation phase specialists
+  validation:
+    agents:
+      - type: test-runner
+        description: "Test coverage analysis and test strategy"
+        timeout: 180  # 3 minutes
+        capabilities:
+          - coverage_analysis
+          - test_gap_identification
+          - edge_case_detection
+          - integration_test_needs
+      - type: security-analyzer
+        description: "Security vulnerability scanning"
+        timeout: 180
+        capabilities:
+          - vulnerability_detection
+          - auth_validation
+          - data_handling_review
+          - attack_vector_analysis
+    threshold: always
+    parallel: true
+    max_parallel: 2
+    fallback_behavior: warn
+
+  # PR creation phase - no specialists (direct execution only)
+  pr_creation:
+    agents: []
+    threshold: never
+    reason: "PR creation requires direct GitHub operations"
+
+  # Monitoring phase - no specialists (direct execution only)
+  monitoring:
+    agents: []
+    threshold: never
+    reason: "Monitoring is a passive observation phase"
+
+# Global specialist settings
+global_settings:
+  max_timeout: 600  # 10 minutes absolute max
+  default_timeout: 300  # 5 minutes default
+  parallel_execution_limit: 3
+  retry_on_timeout: false
+  log_specialist_errors: true
+  specialist_error_tolerance: high  # low, medium, high
+
+# Complexity assessment rules
+complexity_rules:
+  complex_indicators:
+    - "investigation needed"
+    - "unclear scope"
+    - "multiple components"
+    - "architectural changes"
+    - "performance issues"
+  large_codebase_indicators:
+    - files_affected: 10
+    - components_involved: 3
+    - cross_module_changes: true
