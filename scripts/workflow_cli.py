@@ -10,7 +10,6 @@ import argparse
 import json
 import subprocess
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -320,176 +319,42 @@ class WorkflowCLI:
     # Phase execution methods
     def _execute_investigation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute investigation phase."""
-        # Check if we should use direct execution (for slash command)
-        if context.get("use_agents", False):
-            # Use direct executor instead of agent delegation
-            executor = WorkflowExecutor(issue_number)
-            return executor.execute_investigation(context)
-
-        # Original simulation code for direct CLI usage
-        if context.get("scope_is_clear", False):
-            print("✨ Skipping investigation - scope is clear")
-            return {"scope_clarity": "clear", "investigation_completed": True, "skipped": True}
-
-        print("🔍 Investigating issue...")
-        print("  - Analyzing symptoms")
-        print("  - Identifying root cause")
-        print("  - Assessing scope")
-
-        return {
-            "scope_clarity": "clear",
-            "investigation_completed": True,
-            "root_cause": "workflow steps being skipped",
-            "recommendations": ["implement enforcement system"],
-        }
+        # Always use direct executor for real workflow execution
+        executor = WorkflowExecutor(issue_number)
+        return executor.execute_investigation(context)
 
     def _execute_planning(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute planning phase."""
-        # Check if we should use direct execution (for slash command)
-        if context.get("use_agents", False):
-            # Use direct executor instead of agent delegation
-            executor = WorkflowExecutor(issue_number)
-            return executor.execute_planning(context)
-
-        # Original simulation code for direct CLI usage
-        print("📝 Creating task template and scratchpad...")
-
-        # Simulate planning (for direct CLI usage)
-        # Check if files already exist
-        task_template = Path(f"context/trace/task-templates/issue-{issue_number}-*.md")
-        scratchpad = Path(f"context/trace/scratchpad/*-issue-{issue_number}-*.md")
-
-        if list(Path(".").glob(str(task_template))):
-            print("  ✅ Task template already exists")
-        else:
-            print("  ⚠️  Task template should be created")
-
-        if list(Path(".").glob(str(scratchpad))):
-            print("  ✅ Scratchpad already exists")
-        else:
-            print("  ⚠️  Scratchpad should be created")
-
-        # Check for commit
-        try:
-            result = subprocess.run(
-                ["git", "log", "--oneline", "--grep", f"issue #{issue_number}"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            if "docs(trace): add task template" in result.stdout:
-                print("  ✅ Documentation committed")
-                doc_committed = True
-            else:
-                print("  ⚠️  Documentation should be committed")
-                doc_committed = False
-        except subprocess.CalledProcessError as e:
-            print(f"  ⚠️  Error checking git log: {e}")
-            doc_committed = False
-
-        return {
-            "task_template_created": True,
-            "scratchpad_created": True,
-            "documentation_committed": doc_committed,
-            "execution_plan_complete": True,
-        }
+        # Always use direct executor for real workflow execution
+        executor = WorkflowExecutor(issue_number)
+        return executor.execute_planning(context)
 
     def _execute_implementation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute implementation phase."""
-        # Check if we should use direct execution (for slash command)
-        if context.get("use_agents", False):
-            # Use direct executor instead of agent delegation
-            executor = WorkflowExecutor(issue_number)
-            return executor.execute_implementation(context)
-
-        # Original simulation code for direct CLI usage
-        print("💻 Implementing solution...")
-
-        # Check branch
-        try:
-            result = subprocess.run(
-                ["git", "branch", "--show-current"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            branch = result.stdout.strip()
-            print(f"  📌 Current branch: {branch}")
-
-            if branch == "main":
-                print("  ⚠️  WARNING: On main branch!")
-        except subprocess.CalledProcessError as e:
-            print(f"  ⚠️  Error checking branch: {e}")
-            branch = "unknown"
-
-        return {
-            "branch_created": branch != "main",
-            "implementation_complete": True,
-            "commits_made": True,
-            "branch_name": branch,
-        }
+        # Always use direct executor for real workflow execution
+        executor = WorkflowExecutor(issue_number)
+        return executor.execute_implementation(context)
 
     def _execute_validation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute validation phase."""
-        # Check if we should use direct execution (for slash command)
-        if context.get("use_agents", False):
-            # Use direct executor instead of agent delegation
-            executor = WorkflowExecutor(issue_number)
-            return executor.execute_validation(context)
-
-        # Original simulation code for direct CLI usage
-        print("🧪 Running tests and validation...")
-
-        # Simulate validation (for direct CLI usage)
-        print("  - Would run: ./scripts/run-ci-docker.sh")
-        print("  - Would run: pre-commit run --all-files")
-        print("  - Would check: coverage >= 71.82%")
-
-        # In real implementation, actually run these commands
-        return {
-            "tests_run": True,
-            "ci_passed": True,
-            "pre_commit_passed": True,
-            "coverage_maintained": True,
-            "coverage_percentage": "85.5%",
-        }
+        # Always use direct executor for real workflow execution
+        executor = WorkflowExecutor(issue_number)
+        return executor.execute_validation(context)
 
     def _execute_pr_creation(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute PR creation phase."""
-        # Check if we should use direct execution (for slash command)
-        if context.get("use_agents", False):
-            # Use direct executor instead of agent delegation
-            executor = WorkflowExecutor(issue_number)
-            return executor.execute_pr_creation(context)
-
-        # Original simulation code for direct CLI usage
-        print("🚀 Creating pull request...")
-
-        # Simulate PR creation (for direct CLI usage)
-        print("  - Would validate branch")
-        print("  - Would create PR with template")
-        print("  - Would apply labels")
-
-        # In real implementation, actually create PR
-        return {
-            "pr_created": True,
-            "branch_pushed": True,
-            "documentation_included": True,
-            "pr_number": 9999,  # Simulated
-            "pr_url": "https://github.com/owner/repo/pull/9999",
-        }
+        # Always use direct executor for real workflow execution
+        executor = WorkflowExecutor(issue_number)
+        return executor.execute_pr_creation(context)
 
     def _execute_monitoring(self, issue_number: int, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute monitoring phase."""
-        # Check if we should use direct execution (for slash command)
-        if context.get("use_agents", False):
-            # Use direct executor instead of agent delegation
-            executor = WorkflowExecutor(issue_number)
-            # Pass PR number from previous phase if available
-            if "pr_number" in context:
-                return executor.execute_monitoring(context)
-            else:
-                # Try to get PR number from enforcer state
+        # Always use direct executor for real workflow execution
+        executor = WorkflowExecutor(issue_number)
+        # Pass PR number from previous phase if available
+        if "pr_number" not in context:
+            # Try to get PR number from enforcer state
+            try:
                 enforcer = WorkflowEnforcer(issue_number)
                 state = enforcer.get_current_state()
                 if "pr_creation" in state["phases"] and state["phases"]["pr_creation"].get(
@@ -498,17 +363,10 @@ class WorkflowCLI:
                     context["pr_number"] = state["phases"]["pr_creation"]["outputs"].get(
                         "pr_number"
                     )
-                return executor.execute_monitoring(context)
-
-        # Original simulation code for direct CLI usage
-        print("👀 Setting up PR monitoring...")
-
-        # Simulate monitoring (for direct CLI usage)
-        print("  - Would monitor CI checks")
-        print("  - Would track review status")
-        print("  - Would wait for merge")
-
-        return {"pr_monitoring_active": True, "monitoring_started": datetime.now().isoformat()}
+            except Exception:
+                # If enforcer fails, continue without PR number
+                pass
+        return executor.execute_monitoring(context)
 
     def _check_scope_clarity(self, issue_number: int) -> bool:
         """Check if issue scope is clear."""

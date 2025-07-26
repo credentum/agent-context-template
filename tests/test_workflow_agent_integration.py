@@ -35,30 +35,30 @@ class TestWorkflowAgentIntegration(unittest.TestCase):
             if file_path.exists():
                 file_path.unlink()
 
-    def test_workflow_cli_agent_delegation(self):
-        """Test that workflow CLI properly delegates to agents."""
+    def test_workflow_cli_uses_executor_directly(self):
+        """Test that workflow CLI uses WorkflowExecutor directly."""
         cli = WorkflowCLI()
 
-        # Test with use_agents flag
-        with patch(
-            "sys.argv", ["workflow", "issue", "--number", str(self.test_issue), "--use-agents"]
-        ):
-            # Mock the phase executors to check they're called correctly
-            with patch.object(cli, "_execute_investigation") as mock_investigation:
-                mock_investigation.return_value = {
-                    "scope_clarity": "delegated_to_agent",
-                    "investigation_completed": True,
-                    "agent_delegated": True,
-                }
+        # Mock WorkflowExecutor to verify it's called
+        with patch("workflow_cli.WorkflowExecutor") as mock_executor_class:
+            mock_executor = mock_executor_class.return_value
+            mock_executor.execute_investigation.return_value = {
+                "scope_clarity": "clear",
+                "investigation_completed": True,
+                "root_cause_identified": True,
+            }
 
-                # Run just the investigation phase
-                context = {"issue_number": self.test_issue, "use_agents": True}
+            # Run investigation phase
+            context = {"issue_number": self.test_issue, "use_agents": True}
+            result = cli._execute_investigation(self.test_issue, context)
 
-                result = mock_investigation(self.test_issue, context)
+            # Verify WorkflowExecutor was instantiated and called
+            mock_executor_class.assert_called_once_with(self.test_issue)
+            mock_executor.execute_investigation.assert_called_once_with(context)
 
-                # Verify agent delegation happened
-                self.assertTrue(result["agent_delegated"])
-                self.assertEqual(result["scope_clarity"], "delegated_to_agent")
+            # Verify correct result
+            self.assertTrue(result["investigation_completed"])
+            self.assertEqual(result["scope_clarity"], "clear")
 
     def test_workflow_issue_command(self):
         """Test the workflow-issue slash command."""
@@ -189,52 +189,58 @@ class TestWorkflowAgentIntegration(unittest.TestCase):
         self.assertEqual(next_phase, "implementation")
 
 
-class TestWorkflowCLIAgentPrompts(unittest.TestCase):
-    """Test that workflow CLI generates correct agent prompts."""
+class TestWorkflowCLIExecutorIntegration(unittest.TestCase):
+    """Test that workflow CLI integrates correctly with WorkflowExecutor."""
 
-    def test_investigation_agent_prompt(self):
-        """Test investigation phase generates correct prompt."""
-        cli = WorkflowCLI()
-        context = {"use_agents": True}
-
-        # Capture printed output
-        with patch("builtins.print") as mock_print:
-            cli._execute_investigation(123, context)
-
-            # Check that Task() prompt was generated
-            printed_args = [str(arg) for call in mock_print.call_args_list for arg in call[0]]
-            task_prompt = "\n".join(printed_args)
-
-            self.assertIn("Task(", task_prompt)
-            self.assertIn("issue-investigator", task_prompt)
-            self.assertIn("workflow-state-123.json", task_prompt)
-
-    def test_all_phases_generate_prompts(self):
-        """Test all phases generate appropriate prompts."""
+    def test_all_phases_use_executor(self):
+        """Test all phases use WorkflowExecutor directly."""
         cli = WorkflowCLI()
         context = {"use_agents": True}
         issue_number = 123
 
         phases = [
-            ("_execute_investigation", "issue-investigator"),
-            ("_execute_planning", "task-planner"),
-            ("_execute_validation", "test-runner"),
-            ("_execute_pr_creation", "pr-manager"),
-            ("_execute_monitoring", "pr-manager"),
+            ("_execute_investigation", "execute_investigation"),
+            ("_execute_planning", "execute_planning"),
+            ("_execute_implementation", "execute_implementation"),
+            ("_execute_validation", "execute_validation"),
+            ("_execute_pr_creation", "execute_pr_creation"),
+            ("_execute_monitoring", "execute_monitoring"),
         ]
 
-        for method_name, expected_agent in phases:
-            with patch("builtins.print") as mock_print:
+        for method_name, executor_method in phases:
+            with patch("workflow_cli.WorkflowExecutor") as mock_executor_class:
+                mock_executor = mock_executor_class.return_value
+                # Mock the executor method to return success
+                getattr(mock_executor, executor_method).return_value = {
+                    "success": True,
+                    "phase_completed": True,
+                }
+
                 method = getattr(cli, method_name)
                 result = method(issue_number, context)
 
-                # Verify agent delegation
-                self.assertTrue(result.get("agent_delegated"))
+                # Verify WorkflowExecutor was instantiated
+                mock_executor_class.assert_called_once_with(issue_number)
 
-                # Check prompt contains expected agent
-                printed_args = [str(arg) for call in mock_print.call_args_list for arg in call[0]]
-                task_prompt = "\n".join(printed_args)
-                self.assertIn(expected_agent, task_prompt)
+                # Verify the correct executor method was called
+                getattr(mock_executor, executor_method).assert_called_once_with(context)
+
+                # Verify result indicates success
+                self.assertTrue(result.get("success") or result.get("phase_completed"))
+
+    def test_executor_instantiation_with_issue_number(self):
+        """Test that WorkflowExecutor is instantiated with correct issue number."""
+        cli = WorkflowCLI()
+        test_issue = 456
+
+        with patch("workflow_cli.WorkflowExecutor") as mock_executor_class:
+            mock_executor = mock_executor_class.return_value
+            mock_executor.execute_planning.return_value = {"planning_complete": True}
+
+            cli._execute_planning(test_issue, {})
+
+            # Verify WorkflowExecutor was called with the correct issue number
+            mock_executor_class.assert_called_once_with(test_issue)
 
 
 if __name__ == "__main__":
