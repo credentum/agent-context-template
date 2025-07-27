@@ -608,6 +608,112 @@ class TestWorkflowValidator(unittest.TestCase):
             WorkflowValidator(123, Path("/nonexistent/directory"))
 
     @patch("subprocess.run")
+    def test_phase_5_prerequisites(self, mock_run: Mock) -> None:
+        """Test Phase 5 (Monitoring) prerequisite validation."""
+        # Phase 5 should fail without Phase 4 completion
+        can_proceed, errors = self.validator.validate_phase_prerequisites(5)
+        self.assertFalse(can_proceed)
+        self.assertIn("Phase 4 (PR Creation) must be completed first", errors)
+
+        # Mark Phase 4 as completed
+        self.validator.record_phase_start(4, "pr-manager")
+        self.validator.record_phase_completion(4, {"pr_created": True})
+
+        # Still should fail without PR existing
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = "[]"  # No PRs
+        can_proceed, errors = self.validator.validate_phase_prerequisites(5)
+        self.assertFalse(can_proceed)
+        self.assertIn("PR must exist before monitoring can begin", errors)
+
+        # Should succeed when PR exists
+        mock_run.return_value.stdout = (
+            f'[{{"headRefName": "feature/{self.test_issue_number}-test"}}]'
+        )
+        can_proceed, errors = self.validator.validate_phase_prerequisites(5)
+        self.assertTrue(can_proceed)
+        self.assertEqual(len(errors), 0)
+
+    def test_phase_5_outputs_validation(self) -> None:
+        """Test Phase 5 (Monitoring) outputs validation."""
+        # Test missing monitoring activation
+        valid, errors = self.validator.validate_phase_outputs(5, {})
+        self.assertFalse(valid)
+        self.assertIn("PR monitoring must be activated", errors)
+        self.assertIn("PR number must be recorded for monitoring", errors)
+
+        # Test partial outputs
+        outputs = {"pr_monitoring_active": True}
+        valid, errors = self.validator.validate_phase_outputs(5, outputs)
+        self.assertFalse(valid)
+        self.assertIn("PR number must be recorded for monitoring", errors)
+
+        # Test complete outputs
+        outputs = {"pr_monitoring_active": True, "pr_number": 123}
+        valid, errors = self.validator.validate_phase_outputs(5, outputs)
+        self.assertTrue(valid)
+        self.assertEqual(len(errors), 0)
+
+        # Test workflow completion without status tracking
+        outputs = {"pr_monitoring_active": True, "pr_number": 123, "workflow_completed": True}
+        valid, errors = self.validator.validate_phase_outputs(5, outputs)
+        self.assertFalse(valid)
+        self.assertIn("PR final status must be tracked when workflow completes", errors)
+
+        # Test with status tracking
+        outputs = {
+            "pr_monitoring_active": True,
+            "pr_number": 123,
+            "pr_status_tracked": "merged",
+            "workflow_completed": True,
+        }
+        valid, errors = self.validator.validate_phase_outputs(5, outputs)
+        self.assertTrue(valid)
+        self.assertEqual(len(errors), 0)
+
+    def test_phase_5_edge_cases(self) -> None:
+        """Test Phase 5 edge cases and error conditions."""
+        # Test with invalid PR number type
+        outputs = {"pr_monitoring_active": True, "pr_number": "not-a-number"}
+        valid, errors = self.validator.validate_phase_outputs(5, outputs)
+        self.assertTrue(valid)  # Should accept string PR numbers
+
+        # Test with zero PR number
+        outputs = {"pr_monitoring_active": True, "pr_number": 0}
+        valid, errors = self.validator.validate_phase_outputs(5, outputs)
+        self.assertFalse(valid)  # Zero is falsy, should fail
+
+        # Test with monitoring active as string
+        outputs = {"pr_monitoring_active": "yes", "pr_number": 123}
+        valid, errors = self.validator.validate_phase_outputs(5, outputs)
+        self.assertTrue(valid)  # Should accept truthy strings
+
+        # Test with empty string monitoring
+        outputs = {"pr_monitoring_active": "", "pr_number": 123}
+        valid, errors = self.validator.validate_phase_outputs(5, outputs)
+        self.assertFalse(valid)  # Empty string is falsy
+
+    def test_phase_5_monitoring_log_requirement(self) -> None:
+        """Test optional monitoring log requirement in Phase 5."""
+        # Configure monitoring log requirement
+        self.validator.config["monitoring"] = {"require_log": True}
+
+        outputs = {"pr_monitoring_active": True, "pr_number": 123}
+        valid, errors = self.validator.validate_phase_outputs(5, outputs)
+        self.assertFalse(valid)
+        self.assertIn("PR monitoring log not found", errors)
+
+        # Create the monitoring log
+        log_path = Path(self.temp_dir) / "context" / "trace" / "logs"
+        log_path.mkdir(parents=True, exist_ok=True)
+        (log_path / "pr-monitoring.log").write_text("PR monitoring active")
+
+        # Should now pass
+        valid, errors = self.validator.validate_phase_outputs(5, outputs)
+        self.assertTrue(valid)
+        self.assertEqual(len(errors), 0)
+
+    @patch("subprocess.run")
     def test_subprocess_return_codes(self, mock_run: Mock) -> None:
         """Test subprocess methods with different return codes."""
         # Test _check_issue_accessible with different return codes
@@ -617,12 +723,76 @@ class TestWorkflowValidator(unittest.TestCase):
         mock_run.return_value.returncode = 1
         self.assertFalse(self.validator._check_issue_accessible())
 
-        # Test _check_pr_created with different outputs
-        mock_run.return_value.stdout = f"feature/{self.test_issue_number}-test"
+        # Test _check_pr_created with JSON output (new behavior)
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = (
+            f'[{{"headRefName": "feature/{self.test_issue_number}-test"}}]'
+        )
         self.assertTrue(self.validator._check_pr_created())
 
-        mock_run.return_value.stdout = ""
+        mock_run.return_value.stdout = "[]"
         self.assertFalse(self.validator._check_pr_created())
+
+    @patch("subprocess.run")
+    def test_check_pr_created_branch_patterns(self, mock_run: Mock) -> None:
+        """Test _check_pr_created with various branch patterns."""
+        mock_run.return_value.returncode = 0
+
+        # Test hotfix branch
+        mock_run.return_value.stdout = (
+            f'[{{"headRefName": "hotfix/{self.test_issue_number}-urgent"}}]'
+        )
+        self.assertTrue(self.validator._check_pr_created())
+
+        # Test refactor branch
+        mock_run.return_value.stdout = (
+            f'[{{"headRefName": "refactor/{self.test_issue_number}-cleanup"}}]'
+        )
+        self.assertTrue(self.validator._check_pr_created())
+
+        # Test chore branch
+        mock_run.return_value.stdout = f'[{{"headRefName": "chore/{self.test_issue_number}-deps"}}]'
+        self.assertTrue(self.validator._check_pr_created())
+
+        # Test docs branch
+        mock_run.return_value.stdout = (
+            f'[{{"headRefName": "docs/{self.test_issue_number}-readme"}}]'
+        )
+        self.assertTrue(self.validator._check_pr_created())
+
+        # Test style branch
+        mock_run.return_value.stdout = (
+            f'[{{"headRefName": "style/{self.test_issue_number}-format"}}]'
+        )
+        self.assertTrue(self.validator._check_pr_created())
+
+        # Test test branch
+        mock_run.return_value.stdout = (
+            f'[{{"headRefName": "test/{self.test_issue_number}-coverage"}}]'
+        )
+        self.assertTrue(self.validator._check_pr_created())
+
+        # Test invalid branch pattern
+        mock_run.return_value.stdout = (
+            f'[{{"headRefName": "invalid-{self.test_issue_number}-branch"}}]'
+        )
+        self.assertFalse(self.validator._check_pr_created())
+
+        # Test custom regex pattern
+        self.validator.config["branch_patterns"]["custom_regex"] = "issue-{issue}-.*"
+        mock_run.return_value.stdout = (
+            f'[{{"headRefName": "issue-{self.test_issue_number}-custom"}}]'
+        )
+        self.assertTrue(self.validator._check_pr_created())
+
+        # Test invalid custom regex
+        self.validator.config["branch_patterns"]["custom_regex"] = "invalid-{{issue"
+        mock_run.return_value.stdout = (
+            f'[{{"headRefName": "invalid-{self.test_issue_number}-test"}}]'
+        )
+        self.assertFalse(
+            self.validator._check_pr_created()
+        )  # Should handle invalid regex gracefully
 
 
 @unittest.skipUnless(IMPORT_SUCCESS, "workflow-validator.py import failed")
@@ -734,6 +904,84 @@ class TestWorkflowValidatorBasic(unittest.TestCase):
 
         for pattern in security_patterns:
             self.assertIn(pattern, content, f"Security pattern '{pattern}' not found")
+
+    @patch("subprocess.run")
+    def test_full_workflow_integration(self, mock_run: Mock) -> None:
+        """Test complete workflow execution from Phase 0 to Phase 5."""
+        # Setup mock responses
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = "Issue details"
+
+        # Test Phase 0 - Investigation
+        validator = WorkflowValidator(123, Path(self.temp_dir))
+        can_proceed, errors = validator.validate_phase_prerequisites(0)
+        self.assertTrue(can_proceed)
+
+        validator.record_phase_start(0, "issue-investigator")
+        outputs = {"scope_clarity": "clear", "skipped": True}
+        validator.record_phase_completion(0, outputs)
+
+        # Test Phase 1 - Planning
+        can_proceed, errors = validator.validate_phase_prerequisites(1)
+        self.assertTrue(can_proceed)
+
+        # Create task template for phase 1
+        task_template = Path(self.temp_dir) / "context" / "trace" / "task-templates"
+        task_template.mkdir(parents=True, exist_ok=True)
+        (task_template / "issue-123-test.md").write_text("test template")
+
+        validator.record_phase_start(1, "task-planner")
+        validator.record_phase_completion(1, {"template_created": True})
+
+        # Test Phase 2 - Implementation
+        can_proceed, errors = validator.validate_phase_prerequisites(2)
+        self.assertTrue(can_proceed)
+
+        # Mock commits for phase 2
+        mock_run.return_value.stdout = "commit1\ncommit2"
+        mock_run.return_value.returncode = 0
+
+        validator.record_phase_start(2, "workflow-coordinator")
+        validator.record_phase_completion(2, {"commits_made": True})
+
+        # Test Phase 3 - Testing
+        can_proceed, errors = validator.validate_phase_prerequisites(3)
+        self.assertTrue(can_proceed)
+
+        # Create pytest cache for phase 3
+        pytest_cache = Path(self.temp_dir) / ".pytest_cache"
+        pytest_cache.mkdir(exist_ok=True)
+
+        # Create CI marker
+        (Path(self.temp_dir) / ".last-ci-run").touch()
+
+        validator.record_phase_start(3, "test-runner")
+        validator.record_phase_completion(3, {"tests_passed": True})
+
+        # Test Phase 4 - PR Creation
+        can_proceed, errors = validator.validate_phase_prerequisites(4)
+        self.assertTrue(can_proceed)
+
+        # Mock PR creation
+        mock_run.return_value.stdout = '[{"headRefName": "feature/123-test"}]'
+
+        validator.record_phase_start(4, "pr-manager")
+        validator.record_phase_completion(4, {"pr_created": True})
+
+        # Test Phase 5 - Monitoring
+        can_proceed, errors = validator.validate_phase_prerequisites(5)
+        self.assertTrue(can_proceed)
+
+        outputs = {"pr_monitoring_active": True, "pr_number": 123, "pr_status_tracked": "open"}
+        valid, errors = validator.validate_phase_outputs(5, outputs)
+        self.assertTrue(valid)
+
+        validator.record_phase_start(5, "pr-manager")
+        validator.record_phase_completion(5, outputs)
+
+        # Verify all phases completed
+        for phase in range(6):
+            self.assertTrue(validator._phase_completed(phase))
 
 
 if __name__ == "__main__":

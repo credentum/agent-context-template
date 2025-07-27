@@ -146,6 +146,15 @@ class WorkflowValidator:
             if not self._check_ci_status():
                 errors.append("CI must pass before creating PR")
 
+        # Phase 5 requires Phase 4 completion
+        elif phase == 5:
+            if not self._phase_completed(4):
+                errors.append("Phase 4 (PR Creation) must be completed first")
+
+            # Check PR exists
+            if not self._check_pr_created():
+                errors.append("PR must exist before monitoring can begin")
+
         return len(errors) == 0, errors
 
     def validate_phase_outputs(self, phase: int, outputs: Dict[str, Any]) -> Tuple[bool, List[str]]:
@@ -210,6 +219,32 @@ class WorkflowValidator:
             # Check PR creation
             if not self._check_pr_created():
                 errors.append("PR must be created")
+
+        elif phase == 5:
+            # Check monitoring was set up
+            if not outputs.get("pr_monitoring_active"):
+                errors.append("PR monitoring must be activated")
+
+            # Check PR number is tracked
+            if not outputs.get("pr_number"):
+                errors.append("PR number must be recorded for monitoring")
+
+            # Verify PR status tracking
+            if outputs.get("pr_status_tracked"):
+                # If status is tracked, ensure it's valid
+                pass
+            elif outputs.get("workflow_completed"):
+                # If workflow marked complete, verify PR status was tracked
+                errors.append("PR final status must be tracked when workflow completes")
+
+            # Check for optional monitoring artifacts based on config
+            monitoring_config = self.config.get("monitoring", {})
+            if monitoring_config.get("require_log", False):
+                monitoring_log = (
+                    self.workflow_dir / "context" / "trace" / "logs" / "pr-monitoring.log"
+                )
+                if not monitoring_log.exists():
+                    errors.append("PR monitoring log not found")
 
         return len(errors) == 0, errors
 
