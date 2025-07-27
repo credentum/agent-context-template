@@ -213,6 +213,112 @@ class TestWorkflowValidator(unittest.TestCase):
         self.assertIsInstance(can_proceed, bool)
         self.assertIsInstance(errors, list)
 
+    @patch("subprocess.run")
+    def test_phase_0_prerequisites(self, mock_run: Mock) -> None:
+        """Test Phase 0 prerequisite validation."""
+        # Test successful issue access
+        mock_run.return_value.returncode = 0
+        can_proceed, errors = self.validator.validate_phase_prerequisites(0)
+        self.assertTrue(can_proceed)
+        self.assertEqual(len(errors), 0)
+
+        # Test failed issue access
+        mock_run.return_value.returncode = 1
+        can_proceed, errors = self.validator.validate_phase_prerequisites(0)
+        self.assertFalse(can_proceed)
+        self.assertIn(f"Cannot access issue #{self.test_issue_number}", errors[0])
+
+    def test_phase_0_outputs_when_skipped(self) -> None:
+        """Test Phase 0 output validation when investigation is skipped."""
+        # Test valid skipped investigation
+        skipped_outputs = {
+            "skipped": True,
+            "scope_clarity": "clear",
+            "investigation_completed": True,
+            "root_cause_identified": True,
+        }
+        valid, errors = self.validator.validate_phase_outputs(0, skipped_outputs)
+        self.assertTrue(valid)
+        self.assertEqual(len(errors), 0)
+
+        # Test invalid skipped investigation (scope not clear)
+        invalid_skipped_outputs = {
+            "skipped": True,
+            "scope_clarity": "unclear",
+        }
+        valid, errors = self.validator.validate_phase_outputs(0, invalid_skipped_outputs)
+        self.assertFalse(valid)
+        self.assertIn("Investigation skipped but scope not marked as clear", errors[0])
+
+    def test_phase_0_outputs_when_performed(self) -> None:
+        """Test Phase 0 output validation when investigation is performed."""
+        # Create investigation report
+        investigation_dir = Path(self.temp_dir) / "context" / "trace" / "investigations"
+        investigation_dir.mkdir(parents=True, exist_ok=True)
+        report_path = investigation_dir / f"issue-{self.test_issue_number}-investigation.md"
+        report_path.write_text("# Investigation Report")
+
+        # Test valid performed investigation
+        performed_outputs = {
+            "skipped": False,
+            "investigation_completed": True,
+            "root_cause_identified": True,
+            "scope_clarity": "clear",
+        }
+        valid, errors = self.validator.validate_phase_outputs(0, performed_outputs)
+        self.assertTrue(valid)
+        self.assertEqual(len(errors), 0)
+
+        # Test missing investigation report
+        report_path.unlink()
+        valid, errors = self.validator.validate_phase_outputs(0, performed_outputs)
+        self.assertFalse(valid)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Investigation report not found", errors[0])
+
+        # Test missing root cause
+        investigation_dir.mkdir(parents=True, exist_ok=True)
+        report_path.write_text("# Investigation Report")
+        incomplete_outputs = {
+            "skipped": False,
+            "investigation_completed": True,
+            "root_cause_identified": False,
+        }
+        valid, errors = self.validator.validate_phase_outputs(0, incomplete_outputs)
+        self.assertFalse(valid)
+        self.assertIn("Investigation must identify root cause", errors[0])
+
+        # Test investigation not marked as completed
+        missing_completion_outputs = {
+            "skipped": False,
+            "investigation_completed": False,
+            "root_cause_identified": True,
+        }
+        valid, errors = self.validator.validate_phase_outputs(0, missing_completion_outputs)
+        self.assertFalse(valid)
+        self.assertIn("Investigation must be marked as completed", errors[0])
+
+    @patch("subprocess.run")
+    def test_phase_1_requires_phase_0(self, mock_run: Mock) -> None:
+        """Test that Phase 1 requires Phase 0 completion."""
+        # Mock successful issue access
+        mock_run.return_value.returncode = 0
+
+        # Phase 1 should fail without Phase 0 completion
+        can_proceed, errors = self.validator.validate_phase_prerequisites(1)
+        self.assertFalse(can_proceed)
+        self.assertIn("Phase 0 (Investigation) must be completed first", errors[0])
+
+        # Complete Phase 0
+        self.validator.record_phase_start(0, "issue-investigator")
+        self.validator.record_phase_completion(0, {"skipped": True, "scope_clarity": "clear"})
+
+        # Now Phase 1 should proceed (may still fail on other requirements)
+        can_proceed, errors = self.validator.validate_phase_prerequisites(1)
+        # Should pass Phase 0 check but may fail on other checks
+        if not can_proceed:
+            self.assertNotIn("Phase 0 (Investigation) must be completed first", errors)
+
     def test_ci_status_checking(self) -> None:
         """Test CI status validation functionality."""
         # Initially no CI run marker
@@ -253,17 +359,17 @@ class TestWorkflowValidator(unittest.TestCase):
     def test_validate_phase_outputs_edge_cases(self) -> None:
         """Test phase output validation with edge cases."""
         # Test with empty outputs
-        valid, errors = self.validator.validate_phase_outputs(1)
+        valid, errors = self.validator.validate_phase_outputs(1, {})
         self.assertIsInstance(valid, bool)
         self.assertIsInstance(errors, list)
 
         # Test with invalid phase number - check actual implementation behavior
-        valid, errors = self.validator.validate_phase_outputs(-1)
+        valid, errors = self.validator.validate_phase_outputs(-1, {})
         self.assertIsInstance(valid, bool)
         self.assertIsInstance(errors, list)
 
         # Test with very high phase number - check actual implementation behavior
-        valid, errors = self.validator.validate_phase_outputs(999)
+        valid, errors = self.validator.validate_phase_outputs(999, {})
         self.assertIsInstance(valid, bool)
         self.assertIsInstance(errors, list)
 
@@ -317,17 +423,17 @@ class TestWorkflowValidator(unittest.TestCase):
     def test_validate_phase_outputs_all_phases(self) -> None:
         """Test phase output validation for all phase types."""
         # Test phase 1 (task template validation)
-        valid, errors = self.validator.validate_phase_outputs(1)
+        valid, errors = self.validator.validate_phase_outputs(1, {})
         self.assertIsInstance(valid, bool)
         self.assertIsInstance(errors, list)
 
         # Test phase 4 (test validation)
-        valid, errors = self.validator.validate_phase_outputs(4)
+        valid, errors = self.validator.validate_phase_outputs(4, {})
         self.assertIsInstance(valid, bool)
         self.assertIsInstance(errors, list)
 
         # Test phase 5 (PR validation)
-        valid, errors = self.validator.validate_phase_outputs(5)
+        valid, errors = self.validator.validate_phase_outputs(5, {})
         self.assertIsInstance(valid, bool)
         self.assertIsInstance(errors, list)
 
