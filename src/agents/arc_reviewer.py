@@ -14,7 +14,7 @@ Usage:
 """
 
 import json
-import os
+import os  # noqa: F401 - will be used when LLM auto-detection is re-enabled
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -76,9 +76,12 @@ class ARCReviewer:
         # Determine review mode
         self.use_llm = use_llm
         if self.use_llm is None:
-            # Auto-detect: use LLM if API key is available
-            api_key = os.getenv("CLAUDE_CODE_OAUTH_TOKEN") or os.getenv("ANTHROPIC_API_KEY")
-            self.use_llm = bool(api_key and LLMREVIEWER_AVAILABLE)
+            # Temporarily default to rule-based mode until context window issue is fixed
+            # TODO: Re-enable auto-detection after fixing rate limit issues
+            # When re-enabling, uncomment the following lines:
+            # api_key = os.getenv("CLAUDE_CODE_OAUTH_TOKEN") or os.getenv("ANTHROPIC_API_KEY")
+            # self.use_llm = bool(api_key and LLMREVIEWER_AVAILABLE)
+            self.use_llm = False  # Force rule-based mode regardless of API key
 
         # Initialize LLM reviewer if requested and available
         self.llm_reviewer: Optional["LLMReviewer"] = None
