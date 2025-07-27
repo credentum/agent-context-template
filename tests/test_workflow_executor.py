@@ -302,6 +302,110 @@ Other content.
         self.assertEqual(result["branch_name"], "unknown")
         self.assertFalse(result["commits_made"])
 
+    @patch("subprocess.run")
+    def test_execute_planning_creates_documents(self, mock_run):
+        """Test planning phase creates task template and scratchpad when they don't exist."""
+        mock_issue_data = {
+            "title": "Fix validation error",
+            "body": "Planning phase fails validation",
+            "labels": [{"name": "bug"}, {"name": "workflow"}]
+        }
+        
+        # Mock subprocess calls
+        def side_effect(*args, **kwargs):
+            cmd = args[0]
+            if cmd[0] == "gh" and cmd[1] == "issue" and cmd[2] == "view":
+                # Return mock issue data
+                result = MagicMock()
+                result.stdout = json.dumps(mock_issue_data)
+                result.returncode = 0
+                return result
+            elif cmd[0] == "git" and cmd[1] == "log":
+                # No existing commits
+                result = MagicMock()
+                result.stdout = ""
+                result.returncode = 0
+                return result
+            elif cmd[0] == "git" and (cmd[1] == "add" or cmd[1] == "commit"):
+                # Git operations succeed
+                result = MagicMock()
+                result.returncode = 0
+                return result
+            return MagicMock(returncode=0)
+        
+        mock_run.side_effect = side_effect
+        
+        context: Dict[str, Any] = {}
+        result = self.executor.execute_planning(context)
+        
+        # Verify outputs
+        self.assertTrue(result["task_template_created"])
+        self.assertTrue(result["scratchpad_created"])
+        self.assertTrue(result["documentation_committed"])
+        
+        # Verify files were created
+        template_path = Path(result["task_template_path"])
+        scratchpad_path = Path(result["scratchpad_path"])
+        
+        self.assertTrue(template_path.exists())
+        self.assertTrue(scratchpad_path.exists())
+        
+        # Verify template content
+        template_content = template_path.read_text()
+        self.assertIn("Fix validation error", template_content)
+        self.assertIn(f"#{self.issue_number}", template_content)
+        self.assertIn("bug, workflow", template_content)
+        
+        # Verify scratchpad content
+        scratchpad_content = scratchpad_path.read_text()
+        self.assertIn("Fix validation error", scratchpad_content)
+        self.assertIn(f"#{self.issue_number}", scratchpad_content)
+
+    @patch("subprocess.run")
+    @patch("datetime.datetime")
+    def test_execute_planning_preserves_existing_files(self, mock_datetime, mock_run):
+        """Test planning phase preserves existing documents and doesn't overwrite them."""
+        # Fix date for consistent file naming
+        mock_now = MagicMock()
+        mock_now.strftime.return_value = "2025-07-27"
+        mock_now.isoformat.return_value = "2025-07-27T12:00:00"
+        mock_datetime.now.return_value = mock_now
+        
+        # Create existing files
+        template_dir = self.temp_dir / "context" / "trace" / "task-templates"
+        template_dir.mkdir(parents=True)
+        scratchpad_dir = self.temp_dir / "context" / "trace" / "scratchpad"
+        scratchpad_dir.mkdir(parents=True)
+        
+        template_path = template_dir / f"issue-{self.issue_number}-fix-validation-error.md"
+        template_path.write_text("Existing template content")
+        scratchpad_path = scratchpad_dir / f"2025-07-27-issue-{self.issue_number}-fix-validation-error.md"
+        scratchpad_path.write_text("Existing scratchpad content")
+        
+        # Mock issue data
+        mock_run.side_effect = [
+            MagicMock(
+                stdout='{"title": "Fix validation error", "body": "Description", "labels": []}',
+                returncode=0
+            ),
+            MagicMock(
+                stdout="abc123 docs(trace): add task template for issue #1234",
+                returncode=0
+            )
+        ]
+        
+        context: Dict[str, Any] = {}
+        result = self.executor.execute_planning(context)
+        
+        # Verify files weren't overwritten
+        self.assertEqual(template_path.read_text(), "Existing template content")
+        self.assertEqual(scratchpad_path.read_text(), "Existing scratchpad content")
+        
+        # Verify result indicates files exist and are committed
+        self.assertTrue(result["task_template_created"])
+        self.assertTrue(result["scratchpad_created"])
+        self.assertTrue(result["documentation_committed"])
+
 
 if __name__ == "__main__":
     unittest.main()

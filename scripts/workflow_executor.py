@@ -25,6 +25,63 @@ class WorkflowExecutor:
         self.issue_number = issue_number
         self.workspace_root = Path.cwd()
 
+    def _generate_template_content(self, issue_title: str, issue_body: str, labels: list) -> str:
+        """Generate task template content."""
+        labels_str = ', '.join(labels) if labels else 'None'
+        title_slug = issue_title.lower().replace(" ", "-")[:50]
+        return f"""# {'─' * 72}
+# TASK: issue-{self.issue_number}-{title_slug}
+# Generated from GitHub Issue #{self.issue_number}
+# {'─' * 72}
+
+## 📌 Task Name
+`fix-issue-{self.issue_number}-{title_slug}`
+
+## 🎯 Goal (≤ 2 lines)
+> {issue_title}
+
+## 🧠 Context
+- **GitHub Issue**: #{self.issue_number} - {issue_title}
+- **Labels**: {labels_str}
+- **Component**: workflow-automation
+- **Why this matters**: Resolves reported issue
+
+## 🛠️ Subtasks
+| File | Action | Prompt Tech | Purpose | Context Impact |
+|------|--------|-------------|---------|----------------|
+| TBD | TBD | TBD | TBD | TBD |
+
+## 📝 Issue Description
+{issue_body}
+
+## 🔍 Verification & Testing
+- Run CI checks locally
+- Test the specific functionality
+- Verify issue is resolved
+
+## ✅ Acceptance Criteria
+- Issue requirements are met
+- Tests pass
+- No regressions introduced
+"""
+
+    def _generate_scratchpad_content(self, issue_title: str) -> str:
+        """Generate scratchpad content."""
+        return f"""# Scratchpad: Issue #{self.issue_number} - {issue_title}
+
+## Execution Plan
+- Phase 0: Investigation (if needed)
+- Phase 1: Planning (current)
+- Phase 2: Implementation
+- Phase 3: Testing & Validation
+- Phase 4: PR Creation
+- Phase 5: Monitoring
+
+## Notes
+- Created: {datetime.now().isoformat()}
+- Issue: #{self.issue_number}
+"""
+
     def execute_investigation(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute investigation phase directly."""
         print("🔍 Executing investigation phase...")
@@ -148,41 +205,7 @@ class WorkflowExecutor:
         template_path = template_dir / f"issue-{self.issue_number}-{title_slug}.md"
         if not template_path.exists():
             print("  📝 Creating task template...")
-            template_content = f"""# {'─' * 72}
-# TASK: issue-{self.issue_number}-{title_slug}
-# Generated from GitHub Issue #{self.issue_number}
-# {'─' * 72}
-
-## 📌 Task Name
-`fix-issue-{self.issue_number}-{title_slug}`
-
-## 🎯 Goal (≤ 2 lines)
-> {issue_title}
-
-## 🧠 Context
-- **GitHub Issue**: #{self.issue_number} - {issue_title}
-- **Labels**: {', '.join(labels) if labels else 'None'}
-- **Component**: workflow-automation
-- **Why this matters**: Resolves reported issue
-
-## 🛠️ Subtasks
-| File | Action | Prompt Tech | Purpose | Context Impact |
-|------|--------|-------------|---------|----------------|
-| TBD | TBD | TBD | TBD | TBD |
-
-## 📝 Issue Description
-{issue_body}
-
-## 🔍 Verification & Testing
-- Run CI checks locally
-- Test the specific functionality
-- Verify issue is resolved
-
-## ✅ Acceptance Criteria
-- Issue requirements are met
-- Tests pass
-- No regressions introduced
-"""
+            template_content = self._generate_template_content(issue_title, issue_body, labels)
             template_path.write_text(template_content)
             print(f"  ✅ Task template created: {template_path.name}")
         else:
@@ -196,20 +219,7 @@ class WorkflowExecutor:
         scratchpad_path = scratchpad_dir / f"{date_str}-issue-{self.issue_number}-{title_slug}.md"
         if not scratchpad_path.exists():
             print("  📝 Creating scratchpad...")
-            scratchpad_content = f"""# Scratchpad: Issue #{self.issue_number} - {issue_title}
-
-## Execution Plan
-- Phase 0: Investigation (if needed)
-- Phase 1: Planning (current)
-- Phase 2: Implementation
-- Phase 3: Testing & Validation
-- Phase 4: PR Creation
-- Phase 5: Monitoring
-
-## Notes
-- Created: {datetime.now().isoformat()}
-- Issue: #{self.issue_number}
-"""
+            scratchpad_content = self._generate_scratchpad_content(issue_title)
             scratchpad_path.write_text(scratchpad_content)
             print(f"  ✅ Scratchpad created: {scratchpad_path.name}")
         else:
