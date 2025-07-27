@@ -36,6 +36,8 @@ services:
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
     command: /bin/bash scripts/test-comprehensive-ci.sh
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
     deploy:
       resources:
         limits:
@@ -62,6 +64,8 @@ services:
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
     command: black --check src/ tests/ scripts/
+    stop_signal: SIGTERM
+    stop_grace_period: 10s
 
   ci-isort:
     build:
@@ -79,6 +83,8 @@ services:
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
     command: isort --check-only --profile black src/ tests/ scripts/
+    stop_signal: SIGTERM
+    stop_grace_period: 10s
 
   ci-flake8:
     build:
@@ -97,6 +103,8 @@ services:
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
     command: flake8 src/ tests/ scripts/
+    stop_signal: SIGTERM
+    stop_grace_period: 10s
 
   ci-mypy:
     build:
@@ -113,6 +121,8 @@ services:
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
     command: mypy src/ --config-file=mypy.ini
+    stop_signal: SIGTERM
+    stop_grace_period: 10s
 
   ci-context-lint:
     build:
@@ -129,6 +139,8 @@ services:
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
     command: python -m src.agents.context_lint validate context/
+    stop_signal: SIGTERM
+    stop_grace_period: 10s
 
   ci-import-check:
     build:
@@ -145,6 +157,8 @@ services:
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
     command: python -m pytest --collect-only -q
+    stop_signal: SIGTERM
+    stop_grace_period: 10s
 
   # Service for interactive debugging
   ci-debug:
@@ -170,6 +184,8 @@ services:
     command: /bin/bash
     stdin_open: true
     tty: true
+    stop_signal: SIGTERM
+    stop_grace_period: 10s
 
   # Test GitHub Actions workflows (simple version)
   ci-workflow-simple:
@@ -191,6 +207,8 @@ services:
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
     command: /bin/bash scripts/test-workflow-simple.sh
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
 
   # Test coverage like GitHub Actions
   ci-coverage:
@@ -226,6 +244,8 @@ services:
     depends_on:
       - redis
     command: /bin/bash scripts/test-coverage-like-ci.sh
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
 
   # Test unit tests like GitHub Actions
   ci-unit-tests:
@@ -260,6 +280,8 @@ services:
     depends_on:
       - redis
     command: /bin/bash scripts/test-unit-like-ci.sh
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
 
   # Test suite like GitHub Actions
   ci-test-suite:
@@ -294,6 +316,8 @@ services:
     depends_on:
       - redis
     command: /bin/bash scripts/test-suite-like-ci.sh
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
 
   # Enhanced parallel lint service (from optimized version)
   ci-lint-parallel:
@@ -330,6 +354,8 @@ services:
         wait
         echo '🎉 All lint checks completed'
       "
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
 
 volumes:
   qdrant_data:

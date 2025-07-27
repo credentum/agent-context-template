@@ -4,6 +4,23 @@
 
 set -e  # Exit on error
 
+# Signal handling for clean shutdown
+cleanup() {
+    echo -e "\n${YELLOW}Caught signal, cleaning up test processes...${NC}"
+    # Kill all child processes in this process group
+    jobs -p | xargs -r kill 2>/dev/null
+    # Wait briefly for processes to exit gracefully
+    sleep 1
+    # Force kill any remaining processes
+    jobs -p | xargs -r kill -9 2>/dev/null
+    wait
+    echo -e "${GREEN}Test cleanup completed${NC}"
+    exit 0
+}
+
+# Set up signal handlers
+trap cleanup EXIT SIGTERM SIGINT
+
 echo "🧪 Running Full Test Suite (exactly like GitHub Actions)"
 echo "======================================================="
 echo "Matching: .github/workflows/test-suite.yml"

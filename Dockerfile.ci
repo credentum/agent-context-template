@@ -3,12 +3,14 @@
 FROM python:3.11-slim@sha256:139020233cc412efe4c8135b0efe1c7569dc8b28ddd88bddb109b764f8977e30
 
 # Install system dependencies (matching GitHub CI environment)
+# Including tini for proper PID 1 signal handling
 RUN apt-get update && apt-get install -y \
     git \
     curl \
     redis-tools \
     bc \
     jq \
+    tini \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -56,6 +58,9 @@ RUN mkdir -p context/.duckdb \
 ENV CI=true
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+
+# Use tini as entrypoint for proper signal handling
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Default command runs all CI checks
 CMD ["/bin/bash", "scripts/test-like-ci.sh"]
