@@ -119,30 +119,72 @@ class WorkflowExecutor:
         }
 
     def execute_planning(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute planning phase directly."""
+        """Execute planning phase - creates task template and scratchpad, then commits them."""
         print("📝 Executing planning phase...")
 
         # Get issue details for planning
+        issue_title = ""
+        issue_body = ""
         try:
             result = subprocess.run(
-                ["gh", "issue", "view", str(self.issue_number), "--json", "title,body"],
+                ["gh", "issue", "view", str(self.issue_number), "--json", "title,body,labels"],
                 capture_output=True,
                 text=True,
                 check=True,
             )
             issue_data = json.loads(result.stdout)
-            title = issue_data.get("title", "").lower().replace(" ", "-")[:50]
+            issue_title = issue_data.get("title", f"Issue {self.issue_number}")
+            issue_body = issue_data.get("body", "No description provided")
+            title_slug = issue_title.lower().replace(" ", "-")[:50]
+            labels = [label.get("name", "") for label in issue_data.get("labels", [])]
         except subprocess.CalledProcessError:
-            title = f"issue-{self.issue_number}"
+            title_slug = f"issue-{self.issue_number}"
+            labels = []
 
         # Create task template
         template_dir = self.workspace_root / "context" / "trace" / "task-templates"
         template_dir.mkdir(parents=True, exist_ok=True)
 
-        template_path = template_dir / f"issue-{self.issue_number}-{title}.md"
+        template_path = template_dir / f"issue-{self.issue_number}-{title_slug}.md"
         if not template_path.exists():
-            print("  ⚠️  Task template should already exist from Phase 1")
-            # In a real workflow, we would create it here
+            print("  📝 Creating task template...")
+            template_content = f"""# {'─' * 72}
+# TASK: issue-{self.issue_number}-{title_slug}
+# Generated from GitHub Issue #{self.issue_number}
+# {'─' * 72}
+
+## 📌 Task Name
+`fix-issue-{self.issue_number}-{title_slug}`
+
+## 🎯 Goal (≤ 2 lines)
+> {issue_title}
+
+## 🧠 Context
+- **GitHub Issue**: #{self.issue_number} - {issue_title}
+- **Labels**: {', '.join(labels) if labels else 'None'}
+- **Component**: workflow-automation
+- **Why this matters**: Resolves reported issue
+
+## 🛠️ Subtasks
+| File | Action | Prompt Tech | Purpose | Context Impact |
+|------|--------|-------------|---------|----------------|
+| TBD | TBD | TBD | TBD | TBD |
+
+## 📝 Issue Description
+{issue_body}
+
+## 🔍 Verification & Testing
+- Run CI checks locally
+- Test the specific functionality
+- Verify issue is resolved
+
+## ✅ Acceptance Criteria
+- Issue requirements are met
+- Tests pass
+- No regressions introduced
+"""
+            template_path.write_text(template_content)
+            print(f"  ✅ Task template created: {template_path.name}")
         else:
             print(f"  ✅ Task template exists: {template_path.name}")
 
@@ -151,13 +193,30 @@ class WorkflowExecutor:
         scratchpad_dir.mkdir(parents=True, exist_ok=True)
 
         date_str = datetime.now().strftime("%Y-%m-%d")
-        scratchpad_path = scratchpad_dir / f"{date_str}-issue-{self.issue_number}-{title}.md"
+        scratchpad_path = scratchpad_dir / f"{date_str}-issue-{self.issue_number}-{title_slug}.md"
         if not scratchpad_path.exists():
-            print("  ⚠️  Scratchpad should already exist from Phase 1")
+            print("  📝 Creating scratchpad...")
+            scratchpad_content = f"""# Scratchpad: Issue #{self.issue_number} - {issue_title}
+
+## Execution Plan
+- Phase 0: Investigation (if needed)
+- Phase 1: Planning (current)
+- Phase 2: Implementation
+- Phase 3: Testing & Validation
+- Phase 4: PR Creation
+- Phase 5: Monitoring
+
+## Notes
+- Created: {datetime.now().isoformat()}
+- Issue: #{self.issue_number}
+"""
+            scratchpad_path.write_text(scratchpad_content)
+            print(f"  ✅ Scratchpad created: {scratchpad_path.name}")
         else:
             print(f"  ✅ Scratchpad exists: {scratchpad_path.name}")
 
-        # Check if documentation was committed
+        # Check if documentation was already committed
+        doc_committed = False
         try:
             result = subprocess.run(
                 ["git", "log", "--oneline", "-n", "10", "--grep", f"issue #{self.issue_number}"],
@@ -168,11 +227,33 @@ class WorkflowExecutor:
             if "docs(trace): add task template" in result.stdout:
                 print("  ✅ Documentation already committed")
                 doc_committed = True
-            else:
-                print("  ⚠️  Documentation should be committed")
-                doc_committed = False
         except subprocess.CalledProcessError:
-            doc_committed = False
+            pass
+
+        # Commit documentation if not already done
+        if not doc_committed:
+            print("  📤 Committing documentation files...")
+            try:
+                # Stage the files
+                subprocess.run(
+                    ["git", "add", str(template_path), str(scratchpad_path)],
+                    check=True,
+                )
+
+                # Commit with proper message
+                commit_msg = (
+                    f"docs(trace): add task template and execution plan "
+                    f"for issue #{self.issue_number}"
+                )
+                subprocess.run(
+                    ["git", "commit", "-m", commit_msg],
+                    check=True,
+                )
+                print("  ✅ Documentation committed")
+                doc_committed = True
+            except subprocess.CalledProcessError as e:
+                print(f"  ⚠️  Failed to commit documentation: {e}")
+                # Don't fail the phase, just note it wasn't committed
 
         return {
             "task_template_created": True,
