@@ -57,8 +57,16 @@ class WorkflowValidator:
         """Check if prerequisites for a phase are met."""
         errors = []
 
-        # Phase 1 requires issue to be fetched
-        if phase == 1:
+        # Phase 0 requires issue to be accessible
+        if phase == 0:
+            if not self._check_issue_accessible():
+                errors.append(f"Cannot access issue #{self.issue_number}")
+
+        # Phase 1 requires Phase 0 completion
+        elif phase == 1:
+            if not self._phase_completed(0):
+                errors.append("Phase 0 (Investigation) must be completed first")
+
             if not self._check_issue_accessible():
                 errors.append(f"Cannot access issue #{self.issue_number}")
 
@@ -92,17 +100,42 @@ class WorkflowValidator:
 
         return len(errors) == 0, errors
 
-    def validate_phase_outputs(self, phase: int) -> Tuple[bool, List[str]]:
+    def validate_phase_outputs(self, phase: int, outputs: Dict[str, Any]) -> Tuple[bool, List[str]]:
         """Validate outputs produced by a phase."""
         errors = []
 
-        if phase == 1:
+        if phase == 0:
+            # Phase 0: Investigation phase
+            # Check if investigation was skipped
+            if outputs.get("skipped", False):
+                # Validate scope was clear
+                if not outputs.get("scope_clarity") == "clear":
+                    errors.append("Investigation skipped but scope not marked as clear")
+            else:
+                # Check investigation outputs
+                investigation_report = (
+                    self.workflow_dir
+                    / "context"
+                    / "trace"
+                    / "investigations"
+                    / f"issue-{self.issue_number}-investigation.md"
+                )
+                if not investigation_report.exists():
+                    errors.append(f"Investigation report not found: {investigation_report}")
+
+                if not outputs.get("root_cause_identified"):
+                    errors.append("Investigation must identify root cause")
+
+                if not outputs.get("investigation_completed"):
+                    errors.append("Investigation must be marked as completed")
+
+        elif phase == 1:
             # Check task template creation
-            outputs = [
+            template_patterns = [
                 f"issue_{self.issue_number}_tasks.md",
                 f"context/trace/task-templates/issue-{self.issue_number}-*.md",
             ]
-            for pattern in outputs:
+            for pattern in template_patterns:
                 if not list(self.workflow_dir.glob(pattern)):
                     errors.append(f"Required output not found: {pattern}")
 
@@ -278,7 +311,7 @@ def complete_workflow_phase(validator: WorkflowValidator, phase: int, outputs: D
     This should be called at the end of each agent's execution.
     """
     # Validate outputs
-    valid, errors = validator.validate_phase_outputs(phase)
+    valid, errors = validator.validate_phase_outputs(phase, outputs)
     if not valid:
         validator.record_phase_failure(phase, errors)
         print(f"❌ Phase {phase} validation failed:")
