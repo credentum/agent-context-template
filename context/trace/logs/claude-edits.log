@@ -564,3 +564,9 @@
 [2025-07-26 23:16:27] File: /tmp/pytest-of-root/pytest-2/test_multiple_file_validation0/file1.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
 [2025-07-27 00:41:35] File: /tmp/pytest-of-root/pytest-14/test_exit_codes0/good.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
 [2025-07-27 00:41:47] File: /tmp/pytest-of-root/pytest-14/test_exit_codes0/bad.py, Status: error, Issues: 3, Fixed: 0, Remaining: 3
+[2025-07-27 03:07:36] File: /tmp/pytest-of-root/pytest-3/test_multiple_file_validation0/file1.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-27 03:07:37] File: /tmp/pytest-of-root/pytest-4/test_multiple_file_validation0/file1.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-27 03:07:37] File: /tmp/pytest-of-root/pytest-5/test_multiple_file_validation0/file1.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-27 03:08:04] File: /tmp/pytest-of-root/pytest-4/test_multiple_file_validation0/file2.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-27 03:08:04] File: /tmp/pytest-of-root/pytest-3/test_multiple_file_validation0/file2.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
+[2025-07-27 03:08:05] File: /tmp/pytest-of-root/pytest-5/test_multiple_file_validation0/file2.py, Status: success, Issues: 0, Fixed: 0, Remaining: 0
