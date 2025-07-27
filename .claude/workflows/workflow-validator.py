@@ -4,6 +4,7 @@ Workflow validator to ensure sub-agents follow the defined workflow.
 This can be integrated into the workflow execution to enforce compliance.
 """
 
+import glob
 import json
 import re
 import subprocess
@@ -68,9 +69,9 @@ class WorkflowValidator:
                 errors.append("Phase 1 (Planning) must be completed first")
 
             # Check for task template
-            task_template = self.workflow_dir / f"issue_{self.issue_number}_tasks.md"
-            if not task_template.exists():
-                errors.append(f"Task template not found: {task_template}")
+            task_template_pattern = f"context/trace/task-templates/issue-{self.issue_number}-*.md"
+            if not self._check_file_exists(task_template_pattern):
+                errors.append(f"Task template not found matching pattern: {task_template_pattern}")
 
         # Phase 3 requires Phase 2 completion
         elif phase == 3:
@@ -248,6 +249,11 @@ class WorkflowValidator:
         output = result.stdout.strip()
         # Check if any PR contains our issue number
         return f"fix/{self.issue_number}-" in output or f"feature/{self.issue_number}-" in output
+
+    def _check_file_exists(self, pattern: str) -> bool:
+        """Check if a file matching the pattern exists."""
+        files = glob.glob(pattern)
+        return len(files) > 0
 
 
 def enforce_workflow_phase(issue_number: int, phase: int, agent_type: str) -> WorkflowValidator:
