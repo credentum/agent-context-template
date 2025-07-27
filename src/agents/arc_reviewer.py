@@ -18,17 +18,30 @@ import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Import LLMReviewer for LLM-based review mode
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
-# Import LLMReviewer for LLM-based review mode
+# Handle import for both module and script execution
+LLMREVIEWER_AVAILABLE = False
+
 try:
+    # Try relative import first (when used as a module)
     from .llm_reviewer import LLMReviewer
 
     LLMREVIEWER_AVAILABLE = True
 except ImportError:
-    LLMREVIEWER_AVAILABLE = False
+    try:
+        # Fall back to absolute import (when run as a script)
+        from llm_reviewer import LLMReviewer  # type: ignore[no-redef]
+
+        LLMREVIEWER_AVAILABLE = True
+    except ImportError:
+        # Define placeholder if import fails
+        class LLMReviewer:  # type: ignore[no-redef]
+            pass
 
 
 class ARCReviewer:
@@ -64,11 +77,11 @@ class ARCReviewer:
         self.use_llm = use_llm
         if self.use_llm is None:
             # Auto-detect: use LLM if API key is available
-            api_key = os.getenv("CLAUDE_CODE_OAUTH_TOKEN")
+            api_key = os.getenv("CLAUDE_CODE_OAUTH_TOKEN") or os.getenv("ANTHROPIC_API_KEY")
             self.use_llm = bool(api_key and LLMREVIEWER_AVAILABLE)
 
         # Initialize LLM reviewer if requested and available
-        self.llm_reviewer = None
+        self.llm_reviewer: Optional["LLMReviewer"] = None
         if self.use_llm:
             if not LLMREVIEWER_AVAILABLE:
                 if self.verbose:

@@ -16,8 +16,11 @@ import yaml
 
 try:
     import anthropic
+
+    ANTHROPIC_AVAILABLE = True
 except ImportError:
     anthropic = None
+    ANTHROPIC_AVAILABLE = False
 
 
 class LLMReviewer:
@@ -35,20 +38,27 @@ class LLMReviewer:
             verbose: Enable verbose output
             timeout: Maximum seconds for command execution
         """
-        if anthropic is None:
+        if not ANTHROPIC_AVAILABLE:
             raise ImportError(
                 "anthropic package is required for LLMReviewer. "
                 "Install with: pip install anthropic>=0.8.0"
             )
 
-        self.api_key = api_key or os.getenv("CLAUDE_CODE_OAUTH_TOKEN")
-        if not self.api_key:
+        # Check for OAuth token first, then API key
+        self.oauth_token = os.getenv("CLAUDE_CODE_OAUTH_TOKEN")
+        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+
+        if not self.oauth_token and not self.api_key:
             raise ValueError(
-                "CLAUDE_CODE_OAUTH_TOKEN must be provided either as parameter "
+                "CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY must be provided either as parameter "
                 "or environment variable"
             )
 
-        self.client = anthropic.Anthropic(api_key=self.api_key)
+        # Use OAuth token if available, otherwise use API key
+        if self.oauth_token:
+            self.client = anthropic.Anthropic(auth_token=self.oauth_token)
+        else:
+            self.client = anthropic.Anthropic(api_key=self.api_key)
         self.verbose = verbose
         self.timeout = timeout
         self.repo_root = Path(__file__).parent.parent.parent
@@ -264,7 +274,7 @@ Please review the entire PR state and provide your assessment in the required YA
                 print("🔄 Calling Claude API for review...")
 
             # Define available tools for Claude
-            tools = [
+            tools: List[Dict[str, Any]] = [
                 {
                     "name": "bash",
                     "description": "Execute a bash command",
@@ -336,7 +346,7 @@ Please review the entire PR state and provide your assessment in the required YA
             )
 
             # Handle tool use if Claude requests it
-            conversation = [
+            conversation: List[Dict[str, Any]] = [
                 {"role": "user", "content": self._get_prompt_template() + "\n\n" + context_message},
                 {"role": "assistant", "content": message.content},
             ]
@@ -348,7 +358,7 @@ Please review the entire PR state and provide your assessment in the required YA
                 for block in message.content:
                     if block.type == "tool_use":
                         tool_name = block.name
-                        tool_input = block.input
+                        tool_input: Dict[str, Any] = block.input
 
                         if self.verbose:
                             print(f"🔧 Claude requested tool: {tool_name} with {tool_input}")
