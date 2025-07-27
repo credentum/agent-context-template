@@ -14,12 +14,21 @@ Usage:
 """
 
 import json
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
+
+# Import LLMReviewer for LLM-based review mode
+try:
+    from .llm_reviewer import LLMReviewer
+
+    LLMREVIEWER_AVAILABLE = True
+except ImportError:
+    LLMREVIEWER_AVAILABLE = False
 
 
 class ARCReviewer:
@@ -30,19 +39,53 @@ class ARCReviewer:
     claude-code-review.yml but in a standalone Python module for local execution.
     """
 
-    def __init__(self, verbose: bool = False, timeout: int = 120, skip_coverage: bool = False):
+    def __init__(
+        self,
+        verbose: bool = False,
+        timeout: int = 120,
+        skip_coverage: bool = False,
+        use_llm: Optional[bool] = None,
+    ):
         """Initialize the ARC-Reviewer.
 
         Args:
             verbose: Enable verbose output
             timeout: Maximum seconds for command execution (default: 120)
             skip_coverage: Skip coverage check for faster execution
+            use_llm: Force LLM mode (True), rule-based mode (False), or auto-detect (None)
         """
         self.verbose = verbose
         self.timeout = timeout
         self.skip_coverage = skip_coverage
         self.coverage_config = self._load_coverage_config()
         self.repo_root = Path(__file__).parent.parent.parent
+
+        # Determine review mode
+        self.use_llm = use_llm
+        if self.use_llm is None:
+            # Auto-detect: use LLM if API key is available
+            api_key = os.getenv("CLAUDE_CODE_OAUTH_TOKEN")
+            self.use_llm = bool(api_key and LLMREVIEWER_AVAILABLE)
+
+        # Initialize LLM reviewer if requested and available
+        self.llm_reviewer = None
+        if self.use_llm:
+            if not LLMREVIEWER_AVAILABLE:
+                if self.verbose:
+                    print("❌ LLM mode requested but anthropic package not available")
+                self.use_llm = False
+            else:
+                try:
+                    self.llm_reviewer = LLMReviewer(verbose=verbose, timeout=timeout)
+                    if self.verbose:
+                        print("✅ LLM mode enabled with Claude API")
+                except Exception as e:
+                    if self.verbose:
+                        print(f"❌ Failed to initialize LLM reviewer: {e}")
+                    self.use_llm = False
+
+        if not self.use_llm and self.verbose:
+            print("📋 Using rule-based review mode")
 
     def _load_coverage_config(self) -> Dict[str, Any]:
         """Load coverage configuration from .coverage-config.json."""
@@ -432,8 +475,15 @@ class ARCReviewer:
         Returns:
             Dictionary with review results
         """
+        # Delegate to LLM reviewer if available and enabled
+        if self.use_llm and self.llm_reviewer:
+            if self.verbose:
+                print("🤖 Using LLM-based review mode")
+            return self.llm_reviewer.review_pr(pr_number=pr_number, base_branch=base_branch)
+
+        # Fall back to rule-based review
         if self.verbose:
-            print("🔍 Starting ARC-Reviewer analysis...")
+            print("🔍 Starting rule-based ARC-Reviewer analysis...")
 
         # Get changed files
         changed_files = self._get_changed_files(base_branch)
@@ -568,11 +618,27 @@ def main():
     parser.add_argument(
         "--skip-coverage", action="store_true", help="Skip coverage check for faster execution"
     )
+    parser.add_argument(
+        "--llm", action="store_true", help="Force LLM mode (requires CLAUDE_CODE_OAUTH_TOKEN)"
+    )
+    parser.add_argument("--no-llm", action="store_true", help="Force rule-based mode (disable LLM)")
 
     args = parser.parse_args()
 
+    # Determine LLM mode from arguments
+    use_llm = None
+    if args.llm and args.no_llm:
+        parser.error("Cannot specify both --llm and --no-llm")
+    elif args.llm:
+        use_llm = True
+    elif args.no_llm:
+        use_llm = False
+
     reviewer = ARCReviewer(
-        verbose=args.verbose, timeout=args.timeout, skip_coverage=args.skip_coverage
+        verbose=args.verbose,
+        timeout=args.timeout,
+        skip_coverage=args.skip_coverage,
+        use_llm=use_llm,
     )
     reviewer.review_and_output(
         pr_number=args.pr, base_branch=args.base, runtime_test=args.runtime_test
