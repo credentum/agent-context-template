@@ -64,7 +64,7 @@ class ARCReviewer:
         self.use_llm = use_llm
         if self.use_llm is None:
             # Auto-detect: use LLM if API key is available
-            api_key = os.getenv("ANTHROPIC_API_KEY")
+            api_key = os.getenv("CLAUDE_CODE_OAUTH_TOKEN")
             self.use_llm = bool(api_key and LLMREVIEWER_AVAILABLE)
 
         # Initialize LLM reviewer if requested and available
@@ -619,7 +619,7 @@ def main():
         "--skip-coverage", action="store_true", help="Skip coverage check for faster execution"
     )
     parser.add_argument(
-        "--llm", action="store_true", help="Force LLM mode (requires ANTHROPIC_API_KEY)"
+        "--llm", action="store_true", help="Force LLM mode (requires CLAUDE_CODE_OAUTH_TOKEN)"
     )
     parser.add_argument("--no-llm", action="store_true", help="Force rule-based mode (disable LLM)")
 

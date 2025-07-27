@@ -37,7 +37,7 @@ class TestLLMReviewer:
         assert reviewer.timeout == 120
         mock_anthropic.Anthropic.assert_called_once_with(api_key=self.test_api_key)
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "env-api-key"})
+    @patch.dict(os.environ, {"CLAUDE_CODE_OAUTH_TOKEN": "env-api-key"})
     @patch("src.agents.llm_reviewer.anthropic")
     def test_init_with_env_var(self, mock_anthropic):
         """Test LLMReviewer initialization with environment variable."""
@@ -52,7 +52,7 @@ class TestLLMReviewer:
     @patch("src.agents.llm_reviewer.anthropic")
     def test_init_no_api_key(self, mock_anthropic):
         """Test LLMReviewer initialization fails without API key."""
-        with pytest.raises(ValueError, match="ANTHROPIC_API_KEY must be provided"):
+        with pytest.raises(ValueError, match="CLAUDE_CODE_OAUTH_TOKEN must be provided"):
             LLMReviewer()
 
     @patch("src.agents.llm_reviewer.anthropic")
@@ -329,7 +329,7 @@ def mock_open_multiple_files(files_dict):
 
 # Integration test (requires real API key)
 @pytest.mark.integration
-@pytest.mark.skipif(not os.getenv("ANTHROPIC_API_KEY"), reason="API key required")
+@pytest.mark.skipif(not os.getenv("CLAUDE_CODE_OAUTH_TOKEN"), reason="API key required")
 def test_llm_reviewer_integration():
     """Integration test with real API (requires ANTHROPIC_API_KEY)."""
     # This would make a real API call - only run with appropriate setup

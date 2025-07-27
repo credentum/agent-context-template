@@ -18,7 +18,7 @@ class TestARCReviewerLLMIntegration:
             assert reviewer.use_llm is False
             assert reviewer.llm_reviewer is None
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"CLAUDE_CODE_OAUTH_TOKEN": "test-key"})
     @patch("src.agents.arc_reviewer.LLMReviewer")
     def test_init_auto_detect_with_api_key(self, mock_llm_reviewer_class):
         """Test auto-detection with API key enables LLM mode."""
@@ -37,7 +37,7 @@ class TestARCReviewerLLMIntegration:
         mock_llm_reviewer = Mock()
         mock_llm_reviewer_class.return_value = mock_llm_reviewer
 
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"CLAUDE_CODE_OAUTH_TOKEN": "test-key"}):
             reviewer = ARCReviewer(use_llm=True, verbose=True)
 
         assert reviewer.use_llm is True
@@ -45,7 +45,7 @@ class TestARCReviewerLLMIntegration:
 
     def test_init_force_rule_based_mode(self):
         """Test forcing rule-based mode."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"CLAUDE_CODE_OAUTH_TOKEN": "test-key"}):
             reviewer = ARCReviewer(use_llm=False, verbose=True)
 
         assert reviewer.use_llm is False
@@ -55,7 +55,7 @@ class TestARCReviewerLLMIntegration:
     def test_init_llm_not_available(self, mock_llm_reviewer_class):
         """Test LLM mode when LLMReviewer import fails."""
         with patch("src.agents.arc_reviewer.LLMReviewer", None):
-            with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            with patch.dict(os.environ, {"CLAUDE_CODE_OAUTH_TOKEN": "test-key"}):
                 reviewer = ARCReviewer(use_llm=True, verbose=True)
 
             assert reviewer.use_llm is False
@@ -66,7 +66,7 @@ class TestARCReviewerLLMIntegration:
         """Test LLM mode when LLMReviewer initialization fails."""
         mock_llm_reviewer_class.side_effect = Exception("API key invalid")
 
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "invalid-key"}):
+        with patch.dict(os.environ, {"CLAUDE_CODE_OAUTH_TOKEN": "invalid-key"}):
             reviewer = ARCReviewer(use_llm=True, verbose=True)
 
         assert reviewer.use_llm is False
@@ -84,7 +84,7 @@ class TestARCReviewerLLMIntegration:
         mock_llm_reviewer.review_pr.return_value = mock_llm_response
         mock_llm_reviewer_class.return_value = mock_llm_reviewer
 
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        with patch.dict(os.environ, {"CLAUDE_CODE_OAUTH_TOKEN": "test-key"}):
             reviewer = ARCReviewer(verbose=True)
 
         result = reviewer.review_pr(pr_number=123, base_branch="main")

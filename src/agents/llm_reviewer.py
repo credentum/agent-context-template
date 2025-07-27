@@ -41,10 +41,11 @@ class LLMReviewer:
                 "Install with: pip install anthropic>=0.8.0"
             )
 
-        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        self.api_key = api_key or os.getenv("CLAUDE_CODE_OAUTH_TOKEN")
         if not self.api_key:
             raise ValueError(
-                "ANTHROPIC_API_KEY must be provided either as parameter or environment variable"
+                "CLAUDE_CODE_OAUTH_TOKEN must be provided either as parameter "
+                "or environment variable"
             )
 
         self.client = anthropic.Anthropic(api_key=self.api_key)
