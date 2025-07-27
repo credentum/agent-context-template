@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+import yaml
+
 
 class WorkflowValidator:
     """Validates and enforces workflow compliance for sub-agents."""
@@ -34,7 +36,38 @@ class WorkflowValidator:
             raise ValueError("Invalid state filename")
 
         self.state_file = self.workflow_dir / safe_filename
+        self.config = self._load_config()
         self.state = self._load_state()
+
+    def _load_config(self) -> Dict[str, Any]:
+        """Load workflow configuration from YAML file."""
+        config_path = self.workflow_dir / ".claude" / "config" / "workflow-enforcement.yaml"
+        try:
+            if config_path.exists():
+                with open(config_path, "r") as f:
+                    config = yaml.safe_load(f)
+                    return config if config is not None else {}
+            else:
+                # Return default configuration for backward compatibility
+                return self._get_default_config()
+        except Exception:
+            # Return default configuration on any error
+            return self._get_default_config()
+
+    def _get_default_config(self) -> Dict[str, Any]:
+        """Get default configuration for backward compatibility."""
+        return {
+            "phases": {
+                "validation": {
+                    "ci_validation": {
+                        "require_ci": True,
+                        "max_age_hours": 1,  # Backward compatible 1-hour default
+                        "marker_files": [".last-ci-run"],
+                        "allow_test_only": False,
+                    }
+                }
+            }
+        }
 
     def _load_state(self) -> Dict[str, Any]:
         """Load workflow state from file."""
@@ -244,14 +277,36 @@ class WorkflowValidator:
         return len(result.stdout.decode().strip()) > 0
 
     def _check_ci_status(self) -> bool:
-        """Check if CI has passed."""
-        # Check for CI execution marker
-        ci_marker = self.workflow_dir / ".last-ci-run"
-        if ci_marker.exists():
-            # Check if it's recent (within last hour)
-            stat = ci_marker.stat()
-            age = datetime.now().timestamp() - stat.st_mtime
-            return age < 3600
+        """Check if CI has passed with configurable validation."""
+        # Get CI validation configuration
+        ci_config = self.config.get("phases", {}).get("validation", {}).get("ci_validation", {})
+
+        # Extract configuration with defaults
+        require_ci = ci_config.get("require_ci", True)
+        max_age_hours = ci_config.get("max_age_hours", 1)
+        marker_files = ci_config.get("marker_files", [".last-ci-run"])
+        allow_test_only = ci_config.get("allow_test_only", False)
+
+        # Check for any CI marker files
+        for marker_file in marker_files:
+            marker_path = self.workflow_dir / marker_file
+            if marker_path.exists():
+                # If max_age_hours is 0, no time restriction
+                if max_age_hours == 0:
+                    return True
+
+                # Check age only if configured
+                stat = marker_path.stat()
+                age_hours = (datetime.now().timestamp() - stat.st_mtime) / 3600
+                if age_hours <= max_age_hours:
+                    return True
+
+        # If CI not required and tests might have passed another way
+        if not require_ci:
+            # Check for test indicators even without CI
+            if allow_test_only and self._check_tests_run():
+                return True
+
         return False
 
     def _check_tests_run(self) -> bool:
