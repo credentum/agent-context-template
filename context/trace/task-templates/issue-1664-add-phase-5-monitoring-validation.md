@@ -1,3 +1,7 @@
+---
+schema_version: "1.0"
+---
+
 # ────────────────────────────────────────────────────────────────────────
 # TASK: issue-1664-add-phase-5-monitoring-validation
 # Generated from GitHub Issue #1664

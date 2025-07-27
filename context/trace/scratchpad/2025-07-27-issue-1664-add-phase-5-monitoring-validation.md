@@ -1,3 +1,7 @@
+---
+schema_version: "1.0"
+---
+
 # Execution Plan: Issue #1664 - Add Phase 5 Monitoring Validation
 
 **Issue**: #1664 - Add missing Phase 5 (Monitoring) validation logic to workflow system
