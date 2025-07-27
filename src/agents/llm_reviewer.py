@@ -334,7 +334,7 @@ Please review the entire PR state and provide your assessment in the required YA
 
             # Start conversation with Claude
             message = self.client.messages.create(
-                model="claude-3-opus-20240229",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=4000,
                 tools=tools,
                 messages=[
@@ -376,14 +376,16 @@ Please review the entire PR state and provide your assessment in the required YA
                         else:
                             result = f"Unknown tool: {tool_name}"
 
-                        tool_results.append({"tool_use_id": block.id, "content": result})
+                        tool_results.append(
+                            {"type": "tool_result", "tool_use_id": block.id, "content": result}
+                        )
 
                 # Send tool results back to Claude
                 conversation.append({"role": "user", "content": tool_results})
 
                 # Get Claude's next response
                 message = self.client.messages.create(
-                    model="claude-3-opus-20240229",
+                    model="claude-3-5-sonnet-20241022",
                     max_tokens=4000,
                     tools=tools,
                     messages=conversation,
