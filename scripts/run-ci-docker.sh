@@ -43,15 +43,33 @@ show_help() {
 # Default command
 COMMAND=${1:-all}
 
-# Function to run a service
+# Function to run a service with proper timeout handling
 run_service() {
     local service=$1
     local description=$2
 
     echo -e "${BLUE}▶ Running $description...${NC}"
+    echo -e "${YELLOW}Note: CI operations may take up to 12 minutes to complete${NC}"
+
+    # Set Docker client timeout to 12 minutes (720 seconds)
+    export DOCKER_CLIENT_TIMEOUT=720
+    export COMPOSE_HTTP_TIMEOUT=720
 
     # Always use both compose files since CI file has dependencies on base services
-    docker-compose -f docker-compose.yml -f docker-compose.ci.yml run --rm $service
+    # Use timeout command as additional safety net
+    timeout 720 docker-compose -f docker-compose.yml -f docker-compose.ci.yml run --rm $service
+    local exit_code=$?
+
+    if [ $exit_code -eq 124 ]; then
+        echo -e "${RED}✗ Operation timed out after 12 minutes${NC}"
+        return 124
+    elif [ $exit_code -ne 0 ]; then
+        echo -e "${RED}✗ Operation failed with exit code $exit_code${NC}"
+        return $exit_code
+    else
+        echo -e "${GREEN}✓ Operation completed successfully${NC}"
+        return 0
+    fi
 }
 
 # Main logic
