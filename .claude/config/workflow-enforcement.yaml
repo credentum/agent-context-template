@@ -5,6 +5,23 @@ enforcement:
   enabled: true
   require_state_file: true
   strict_mode: true
+branch_patterns:
+  # List of allowed branch prefixes for PR validation
+  prefixes:
+    - fix
+    - feature
+    - hotfix
+    - refactor
+    - chore
+    - docs
+    - style
+    - test
+  # Optional custom regex pattern for complex branch naming
+  # Use {issue} placeholder for issue number
+  # Example: "issue-{issue}-.*" would match "issue-123-fix-bug"
+  custom_regex: null
+  # PR list limit for busy repositories
+  pr_list_limit: 100
 phases:
   implementation:
     max_duration_hours: 8

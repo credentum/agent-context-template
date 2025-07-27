@@ -6,6 +6,7 @@ This can be integrated into the workflow execution to enforce compliance.
 
 import glob
 import json
+import logging
 import re
 import subprocess
 from datetime import datetime
@@ -66,7 +67,20 @@ class WorkflowValidator:
                         "allow_test_only": False,
                     }
                 }
-            }
+            },
+            "branch_patterns": {
+                "prefixes": [
+                    "fix",
+                    "feature",
+                    "hotfix",
+                    "refactor",
+                    "chore",
+                    "docs",
+                    "style",
+                    "test",
+                ],
+                "custom_regex": None,  # Optional custom pattern with {issue} placeholder
+            },
         }
 
     def _load_state(self) -> Dict[str, Any]:
@@ -325,18 +339,61 @@ class WorkflowValidator:
         )
 
     def _check_pr_created(self) -> bool:
-        """Check if PR was created."""
-        # Use exact branch pattern instead of wildcard to prevent injection
-        # issue_number already validated in __init__
-        result = subprocess.run(
-            ["gh", "pr", "list", "--head", f"fix/{self.issue_number}-", "--limit", "10"],
-            capture_output=True,
-            shell=False,  # Explicitly disable shell
-            text=True,
+        """Check if PR was created with flexible branch pattern matching."""
+        # Get configured branch prefixes or use defaults
+        branch_config = self.config.get("branch_patterns", {})
+        branch_prefixes = branch_config.get(
+            "prefixes", ["fix", "feature", "hotfix", "refactor", "chore", "docs", "style", "test"]
         )
-        output = result.stdout.strip()
-        # Check if any PR contains our issue number
-        return f"fix/{self.issue_number}-" in output or f"feature/{self.issue_number}-" in output
+
+        # Get configurable PR list limit
+        pr_list_limit = str(branch_config.get("pr_list_limit", 100))
+
+        try:
+            # Get all PRs to search through - using JSON for safer parsing
+            result = subprocess.run(
+                ["gh", "pr", "list", "--json", "headRefName", "--limit", pr_list_limit],
+                capture_output=True,
+                shell=False,  # Explicitly disable shell
+                text=True,
+            )
+
+            if result.returncode == 0:
+                prs = json.loads(result.stdout)
+
+                issue_pattern = f"{self.issue_number}-"
+
+                # Check if any PR branch contains our issue number
+                for pr in prs:
+                    branch_name = pr.get("headRefName", "")
+
+                    # Check standard patterns: prefix/issue_number-*
+                    for prefix in branch_prefixes:
+                        if branch_name.startswith(f"{prefix}/{issue_pattern}"):
+                            return True
+
+                    # Check custom regex if configured
+                    custom_pattern = branch_config.get("custom_regex")
+                    if custom_pattern:
+                        pattern = custom_pattern.format(issue=self.issue_number)
+                        if re.match(pattern, branch_name):
+                            return True
+
+            logging.debug(f"No PR found for issue {self.issue_number} with configured patterns")
+            return False
+        except (json.JSONDecodeError, subprocess.CalledProcessError, KeyError) as e:
+            # Fall back to original behavior if JSON parsing fails
+            logging.debug(f"PR detection failed with JSON approach: {e}")
+            result = subprocess.run(
+                ["gh", "pr", "list", "--head", f"fix/{self.issue_number}-", "--limit", "10"],
+                capture_output=True,
+                shell=False,
+                text=True,
+            )
+            output = result.stdout.strip()
+            return (
+                f"fix/{self.issue_number}-" in output or f"feature/{self.issue_number}-" in output
+            )
 
     def _check_file_exists(self, pattern: str) -> bool:
         """Check if a file matching the pattern exists."""
