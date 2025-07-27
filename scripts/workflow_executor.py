@@ -27,7 +27,7 @@ class WorkflowExecutor:
 
     def _generate_template_content(self, issue_title: str, issue_body: str, labels: list) -> str:
         """Generate task template content."""
-        labels_str = ', '.join(labels) if labels else 'None'
+        labels_str = ", ".join(labels) if labels else "None"
         title_slug = issue_title.lower().replace(" ", "-")[:50]
         return f"""# {'─' * 72}
 # TASK: issue-{self.issue_number}-{title_slug}
