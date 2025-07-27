@@ -146,7 +146,8 @@ class LLMReviewer:
 pull-requests on the agent-context-template (MCP-based context platform).
 
 CRITICAL: Output ONLY valid YAML. No markdown, no explanations, \
-no code blocks. Start directly with the YAML schema.
+no code blocks. Do NOT include any text before or after the YAML. \
+Start directly with 'schema_version:' on the first line.
 FORMATTING: Ensure consistent YAML formatting for both initial reviews \
 and subsequent edits.
 COMMENT_FORMAT: Use identical structure and indentation for all review \
@@ -239,7 +240,7 @@ automated_issues:
                     print(f"Warning: Could not get changed files: {stderr}")
                 changed_files_output = ""
 
-            # Get the full diff for context
+            # Get the full diff for context (limited to avoid rate limits)
             full_diff_cmd = f"git diff origin/{base_branch}...HEAD"
             exit_code, full_diff, stderr = self._run_command(full_diff_cmd.split())
 
@@ -247,6 +248,15 @@ automated_issues:
                 if self.verbose:
                     print(f"Warning: Could not get full diff: {stderr}")
                 full_diff = ""
+            else:
+                # Limit diff size to avoid hitting rate limits
+                max_diff_lines = 500
+                diff_lines = full_diff.split("\n")
+                if len(diff_lines) > max_diff_lines:
+                    full_diff = (
+                        "\n".join(diff_lines[:max_diff_lines])
+                        + f"\n\n[Diff truncated - {max_diff_lines}/{len(diff_lines)} lines]"
+                    )
 
             # Create the context message for Claude
             context_message = f"""Please review this PR against the criteria specified.
@@ -404,6 +414,13 @@ Please review the entire PR state and provide your assessment in the required YA
 
             # Parse the YAML response
             try:
+                # Try to extract YAML if Claude included explanatory text
+                yaml_start = final_response.find("schema_version:")
+                if yaml_start > 0:
+                    if self.verbose:
+                        print(f"⚠️  Stripping {yaml_start} chars of text before YAML")
+                    final_response = final_response[yaml_start:]
+
                 review_data = yaml.safe_load(final_response)
 
                 if not isinstance(review_data, dict):
