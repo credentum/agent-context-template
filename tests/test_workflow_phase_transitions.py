@@ -42,11 +42,11 @@ class TestWorkflowPhaseTransitions(unittest.TestCase):
 
         # Patch the init
         self.original_init = WorkflowEnforcer.__init__
-        WorkflowEnforcer.__init__ = mock_init
+        WorkflowEnforcer.__init__ = mock_init  # type: ignore[method-assign]
 
     def tearDown(self):
         """Clean up test environment."""
-        WorkflowEnforcer.__init__ = self.original_init
+        WorkflowEnforcer.__init__ = self.original_init  # type: ignore[method-assign]
         if self.state_file.exists():
             self.state_file.unlink()
 

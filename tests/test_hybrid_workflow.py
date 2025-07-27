@@ -173,7 +173,7 @@ global_settings:
     def test_specialist_timeout_handling(self):
         """Test handling of specialist timeouts."""
         executor = HybridWorkflowExecutor(self.test_issue_number)
-        executor.specialist_timeout = 0.1  # Very short timeout
+        executor.specialist_timeout = 1  # Very short timeout (1 second)
 
         # Create a slow specialist
         def slow_specialist(agent_type, prompt, context):

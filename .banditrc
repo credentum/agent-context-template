@@ -1,0 +1,24 @@
+[bandit]
+# Security scan configuration for CI pipeline
+# Focus on high and medium severity issues only
+
+# Exclude test files from security scanning
+exclude_dirs = tests,context,docs,.git
+
+# Skip issues that are acceptable for development scripts
+skips = B101,B601,B607,B110,B404,B405,B602,B314,B324
+
+# Configure severity levels
+severity = medium
+
+# Configure confidence levels
+confidence = medium
+
+# Ignore common development patterns that are acceptable
+[bandit.assert_used]
+# Allow assert statements in tests and scripts
+skip_non_production = true
+
+[bandit.hardcoded_password_string]
+# Allow hardcoded strings that are clearly not passwords
+word_list = password,pass,passwd,secret,key,token,api

@@ -20,17 +20,17 @@ schema_version: "1.0"
 - **Component**: workflow-automation
 - **Priority**: enhancement
 - **Why this matters**: Current workflow validator only accepts fix/ and feature/ branch patterns, limiting teams that use other naming conventions like hotfix/, refactor/, chore/, docs/, etc.
-- **Dependencies**: WorkflowValidator class, workflow-enforcement.yaml configuration
+- **Dependencies**: WorkflowValidator class, workflow-enforcement.yaml configuration, GitHub CLI (gh)
 - **Related**: #1662 (CI validation flexibility), #1661 (path validation), #1659 (workflow validation fixes)
 
 ## 🛠️ Subtasks
 
 | File | Action | Prompt Tech | Purpose | Context Impact |
 |------|--------|-------------|---------|----------------|
-| scripts/validators/workflow_validator.py | modify | direct implementation | Add flexible branch pattern support | Med |
-| .claude/config/workflow-enforcement.yaml | modify | yaml enhancement | Add branch pattern configuration | Low |
-| tests/test_workflow_validator.py | create/modify | test-driven | Comprehensive test coverage for patterns | Med |
-| context/trace/scratchpad/2025-07-27-issue-1663-support-flexible-branch-naming-patterns.md | create | documentation | Track implementation progress | Low |
+| `.claude/workflows/workflow-validator.py` | modify | direct-implementation | Update `_check_pr_created()` method | Low |
+| `.claude/config/workflow-enforcement.yaml` | modify | structured-config | Add branch pattern configuration | Low |
+| `tests/test_workflow_validator.py` | create/modify | test-driven | Comprehensive test coverage for patterns | Med |
+| `context/trace/scratchpad/2025-07-27-issue-1663-support-flexible-branch-naming-patterns.md` | create | documentation | Track implementation progress | Low |
 
 ## 📝 Enhanced RCICO Prompt
 **Role**
@@ -44,7 +44,7 @@ Need to extend to support:
 - Custom regex patterns for complex naming schemes
 - Configurable patterns via workflow-enforcement.yaml
 - Backward compatibility with existing patterns
-Related files: scripts/validators/workflow_validator.py, .claude/config/workflow-enforcement.yaml
+Related files: .claude/workflows/workflow-validator.py, .claude/config/workflow-enforcement.yaml
 
 **Instructions**
 1. **Primary Objective**: Enhance branch pattern validation to support flexible naming patterns while maintaining security
@@ -115,6 +115,6 @@ phase: Phase 2: Implementation
 component: workflow-automation
 priority: enhancement
 complexity: Medium
-dependencies: workflow-enforcement.yaml, WorkflowValidator
+dependencies: workflow-enforcement.yaml, WorkflowValidator, GitHub CLI
 security_considerations: regex_validation, input_sanitization
 ```
