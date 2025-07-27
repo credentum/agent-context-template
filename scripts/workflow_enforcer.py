@@ -131,13 +131,15 @@ class WorkflowEnforcer:
             return default_config
 
         with open(self.config_path, "r") as f:
-            return yaml.safe_load(f)
+            config = yaml.safe_load(f)
+            return config if isinstance(config, dict) else {}
 
     def _load_state(self) -> Dict[str, Any]:
         """Load workflow state from file."""
         if self.state_file.exists():
             with open(self.state_file, "r") as f:
-                return json.load(f)
+                state = json.load(f)
+                return state if isinstance(state, dict) else {}
 
         # Initialize new state
         return {
@@ -292,8 +294,8 @@ class WorkflowEnforcer:
         Returns:
             Tuple of (is_valid, errors, warnings)
         """
-        errors = []
-        warnings = []
+        errors: List[str] = []
+        warnings: List[str] = []
 
         # Check if enforcement is required
         if not self.config["enforcement"]["enabled"]:
