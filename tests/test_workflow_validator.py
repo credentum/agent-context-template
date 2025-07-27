@@ -374,19 +374,169 @@ class TestWorkflowValidator(unittest.TestCase):
         self.assertIsInstance(errors, list)
 
     @patch("subprocess.run")
-    def test_pr_creation_detection(self, mock_run: Mock) -> None:
-        """Test PR creation detection with various branch patterns."""
-        # Mock PR exists
-        mock_run.return_value.stdout = f"fix/{self.test_issue_number}-implement"
-        self.assertTrue(self.validator._check_pr_created())
-
-        # Mock no PR
-        mock_run.return_value.stdout = ""
+    def test_pr_creation_detection_flexible_patterns(self, mock_run: Mock) -> None:
+        """Test PR creation detection with flexible branch patterns."""
+        # Mock successful command execution with JSON response
+        mock_run.return_value.returncode = 0
+        
+        # Test various branch patterns that should be detected
+        branch_patterns = [
+            f"fix/{self.test_issue_number}-implement",
+            f"feature/{self.test_issue_number}-enhancement", 
+            f"hotfix/{self.test_issue_number}-urgent",
+            f"refactor/{self.test_issue_number}-cleanup",
+            f"chore/{self.test_issue_number}-maintenance",
+            f"docs/{self.test_issue_number}-documentation",
+            f"style/{self.test_issue_number}-formatting",
+            f"test/{self.test_issue_number}-testing"
+        ]
+        
+        for branch_name in branch_patterns:
+            with self.subTest(branch=branch_name):
+                # Mock JSON response with the branch
+                json_response = f'[{{"headRefName": "{branch_name}"}}]'
+                mock_run.return_value.stdout = json_response
+                self.assertTrue(self.validator._check_pr_created(), 
+                               f"Should detect PR for branch: {branch_name}")
+        
+        # Test no matching PR
+        json_response = '[{"headRefName": "unrelated-branch"}]'
+        mock_run.return_value.stdout = json_response
+        self.assertFalse(self.validator._check_pr_created())
+        
+        # Test empty PR list
+        mock_run.return_value.stdout = "[]"
         self.assertFalse(self.validator._check_pr_created())
 
-        # Test with feature branch pattern
-        mock_run.return_value.stdout = f"feature/{self.test_issue_number}-enhancement"
+    @patch("subprocess.run")
+    def test_pr_creation_detection_custom_regex(self, mock_run: Mock) -> None:
+        """Test PR creation detection with custom regex patterns."""
+        # Create validator with custom regex configuration
+        custom_config = {
+            "branch_patterns": {
+                "prefixes": ["fix", "feature"],
+                "custom_regex": r"^(issue|bug)-{issue}-.*$"
+            }
+        }
+        
+        # Mock the config loading
+        with patch.object(self.validator, 'config', custom_config):
+            mock_run.return_value.returncode = 0
+            
+            # Test custom regex match
+            custom_branch = f"issue-{self.test_issue_number}-description"
+            json_response = f'[{{"headRefName": "{custom_branch}"}}]'
+            mock_run.return_value.stdout = json_response
+            self.assertTrue(self.validator._check_pr_created())
+            
+            # Test custom regex non-match  
+            non_matching_branch = f"task-{self.test_issue_number}-description"
+            json_response = f'[{{"headRefName": "{non_matching_branch}"}}]'
+            mock_run.return_value.stdout = json_response
+            self.assertFalse(self.validator._check_pr_created())
+
+    @patch("subprocess.run")
+    def test_pr_creation_detection_security(self, mock_run: Mock) -> None:
+        """Test PR creation detection security aspects."""
+        mock_run.return_value.returncode = 0
+        
+        # Test with malicious JSON (should handle gracefully)
+        malicious_inputs = [
+            '{"headRefName": "' + "x" * 10000 + '"}',  # Very long string
+            '{"headRefName": null}',                    # Null value
+            '{"headRefName": 123}',                     # Non-string value
+            '{"different_key": "value"}',               # Missing expected key
+        ]
+        
+        for malicious_input in malicious_inputs:
+            with self.subTest(input=malicious_input[:50]):
+                mock_run.return_value.stdout = f"[{malicious_input}]"
+                # Should not crash and should return False
+                try:
+                    result = self.validator._check_pr_created()
+                    self.assertFalse(result)
+                except Exception:
+                    # If any exception, it should be handled gracefully
+                    self.fail(f"Should handle malicious input gracefully: {malicious_input[:50]}")
+
+    def test_validate_custom_regex_security(self) -> None:
+        """Test custom regex validation for security."""
+        # Valid patterns
+        valid_patterns = [
+            r"^(fix|feature)-{issue}-.*$",
+            r"^issue-{issue}$",
+            r"^{issue}-description$"
+        ]
+        
+        for pattern in valid_patterns:
+            with self.subTest(pattern=pattern):
+                self.assertTrue(self.validator._validate_custom_regex(pattern))
+        
+        # Invalid patterns (security risks)
+        invalid_patterns = [
+            r"(?!.*){issue}",  # Negative lookahead
+            r"(?=.*){issue}",  # Positive lookahead
+            r"(?<!.*){issue}", # Negative lookbehind
+            r"(?<=.*){issue}", # Positive lookbehind
+            r".*+{issue}",     # Catastrophic backtracking
+            r".*{1,}{issue}",  # Unbounded quantifiers
+            "x" * 2000 + "{issue}",  # Too long
+            r"{issue}{other}",        # Multiple placeholders
+            r"no-placeholder",        # No placeholder
+            None,                     # Invalid type
+            123,                      # Invalid type
+        ]
+        
+        for pattern in invalid_patterns:
+            with self.subTest(pattern=str(pattern)[:50]):
+                self.assertFalse(self.validator._validate_custom_regex(pattern))
+
+    def test_validate_branch_prefixes(self) -> None:
+        """Test branch prefix validation and sanitization."""
+        # Valid prefixes
+        valid_prefixes = ["fix", "feature", "hotfix", "refactor"]
+        result = self.validator._validate_branch_prefixes(valid_prefixes)
+        self.assertEqual(result, valid_prefixes)
+        
+        # Mixed valid/invalid prefixes
+        mixed_prefixes = ["fix", "feature!", "hot@fix", "", "very-long-prefix-name", None, 123]
+        result = self.validator._validate_branch_prefixes(mixed_prefixes)
+        expected = ["fix", "hotfix"]  # Only valid ones
+        self.assertEqual(result, expected)
+        
+        # Empty or invalid input
+        self.assertEqual(
+            self.validator._validate_branch_prefixes([]),
+            ["fix", "feature", "hotfix", "refactor", "chore", "docs", "style", "test"]
+        )
+        self.assertEqual(
+            self.validator._validate_branch_prefixes(None),
+            ["fix", "feature", "hotfix", "refactor", "chore", "docs", "style", "test"]
+        )
+
+    @patch("subprocess.run")
+    def test_pr_creation_detection_fallback(self, mock_run: Mock) -> None:
+        """Test PR creation detection fallback to original behavior."""
+        # Mock JSON parsing failure (invalid JSON)
+        def side_effect(*args, **kwargs):
+            if "--json" in args[0]:
+                # First call (JSON) returns invalid
+                result = Mock()
+                result.returncode = 0
+                result.stdout = "invalid json"
+                return result
+            else:
+                # Second call (fallback) returns valid
+                result = Mock()
+                result.returncode = 0
+                result.stdout = f"fix/{self.test_issue_number}-test"
+                return result
+        
+        mock_run.side_effect = side_effect
         self.assertTrue(self.validator._check_pr_created())
+        
+        # Verify both calls were made
+        self.assertEqual(mock_run.call_count, 2)
 
     def test_workflow_directory_validation(self) -> None:
         """Test workflow directory validation and security."""
