@@ -5,6 +5,23 @@
 # Note: We intentionally do NOT use 'set -e' here
 # This ensures ALL checks run even if some fail, allowing us to see all errors at once
 
+# Signal handling for clean shutdown
+cleanup() {
+    echo -e "\n${YELLOW}Caught signal, cleaning up...${NC}"
+    # Kill all child processes in this process group
+    jobs -p | xargs -r kill 2>/dev/null
+    # Wait briefly for processes to exit gracefully
+    sleep 1
+    # Force kill any remaining processes
+    jobs -p | xargs -r kill -9 2>/dev/null
+    wait
+    echo -e "${GREEN}Cleanup completed${NC}"
+    exit 0
+}
+
+# Set up signal handlers
+trap cleanup EXIT SIGTERM SIGINT
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
