@@ -92,12 +92,12 @@ Estimates based on analysis:
 ├── complexity: medium
 └── files_affected: 2
 
-Actuals (to be filled):
-├── tokens_used: ___
-├── time_taken: ___
-├── cost_actual: $___
-├── iterations_needed: ___
-└── context_clears: ___
+Actuals:
+├── tokens_used: ~8k
+├── time_taken: 45 minutes
+├── cost_actual: ~$0.12
+├── iterations_needed: 1
+└── context_clears: 0
 ```
 
 ## 🏷️ Metadata
