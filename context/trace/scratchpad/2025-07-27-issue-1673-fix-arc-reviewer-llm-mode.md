@@ -44,7 +44,17 @@
 - anthropic package confirmed installed (version 0.59.0)
 
 ## Lessons Learned
-(To be filled during implementation)
+1. CLAUDE_CODE_OAUTH_TOKEN is specifically for Claude Code CLI and GitHub Actions, not for direct API usage
+2. Need to use ANTHROPIC_API_KEY for direct Anthropic Python SDK calls
+3. Import handling needs to support both module and script execution modes
+4. Tool result format must include "type": "tool_result" field for Claude API
+5. Rate limits apply (40k tokens/minute) - need to be mindful of context size
 
 ## Actual Results
-(To be filled after implementation)
+- Successfully fixed import handling to detect anthropic package
+- Added support for both OAuth token (auth_token) and API key authentication
+- Fixed all MyPy type checking errors
+- Maintained backward compatibility with rule-based mode
+- LLM mode works correctly with proper ANTHROPIC_API_KEY
+- Claude successfully processes reviews and uses tools (grep, read, etc.)
+- Hit rate limits during testing but functionality confirmed working
