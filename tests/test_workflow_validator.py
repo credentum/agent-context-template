@@ -4,6 +4,7 @@ Comprehensive unit tests for workflow validator enforcement system.
 """
 
 import importlib.util
+import json
 import os
 import tempfile
 import unittest
@@ -375,17 +376,150 @@ class TestWorkflowValidator(unittest.TestCase):
 
     @patch("subprocess.run")
     def test_pr_creation_detection(self, mock_run: Mock) -> None:
-        """Test PR creation detection with various branch patterns."""
-        # Mock PR exists
-        mock_run.return_value.stdout = f"fix/{self.test_issue_number}-implement"
+        """Test PR creation detection with legacy fallback behavior."""
+        # Test fallback to legacy behavior when JSON parsing fails
+        mock_run.side_effect = [
+            Mock(returncode=0, stdout="invalid json"),  # First call fails
+            Mock(
+                returncode=0, stdout=f"fix/{self.test_issue_number}-implement", stderr=""
+            ),  # Fallback succeeds
+        ]
         self.assertTrue(self.validator._check_pr_created())
 
-        # Mock no PR
-        mock_run.return_value.stdout = ""
+        # Reset for next test
+        mock_run.reset_mock()
+        mock_run.side_effect = [
+            Mock(returncode=0, stdout="invalid json"),  # First call fails
+            Mock(returncode=0, stdout="", stderr=""),  # Fallback finds no PR
+        ]
         self.assertFalse(self.validator._check_pr_created())
 
-        # Test with feature branch pattern
-        mock_run.return_value.stdout = f"feature/{self.test_issue_number}-enhancement"
+        # Test with feature branch pattern in fallback
+        mock_run.reset_mock()
+        mock_run.side_effect = [
+            Mock(returncode=0, stdout="not json"),  # First call fails
+            Mock(
+                returncode=0, stdout=f"feature/{self.test_issue_number}-enhancement", stderr=""
+            ),  # Fallback finds feature branch
+        ]
+        self.assertTrue(self.validator._check_pr_created())
+
+    @patch("subprocess.run")
+    def test_pr_creation_detection_flexible_patterns(self, mock_run: Mock) -> None:
+        """Test PR creation detection with flexible branch patterns using JSON output."""
+        # Test with various branch prefixes
+        branch_patterns = ["fix", "feature", "hotfix", "refactor", "chore", "docs", "style", "test"]
+
+        for prefix in branch_patterns:
+            # Mock successful JSON response with PR matching pattern
+            mock_run.return_value.returncode = 0
+            mock_run.return_value.stdout = json.dumps(
+                [{"headRefName": f"{prefix}/{self.test_issue_number}-description"}]
+            )
+            self.assertTrue(
+                self.validator._check_pr_created(), f"Failed to detect PR with {prefix}/ pattern"
+            )
+
+        # Test no matching PR
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = json.dumps(
+            [{"headRefName": "unrelated/branch-name"}, {"headRefName": "another/999-different"}]
+        )
+        self.assertFalse(self.validator._check_pr_created())
+
+        # Test empty PR list
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = json.dumps([])
+        self.assertFalse(self.validator._check_pr_created())
+
+    @patch("subprocess.run")
+    def test_pr_creation_detection_custom_regex(self, mock_run: Mock) -> None:
+        """Test PR creation detection with custom regex patterns."""
+        # Set up custom regex configuration
+        self.validator.config["branch_patterns"] = {"custom_regex": r"issue-{issue}-.*"}
+
+        # Test matching custom pattern
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = json.dumps(
+            [{"headRefName": f"issue-{self.test_issue_number}-implementation"}]
+        )
+        self.assertTrue(self.validator._check_pr_created())
+
+        # Test non-matching pattern
+        mock_run.return_value.stdout = json.dumps([{"headRefName": "issue-999-different"}])
+        self.assertFalse(self.validator._check_pr_created())
+
+    @patch("subprocess.run")
+    def test_pr_creation_detection_error_handling(self, mock_run: Mock) -> None:
+        """Test PR creation detection error handling and fallback."""
+        # Test JSON decode error - should fall back to legacy behavior
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = "invalid json"
+
+        # Configure second call for fallback
+        mock_run.side_effect = [
+            Mock(returncode=0, stdout="invalid json"),  # First call fails
+            Mock(
+                returncode=0, stdout=f"fix/{self.test_issue_number}-test", stderr=""
+            ),  # Fallback succeeds
+        ]
+
+        result = self.validator._check_pr_created()
+        self.assertTrue(result)
+        self.assertEqual(mock_run.call_count, 2)
+
+        # Test subprocess error - simulate JSON parsing error which triggers fallback
+        mock_run.reset_mock()
+        mock_run.side_effect = [
+            Mock(returncode=0, stdout="{invalid json}"),  # First call has invalid JSON
+            Mock(returncode=1, stdout="", stderr="error"),  # Fallback fails
+        ]
+        result = self.validator._check_pr_created()
+        self.assertFalse(result)
+
+        # Test with command failure
+        mock_run.reset_mock()
+        mock_run.side_effect = None
+        mock_run.return_value.returncode = 1
+        mock_run.return_value.stdout = ""
+        result = self.validator._check_pr_created()
+        self.assertFalse(result)
+
+    @patch("subprocess.run")
+    def test_pr_creation_detection_mixed_patterns(self, mock_run: Mock) -> None:
+        """Test PR creation detection with multiple PRs and mixed patterns."""
+        # Multiple PRs with different patterns
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = json.dumps(
+            [
+                {"headRefName": "feature/456-other-feature"},
+                {"headRefName": f"hotfix/{self.test_issue_number}-urgent-fix"},
+                {"headRefName": "main"},
+                {"headRefName": "develop"},
+            ]
+        )
+
+        self.assertTrue(self.validator._check_pr_created())
+
+        # Test with custom configuration limiting prefixes
+        self.validator.config["branch_patterns"] = {
+            "prefixes": ["fix", "feature"]  # Only allow these two
+        }
+
+        mock_run.return_value.stdout = json.dumps(
+            [
+                {"headRefName": f"hotfix/{self.test_issue_number}-urgent"},  # Not in allowed list
+                {"headRefName": f"chore/{self.test_issue_number}-cleanup"},  # Not in allowed list
+            ]
+        )
+
+        self.assertFalse(self.validator._check_pr_created())
+
+        # Now with allowed prefix
+        mock_run.return_value.stdout = json.dumps(
+            [{"headRefName": f"feature/{self.test_issue_number}-new-feature"}]
+        )
+
         self.assertTrue(self.validator._check_pr_created())
 
     def test_workflow_directory_validation(self) -> None:
