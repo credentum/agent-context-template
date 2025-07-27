@@ -7,6 +7,7 @@ Testing issue #1662 requirements
 import importlib.util
 import os
 import tempfile
+import time
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -14,9 +15,10 @@ from unittest.mock import patch
 
 import yaml
 
-# Load workflow validator using importlib for reliable importing
-workflow_dir = Path(__file__).parent.parent / ".claude" / "workflows"
-workflow_validator_path = workflow_dir / "workflow-validator.py"
+# Load workflow validator module
+workflow_validator_path = (
+    Path(__file__).parent.parent / ".claude" / "workflows" / "workflow-validator.py"
+)
 
 try:
     spec = importlib.util.spec_from_file_location("workflow_validator", workflow_validator_path)
@@ -24,9 +26,7 @@ try:
         raise ImportError(f"Could not load spec from {workflow_validator_path}")
     workflow_validator_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(workflow_validator_module)
-
     WorkflowValidator = workflow_validator_module.WorkflowValidator
-
     IMPORT_SUCCESS = True
 except Exception as e:
     print(f"Import failed: {e}")
@@ -268,6 +268,91 @@ class TestWorkflowValidatorCIFlexibility(unittest.TestCase):
             self._create_marker_file("coverage.xml")
 
             # Phase 4 prerequisites should pass
+            can_proceed, errors = validator.validate_phase_prerequisites(4)
+            self.assertTrue(can_proceed)
+            self.assertEqual(len(errors), 0)
+
+    def test_ci_pipeline_integration_docker_simulation(self):
+        """Integration test simulating actual Docker CI pipeline behavior."""
+        # Configure for Docker CI simulation
+        self._create_config(
+            {
+                "require_ci": True,
+                "max_age_hours": 2,
+                "marker_files": [".last-ci-run", "ci-output.log"],
+                "allow_test_only": False,
+            }
+        )
+
+        validator = WorkflowValidator(self.issue_number, self.workflow_dir)
+
+        # Simulate Docker CI run creating output log
+        ci_log_path = self.workflow_dir / "ci-output.log"
+        ci_log_path.write_text("Docker CI completed successfully\nAll tests passed\n")
+
+        # Should pass with CI log present
+        self.assertTrue(validator._check_ci_status())
+
+        # Simulate CI run marker creation (as would happen in real CI)
+        self._create_marker_file(".last-ci-run")
+        self.assertTrue(validator._check_ci_status())
+
+    def test_ci_pipeline_integration_pytest_workflow(self):
+        """Integration test for pytest-based CI workflow."""
+        self._create_config(
+            {
+                "require_ci": True,
+                "max_age_hours": 1,
+                "marker_files": [".pytest_cache/v/cache/lastfailed", "coverage.xml"],
+                "allow_test_only": False,
+            }
+        )
+
+        validator = WorkflowValidator(self.issue_number, self.workflow_dir)
+
+        # Simulate pytest run creating cache and coverage
+        pytest_cache_dir = self.workflow_dir / ".pytest_cache" / "v" / "cache"
+        pytest_cache_dir.mkdir(parents=True)
+
+        # Create pytest cache files as would be created by real test run
+        (pytest_cache_dir / "lastfailed").write_text("{}")
+        (pytest_cache_dir / "nodeids").write_text("tests/test_example.py::test_function")
+
+        # Create coverage report as would be generated
+        coverage_file = self.workflow_dir / "coverage.xml"
+        coverage_file.write_text('<?xml version="1.0" ?><coverage><packages></packages></coverage>')
+
+        # Should pass with pytest artifacts present
+        self.assertTrue(validator._check_ci_status())
+
+    def test_ci_pipeline_integration_resume_scenario(self):
+        """Integration test for workflow resume after CI interruption."""
+        # Configure for resume-friendly CI validation
+        self._create_config(
+            {
+                "require_ci": True,
+                "max_age_hours": 0,  # No time limit for resume
+                "marker_files": [".last-ci-run", "ci-output.log", "coverage.xml"],
+                "allow_test_only": True,
+            }
+        )
+
+        validator = WorkflowValidator(self.issue_number, self.workflow_dir)
+
+        # Simulate old CI artifacts (from before interruption)
+        self._create_marker_file(".last-ci-run", age_hours=24)  # Day-old CI run
+        old_coverage = self.workflow_dir / "coverage.xml"
+        old_coverage.write_text("<coverage></coverage>")
+
+        # Set coverage file to be old too
+        old_time = time.time() - (25 * 3600)  # 25 hours ago
+        os.utime(old_coverage, (old_time, old_time))
+
+        # Should still pass because time limit is disabled
+        self.assertTrue(validator._check_ci_status())
+
+        # Verify phase validation works in resume scenario
+        with patch.object(validator, "_phase_completed", return_value=True):
             can_proceed, errors = validator.validate_phase_prerequisites(4)
             self.assertTrue(can_proceed)
             self.assertEqual(len(errors), 0)

@@ -366,7 +366,9 @@ def enforce_workflow_phase(issue_number: int, phase: int, agent_type: str) -> Wo
     return validator
 
 
-def complete_workflow_phase(validator: WorkflowValidator, phase: int, outputs: Dict[str, Any]):
+def complete_workflow_phase(
+    validator: WorkflowValidator, phase: int, outputs: Dict[str, Any]
+) -> None:
     """
     Mark a workflow phase as complete after validation.
     This should be called at the end of each agent's execution.
