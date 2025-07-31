@@ -768,6 +768,7 @@ will be enhanced in future iterations.
 
         return {
             "tests_run": True,
+            "ci_passed": docker_tests_passed,  # Required output
             "docker_tests_passed": docker_tests_passed,
             "arc_reviewer_passed": arc_reviewer_passed,
             "arc_verdict": arc_verdict,
