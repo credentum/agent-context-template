@@ -9,6 +9,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock, patch
 
 # Load workflow validator using importlib for reliable importing
@@ -649,19 +650,19 @@ class TestWorkflowValidator(unittest.TestCase):
         self.assertIn("PR number must be recorded for monitoring", errors)
 
         # Test complete outputs
-        outputs = {"pr_monitoring_active": True, "pr_number": 123}
+        outputs: dict[str, Any] = {"pr_monitoring_active": True, "pr_number": 123}
         valid, errors = self.validator.validate_phase_outputs(5, outputs)
         self.assertTrue(valid)
         self.assertEqual(len(errors), 0)
 
         # Test workflow completion without status tracking
-        outputs = {"pr_monitoring_active": True, "pr_number": 123, "workflow_completed": True}
+        outputs: dict[str, Any] = {"pr_monitoring_active": True, "pr_number": 123, "workflow_completed": True}
         valid, errors = self.validator.validate_phase_outputs(5, outputs)
         self.assertFalse(valid)
         self.assertIn("PR final status must be tracked when workflow completes", errors)
 
         # Test with status tracking
-        outputs = {
+        outputs: dict[str, Any] = {
             "pr_monitoring_active": True,
             "pr_number": 123,
             "pr_status_tracked": "merged",
