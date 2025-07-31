@@ -1563,3 +1563,13 @@
 {"timestamp": "2025-07-31T16:43:46.864182", "hook_type": "post", "phase": "implementation", "agent": null, "success": true, "message": "Phase 'implementation' completed successfully", "issue": 9999}
 {"timestamp": "2025-07-31T16:43:46.865408", "hook_type": "pre", "phase": "validation", "agent": "test-runner", "success": true, "message": "Entering phase 'validation'", "issue": 9999}
 {"timestamp": "2025-07-31T16:43:46.865828", "hook_type": "post", "phase": "validation", "agent": null, "success": false, "message": "Missing required outputs: coverage_maintained", "issue": 9999}
+{"timestamp": "2025-07-31T17:03:37.802724", "hook_type": "post", "phase": "investigation", "agent": null, "success": true, "message": "Phase 'investigation' was skipped", "issue": 1676}
+{"timestamp": "2025-07-31T17:03:37.803244", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 1676}
+{"timestamp": "2025-07-31T17:03:38.209318", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 1676}
+{"timestamp": "2025-07-31T17:03:38.211459", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Cannot implement on main branch", "issue": 1676}
+{"timestamp": "2025-07-31T17:05:53.455600", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": false, "message": "Previous phase 'planning' not started", "issue": 1676}
+{"timestamp": "2025-07-31T17:07:28.683519", "hook_type": "post", "phase": "investigation", "agent": null, "success": true, "message": "Phase 'investigation' was skipped", "issue": 1676}
+{"timestamp": "2025-07-31T17:07:28.684163", "hook_type": "pre", "phase": "planning", "agent": "task-planner", "success": true, "message": "Entering phase 'planning'", "issue": 1676}
+{"timestamp": "2025-07-31T17:07:29.105404", "hook_type": "post", "phase": "planning", "agent": null, "success": true, "message": "Phase 'planning' completed successfully", "issue": 1676}
+{"timestamp": "2025-07-31T17:07:29.109125", "hook_type": "pre", "phase": "implementation", "agent": "main-claude", "success": true, "message": "Entering phase 'implementation'", "issue": 1676}
+{"timestamp": "2025-07-31T17:07:29.119259", "hook_type": "post", "phase": "implementation", "agent": null, "success": false, "message": "Missing required outputs: commits_made", "issue": 1676}
