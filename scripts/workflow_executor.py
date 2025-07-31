@@ -696,15 +696,23 @@ will be enhanced in future iterations.
 
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
                 print(f"    ❌ Docker tests failed: {e}")
+                stdout_output = ""
                 if hasattr(e, "stdout") and e.stdout:
+                    stdout_output = e.stdout
                     print(f"    Output: {e.stdout}")
+                
+                # Try to extract coverage even on failure/timeout
+                coverage_percentage, coverage_maintained = self._extract_coverage_data(stdout_output)
                 
                 # Clean up even on failure
                 self._cleanup_test_environment()
                 
                 return {
                     "tests_run": True,
+                    "ci_passed": False,  # Required output
                     "docker_tests_passed": False,
+                    "coverage_maintained": coverage_maintained,
+                    "coverage_percentage": coverage_percentage,
                     "phase_1_complete": True,
                     "phase_2_complete": False,
                     "validation_attempts": validation_attempts,
@@ -714,6 +722,9 @@ will be enhanced in future iterations.
         else:
             print("    ⚠️  CI script not found, skipping Docker tests")
             docker_tests_passed = True  # Don't fail if no CI script
+            # Set default coverage values when no CI script
+            coverage_percentage = "unknown"
+            coverage_maintained = False
 
         # Clean up before ARC reviewer to ensure clean environment
         self._cleanup_test_environment()
