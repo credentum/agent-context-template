@@ -17,6 +17,17 @@ This repository is a GitHub Actions template for integrating Claude AI into work
 4. Run tests before committing any new logic
 5. Follow conventional commits: `type(scope): message`
 
+## CI/CD Best Practices
+### Docker CI Timeout Guidance
+- **Claude's tool timeout**: Commands have a 2-minute limit by default
+- **Quick CI mode**: Use `./scripts/run-ci-docker.sh quick` for fast essential checks
+- **Split long operations**: 
+  - `./scripts/run-ci-docker.sh lint` - Format checks only (Black, isort, Flake8)
+  - `./scripts/run-ci-docker.sh typecheck` - MyPy only
+  - `./scripts/run-ci-docker.sh precommit` - Pre-commit hooks only
+- **Full CI**: Use `./scripts/run-ci-docker.sh all` when you have more time
+- **GitHub Actions**: Full CI runs have 12-minute timeout in GitHub Actions
+
 ## Quick Start
 ```bash
 # Install CLI (once per machine)

@@ -49,9 +49,24 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}🚀 Running COMPREHENSIVE CI Checks (exactly like GitHub Actions)${NC}"
 echo "=========================================================================="
 echo "This runs ALL the checks that are failing in GitHub Actions"
+echo -e "${YELLOW}⏱️  Total estimated time: 10-12 minutes${NC}"
+echo -e "${YELLOW}💡 Tip: Use './scripts/run-ci-docker.sh quick' for 2-minute essential checks${NC}"
 if [ "$NO_ARC_REVIEWER" = "true" ]; then
     echo -e "${YELLOW}Note: ARC reviewer checks will be skipped (--no-arc-reviewer flag set)${NC}"
 fi
+echo
+
+# Show progress
+echo "Check Order (optimized for early failure detection):"
+echo "  1. Pre-commit hooks (includes formatting) - 2-3 min"
+echo "  2. Individual lint checks (detailed errors) - 3-4 min"
+echo "  3. Unit tests - 1-2 min"
+echo "  4. Integration tests - 2-3 min"
+echo "  5. Coverage analysis - 2-3 min"
+echo "  6. Conflict detection - <10 sec"
+echo "  7. Workflow validation - <10 sec"
+echo "  8. Specific tests - <2 min"
+echo "  9. Quality checks - <1 min"
 echo
 
 # Track failures
@@ -64,9 +79,10 @@ run_check() {
     local cmd=$2
     local allow_fail=${3:-false}
     local fix_hint=${4:-""}  # Optional fix suggestion
+    local estimated_time=${5:-"<1 min"}  # Estimated completion time
 
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-    echo -e "\n${BLUE}▶ $name${NC}"
+    echo -e "\n${BLUE}▶ [$TOTAL_CHECKS] $name${NC} (Est: $estimated_time)"
     echo "  Command: $cmd"
 
     if eval "$cmd"; then
@@ -87,33 +103,40 @@ run_check() {
     fi
 }
 
-# 1. LINT CHECKS (from lint-verification.yml)
-echo -e "\n${YELLOW}📋 1. LINT VERIFICATION CHECKS${NC}"
-echo "=================================="
+# REORDERED: Pre-commit hooks first (includes most other checks)
+echo -e "\n${YELLOW}📋 1. PRE-COMMIT HOOKS (PRIORITY)${NC}"
+echo "==================================="
+echo "Running pre-commit first as it includes Black, isort, and other checks..."
 
-run_check "Black formatting" "black --check src/ tests/ scripts/" "false" "Run 'black src/ tests/ scripts/' to fix formatting"
-run_check "isort import sorting" "isort --check-only --profile black src/ tests/ scripts/" "false" "Run 'isort --profile black src/ tests/ scripts/' to fix imports"
-run_check "Flake8 linting" "flake8 src/ tests/ scripts/" "false" "Check specific error codes and fix manually or use 'autopep8'"
-run_check "MyPy type checking (src/)" "mypy src/ --config-file=mypy.ini" "false" "Add type annotations or use '# type: ignore' comments where needed"
-run_check "MyPy type checking (tests/)" "mypy tests/ --config-file=mypy.ini" "true" "Type annotations in tests are optional"
-run_check "Context YAML validation" "python -m src.agents.context_lint validate context/" "false" "Check YAML syntax and schema compliance in context/ files"
-run_check "Import check" "python -m pytest --collect-only -q" "false" "Fix import errors or missing dependencies"
+run_check "Pre-commit checks" "pre-commit run --all-files" "false" "Run 'pre-commit run --all-files' locally and fix issues" "2-3 min"
 
-# 2. UNIT TESTS (from test.yml)
-echo -e "\n${YELLOW}📋 2. UNIT TESTS${NC}"
-echo "================="
+# 2. INDIVIDUAL LINT CHECKS (for detailed error reporting)
+echo -e "\n${YELLOW}📋 2. INDIVIDUAL LINT CHECKS${NC}"
+echo "============================="
 
-run_check "Unit Tests (Fast)" "python -m pytest tests/ -v --tb=short -m 'not integration and not e2e' --maxfail=5" "false" "Debug failing tests and update test code"
+run_check "Black formatting" "black --check src/ tests/ scripts/" "false" "Run 'black src/ tests/ scripts/' to fix formatting" "<30 sec"
+run_check "isort import sorting" "isort --check-only --profile black src/ tests/ scripts/" "false" "Run 'isort --profile black src/ tests/ scripts/' to fix imports" "<30 sec"
+run_check "Flake8 linting" "flake8 src/ tests/ scripts/" "false" "Check specific error codes and fix manually or use 'autopep8'" "<30 sec"
+run_check "MyPy type checking (src/)" "mypy src/ --config-file=mypy.ini --explicit-package-bases" "false" "Add type annotations or use '# type: ignore' comments where needed" "1-2 min"
+run_check "MyPy type checking (tests/)" "mypy tests/ --config-file=mypy.ini --explicit-package-bases" "true" "Type annotations in tests are optional" "<1 min"
+run_check "Context YAML validation" "python -m src.agents.context_lint validate context/" "false" "Check YAML syntax and schema compliance in context/ files" "<30 sec"
+run_check "Import check" "python -m pytest --collect-only -q" "false" "Fix import errors or missing dependencies" "<30 sec"
 
-# 3. INTEGRATION TESTS (from test-suite.yml)
-echo -e "\n${YELLOW}📋 3. INTEGRATION TESTS${NC}"
+# 3. UNIT TESTS (from test.yml)
+echo -e "\n${YELLOW}📋 3. UNIT TESTS${NC}"
+echo "================"
+
+run_check "Unit Tests (Fast)" "python -m pytest tests/ -v --tb=short -m 'not integration and not e2e' --maxfail=5" "false" "Debug failing tests and update test code" "1-2 min"
+
+# 4. INTEGRATION TESTS (from test-suite.yml)
+echo -e "\n${YELLOW}📋 4. INTEGRATION TESTS${NC}"
 echo "======================"
 
-run_check "Integration Tests" "python -m pytest tests/ -v --tb=short -m 'integration' --maxfail=3" "false" "Check service dependencies and integration test setup"
+run_check "Integration Tests" "python -m pytest tests/ -v --tb=short -m 'integration' --maxfail=3" "false" "Check service dependencies and integration test setup" "2-3 min"
 
-# 4. COVERAGE ANALYSIS (from test-coverage.yml)
-echo -e "\n${YELLOW}📋 4. COVERAGE ANALYSIS${NC}"
-echo "======================="
+# 5. COVERAGE ANALYSIS (from test-coverage.yml)
+echo -e "\n${YELLOW}📋 5. COVERAGE ANALYSIS${NC}"
+echo "======================"
 
 # Read coverage threshold from centralized configuration
 if [ -f ".coverage-config.json" ]; then
@@ -126,10 +149,10 @@ fi
 mkdir -p test-artifacts
 
 # Run coverage tests and output to test-artifacts directory
-run_check "Coverage Tests" "python -m pytest tests/ --cov=src --cov-report=term-missing --cov-report=xml:test-artifacts/coverage.xml --cov-report=json:test-artifacts/coverage.json --cov-fail-under=$COVERAGE_BASELINE -m 'not e2e'" "false" "Add tests for uncovered code or adjust coverage threshold"
+run_check "Coverage Tests" "python -m pytest tests/ --cov=src --cov-report=term-missing --cov-report=xml:test-artifacts/coverage.xml --cov-report=json:test-artifacts/coverage.json --cov-fail-under=$COVERAGE_BASELINE -m 'not e2e'" "false" "Add tests for uncovered code or adjust coverage threshold" "2-3 min"
 
-# 5. CONFLICT DETECTION (from pr-conflict-validator.yml)
-echo -e "\n${YELLOW}📋 5. CONFLICT DETECTION${NC}"
+# 6. CONFLICT DETECTION (from pr-conflict-validator.yml)
+echo -e "\n${YELLOW}📋 6. CONFLICT DETECTION${NC}"
 echo "========================"
 
 # Check if we're in a git repository and have the right setup
@@ -167,8 +190,8 @@ else
     echo -e "  ${YELLOW}⚠ Not in git repository, skipping conflict detection${NC}"
 fi
 
-# 6. WORKFLOW VALIDATION (from ai-pr-monitor.yml validation)
-echo -e "\n${YELLOW}📋 6. WORKFLOW VALIDATION${NC}"
+# 7. WORKFLOW VALIDATION (from ai-pr-monitor.yml validation)
+echo -e "\n${YELLOW}📋 7. WORKFLOW VALIDATION${NC}"
 echo "=========================="
 
 # Check if our new AI workflow file exists and is valid
@@ -184,25 +207,21 @@ else
     FAILED=$((FAILED + 1))
 fi
 
-# 7. PRE-COMMIT HOOKS (comprehensive)
-echo -e "\n${YELLOW}📋 7. PRE-COMMIT HOOKS${NC}"
-echo "====================="
-
-run_check "Pre-commit checks" "pre-commit run --all-files" "false" "Run 'pre-commit run --all-files' locally and fix issues"
+# Note: Pre-commit hooks were already run in section 1
 
 # 8. SPECIFIC FAILING TESTS (from GitHub Actions)
 echo -e "\n${YELLOW}📋 8. SPECIFIC FAILING TESTS${NC}"
-echo "============================="
+echo "============================"
 
 # Run the specific tests that were failing (with file existence check)
 if [ -f "tests/test_auto_merge_output_fix.py" ]; then
-    run_check "Auto-merge output fix tests" "python -m pytest tests/test_auto_merge_output_fix.py -v" "false" "Fix failing auto-merge output tests"
+    run_check "Auto-merge output fix tests" "python -m pytest tests/test_auto_merge_output_fix.py -v" "false" "Fix failing auto-merge output tests" "<1 min"
 else
     echo -e "  ${YELLOW}⚠ Skipping auto-merge output fix tests (file not found)${NC}"
 fi
 
 if [ -f "tests/test_workflow_feature_parity.py" ]; then
-    run_check "Workflow feature parity tests" "python -m pytest tests/test_workflow_feature_parity.py -v" "false" "Fix failing workflow feature parity tests"
+    run_check "Workflow feature parity tests" "python -m pytest tests/test_workflow_feature_parity.py -v" "false" "Fix failing workflow feature parity tests" "<1 min"
 else
     echo -e "  ${YELLOW}⚠ Skipping workflow feature parity tests (file not found)${NC}"
 fi
@@ -212,10 +231,10 @@ echo -e "\n${YELLOW}📋 9. ADDITIONAL QUALITY CHECKS${NC}"
 echo "==============================="
 
 # Security check
-run_check "Security scan (bandit)" "bandit -r src/ -f json -o /tmp/bandit-report.json || bandit -r src/ -ll" "true" "Review security findings and fix high-severity issues"
+run_check "Security scan (bandit)" "bandit -r src/ -f json -o /tmp/bandit-report.json || bandit -r src/ -ll" "true" "Review security findings and fix high-severity issues" "<1 min"
 
 # Dependency check
-run_check "Dependency check" "pip check" "false" "Fix dependency conflicts with 'pip install -r requirements.txt'"
+run_check "Dependency check" "pip check" "false" "Fix dependency conflicts with 'pip install -r requirements.txt'" "<10 sec"
 
 # 10. SUMMARY
 echo -e "\n${BLUE}========================================${NC}"
