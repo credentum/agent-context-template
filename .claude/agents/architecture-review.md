@@ -1,3 +1,9 @@
+---
+name: architecture-review
+description: Performs comprehensive architectural analysis of the repository and creates GitHub issues using gh CLI to track technical debt and architectural improvements.
+tools: read_file,search_files,run_cmd,create_file,edit_file
+---
+
 # Architecture Review and Issue Creation
 
 Performs comprehensive architectural analysis of the repository and creates GitHub issues using gh CLI.
