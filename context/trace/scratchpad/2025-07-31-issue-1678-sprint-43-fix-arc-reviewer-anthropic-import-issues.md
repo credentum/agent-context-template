@@ -1,3 +1,7 @@
+---
+schema_version: "1.0"
+---
+
 # Scratchpad: Issue #1678 - [SPRINT-4.3] Fix ARC reviewer anthropic import issues for LLM mode
 
 ## Execution Plan

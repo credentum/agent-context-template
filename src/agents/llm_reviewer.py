@@ -259,7 +259,8 @@ automated_issues:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "reviewer": "ARC-Reviewer (LLM)",
                 "verdict": verdict,
-                "summary": f"Found {len(issues['blocking'])} blocking, {len(issues['warnings'])} warning, {len(issues['nits'])} nit issues",
+                "summary": f"Found {len(issues['blocking'])} blocking, "
+                f"{len(issues['warnings'])} warning, {len(issues['nits'])} nit issues",
                 "coverage": {
                     "current_pct": coverage_pct,
                     "status": "PASS" if coverage_pct >= 78.0 else "FAIL",
@@ -312,6 +313,27 @@ automated_issues:
         for file_path in changed_files:
             if not file_path:
                 continue
+            
+            # Check context markdown files for schema_version
+            if file_path.startswith("context/") and file_path.endswith(".md"):
+                full_path = self.repo_root / file_path
+                if full_path.exists():
+                    try:
+                        with open(full_path, "r", encoding="utf-8") as f:
+                            content = f.read()
+                        
+                        if "schema_version" not in content:
+                            issues["warnings"].append({
+                                "description": "Context markdown files added without "
+                                "YAML schema_version",
+                                "file": file_path,
+                                "line": 1,
+                                "category": "context_integrity",
+                                "fix_guidance": "Add schema_version to markdown files or ensure "
+                                "they are excluded from YAML validation"
+                            })
+                    except Exception:
+                        pass
 
             # Check if it's a Python file
             if file_path.endswith(".py"):
@@ -322,9 +344,22 @@ automated_issues:
                         with open(full_path, "r", encoding="utf-8") as f:
                             content = f.read()
 
+                        # Check for code quality issues
+                        lines = content.split("\n")
+                        for i, line in enumerate(lines, 1):
+                            # Check line length
+                            if len(line) > 100:
+                                issues["blocking"].append({
+                                    "description": f"Line too long ({len(line)} > 100 characters)",
+                                    "file": file_path,
+                                    "line": i,
+                                    "category": "code_quality",
+                                    "fix_guidance": "Break line into multiple lines to meet "
+                                    "100 character limit"
+                                })
+                        
                         # Check for missing docstrings in classes/functions
                         if "def " in content or "class " in content:
-                            lines = content.split("\n")
                             for i, line in enumerate(lines, 1):
                                 if (
                                     line.strip().startswith("def ")
@@ -342,11 +377,13 @@ automated_issues:
                                     ):  # Skip magic methods
                                         issues["warnings"].append(
                                             {
-                                                "description": f"Missing docstring for {line.strip()}",
+                                                "description": f"Missing docstring for "
+                                                f"{line.strip()}",
                                                 "file": file_path,
                                                 "line": i,
                                                 "category": "documentation",
-                                                "fix_guidance": "Add docstring describing the function/class",
+                                                "fix_guidance": "Add docstring describing "
+                                                "the function/class",
                                             }
                                         )
 

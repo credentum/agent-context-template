@@ -638,7 +638,7 @@ def main():
         "--skip-coverage", action="store_true", help="Skip coverage check for faster execution"
     )
     parser.add_argument(
-        "--llm", action="store_true", help="Force LLM mode (requires CLAUDE_CODE_OAUTH_TOKEN)"
+        "--llm", action="store_true", help="Force LLM mode (uses internal Claude capability)"
     )
     parser.add_argument("--no-llm", action="store_true", help="Force rule-based mode (disable LLM)")
 

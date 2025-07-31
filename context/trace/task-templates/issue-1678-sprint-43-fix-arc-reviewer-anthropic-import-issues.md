@@ -1,3 +1,7 @@
+---
+schema_version: "1.0"
+---
+
 # ────────────────────────────────────────────────────────────────────────
 # TASK: issue-1678-[sprint-4.3]-fix-arc-reviewer-anthropic-import-iss
 # Generated from GitHub Issue #1678
