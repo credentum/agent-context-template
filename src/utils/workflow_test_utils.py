@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""Utility functions for workflow testing."""
+"""Workflow testing utility functions.
+
+This module provides utility functions to support testing of the workflow automation
+system, including phase output validation, test state creation, and test issue
+number generation. These utilities are designed to work with the WorkflowExecutor
+and HybridWorkflowExecutor classes to facilitate comprehensive testing of the
+issue-to-PR workflow pipeline.
+
+Functions:
+    verify_workflow_phase_outputs: Validate that phase outputs meet requirements
+    get_workflow_test_issue_number: Get a standardized test issue number
+    create_test_workflow_state: Create test workflow state for different phases
+"""
 
 from typing import Any, Dict
 
