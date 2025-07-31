@@ -1,0 +1,94 @@
+---
+# Production Docker Compose configuration with SSL/TLS enabled
+# Use this for production deployments where security is critical
+# 
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+# Docker image references with SHA pinning for security
+x-images:
+  qdrant: &qdrant-image qdrant/qdrant:v1.14.1@sha256:419d72603f5346ee22ffc4606bdb7beb52fcb63077766fab678e6622ba247366  # yamllint disable-line rule:line-length
+  neo4j: &neo4j-image neo4j:5.20.0@sha256:52d3dec8d45585b21edeca8517d752b2512e52aa94f80fc36a5788c88c95f8e4  # yamllint disable-line rule:line-length
+  redis: &redis-image redis@sha256:af1d0fc3f63b02b13ff7906c9baf7c5b390b8881ca08119cd570677fe2f60b55  # yamllint disable-line rule:line-length
+
+services:
+  # Vector database for embeddings with TLS
+  qdrant:
+    environment:
+      # Enable TLS for Qdrant
+      - QDRANT__SERVICE__ENABLE_TLS=true
+      - QDRANT__TLS__CERT_FILE=/tls/qdrant.crt
+      - QDRANT__TLS__KEY_FILE=/tls/qdrant.key
+      # Production security settings
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-generate_secure_key_here}
+    volumes:
+      - qdrant_data:/qdrant/storage
+      - ./tls/qdrant:/tls:ro
+    # Override ports for HTTPS
+    ports:
+      - "6333:6333"  # HTTPS API
+      - "6334:6334"  # gRPC with TLS
+
+  # Graph database for relationships with SSL
+  neo4j:
+    environment:
+      # Existing Neo4j config
+      - NEO4J_AUTH=${NEO4J_AUTH:-neo4j/changeme_in_production}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+      # Enable SSL for bolt and https
+      - NEO4J_dbms_ssl_policy_bolt_enabled=true
+      - NEO4J_dbms_ssl_policy_bolt_base__directory=/ssl/bolt
+      - NEO4J_dbms_ssl_policy_bolt_private__key=private.key
+      - NEO4J_dbms_ssl_policy_bolt_public__certificate=public.crt
+      - NEO4J_dbms_ssl_policy_https_enabled=true
+      - NEO4J_dbms_ssl_policy_https_base__directory=/ssl/https
+      - NEO4J_dbms_ssl_policy_https_private__key=private.key
+      - NEO4J_dbms_ssl_policy_https_public__certificate=public.crt
+      # Force encrypted connections
+      - NEO4J_dbms_connector_bolt_tls__level=REQUIRED
+      - NEO4J_dbms_connector_https_enabled=true
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - ./tls/neo4j/bolt:/ssl/bolt:ro
+      - ./tls/neo4j/https:/ssl/https:ro
+
+  # Key-value store with TLS
+  redis:
+    # Use Redis with TLS support
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --tls-port 6379
+      --port 0
+      --tls-cert-file /tls/redis.crt
+      --tls-key-file /tls/redis.key
+      --tls-ca-cert-file /tls/ca.crt
+      --tls-auth-clients yes
+      --requirepass ${REDIS_PASSWORD:-change_me_in_production}
+    volumes:
+      - ./tls/redis:/tls:ro
+    # Health check with TLS
+    healthcheck:
+      test: ["CMD", "redis-cli", "--tls", "--cert", "/tls/redis.crt", "--key", "/tls/redis.key", "--cacert", "/tls/ca.crt", "-a", "${REDIS_PASSWORD:-change_me_in_production}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+# Production-specific volumes
+volumes:
+  qdrant_data:
+    driver: local
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+
+# Use the same network as base configuration
+networks:
+  default:
+    name: agent-context-network

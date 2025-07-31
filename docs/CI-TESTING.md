@@ -256,6 +256,64 @@ Runs the exact same environment as GitHub Actions:
 - Uses Python 3.11 like CI
 - Isolated from your system
 
+### 2.1 Two-Phase CI Architecture
+
+For enhanced code review with LLM capabilities, we support a two-phase CI workflow:
+
+```bash
+# Run complete two-phase workflow
+./scripts/run-two-phase-ci.sh
+
+# Run only Phase 1 (Docker tests)
+./scripts/run-two-phase-ci.sh --phase1-only
+
+# Run only Phase 2 (ARC reviewer with LLM)
+./scripts/run-two-phase-ci.sh --phase2-only
+```
+
+**Phase 1 (Docker):**
+- Runs all CI checks (linting, tests, coverage)
+- Generates coverage artifacts in `test-artifacts/`
+- Skips ARC reviewer to avoid token issues
+- Command: `./scripts/run-ci-docker.sh all --no-arc-reviewer`
+
+**Phase 2 (Claude Code):**
+- Runs ARC reviewer with `--llm` flag
+- Uses Claude Code's OAuth token automatically
+- Reads coverage from `test-artifacts/coverage.json`
+- Provides AI-powered code review insights
+
+**Advantages:**
+- OAuth token stays secure in Claude Code environment
+- No need to pass sensitive tokens to Docker
+- Enables full LLM-powered code reviews
+- Maintains test isolation and reproducibility
+
+### 2.2 Production Deployment with SSL/TLS
+
+For production deployments, use the secure Docker Compose configuration:
+
+```bash
+# Start services with SSL/TLS enabled
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Verify SSL connections
+./scripts/verify-tls-connections.sh
+```
+
+**Security Features:**
+- TLS/SSL enabled for all services (Qdrant, Neo4j, Redis)
+- API key authentication for Qdrant
+- Password authentication for Redis and Neo4j
+- Certificate-based mutual TLS support
+- Encrypted data in transit
+
+**Setup Instructions:**
+1. Generate certificates: See `tls/README.md`
+2. Set secure passwords in `.env`
+3. Use production compose file: `docker-compose.prod.yml`
+4. Monitor certificate expiry dates
+
 ### 3. Make Method
 
 Traditional approach using Makefile:

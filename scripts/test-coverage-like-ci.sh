@@ -63,10 +63,13 @@ for tool in python pytest coverage mutmut; do
 done
 echo
 
+# Create test-artifacts directory if it doesn't exist
+mkdir -p test-artifacts
+
 # From test-coverage.yml lines 62-74
 export REDIS_HOST=localhost
 export REDIS_PORT=6379
-run_check "Run tests with coverage" "python -m pytest --cov=src --cov-branch --cov-report=term-missing:skip-covered --cov-report=html --cov-report=xml --cov-report=json -v"
+run_check "Run tests with coverage" "python -m pytest --cov=src --cov-branch --cov-report=term-missing:skip-covered --cov-report=xml:test-artifacts/coverage.xml --cov-report=json:test-artifacts/coverage.json -v"
 
 # From test-coverage.yml lines 76-78
 run_check "Check coverage thresholds" "python scripts/coverage_summary.py"

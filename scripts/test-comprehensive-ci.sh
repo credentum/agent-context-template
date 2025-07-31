@@ -5,6 +5,23 @@
 # Note: We intentionally do NOT use 'set -e' here
 # This ensures ALL checks run even if some fail, allowing us to see all errors at once
 
+# Parse command line arguments
+NO_ARC_REVIEWER=false
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --no-arc-reviewer) NO_ARC_REVIEWER=true ;;
+        *) echo "Unknown parameter: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# Also check environment variable for Docker compatibility
+if [[ -n "$CI_EXTRA_ARGS" ]]; then
+    if [[ "$CI_EXTRA_ARGS" == *"--no-arc-reviewer"* ]]; then
+        NO_ARC_REVIEWER=true
+    fi
+fi
+
 # Signal handling for clean shutdown
 cleanup() {
     echo -e "\n${YELLOW}Caught signal, cleaning up...${NC}"
@@ -32,6 +49,9 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}🚀 Running COMPREHENSIVE CI Checks (exactly like GitHub Actions)${NC}"
 echo "=========================================================================="
 echo "This runs ALL the checks that are failing in GitHub Actions"
+if [ "$NO_ARC_REVIEWER" = "true" ]; then
+    echo -e "${YELLOW}Note: ARC reviewer checks will be skipped (--no-arc-reviewer flag set)${NC}"
+fi
 echo
 
 # Track failures
@@ -102,7 +122,11 @@ else
     COVERAGE_BASELINE=78
 fi
 
-run_check "Coverage Tests" "python -m pytest tests/ --cov=src --cov-report=term-missing --cov-report=html --cov-fail-under=$COVERAGE_BASELINE -m 'not e2e'" "false" "Add tests for uncovered code or adjust coverage threshold"
+# Create test-artifacts directory if it doesn't exist
+mkdir -p test-artifacts
+
+# Run coverage tests and output to test-artifacts directory
+run_check "Coverage Tests" "python -m pytest tests/ --cov=src --cov-report=term-missing --cov-report=xml:test-artifacts/coverage.xml --cov-report=json:test-artifacts/coverage.json --cov-fail-under=$COVERAGE_BASELINE -m 'not e2e'" "false" "Add tests for uncovered code or adjust coverage threshold"
 
 # 5. CONFLICT DETECTION (from pr-conflict-validator.yml)
 echo -e "\n${YELLOW}📋 5. CONFLICT DETECTION${NC}"

@@ -4,6 +4,13 @@ venv/
 env/
 .env
 
+# Security - TLS/SSL certificates
+tls/**/*.key
+tls/**/*.crt
+tls/**/*.csr
+tls/**/*.pem
+!tls/README.md
+
 # IDE
 .vscode/
 .idea/

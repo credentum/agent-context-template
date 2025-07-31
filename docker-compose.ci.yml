@@ -29,13 +29,15 @@ services:
       - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml:ro
       - ./.yamllint-workflows.yml:/app/.yamllint-workflows.yml:ro
       - ./.flake8:/app/.flake8:ro
+      # Mount test artifacts directory for two-phase CI
+      - ./test-artifacts:/app/test-artifacts
     environment:
       - PYTHONPATH=/app
       - CI=true
       - PYTHONUNBUFFERED=1
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
-    command: /bin/bash scripts/test-comprehensive-ci.sh
+    command: ["/bin/bash", "scripts/test-comprehensive-ci.sh"]
     stop_signal: SIGTERM
     stop_grace_period: 720s
     deploy:
@@ -225,6 +227,8 @@ services:
       - ./.coverage-config.json:/app/.coverage-config.json:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
       - ./pytest.ini:/app/pytest.ini:ro
+      # Mount test artifacts directory for two-phase CI
+      - ./test-artifacts:/app/test-artifacts
     deploy:
       resources:
         limits:
