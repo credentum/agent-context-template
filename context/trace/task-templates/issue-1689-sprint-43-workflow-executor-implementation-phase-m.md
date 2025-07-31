@@ -18,7 +18,7 @@
 ## 🛠️ Subtasks
 | File | Action | Prompt Tech | Purpose | Context Impact |
 |------|--------|-------------|---------|----------------|
-| src/agents/llm_reviewer.py | Enhance comprehensive checks | Direct implementation | Fix local ARC reviewer to match PR standards | High |
+| scripts/workflow_executor.py | Fix execute_implementation method | Direct implementation | Make it actually implement code changes | High |
 
 ## 📝 Issue Description
 ## Task Context
