@@ -5,11 +5,10 @@ Unit tests for workflow executor functionality.
 
 import json
 import subprocess
+import sys
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
-
-import sys
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
@@ -127,14 +126,14 @@ class TestWorkflowExecutor(unittest.TestCase):
         mock_run.return_value = Mock(stdout=json.dumps(mock_issue_data))
 
         # First call
-        result1 = self.executor._fetch_issue_data()
+        self.executor._fetch_issue_data()
         self.assertEqual(mock_run.call_count, 1)
 
         # Reset cache
         self.executor._issue_data_cache = None
 
         # Second call should fetch again
-        result2 = self.executor._fetch_issue_data()
+        self.executor._fetch_issue_data()
         self.assertEqual(mock_run.call_count, 2)
 
     @patch("re.sub")

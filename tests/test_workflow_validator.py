@@ -656,7 +656,11 @@ class TestWorkflowValidator(unittest.TestCase):
         self.assertEqual(len(errors), 0)
 
         # Test workflow completion without status tracking
-        outputs: dict[str, Any] = {"pr_monitoring_active": True, "pr_number": 123, "workflow_completed": True}
+        outputs: dict[str, Any] = {
+            "pr_monitoring_active": True,
+            "pr_number": 123,
+            "workflow_completed": True,
+        }
         valid, errors = self.validator.validate_phase_outputs(5, outputs)
         self.assertFalse(valid)
         self.assertIn("PR final status must be tracked when workflow completes", errors)
