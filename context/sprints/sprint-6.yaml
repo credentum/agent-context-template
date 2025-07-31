@@ -1,0 +1,444 @@
+---
+# Sprint 6: Modal Migration Architecture
+# Transform the existing workflow-issue system into a scalable, modular agent
+# architecture using Modal.com platform
+
+schema_version: 1.0.0
+document_type: sprint
+id: "sprint-6-modal-migration"
+title: "Sprint 6 - Migrate Workflow-Issue System to Modal Architecture"
+status: planning
+created_date: "2025-01-31"
+sprint_number: 6
+start_date: "2025-02-01"
+end_date: "2025-03-07"
+last_modified: "2025-01-31"
+last_referenced: "2025-01-31"
+
+# High-level goals for this sprint
+goals:
+  - |
+    Transform existing workflow-issue system into scalable Modal.com 
+    serverless architecture
+  - "Implement modular agent design with isolated, stateless functions"
+  - |
+    Preserve all existing workflow capabilities while improving 
+    scalability and maintainability
+  - "Reduce operational overhead through serverless infrastructure"
+
+# Phases represent major work areas
+phases:
+  - phase: 1
+    name: "Infrastructure Setup"
+    status: pending
+    priority: blocking
+    component: modal-infrastructure
+    description: |
+      Set up Modal.com infrastructure foundation including application 
+      structure, secrets management, and GitHub webhook integration
+    duration_days: 7
+    tasks:
+      - title: "Set up Modal Application Infrastructure"
+        description: |
+          Create the foundational Modal application with shared resources
+          and development environment setup.
+
+          ## Acceptance Criteria
+          - [ ] Modal application created with basic structure (`modal_workflow.py`)
+          - [ ] Shared resources configured (secrets, volumes, state storage)
+          - [ ] Development environment set up with Modal CLI
+          - [ ] Basic health check endpoint implemented
+          - [ ] Documentation for Modal setup created
+
+          ## Implementation Notes
+          - Use Modal.App for application structure
+          - Configure Modal.Secret for ANTHROPIC_API_KEY and GITHUB_TOKEN
+          - Set up Modal.Volume for workflow storage
+          - Create Modal.Dict for workflow state persistence
+          - Include error handling and logging setup
+        labels:
+          - "sprint-6"
+          - "phase-1"
+          - "modal-infrastructure"
+          - "priority-blocking"
+        dependencies: []
+        estimate: "8 hours"
+        assignee: "engineering-lead"
+
+      - title: "Implement GitHub Webhook Handler"
+        description: |
+          Create GitHub webhook endpoint to receive issue events and 
+          trigger workflow execution.
+
+          ## Acceptance Criteria
+          - [ ] GitHub webhook endpoint created (`@modal.web_endpoint`)
+          - [ ] Webhook signature validation implemented
+          - [ ] Issue event parsing and routing logic
+          - [ ] Workflow trigger mechanism integrated
+          - [ ] Error handling and logging for webhook events
+
+          ## Implementation Notes
+          - Validate GitHub webhook signatures for security
+          - Parse issue events (opened, labeled, commented)
+          - Trigger workflow orchestrator for relevant events
+          - Return immediate 200 response to GitHub
+          - Include payload validation and error handling
+        labels:
+          - "sprint-6"
+          - "phase-1"
+          - "webhook-handler"
+          - "priority-high"
+        dependencies:
+          - "Set up Modal Application Infrastructure"
+        estimate: "6 hours"
+        assignee: "backend-engineer"
+
+  - phase: 2
+    name: "Agent Migration"
+    status: pending
+    priority: high
+    component: agent-migration
+    description: "Migrate all existing specialized agents to Modal functions"
+    duration_days: 14
+    tasks:
+      - title: "Migrate issue-investigator to Modal"
+        description: |
+          Port the existing issue-investigator agent to Modal function 
+          with preserved functionality.
+
+          ## Acceptance Criteria
+          - [ ] `investigate_agent.py` Modal function created
+          - [ ] Existing issue-investigator logic ported and adapted
+          - [ ] Input/output schema defined (GitHub issue → investigation.json)
+          - [ ] Modal container image configured with dependencies
+          - [ ] Integration tests with real GitHub issues
+
+          ## Implementation Notes
+          - Preserve existing investigation methodology and output format
+          - Use Pydantic for structured investigation.json output
+          - Implement timeout handling for complex investigations
+          - Store investigation results in Modal Volume
+          - Include root cause analysis and scope assessment logic
+        labels:
+          - "sprint-6"
+          - "phase-2"
+          - "agent-migration"
+          - "priority-high"
+        dependencies:
+          - "Set up Modal Application Infrastructure"
+        estimate: "10 hours"
+        assignee: "ai-engineer"
+
+      - title: "Migrate task-planner to Modal"
+        description: |
+          Port the existing task-planner agent to Modal function with 
+          comprehensive planning capabilities.
+
+          ## Acceptance Criteria
+          - [ ] `plan_agent.py` Modal function created
+          - [ ] Existing task-planner logic ported and adapted
+          - [ ] Input/output schema defined (investigation.json → plan.json)
+          - [ ] Task template generation preserved
+          - [ ] Integration with existing planning methodology
+
+          ## Implementation Notes
+          - Preserve task decomposition methodology
+          - Generate comprehensive plan.json with time estimates
+          - Include task dependencies and validation criteria
+          - Maintain compatibility with existing task template format
+          - Implement context analysis and execution planning
+        labels:
+          - "sprint-6"
+          - "phase-2"
+          - "agent-migration"
+          - "priority-high"
+        dependencies:
+          - "Migrate issue-investigator to Modal"
+        estimate: "12 hours"
+        assignee: "ai-engineer"
+
+      - title: "Migrate test-runner to Modal"
+        description: |
+          Port the existing test-runner agent to Modal function with 
+          comprehensive validation capabilities.
+
+          ## Acceptance Criteria
+          - [ ] `validate_agent.py` Modal function created
+          - [ ] Docker container integration for CI execution
+          - [ ] Test execution and coverage analysis preserved
+          - [ ] 71.82% coverage threshold enforcement
+          - [ ] Structured test_results.json output
+
+          ## Implementation Notes
+          - Use Modal container capabilities for isolated test execution
+          - Preserve existing CI validation logic from scripts/
+          - Generate comprehensive test_results.json
+          - Handle test failures and retry mechanisms
+          - Include performance and security validation
+        labels:
+          - "sprint-6"
+          - "phase-2"
+          - "agent-migration"
+          - "priority-high"
+        dependencies:
+          - "Migrate task-planner to Modal"
+        estimate: "14 hours"
+        assignee: "qa-engineer"
+
+      - title: "Migrate pr-manager to Modal"
+        description: |
+          Port the existing pr-manager agent to Modal function for 
+          GitHub operations and PR lifecycle management.
+
+          ## Acceptance Criteria
+          - [ ] `submit_agent.py` Modal function created
+          - [ ] PR creation logic with existing template format
+          - [ ] Documentation inclusion (task templates, test results)
+          - [ ] GitHub CLI integration and monitoring setup
+          - [ ] Auto-merge configuration based on existing rules
+
+          ## Implementation Notes
+          - Preserve comprehensive PR creation logic
+          - Include all documentation from previous phases
+          - Set up monitoring and auto-merge according to existing rules
+          - Handle PR status tracking and notifications
+          - Implement branch validation and conflict resolution
+        labels:
+          - "sprint-6"
+          - "phase-2"
+          - "agent-migration"
+          - "priority-high"
+        dependencies:
+          - "Migrate test-runner to Modal"
+        estimate: "10 hours"
+        assignee: "devops-engineer"
+
+  - phase: 3
+    name: "Orchestration Implementation"
+    status: pending
+    priority: high
+    component: orchestration
+    description: "Build workflow orchestration and implementation agents"
+    duration_days: 7
+    tasks:
+      - title: "Implement Workflow Orchestrator with Enforcement"
+        description: |
+          Create the master orchestrator that coordinates all agents with 
+          comprehensive workflow enforcement.
+
+          ## Acceptance Criteria
+          - [ ] `orchestrator.py` Modal function created
+          - [ ] Workflow enforcement logic from existing validator ported
+          - [ ] State persistence using Modal Dict
+          - [ ] Resume capability for failed workflows
+          - [ ] Error handling and retry mechanisms
+
+          ## Implementation Notes
+          - Port workflow state machine from existing validator
+          - Use Modal Dict for persistent state across agent executions
+          - Implement phase validation and error recovery
+          - Preserve resume capability from any failed phase
+          - Include comprehensive logging and monitoring
+        labels:
+          - "sprint-6"
+          - "phase-3"
+          - "orchestration"
+          - "priority-high"
+        dependencies:
+          - "Migrate pr-manager to Modal"
+        estimate: "16 hours"
+        assignee: "architecture-lead"
+
+      - title: "Add Implementation Agent with Git Operations"
+        description: |
+          Create the implementation agent that handles code changes and 
+          git operations within Modal containers.
+
+          ## Acceptance Criteria
+          - [ ] `implement_agent.py` Modal function created
+          - [ ] Git operations integration (clone, branch, commit, push)
+          - [ ] Pre-commit hooks execution
+          - [ ] Code implementation based on plan.json
+          - [ ] Diff generation and artifact storage
+
+          ## Implementation Notes
+          - Handle git operations within Modal container
+          - Execute pre-commit hooks and handle modifications
+          - Generate implementation based on detailed plans
+          - Store artifacts for validation phase
+          - Include error handling for git conflicts and failures
+        labels:
+          - "sprint-6"
+          - "phase-3"
+          - "implementation"
+          - "priority-high"
+        dependencies:
+          - "Implement Workflow Orchestrator with Enforcement"
+        estimate: "14 hours"
+        assignee: "backend-engineer"
+
+  - phase: 4
+    name: "Integration & Testing"
+    status: pending
+    priority: high
+    component: integration
+    description: "Complete system integration, testing, and production readiness"
+    duration_days: 7
+    tasks:
+      - title: "End-to-End Integration Testing"
+        description: |
+          Comprehensive testing of the complete Modal-based workflow system 
+          with performance optimization.
+
+          ## Acceptance Criteria
+          - [ ] Complete workflow test with real GitHub issues
+          - [ ] Performance benchmarking and optimization
+          - [ ] Error scenario testing and recovery validation
+          - [ ] Documentation for Modal deployment
+          - [ ] Migration guide from existing system
+
+          ## Implementation Notes
+          - Test complete workflow from GitHub issue to PR merge
+          - Validate preservation of all existing capabilities
+          - Performance comparison with current system
+          - Create deployment and migration documentation
+          - Include load testing and scalability validation
+        labels:
+          - "sprint-6"
+          - "phase-4"
+          - "integration"
+          - "priority-high"
+        dependencies:
+          - "Add Implementation Agent with Git Operations"
+        estimate: "12 hours"
+        assignee: "qa-engineer"
+
+      - title: "Security Audit and Production Readiness"
+        description: |
+          Complete security review and production deployment preparation 
+          for the Modal-based system.
+
+          ## Acceptance Criteria
+          - [ ] Security audit of secrets management
+          - [ ] Input validation and sanitization verification
+          - [ ] Network security and isolation testing
+          - [ ] Audit logging implementation
+          - [ ] Production deployment configuration
+
+          ## Implementation Notes
+          - Validate all secrets are properly managed
+          - Ensure input sanitization prevents injection attacks
+          - Implement comprehensive audit logging
+          - Create production deployment checklist
+          - Include monitoring and alerting setup
+        labels:
+          - "sprint-6"
+          - "phase-4"
+          - "security"
+          - "priority-high"
+        dependencies:
+          - "End-to-End Integration Testing"
+        estimate: "10 hours"
+        assignee: "security-engineer"
+
+# Team members and their roles
+team:
+  - role: lead
+    agent: architecture_agent
+    responsibilities:
+      - "Sprint coordination and architecture oversight"
+      - "Modal infrastructure design"
+      - "Technical reviews and guidance"
+
+  - role: implementation
+    agent: backend_agent
+    responsibilities:
+      - "Agent migration and implementation"
+      - "Git operations and workflow logic"
+      - "Integration development"
+
+  - role: ai_engineering
+    agent: ai_agent
+    responsibilities:
+      - "Claude API integration"
+      - "Agent behavior preservation"
+      - "Prompt engineering and optimization"
+
+  - role: validation
+    agent: qa_agent
+    responsibilities:
+      - "Test migration and validation"
+      - "End-to-end testing"
+      - "Performance benchmarking"
+
+  - role: security
+    agent: security_agent
+    responsibilities:
+      - "Security audit and validation"
+      - "Secrets management verification"
+      - "Production readiness assessment"
+
+# Success metrics for this sprint
+success_metrics:
+  - metric: agent_migration_completion
+    target: 100
+    unit: percent
+    description: "All 5 agents successfully migrated to Modal"
+
+  - metric: workflow_capability_preservation
+    target: 100
+    unit: percent
+    description: "All existing workflow features preserved"
+
+  - metric: performance_improvement
+    target: 20
+    unit: percent
+    description: "Performance improvement over current system"
+
+  - metric: test_coverage_maintained
+    target: 71.82
+    unit: percent
+    description: "Maintain existing test coverage threshold"
+
+  - metric: security_audit_pass
+    target: 1
+    unit: boolean
+    description: "Complete security audit with no critical issues"
+
+  - metric: end_to_end_workflow_success
+    target: 95
+    unit: percent
+    description: "End-to-end workflow success rate"
+
+# Metadata for graph relationships
+graph_metadata:
+  node_type: sprint_document
+  relationships:
+    - type: modernizes
+      target: workflow_issue_system
+    - type: implements
+      target: modal_serverless_architecture
+    - type: follows
+      target: sprint-5-context-store
+    - type: enables
+      target: scalable_workflow_automation
+
+# Sprint-specific configuration
+config:
+  # Automatically create GitHub issues from tasks
+  auto_create_issues: true
+
+  # Issue template to use
+  issue_template: "sprint-task.md"
+
+  # Default labels for all issues in this sprint
+  default_labels:
+    - "sprint-6"
+    - "modal-migration"
+    - "architecture"
+
+  # Milestone to create/assign issues to
+  milestone: "Sprint 6 - Modal Migration"
+
+  # Project board to add issues to
+  project_board: "Sprint Board"
