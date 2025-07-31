@@ -2,7 +2,6 @@
 """Unit tests for workflow_test_utils module."""
 
 import unittest
-from typing import Any, Dict
 
 from src.utils.workflow_test_utils import (
     create_test_workflow_state,
