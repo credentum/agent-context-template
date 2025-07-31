@@ -17,7 +17,7 @@ import yaml
 try:
     import anthropic
 except ImportError:
-    anthropic = None
+    anthropic = None  # type: ignore
 
 
 class LLMReviewer:
@@ -264,7 +264,7 @@ Please review the entire PR state and provide your assessment in the required YA
                 print("🔄 Calling Claude API for review...")
 
             # Define available tools for Claude
-            tools = [
+            tools: list[dict[str, Any]] = [
                 {
                     "name": "bash",
                     "description": "Execute a bash command",
@@ -326,7 +326,7 @@ Please review the entire PR state and provide your assessment in the required YA
             message = self.client.messages.create(
                 model="claude-3-opus-20240229",
                 max_tokens=4000,
-                tools=tools,
+                tools=tools,  # type: ignore
                 messages=[
                     {
                         "role": "user",
@@ -355,14 +355,16 @@ Please review the entire PR state and provide your assessment in the required YA
 
                         # Execute the requested tool
                         if tool_name == "bash":
-                            result = self._tool_bash(tool_input["command"])
+                            result = self._tool_bash(tool_input["command"])  # type: ignore
                         elif tool_name == "read":
-                            result = self._tool_read(tool_input["file_path"])
+                            result = self._tool_read(tool_input["file_path"])  # type: ignore
                         elif tool_name == "grep":
-                            file_pattern = tool_input.get("file_pattern", "**/*")
-                            result = self._tool_grep(tool_input["pattern"], file_pattern)
+                            file_pattern = tool_input.get("file_pattern", "**/*")  # type: ignore
+                            result = self._tool_grep(
+                                tool_input["pattern"], file_pattern  # type: ignore
+                            )
                         elif tool_name == "glob":
-                            result = self._tool_glob(tool_input["pattern"])
+                            result = self._tool_glob(tool_input["pattern"])  # type: ignore
                         else:
                             result = f"Unknown tool: {tool_name}"
 
@@ -375,8 +377,8 @@ Please review the entire PR state and provide your assessment in the required YA
                 message = self.client.messages.create(
                     model="claude-3-opus-20240229",
                     max_tokens=4000,
-                    tools=tools,
-                    messages=conversation,
+                    tools=tools,  # type: ignore
+                    messages=conversation,  # type: ignore
                 )
 
                 conversation.append({"role": "assistant", "content": message.content})
