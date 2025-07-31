@@ -78,7 +78,7 @@ After setting up the isolated worktree and loading workflow documentation, direc
 5. **PR Creation** - Creates real PR using GitHub CLI from worktree branch
 6. **Monitoring** - Sets up monitoring for the created PR
 
-**Key Benefits**: 
+**Key Benefits**:
 - **Isolation**: Each issue gets its own workspace, preventing interference
 - **Concurrent Work**: Multiple issues can be developed simultaneously
 - **Clean Main**: Main working directory stays untouched

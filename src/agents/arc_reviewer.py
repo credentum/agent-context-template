@@ -595,16 +595,16 @@ class ARCReviewer:
             print("🔍 DEBUG: Starting review_and_output")
             print(f"🔍 DEBUG: PR number: {pr_number}, base_branch: {base_branch}")
             print(f"🔍 DEBUG: use_llm: {self.use_llm}, runtime_test: {runtime_test}")
-        
+
         try:
             if self.verbose:
                 print("🔍 DEBUG: Calling review_pr...")
-            
+
             results = self.review_pr(pr_number, base_branch, runtime_test=runtime_test)
-            
+
             if self.verbose:
                 print("🔍 DEBUG: review_pr completed, formatting output...")
-            
+
             print(self.format_yaml_output(results))
 
             # Exit with non-zero code if verdict is REQUEST_CHANGES

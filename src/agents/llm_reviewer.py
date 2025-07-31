@@ -227,7 +227,7 @@ automated_issues:
             # Get real coverage data instead of hardcoded value
             if self.verbose:
                 print("🔍 DEBUG: Running real coverage analysis...")
-            
+
             coverage_pct = self._get_real_coverage()
 
             # Since we can't call external Claude API, we'll do a basic analysis
@@ -241,10 +241,10 @@ automated_issues:
 
             if self.verbose:
                 print("🔍 DEBUG: About to perform basic checks...")
-            
+
             # Perform comprehensive checks like PR reviewer
             issues = self._perform_comprehensive_checks(changed_files, full_diff, coverage_pct)
-            
+
             if self.verbose:
                 print("🔍 DEBUG: Basic checks completed")
 
@@ -325,7 +325,7 @@ automated_issues:
         for file_path in changed_files:
             if not file_path:
                 continue
-            
+
             # Check context markdown files for schema_version - NITS like PR reviewer
             if (file_path.startswith("context/trace/task-templates/") and file_path.endswith(".md")):
                 full_path = self.repo_root / file_path
@@ -333,7 +333,7 @@ automated_issues:
                     try:
                         with open(full_path, "r", encoding="utf-8") as f:
                             content = f.read()
-                        
+
                         if "schema_version" not in content:
                             issues["nits"].append({
                                 "description": "Documentation files should have schema_version",
@@ -371,11 +371,11 @@ automated_issues:
             validators_path = self.repo_root / "src" / "validators"
             if not validators_path.exists():
                 return 100.0  # No validators directory = no requirement
-                
+
             exit_code, stdout, stderr = self._run_command([
                 "python", "-m", "pytest", f"--cov={validators_path}", "--cov-report=term-missing", "--quiet"
             ])
-            
+
             if exit_code == 0:
                 for line in stdout.split("\n"):
                     if "TOTAL" in line and "%" in line:
@@ -385,13 +385,13 @@ automated_issues:
                                 return float(part.rstrip("%"))
         except Exception:
             pass
-        
+
         return 100.0  # Default to passing if can't measure
 
     def _check_python_code_quality(self, file_path: str, content: str, issues: Dict[str, List[Dict[str, Any]]]):
         """Check Python code quality issues - reduced noise to match PR reviewer."""
         lines = content.split("\n")
-        
+
         # Only flag extremely long lines (PR reviewer doesn't seem to flag line length often)
         for i, line in enumerate(lines, 1):
             if len(line) > 150:  # Very high threshold to reduce noise
@@ -411,7 +411,7 @@ automated_issues:
         """Check if new code has corresponding tests - match PR reviewer precision."""
         if file_path.startswith("test_") or "test" in file_path:
             return  # Skip test files themselves
-        
+
         # Only flag major new implementations like PR reviewer does
         if "workflow_executor.py" in file_path and "execute_validation" in content:
             # Check for the specific two-phase CI implementation
@@ -420,19 +420,19 @@ automated_issues:
                     "description": "No test coverage for two-phase CI implementation",
                     "file": file_path,
                     "line": 385,  # Match PR reviewer's line number
-                    "category": "test_coverage", 
+                    "category": "test_coverage",
                     "fix_guidance": "Add unit tests for the new execute_validation two-phase CI logic"
                 })
-        
+
         # For other files, be more lenient - only flag if it's clearly a major new feature
         elif file_path.endswith(".py") and len(content.split('\n')) > 100:  # Only large files
             new_major_functions = []
             for line in diff_content.split("\n"):
-                if (line.startswith("+") and "def " in line and 
+                if (line.startswith("+") and "def " in line and
                     "def _" not in line and "def __" not in line and
                     len(line) > 20):  # Only substantial new functions
                     new_major_functions.append(line.strip()[1:].strip())
-            
+
             if len(new_major_functions) > 2:  # Only if many new functions
                 issues["warnings"].append({
                     "description": f"Limited test coverage for major new functionality in {file_path}",
@@ -445,7 +445,7 @@ automated_issues:
     def _check_error_handling(self, file_path: str, content: str, issues: Dict[str, List[Dict[str, Any]]]):
         """Check for proper error handling patterns - match PR reviewer precision."""
         lines = content.split("\n")
-        
+
         for i, line in enumerate(lines, 1):
             # Only flag problematic bare except patterns like PR reviewer
             if ("except Exception:" in line or "except:" in line) and "# " not in line:
@@ -453,10 +453,10 @@ automated_issues:
                 next_lines = lines[i:i+3] if i < len(lines) - 2 else lines[i:]
                 has_pass = any("pass" in next_line.strip() for next_line in next_lines)
                 has_meaningful_handling = any(
-                    any(keyword in next_line for keyword in ["print", "log", "raise", "return"]) 
+                    any(keyword in next_line for keyword in ["print", "log", "raise", "return"])
                     for next_line in next_lines
                 )
-                
+
                 # Only flag if it has pass without meaningful handling (like PR reviewer)
                 if has_pass and not has_meaningful_handling:
                     issues["warnings"].append({
@@ -470,11 +470,11 @@ automated_issues:
     def _check_configuration_hardcoding(self, file_path: str, content: str, issues: Dict[str, List[Dict[str, Any]]]):
         """Check for hard-coded configuration values with PR reviewer precision."""
         lines = content.split("\n")
-        
+
         for i, line in enumerate(lines, 1):
             # Only flag hardcoded values in specific problematic contexts (like PR reviewer)
             line_stripped = line.strip()
-            
+
             # Look for hardcoded timeout values - match PR reviewer exactly
             # Check for timeout=300, timeout=180, timeout=120, timeout=60, timeout=30
             if "timeout=" in line and "# " not in line and "any(val in line for val in" not in line:
@@ -489,7 +489,7 @@ automated_issues:
                             "category": "code_quality",
                             "fix_guidance": f"Replace hardcoded timeout={timeout_match} with WorkflowConfig constant"
                         })
-            
+
             # Look for hardcoded coverage thresholds - match PR reviewer exactly
             if "71.82" in line and "# " not in line:
                 # Exclude WorkflowConfig references
@@ -498,19 +498,19 @@ automated_issues:
                         "description": f"Hardcoded coverage threshold in {file_path.split('/')[-1]}",
                         "file": file_path,
                         "line": i,
-                        "category": "code_quality", 
+                        "category": "code_quality",
                         "fix_guidance": "Replace hardcoded 71.82 with WorkflowConfig.COVERAGE_BASELINE"
                     })
-            
+
             # Only flag 78.0/90.0 in specific threshold contexts as warnings (less critical)
-            elif (("78.0" in line or "90.0" in line) and 
-                  ("if " in line or ">=" in line or "<" in line) and 
+            elif (("78.0" in line or "90.0" in line) and
+                  ("if " in line or ">=" in line or "<" in line) and
                   ("coverage" in line or "baseline" in line) and "# " not in line):
                 issues["warnings"].append({
                     "description": f"Hardcoded coverage thresholds in {file_path.split('/')[-1]}",
                     "file": file_path,
                     "line": i,
-                    "category": "code_quality", 
+                    "category": "code_quality",
                     "fix_guidance": "Make coverage thresholds (78.0%, 90%) configurable via settings"
                 })
 
@@ -527,7 +527,7 @@ automated_issues:
             exit_code, stdout, stderr = self._run_command([
                 "python", "-m", "pytest", "--cov=src", "--cov-report=term-missing", "--quiet"
             ])
-            
+
             if exit_code == 0:
                 # Parse coverage from output
                 for line in stdout.split("\n"):
@@ -536,7 +536,7 @@ automated_issues:
                         for part in parts:
                             if part.endswith("%"):
                                 return float(part.rstrip("%"))
-            
+
             # Fallback: try coverage report if pytest failed
             exit_code, stdout, stderr = self._run_command(["coverage", "report", "--show-missing"])
             if exit_code == 0:
@@ -546,11 +546,11 @@ automated_issues:
                         for part in parts:
                             if part.endswith("%"):
                                 return float(part.rstrip("%"))
-        
+
         except Exception as e:
             if self.verbose:
                 print(f"⚠️  Coverage calculation failed: {e}")
-        
+
         # Last resort: return baseline
         if self.verbose:
             print("⚠️  Using baseline coverage as fallback")
