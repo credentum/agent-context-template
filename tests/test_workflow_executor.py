@@ -250,7 +250,10 @@ class TestWorkflowExecutor(unittest.TestCase):
 
         # Mock issue data
         executor._issue_data_cache = {
-            "title": "Workflow executor implementation phase marks complete without actual code changes",
+            "title": (
+                "Workflow executor implementation phase marks complete "
+                "without actual code changes"
+            ),
             "body": "Bug description",
             "labels": [{"name": "bug"}],
         }

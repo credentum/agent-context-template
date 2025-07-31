@@ -17,9 +17,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+
 # Configuration constants to avoid hardcoded values
 class WorkflowConfig:
     """Configuration constants for workflow execution."""
+
     DOCKER_CI_TIMEOUT = 300  # 5 minutes for Docker CI operations
     ARC_REVIEWER_TIMEOUT = 180  # 3 minutes for ARC reviewer
     COVERAGE_BASELINE = 71.82  # Minimum coverage percentage required
@@ -33,7 +35,7 @@ class WorkflowExecutor:
         """Initialize executor."""
         self.issue_number = issue_number
         self.workspace_root = Path.cwd()
-        self._issue_data_cache = None
+        self._issue_data_cache: Dict[str, Any] | None = None
 
     def _generate_template_content(self, issue_title: str, issue_body: str, labels: list) -> str:
         """Generate task template content."""
@@ -108,11 +110,13 @@ class WorkflowExecutor:
             return self._issue_data_cache
         except subprocess.CalledProcessError:
             # Return default data if issue fetch fails
-            return {
+            default_data = {
                 "title": f"Issue {self.issue_number}",
                 "body": "No description provided",
                 "labels": [],
             }
+            self._issue_data_cache = default_data
+            return default_data
 
     def _generate_title_slug(self, title: str) -> str:
         """Generate a URL-safe slug from issue title."""
@@ -397,6 +401,7 @@ class WorkflowExecutor:
 
         # For issue #1689, we need to fix the execute_implementation method itself
         # This is a special case where we're fixing the very method we're running
+        # TODO: Generalize this special case handling for self-referential fixes
         if self.issue_number == 1689:
             print("  🔧 Special case: Fixing workflow executor implementation phase")
             print("  📝 Implementing proper task template reading and code execution...")
@@ -443,6 +448,8 @@ class WorkflowExecutor:
             # 4. Create commits
 
             # For now, we'll provide a framework that can be extended
+            # TODO: Implement generic task template parsing and execution
+            # See issue #1689 automated issues for follow-up implementation
             print("  ⚠️  Generic implementation logic not yet implemented")
             print("     Please implement specific changes manually or enhance this method")
 
@@ -480,17 +487,17 @@ class WorkflowExecutor:
     def execute_validation(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute validation phase using two-phase CI architecture."""
         print("🧪 Executing validation phase with two-phase CI architecture...")
-        
+
         validation_attempts = context.get("validation_attempts", 0) + 1
         print(f"  📊 Validation attempt #{validation_attempts}")
-        
+
         # Phase 1: Run Docker tests without ARC reviewer
         print("  🐳 Phase 1: Running Docker tests...")
         ci_script = self.workspace_root / "scripts" / "run-ci-docker.sh"
         docker_tests_passed = False
         coverage_percentage = "unknown"
         coverage_maintained = False
-        
+
         if ci_script.exists():
             try:
                 # Run Docker CI with --no-arc-reviewer flag if available
@@ -514,10 +521,10 @@ class WorkflowExecutor:
                         check=True,
                         timeout=WorkflowConfig.DOCKER_CI_TIMEOUT,
                     )
-                
+
                 print("    ✅ Docker tests passed")
                 docker_tests_passed = True
-                
+
                 # Extract coverage from CI output if available
                 if "coverage:" in result.stdout.lower():
                     for line in result.stdout.split("\n"):
@@ -527,28 +534,30 @@ class WorkflowExecutor:
                                 if part.endswith("%"):
                                     coverage_percentage = part
                                     coverage_value = float(part.rstrip("%"))
-                                    coverage_maintained = coverage_value >= WorkflowConfig.COVERAGE_BASELINE
+                                    coverage_maintained = (
+                                        coverage_value >= WorkflowConfig.COVERAGE_BASELINE
+                                    )
                                     break
                             break
-                
+
                 # Create test artifacts directory for coverage sharing
                 artifacts_dir = self.workspace_root / "test-artifacts"
                 artifacts_dir.mkdir(exist_ok=True)
-                
+
                 # Save coverage data for ARC reviewer
                 coverage_file = artifacts_dir / "coverage.json"
                 coverage_data = {
                     "percentage": coverage_percentage,
                     "maintained": coverage_maintained,
                     "timestamp": datetime.now().isoformat(),
-                    "validation_attempt": validation_attempts
+                    "validation_attempt": validation_attempts,
                 }
                 coverage_file.write_text(json.dumps(coverage_data, indent=2))
                 print(f"    📊 Coverage data saved: {coverage_percentage}")
-                
+
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
                 print(f"    ❌ Docker tests failed: {e}")
-                if hasattr(e, 'stdout') and e.stdout:
+                if hasattr(e, "stdout") and e.stdout:
                     print(f"    Output: {e.stdout}")
                 return {
                     "tests_run": True,
@@ -562,12 +571,12 @@ class WorkflowExecutor:
         else:
             print("    ⚠️  CI script not found, skipping Docker tests")
             docker_tests_passed = True  # Don't fail if no CI script
-        
+
         # Phase 2: Run ARC reviewer in Claude Code with LLM mode
         print("  🤖 Phase 2: Running ARC reviewer with LLM mode...")
         arc_reviewer_passed = False
         arc_verdict = "UNKNOWN"
-        
+
         try:
             # Check if ARC reviewer is available
             arc_reviewer_script = self.workspace_root / "src" / "agents" / "arc_reviewer.py"
@@ -577,14 +586,14 @@ class WorkflowExecutor:
                 cmd_args = ["python", "-m", "src.agents.arc_reviewer", "--llm"]
                 if coverage_file.exists():
                     cmd_args.extend(["--coverage-file", str(coverage_file)])
-                
+
                 result = subprocess.run(
                     cmd_args,
                     capture_output=True,
                     text=True,
                     timeout=WorkflowConfig.ARC_REVIEWER_TIMEOUT,
                 )
-                
+
                 # Parse ARC reviewer verdict from output
                 if result.returncode == 0:
                     if "APPROVE" in result.stdout.upper():
@@ -602,15 +611,15 @@ class WorkflowExecutor:
                 else:
                     print(f"    ❌ ARC reviewer failed with exit code {result.returncode}")
                     arc_reviewer_passed = True  # Don't fail validation if ARC reviewer fails
-                    
+
             else:
                 print("    ⚠️  ARC reviewer not found, skipping LLM review")
                 arc_reviewer_passed = True  # Don't fail if ARC reviewer not available
-                
+
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
             print(f"    ⚠️  ARC reviewer failed or timed out: {e}")
             arc_reviewer_passed = True  # Graceful fallback
-            
+
         # Validation loop logic
         if not docker_tests_passed:
             print("  🔄 Docker tests failed - returning to implementation phase")
@@ -625,7 +634,7 @@ class WorkflowExecutor:
                 "phase_2_complete": True,
                 "next_phase": 2,  # Return to implementation
             }
-            
+
         if arc_verdict == "REQUEST_CHANGES":
             print("  🔄 ARC reviewer requested changes - returning to implementation phase")
             return {
@@ -639,10 +648,10 @@ class WorkflowExecutor:
                 "phase_2_complete": True,
                 "next_phase": 2,  # Return to implementation
             }
-        
+
         # Both phases passed - continue to Phase 4
         print("  🎉 Two-phase validation completed successfully!")
-        
+
         # Run legacy pre-commit hooks for additional quality checks
         pre_commit_passed = True
         try:
@@ -658,7 +667,7 @@ class WorkflowExecutor:
         except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
             print(f"  ⚠️  Pre-commit checks had issues (non-blocking): {e}")
             # Don't fail validation for pre-commit issues in two-phase mode
-            
+
         return {
             "tests_run": True,
             "docker_tests_passed": docker_tests_passed,
@@ -704,7 +713,7 @@ class WorkflowExecutor:
                 ["git", "rev-parse", f"origin/{branch_name}"],
                 capture_output=True,
                 text=True,
-                timeout=WorkflowConfig.GENERAL_TIMEOUT//4,
+                timeout=WorkflowConfig.GENERAL_TIMEOUT // 4,
             )
             branch_exists_remote = check_result.returncode == 0
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
@@ -751,12 +760,16 @@ class WorkflowExecutor:
 
         # Commit documentation updates if any
         try:
-            subprocess.run(["git", "add", "context/trace/"], check=True, timeout=WorkflowConfig.GENERAL_TIMEOUT//4)
+            subprocess.run(
+                ["git", "add", "context/trace/"],
+                check=True,
+                timeout=WorkflowConfig.GENERAL_TIMEOUT // 4,
+            )
             result = subprocess.run(
                 ["git", "diff", "--cached", "--quiet"],
                 capture_output=True,
                 text=True,
-                timeout=WorkflowConfig.GENERAL_TIMEOUT//4,
+                timeout=WorkflowConfig.GENERAL_TIMEOUT // 4,
             )
             if result.returncode != 0:  # There are staged changes
                 subprocess.run(
@@ -768,7 +781,7 @@ class WorkflowExecutor:
                         f"add completion log for issue #{self.issue_number}",
                     ],
                     check=True,
-                    timeout=WorkflowConfig.GENERAL_TIMEOUT//2,
+                    timeout=WorkflowConfig.GENERAL_TIMEOUT // 2,
                 )
                 print("  ✅ Documentation updates committed")
                 subprocess.run(["git", "push"], check=True, timeout=WorkflowConfig.GENERAL_TIMEOUT)
@@ -831,7 +844,7 @@ class WorkflowExecutor:
                 capture_output=True,
                 text=True,
                 check=True,
-                timeout=WorkflowConfig.GENERAL_TIMEOUT//2,  # 1 minute timeout
+                timeout=WorkflowConfig.GENERAL_TIMEOUT // 2,  # 1 minute timeout
             )
             pr_output = result.stdout
             # Extract PR URL from output
