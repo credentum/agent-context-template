@@ -4,10 +4,37 @@ Execute the complete issue-to-PR workflow with direct phase execution to ensure 
 
 ## Pre-Execution
 
-First, read the workflow documentation to ensure the complete workflow process is fresh in context:
+### Step 1: Set up Isolated Workspace (Git Worktree)
+
+Create a git worktree for isolated issue development:
 
 ```bash
-# Load workflow documentation
+# Set up isolated workspace for this issue
+echo "🔧 Setting up isolated workspace..."
+
+# Ensure we're in the main repository root
+cd /workspaces/agent-context-template
+
+# Create worktree directory if not exists
+mkdir -p /workspaces/agent-context-template/worktree
+
+# Create git worktree for this issue with feature branch
+git worktree add /workspaces/agent-context-template/worktree/issue-{issue_number} -b feature/issue-{issue_number}
+
+# Change to worktree directory
+cd /workspaces/agent-context-template/worktree/issue-{issue_number}
+
+# Verify we're in the right place
+echo "✅ Working in: $(pwd)"
+echo "✅ Branch: $(git branch --show-current)"
+```
+
+### Step 2: Load Workflow Documentation
+
+Read the workflow documentation to ensure the complete workflow process is fresh in context:
+
+```bash
+# Load workflow documentation (from worktree context)
 cat /workspaces/agent-context-template/.claude/workflows/workflow-issue.md
 ```
 
@@ -22,31 +49,40 @@ cat /workspaces/agent-context-template/.claude/workflows/workflow-issue.md
 
 ## Implementation
 
-This command executes:
+This command executes from the isolated worktree directory:
 ```bash
+# Execute from worktree (after worktree setup)
+cd /workspaces/agent-context-template/worktree/issue-{issue_number}
 python /workspaces/agent-context-template/scripts/workflow_cli.py workflow-issue {issue_number}
 ```
 
 This automatically enables:
+- **Isolated workspace** in `/workspaces/agent-context-template/worktree/issue-{issue_number}/`
+- **Automatic feature branch** creation (`feature/issue-{issue_number}`)
 - Workflow enforcement via WorkflowEnforcer
 - Direct phase execution via WorkflowExecutor (no isolated agents)
 - State persistence in .workflow-state-{issue_number}.json
 - Phase validation before and after each step
-- All changes persist in the actual repository
+- All changes persist in the worktree repository
 - **NEW**: Hybrid mode option with specialist sub-agents (--hybrid)
 
 ## What It Does
 
-After loading the workflow documentation, directly executes each phase in the main context:
+After setting up the isolated worktree and loading workflow documentation, directly executes each phase:
 
-1. **Investigation** - Analyzes scope and root cause directly
-2. **Planning** - Creates task templates and scratchpad files that persist
-3. **Implementation** - Makes code changes directly in the repository
-4. **Validation** - Runs tests and CI checks on actual code
-5. **PR Creation** - Creates real PR using GitHub CLI
+0. **Worktree Setup** - Creates isolated workspace in `/workspaces/agent-context-template/worktree/issue-{issue_number}/`
+1. **Investigation** - Analyzes scope and root cause directly in worktree
+2. **Planning** - Creates task templates and scratchpad files that persist in worktree
+3. **Implementation** - Makes code changes directly in the isolated repository (branch already created)
+4. **Validation** - Runs tests and CI checks on actual code in worktree
+5. **PR Creation** - Creates real PR using GitHub CLI from worktree branch
 6. **Monitoring** - Sets up monitoring for the created PR
 
-**Key Change**: Unlike agent delegation, all operations happen directly in the main repository context, ensuring all file changes, git operations, and GitHub actions persist.
+**Key Benefits**: 
+- **Isolation**: Each issue gets its own workspace, preventing interference
+- **Concurrent Work**: Multiple issues can be developed simultaneously
+- **Clean Main**: Main working directory stays untouched
+- **Direct Execution**: All operations happen directly in the worktree, ensuring persistence
 
 ## Options
 
@@ -76,21 +112,27 @@ After loading the workflow documentation, directly executes each phase in the ma
 
 ## Execution Steps
 
-1. Read the workflow documentation from `.claude/workflows/workflow-issue.md`
-2. Parse the issue number and any options provided
-3. Initialize the WorkflowExecutor for direct execution
-4. Execute phases directly in the main repository context
-5. Track progress and handle phase transitions
+1. **Worktree Setup**: Create isolated workspace in `/workspaces/agent-context-template/worktree/issue-{issue_number}/`
+2. **Branch Creation**: Automatically create feature branch `feature/issue-{issue_number}`
+3. **Context Switch**: Change to worktree directory for all subsequent operations
+4. **Documentation Load**: Read workflow documentation from `.claude/workflows/workflow-issue.md`
+5. **Parse Options**: Parse the issue number and any options provided
+6. **Initialize Executor**: Initialize the WorkflowExecutor for direct execution in worktree
+7. **Execute Phases**: Execute phases directly in the isolated worktree context
+8. **Track Progress**: Track progress and handle phase transitions with state persistence
 
 ## Technical Details
 
-The command now uses `WorkflowExecutor` for direct phase execution instead of delegating to isolated agents via the Task tool. This ensures:
+The command uses `WorkflowExecutor` for direct phase execution in an isolated git worktree. This ensures:
 
-- All file operations create real files in the repository
-- Git commands (branch, commit, push) affect the actual repository
-- GitHub CLI operations (PR creation) work with real authentication
-- State persistence works across all phases
-- No changes are lost when phases complete
+- **Workspace Isolation**: Each issue works in `/workspaces/agent-context-template/worktree/issue-{issue_number}/`
+- **Automatic Branching**: Feature branch `feature/issue-{issue_number}` created with worktree
+- **Real File Operations**: All file operations create real files in the isolated repository
+- **Git Operations**: Git commands (commit, push) affect the worktree repository and branch
+- **GitHub Integration**: GitHub CLI operations (PR creation) work with real authentication from worktree
+- **State Persistence**: State persists across all phases within the worktree
+- **No Interference**: Multiple concurrent workflows don't conflict
+- **Easy Cleanup**: `git worktree remove` cleans up completely when done
 
 ## Hybrid Mode
 
@@ -118,4 +160,69 @@ When using the `--hybrid` flag, the command uses `HybridWorkflowExecutor` which 
 🔍 Executing investigation phase (hybrid mode)...
   🤖 Consulting issue-investigator specialist...
   ✅ Specialist provided additional insights
+```
+
+## Worktree Management
+
+### Automatic Setup
+The workflow automatically creates and manages git worktrees:
+
+```bash
+# This happens automatically when you run /workflow-issue 123
+/workspaces/agent-context-template/worktree/issue-123/  # ← Isolated workspace
+  ├── .git           # ← Points to main repo
+  ├── src/           # ← Full copy of source code
+  ├── scripts/       # ← All scripts available
+  └── ...            # ← Complete repository structure
+```
+
+### Manual Cleanup
+After PR is merged, clean up the worktree:
+
+```bash
+# Remove completed worktree (run from main directory)
+cd /workspaces/agent-context-template
+git worktree remove worktree/issue-123
+
+# List all worktrees
+git worktree list
+
+# Remove all merged worktrees (future automation)
+git worktree prune
+```
+
+### Concurrent Development
+Work on multiple issues simultaneously:
+
+```bash
+# Terminal 1: Working on issue 123
+/workflow-issue 123 --type bug
+
+# Terminal 2: Working on issue 456 (different workspace)
+/workflow-issue 456 --type feature
+
+# Terminal 3: Main directory stays clean for other work
+cd /workspaces/agent-context-template  # ← Always on main branch
+```
+
+### Troubleshooting Worktrees
+
+**If worktree creation fails:**
+```bash
+# Check existing worktrees
+git worktree list
+
+# Remove stale worktree if needed
+git worktree remove worktree/issue-123 --force
+
+# Retry workflow
+/workflow-issue 123
+```
+
+**If branch already exists:**
+```bash
+# The workflow will handle existing branches gracefully
+# Or manually clean up if needed
+git branch -D feature/issue-123  # Delete local branch
+git push origin --delete feature/issue-123  # Delete remote branch
 ```
