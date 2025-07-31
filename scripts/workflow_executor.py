@@ -77,6 +77,66 @@ class WorkflowExecutor:
         time.sleep(2)
         print("    ✅ Test environment cleaned up")
 
+    def _extract_coverage_data(self, stdout_output: str) -> tuple[str, bool]:
+        """Extract coverage percentage and maintenance status using multiple methods."""
+        coverage_percentage = "unknown"
+        coverage_maintained = False
+        
+        # Method 1: Try to read from JSON file (most reliable)
+        coverage_json_path = self.workspace_root / "test-artifacts" / "coverage.json"
+        if coverage_json_path.exists():
+            try:
+                import json
+                with open(coverage_json_path, 'r') as f:
+                    coverage_data = json.load(f)
+                    
+                if 'totals' in coverage_data:
+                    coverage_value = coverage_data['totals']['percent_covered']
+                    coverage_percentage = f"{coverage_value:.2f}%"
+                    coverage_maintained = coverage_value >= WorkflowConfig.COVERAGE_BASELINE
+                    print(f"    📊 Coverage from JSON: {coverage_percentage}")
+                    return coverage_percentage, coverage_maintained
+                    
+            except Exception as e:
+                print(f"    ⚠️  Could not read coverage JSON: {e}")
+        
+        # Method 2: Parse pytest stdout format (fallback)
+        try:
+            for line in stdout_output.split("\n"):
+                # Look for pytest coverage format: "TOTAL ... ... XX.XX%"
+                if line.strip().startswith("TOTAL") and "%" in line:
+                    parts = line.split()
+                    for part in parts:
+                        if part.endswith("%"):
+                            coverage_percentage = part
+                            coverage_value = float(part.rstrip("%"))
+                            coverage_maintained = coverage_value >= WorkflowConfig.COVERAGE_BASELINE
+                            print(f"    📊 Coverage from stdout: {coverage_percentage}")
+                            return coverage_percentage, coverage_maintained
+                            
+        except Exception as e:
+            print(f"    ⚠️  Could not parse coverage from stdout: {e}")
+        
+        # Method 3: Original parsing method (legacy fallback)
+        try:
+            if "coverage:" in stdout_output.lower():
+                for line in stdout_output.split("\n"):
+                    if "total" in line.lower() and "%" in line:
+                        parts = line.split()
+                        for part in parts:
+                            if part.endswith("%"):
+                                coverage_percentage = part
+                                coverage_value = float(part.rstrip("%"))
+                                coverage_maintained = coverage_value >= WorkflowConfig.COVERAGE_BASELINE
+                                print(f"    📊 Coverage from legacy parsing: {coverage_percentage}")
+                                return coverage_percentage, coverage_maintained
+                                
+        except Exception as e:
+            print(f"    ⚠️  Legacy coverage parsing failed: {e}")
+        
+        print(f"    ⚠️  Could not extract coverage data, using defaults")
+        return coverage_percentage, coverage_maintained
+
     def _generate_template_content(self, issue_title: str, issue_body: str, labels: list) -> str:
         """Generate task template content."""
         labels_str = ", ".join(labels) if labels else "None"
@@ -616,20 +676,8 @@ will be enhanced in future iterations.
                 print("    ✅ Docker tests passed")
                 docker_tests_passed = True
 
-                # Extract coverage from CI output if available
-                if "coverage:" in result.stdout.lower():
-                    for line in result.stdout.split("\n"):
-                        if "total" in line.lower() and "%" in line:
-                            parts = line.split()
-                            for part in parts:
-                                if part.endswith("%"):
-                                    coverage_percentage = part
-                                    coverage_value = float(part.rstrip("%"))
-                                    coverage_maintained = (
-                                        coverage_value >= WorkflowConfig.COVERAGE_BASELINE
-                                    )
-                                    break
-                            break
+                # Extract coverage from CI output - try multiple methods
+                coverage_percentage, coverage_maintained = self._extract_coverage_data(result.stdout)
 
                 # Create test artifacts directory for coverage sharing
                 artifacts_dir = self.workspace_root / "test-artifacts"
