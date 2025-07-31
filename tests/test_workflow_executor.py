@@ -175,6 +175,232 @@ class TestWorkflowExecutor(unittest.TestCase):
         expected = "fix/1234-sprint-43-fix-workflow-branch-name-generation"
         self.assertEqual(branch_name, expected)
 
+    @patch("subprocess.run")
+    @patch("pathlib.Path.glob")
+    @patch("pathlib.Path.read_text")
+    def test_execute_implementation_with_task_template(self, mock_read_text, mock_glob, mock_run):
+        """Test execute_implementation when task template exists."""
+        # Mock task template file
+        mock_template_path = Mock()
+        mock_template_path.name = "issue-1234-test.md"
+        mock_template_path.read_text.return_value = "Template content"
+        mock_glob.return_value = [mock_template_path]
+
+        # Mock git commands
+        mock_run.side_effect = [
+            Mock(stdout="feature/1234-test", returncode=0),  # git branch --show-current
+            Mock(stdout="abc123 Initial commit", returncode=0),  # git log after implementation
+        ]
+
+        # Mock issue data
+        self.executor._issue_data_cache = {"title": "Test Issue", "body": "Test body", "labels": []}
+
+        result = self.executor.execute_implementation({})
+
+        # Verify result
+        self.assertTrue(result["branch_created"])
+        self.assertEqual(result["branch_name"], "feature/1234-test")
+        self.assertTrue(result["task_template_followed"])
+        self.assertEqual(result["next_phase"], 3)
+
+        # Verify task template was read
+        mock_glob.assert_called_once()
+
+    @patch("subprocess.run")
+    @patch("pathlib.Path.glob")
+    def test_execute_implementation_no_task_template(self, mock_glob, mock_run):
+        """Test execute_implementation when no task template exists."""
+        # Mock no task template found
+        mock_glob.return_value = []
+
+        # Mock git commands
+        mock_run.return_value = Mock(stdout="feature/1234-test", returncode=0)
+
+        result = self.executor.execute_implementation({})
+
+        # Verify result
+        self.assertFalse(result["implementation_complete"])
+        self.assertFalse(result["code_changes_applied"])
+        self.assertFalse(result["task_template_followed"])
+        self.assertEqual(result["error"], "No task template found")
+
+    @patch("subprocess.run")
+    @patch("pathlib.Path.glob")
+    @patch("pathlib.Path.read_text")
+    def test_execute_implementation_issue_1689(self, mock_read_text, mock_glob, mock_run):
+        """Test execute_implementation for issue 1689 (self-referential fix)."""
+        # Create executor for issue 1689
+        executor = WorkflowExecutor(1689)
+
+        # Mock task template file
+        mock_template_path = Mock()
+        mock_template_path.name = "issue-1689-test.md"
+        mock_template_path.read_text.return_value = "Template content"
+        mock_glob.return_value = [mock_template_path]
+
+        # Mock git commands - simulate successful commit
+        mock_run.side_effect = [
+            Mock(stdout="feature/1689-test", returncode=0),  # git branch --show-current
+            Mock(stdout="", returncode=0),  # git add
+            Mock(stdout="", returncode=0),  # git commit
+            Mock(
+                stdout="abc123 fix(workflow): implement actual code changes", returncode=0
+            ),  # git log
+        ]
+
+        # Mock issue data
+        executor._issue_data_cache = {
+            "title": (
+                "Workflow executor implementation phase marks complete "
+                "without actual code changes"
+            ),
+            "body": "Bug description",
+            "labels": [{"name": "bug"}],
+        }
+
+        result = executor.execute_implementation({})
+
+        # Verify result for issue 1689
+        self.assertTrue(result["implementation_complete"])
+        self.assertTrue(result["commits_made"])
+        self.assertTrue(result["code_changes_applied"])
+
+        # Verify git add and commit were called
+        add_call = [
+            call
+            for call in mock_run.call_args_list
+            if call[0][0][0] == "git" and call[0][0][1] == "add"
+        ]
+        commit_call = [
+            call
+            for call in mock_run.call_args_list
+            if call[0][0][0] == "git" and call[0][0][1] == "commit"
+        ]
+        self.assertEqual(len(add_call), 1)
+        self.assertEqual(len(commit_call), 1)
+
+    @patch("scripts.workflow_executor.subprocess.run")
+    @patch("pathlib.Path.exists")
+    def test_execute_validation_two_phase_ci(self, mock_exists, mock_run):
+        """Test execute_validation with two-phase CI architecture."""
+        executor = WorkflowExecutor(1689)
+
+        # Mock script existence
+        mock_exists.return_value = True
+
+        # Mock successful Docker CI run
+        docker_output = """
+Running Docker CI checks...
+Running tests...
+test_validation.py::test_example PASSED
+All tests passed!
+Coverage: 78.5%
+"""
+
+        # Mock successful ARC reviewer run
+        arc_output = """
+schema_version: "1.0"
+pr_number: 0
+timestamp: "2025-07-31T20:00:00Z"
+reviewer: "ARC-Reviewer"
+verdict: "APPROVE"
+summary: "All checks passed"
+coverage:
+  current_pct: 78.5
+  status: "PASS"
+  meets_baseline: true
+issues:
+  blocking: []
+  warnings: []
+  nits: []
+"""
+
+        mock_run.side_effect = [
+            Mock(returncode=0, stdout=docker_output, stderr=""),  # Docker CI with flag
+            Mock(returncode=0, stdout=arc_output, stderr=""),  # ARC reviewer
+        ]
+
+        result = executor.execute_validation({})
+
+        # Verify result
+        self.assertTrue(result["validation_passed"])
+        self.assertEqual(result["ci_status"], "passing")
+        self.assertEqual(result["test_coverage"], "78.5%")
+        self.assertTrue(result["coverage_maintained"])
+        self.assertEqual(result["arc_verdict"], "APPROVE")
+        self.assertEqual(result["phase"], "validation_complete")
+
+        # Verify Docker CI was called first
+        docker_call = mock_run.call_args_list[0]
+        self.assertIn("run-ci-docker.sh", str(docker_call[0][0]))
+        self.assertIn("--no-arc-reviewer", docker_call[0][0])
+
+        # Verify ARC reviewer was called second
+        arc_call = mock_run.call_args_list[1]
+        self.assertIn("run-arc-reviewer.sh", str(arc_call[0][0]))
+
+    @patch("scripts.workflow_executor.subprocess.run")
+    @patch("pathlib.Path.exists")
+    def test_execute_validation_phase1_failure(self, mock_exists, mock_run):
+        """Test execute_validation when phase 1 (Docker CI) fails."""
+        executor = WorkflowExecutor(1689)
+
+        # Mock script existence
+        mock_exists.return_value = True
+
+        # Mock Docker CI failure
+        docker_error = "ERROR: Tests failed"
+        mock_run.side_effect = subprocess.CalledProcessError(
+            1, ["./scripts/run-ci-docker.sh"], stderr=docker_error
+        )
+
+        result = executor.execute_validation({})
+
+        # Verify phase 1 failure is properly handled
+        self.assertFalse(result["validation_passed"])
+        self.assertEqual(result["ci_status"], "failing")
+        self.assertIn("Phase 1 failed", result["error"])
+        self.assertEqual(result["phase"], "validation_failed")
+        self.assertIsNone(result.get("arc_verdict"))  # Phase 2 should not run
+
+    @patch("scripts.workflow_executor.subprocess.run")
+    @patch("pathlib.Path.exists")
+    def test_execute_validation_phase2_rejection(self, mock_exists, mock_run):
+        """Test execute_validation when phase 2 (ARC reviewer) rejects."""
+        executor = WorkflowExecutor(1689)
+
+        # Mock script existence
+        mock_exists.return_value = True
+
+        # Mock successful Docker CI
+        docker_output = "Tests passed!\nCoverage: 78.5%"
+
+        # Mock ARC reviewer rejection
+        arc_output = """
+schema_version: "1.0"
+verdict: "REQUEST_CHANGES"
+issues:
+  blocking:
+    - description: "Hardcoded timeout value"
+      file: "src/executor.py"
+      line: 42
+      category: "code_quality"
+      fix_guidance: "Use configuration constant"
+"""
+
+        mock_run.side_effect = [
+            Mock(returncode=0, stdout=docker_output, stderr=""),  # Docker CI
+            Mock(returncode=0, stdout=arc_output, stderr=""),  # ARC reviewer
+        ]
+
+        result = executor.execute_validation({})
+
+        # Verify phase 2 rejection is handled
+        self.assertFalse(result["validation_passed"])
+        self.assertEqual(result["arc_verdict"], "REQUEST_CHANGES")
+        self.assertGreater(len(result["blocking_issues"]), 0)
+        self.assertEqual(result["phase"], "validation_needs_fixes")
+
 
 if __name__ == "__main__":
     unittest.main()

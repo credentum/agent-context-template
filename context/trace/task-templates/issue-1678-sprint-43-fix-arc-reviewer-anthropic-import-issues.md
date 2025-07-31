@@ -52,7 +52,7 @@ schema_version: "1.0"
 - [x] **Breaking change assessment** (no breaking changes)
 
 ## Pre-Execution Context
-**Key Files**: 
+**Key Files**:
 - `src/agents/arc_reviewer.py` (lines 28-100)
 - `src/agents/llm_reviewer.py` (lines 17-50)
 
@@ -60,10 +60,10 @@ schema_version: "1.0"
 - anthropic package (>=0.8.0)
 - CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY
 
-**Configuration**: 
+**Configuration**:
 - Environment variables for API keys
 
-**Related Issues/PRs**: 
+**Related Issues/PRs**:
 - #1673 (Original issue)
 - #1675 (Existing PR with partial fixes)
 - #1677 (Two-phase CI architecture)

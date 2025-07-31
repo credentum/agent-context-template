@@ -52,7 +52,7 @@
 - [x] **Breaking change assessment** (backward compatible, adds new options)
 
 ## Pre-Execution Context
-**Key Files**: 
+**Key Files**:
 - `scripts/run-ci-docker.sh`
 - `scripts/test-comprehensive-ci.sh`
 - `mypy.ini`
