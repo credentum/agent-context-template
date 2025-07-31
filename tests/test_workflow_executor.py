@@ -279,6 +279,128 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(len(add_call), 1)
         self.assertEqual(len(commit_call), 1)
 
+    @patch("scripts.workflow_executor.subprocess.run")
+    @patch("pathlib.Path.exists")
+    def test_execute_validation_two_phase_ci(self, mock_exists, mock_run):
+        """Test execute_validation with two-phase CI architecture."""
+        executor = WorkflowExecutor(1689)
+
+        # Mock script existence
+        mock_exists.return_value = True
+
+        # Mock successful Docker CI run
+        docker_output = """
+Running Docker CI checks...
+Running tests...
+test_validation.py::test_example PASSED
+All tests passed!
+Coverage: 78.5%
+"""
+
+        # Mock successful ARC reviewer run
+        arc_output = """
+schema_version: "1.0"
+pr_number: 0
+timestamp: "2025-07-31T20:00:00Z"
+reviewer: "ARC-Reviewer"
+verdict: "APPROVE"
+summary: "All checks passed"
+coverage:
+  current_pct: 78.5
+  status: "PASS"
+  meets_baseline: true
+issues:
+  blocking: []
+  warnings: []
+  nits: []
+"""
+
+        mock_run.side_effect = [
+            Mock(returncode=0, stdout=docker_output, stderr=""),  # Docker CI with flag
+            Mock(returncode=0, stdout=arc_output, stderr=""),  # ARC reviewer
+        ]
+
+        result = executor.execute_validation({})
+
+        # Verify result
+        self.assertTrue(result["validation_passed"])
+        self.assertEqual(result["ci_status"], "passing")
+        self.assertEqual(result["test_coverage"], "78.5%")
+        self.assertTrue(result["coverage_maintained"])
+        self.assertEqual(result["arc_verdict"], "APPROVE")
+        self.assertEqual(result["phase"], "validation_complete")
+
+        # Verify Docker CI was called first
+        docker_call = mock_run.call_args_list[0]
+        self.assertIn("run-ci-docker.sh", str(docker_call[0][0]))
+        self.assertIn("--no-arc-reviewer", docker_call[0][0])
+
+        # Verify ARC reviewer was called second
+        arc_call = mock_run.call_args_list[1]
+        self.assertIn("run-arc-reviewer.sh", str(arc_call[0][0]))
+
+    @patch("scripts.workflow_executor.subprocess.run")
+    @patch("pathlib.Path.exists")
+    def test_execute_validation_phase1_failure(self, mock_exists, mock_run):
+        """Test execute_validation when phase 1 (Docker CI) fails."""
+        executor = WorkflowExecutor(1689)
+
+        # Mock script existence
+        mock_exists.return_value = True
+
+        # Mock Docker CI failure
+        docker_error = "ERROR: Tests failed"
+        mock_run.side_effect = subprocess.CalledProcessError(
+            1, ["./scripts/run-ci-docker.sh"], stderr=docker_error
+        )
+
+        result = executor.execute_validation({})
+
+        # Verify phase 1 failure is properly handled
+        self.assertFalse(result["validation_passed"])
+        self.assertEqual(result["ci_status"], "failing")
+        self.assertIn("Phase 1 failed", result["error"])
+        self.assertEqual(result["phase"], "validation_failed")
+        self.assertIsNone(result.get("arc_verdict"))  # Phase 2 should not run
+
+    @patch("scripts.workflow_executor.subprocess.run")
+    @patch("pathlib.Path.exists")
+    def test_execute_validation_phase2_rejection(self, mock_exists, mock_run):
+        """Test execute_validation when phase 2 (ARC reviewer) rejects."""
+        executor = WorkflowExecutor(1689)
+
+        # Mock script existence
+        mock_exists.return_value = True
+
+        # Mock successful Docker CI
+        docker_output = "Tests passed!\nCoverage: 78.5%"
+
+        # Mock ARC reviewer rejection
+        arc_output = """
+schema_version: "1.0"
+verdict: "REQUEST_CHANGES"
+issues:
+  blocking:
+    - description: "Hardcoded timeout value"
+      file: "src/executor.py"
+      line: 42
+      category: "code_quality"
+      fix_guidance: "Use configuration constant"
+"""
+
+        mock_run.side_effect = [
+            Mock(returncode=0, stdout=docker_output, stderr=""),  # Docker CI
+            Mock(returncode=0, stdout=arc_output, stderr=""),  # ARC reviewer
+        ]
+
+        result = executor.execute_validation({})
+
+        # Verify phase 2 rejection is handled
+        self.assertFalse(result["validation_passed"])
+        self.assertEqual(result["arc_verdict"], "REQUEST_CHANGES")
+        self.assertGreater(len(result["blocking_issues"]), 0)
+        self.assertEqual(result["phase"], "validation_needs_fixes")
+
 
 if __name__ == "__main__":
     unittest.main()

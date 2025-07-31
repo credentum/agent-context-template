@@ -15,11 +15,16 @@ Usage:
 
 import json
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
+from workflow_executor import WorkflowConfig  # noqa: E402
 
 # Import LLMReviewer for LLM-based review mode
 try:
@@ -95,7 +100,11 @@ class ARCReviewer:
         except (FileNotFoundError, json.JSONDecodeError) as e:
             if self.verbose:
                 print(f"Warning: Could not load coverage config: {e}")
-            return {"baseline": 78.0, "target": 85.0, "validator_target": 90.0}
+            return {
+                "baseline": WorkflowConfig.COVERAGE_BASELINE,
+                "target": 85.0,
+                "validator_target": 90.0,
+            }
 
     def _run_command(self, cmd: List[str], cwd: Optional[Path] = None) -> Tuple[int, str, str]:
         """Run a shell command and return exit code, stdout, stderr."""

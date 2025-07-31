@@ -7,11 +7,16 @@ claude-code-review.yml but using the internal Claude Code session.
 """
 
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
+from workflow_executor import WorkflowConfig  # noqa: E402
 
 
 class LLMReviewer:
@@ -112,7 +117,7 @@ class LLMReviewer:
 
     def _get_prompt_template(self) -> str:
         """Get the exact prompt template from GitHub Actions workflow."""
-        return """You are ARC-Reviewer, a senior staff engineer reviewing \
+        return f"""You are ARC-Reviewer, a senior staff engineer reviewing \
 pull-requests on the agent-context-template (MCP-based context platform).
 
 CRITICAL: Output ONLY valid YAML. No markdown, no explanations, \
@@ -131,7 +136,7 @@ Consider all issues that may exist across the entire changeset, including:
 - Cumulative effects of all changes together
 
 Review criteria (any failure = REQUEST_CHANGES):
-- Test Coverage: validators/* ≥ 90%, overall ≥ 78.0%
+- Test Coverage: validators/* ≥ 90%, overall ≥ {WorkflowConfig.COVERAGE_BASELINE}%
 - MCP Compatibility: Tool contracts updated, valid JSON schema
 - Context Integrity: All YAML has schema_version, context/ structure intact
 - Code Quality: Python typed, docstrings, pre-commit passes
@@ -263,8 +268,10 @@ automated_issues:
                 f"{len(issues['warnings'])} warning, {len(issues['nits'])} nit issues",
                 "coverage": {
                     "current_pct": coverage_pct,
-                    "status": "PASS" if coverage_pct >= 78.0 else "FAIL",
-                    "meets_baseline": coverage_pct >= 78.0,
+                    "status": (
+                        "PASS" if coverage_pct >= WorkflowConfig.COVERAGE_BASELINE else "FAIL"
+                    ),
+                    "meets_baseline": coverage_pct >= WorkflowConfig.COVERAGE_BASELINE,
                 },
                 "issues": issues,
                 "automated_issues": [],
@@ -314,11 +321,11 @@ automated_issues:
         if coverage_pct < 75.0:  # More lenient threshold to reduce noise
             issues["blocking"].append(
                 {
-                    "description": f"Overall test coverage {coverage_pct}% below baseline 78.0%",
+                    "description": f"Overall test coverage {coverage_pct}% below baseline {WorkflowConfig.COVERAGE_BASELINE}%",
                     "file": "test_coverage",
                     "line": 0,
                     "category": "test_coverage",
-                    "fix_guidance": "Improve test coverage to meet 78.0% baseline requirement",
+                    "fix_guidance": f"Improve test coverage to meet {WorkflowConfig.COVERAGE_BASELINE}% baseline requirement",
                 }
             )
 
@@ -469,7 +476,7 @@ automated_issues:
                         "file": file_path,
                         "line": 1,
                         "category": "test_coverage",
-                        "fix_guidance": f"Consider adding tests for new major functions",
+                        "fix_guidance": "Consider adding tests for new major functions",
                     }
                 )
 
@@ -600,7 +607,7 @@ automated_issues:
         # Last resort: return baseline
         if self.verbose:
             print("⚠️  Using baseline coverage as fallback")
-        return 78.0
+        return WorkflowConfig.COVERAGE_BASELINE
 
     def format_yaml_output(self, review_data: Dict[str, Any]) -> str:
         """Format review results as YAML string matching workflow output."""
