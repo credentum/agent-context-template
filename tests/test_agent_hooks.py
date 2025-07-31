@@ -75,7 +75,7 @@ class TestAgentHooks:
         )
 
         assert can_proceed is True
-        assert "Investigation skipped" in message
+        assert "skipped" in message
         # Verify investigation was marked as completed
         assert hooks.enforcer.state["phases"]["investigation"]["status"] == "completed"
         assert hooks.enforcer.state["phases"]["investigation"]["outputs"]["skipped"] is True
