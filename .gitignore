@@ -106,3 +106,7 @@ context/.duckdb/
 
 # Workflow state files
 .workflow-state-*.json
+
+# Claude runtime logs
+context/trace/logs/claude-*.log
+context/trace/logs/workflow-enforcement.log
