@@ -323,6 +323,100 @@ services:
     stop_signal: SIGTERM
     stop_grace_period: 30s
 
+  # Quick essential checks for Claude's 2-minute timeout
+  ci-quick:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - ./context:/app/context
+      - ./.github:/app/.github:ro
+      - ./mypy.ini:/app/mypy.ini:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml:ro
+      - ./.flake8:/app/.flake8:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - PYTHONUNBUFFERED=1
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
+    command: ["/bin/bash", "scripts/test-quick-ci.sh"]
+    stop_signal: SIGTERM
+    stop_grace_period: 120s
+
+  # Fast lint checks only (Black, isort, Flake8)
+  ci-lint-fast:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - ./.flake8:/app/.flake8:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - PYTHONUNBUFFERED=1
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
+    command: ["/bin/bash", "scripts/test-lint-fast.sh"]
+    stop_signal: SIGTERM
+    stop_grace_period: 120s
+
+  # Fixed MyPy service with proper configuration
+  ci-mypy-fixed:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./mypy.ini:/app/mypy.ini:ro
+    environment:
+      - CI=true
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
+    command: mypy src/ --config-file=mypy.ini --explicit-package-bases
+    stop_signal: SIGTERM
+    stop_grace_period: 120s
+
+  # Pre-commit hooks service
+  ci-precommit:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    image: agent-context-ci:latest
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./scripts:/app/scripts:ro
+      - ./context:/app/context
+      - ./.github:/app/.github:ro
+      - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml:ro
+      - ./mypy.ini:/app/mypy.ini:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./.flake8:/app/.flake8:ro
+      - ./.yamllint-workflows.yml:/app/.yamllint-workflows.yml:ro
+      - ./.yamllint-schemas.yml:/app/.yamllint-schemas.yml:ro
+    environment:
+      - PYTHONPATH=/app
+      - CI=true
+      - PYTHONUNBUFFERED=1
+      - CACHE_VERSION=v2025-07-16
+      - PYTHON_VERSION=3.11
+    command: pre-commit run --all-files
+    stop_signal: SIGTERM
+    stop_grace_period: 120s
+
   # Enhanced parallel lint service (from optimized version)
   ci-lint-parallel:
     build:

@@ -16,6 +16,10 @@ show_help() {
     echo ""
     echo "Commands:"
     echo "  all       Run all CI lint checks (default)"
+    echo "  quick     Fast essential checks (for Claude's 2-min timeout)"
+    echo "  lint      Run formatting checks: Black, isort, Flake8"
+    echo "  typecheck Run MyPy type checking only"
+    echo "  precommit Run pre-commit hooks only"
     echo "  coverage  Run coverage tests like GitHub Actions"
     echo "  unit      Run unit tests like GitHub Actions"
     echo "  suite     Run full test suite like GitHub Actions"
@@ -35,6 +39,10 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  $0              # Run all checks"
+    echo "  $0 quick        # Fast essential checks (recommended for Claude)"
+    echo "  $0 lint         # Run formatting checks only"
+    echo "  $0 typecheck    # Run MyPy only"
+    echo "  $0 precommit    # Run pre-commit hooks only"
     echo "  $0 coverage     # Run coverage tests"
     echo "  $0 unit         # Run unit tests"
     echo "  $0 suite        # Run full test suite"
@@ -112,6 +120,30 @@ case $COMMAND in
         echo -e "${YELLOW}This replicates GitHub Actions environment exactly${NC}"
         echo ""
         run_service ci-lint "all CI checks"
+        ;;
+    quick)
+        echo -e "${GREEN}🚀 Running quick essential checks (optimized for Claude)${NC}"
+        echo -e "${YELLOW}Runs most important checks within 2-minute timeout${NC}"
+        echo ""
+        run_service ci-quick "quick essential checks"
+        ;;
+    lint)
+        echo -e "${GREEN}🚀 Running formatting checks: Black, isort, Flake8${NC}"
+        echo -e "${YELLOW}Fast formatting and style checks only${NC}"
+        echo ""
+        run_service ci-lint-fast "formatting checks"
+        ;;
+    typecheck)
+        echo -e "${GREEN}🚀 Running MyPy type checking${NC}"
+        echo -e "${YELLOW}Type checking with proper configuration${NC}"
+        echo ""
+        run_service ci-mypy-fixed "MyPy type checking"
+        ;;
+    precommit)
+        echo -e "${GREEN}🚀 Running pre-commit hooks${NC}"
+        echo -e "${YELLOW}All pre-commit checks including whitespace fixes${NC}"
+        echo ""
+        run_service ci-precommit "pre-commit hooks"
         ;;
     coverage)
         echo -e "${GREEN}🚀 Running coverage tests in Docker${NC}"
