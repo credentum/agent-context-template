@@ -7,6 +7,7 @@
 - `claude -c` or `--continue` - Reopen last session
 - `/clear` - Wipe context; use between tasks
 - `/compact` - Summarize conversation to free tokens
+- `/close-pr` - Cleanup after PR work (clear, switch to main, pull, clean branches, exit)
 
 ### Code Operations
 - `/review` - AI code review current diff or PR
@@ -59,3 +60,4 @@ claude
 - Use `/clear` between distinct threads to avoid context bleed
 - Keep prompts concise; prefer bullet lists to prose
 - For complex tasks, break into smaller sub-tasks
+- Use `/close-pr` after finishing PR work to cleanup and reset
