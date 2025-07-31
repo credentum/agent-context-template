@@ -18,7 +18,7 @@
 ## 🛠️ Subtasks
 | File | Action | Prompt Tech | Purpose | Context Impact |
 |------|--------|-------------|---------|----------------|
-| TBD | TBD | TBD | TBD | TBD |
+| src/agents/llm_reviewer.py | Enhance comprehensive checks | Direct implementation | Fix local ARC reviewer to match PR standards | High |
 
 ## 📝 Issue Description
 ## Task Context
