@@ -82,6 +82,10 @@ class WorkflowExecutor:
         coverage_percentage = "unknown"
         coverage_maintained = False
         
+        # Ensure stdout_output is a string
+        if isinstance(stdout_output, bytes):
+            stdout_output = stdout_output.decode('utf-8', errors='ignore')
+        
         # Method 1: Try to read from JSON file (most reliable)
         coverage_json_path = self.workspace_root / "test-artifacts" / "coverage.json"
         if coverage_json_path.exists():
@@ -139,6 +143,10 @@ class WorkflowExecutor:
 
     def _analyze_ci_failure(self, stdout_output: str, exception) -> bool:
         """Analyze CI failure to determine if tests actually failed or just lint issues."""
+        
+        # Ensure stdout_output is a string
+        if isinstance(stdout_output, bytes):
+            stdout_output = stdout_output.decode('utf-8', errors='ignore')
         
         # Check for timeout - if timeout, tests may not have completed
         if isinstance(exception, subprocess.TimeoutExpired):
@@ -733,7 +741,11 @@ will be enhanced in future iterations.
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
                 stdout_output = ""
                 if hasattr(e, "stdout") and e.stdout:
-                    stdout_output = e.stdout
+                    # Handle both bytes and string output
+                    if isinstance(e.stdout, bytes):
+                        stdout_output = e.stdout.decode('utf-8', errors='ignore')
+                    else:
+                        stdout_output = e.stdout
                 
                 # Try to extract coverage even on failure/timeout
                 coverage_percentage, coverage_maintained = self._extract_coverage_data(stdout_output)
