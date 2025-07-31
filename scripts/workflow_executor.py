@@ -853,7 +853,7 @@ will be enhanced in future iterations.
 
 ## Testing
 - [X] All CI checks pass locally
-- [X] Coverage maintained at 71.82%+
+- [X] Coverage maintained at {WorkflowConfig.COVERAGE_BASELINE:.2f}%+
 - [X] Pre-commit hooks pass
 
 ## Task Template
