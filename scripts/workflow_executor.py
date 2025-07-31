@@ -13,6 +13,7 @@ consider adding appropriate contracts for tool exposure.
 import json
 import re
 import subprocess
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
@@ -36,6 +37,45 @@ class WorkflowExecutor:
         self.issue_number = issue_number
         self.workspace_root = Path.cwd()
         self._issue_data_cache: Dict[str, Any] | None = None
+
+    def _cleanup_test_environment(self) -> None:
+        """Clean up Docker containers and test processes."""
+        print("  🧹 Cleaning up test environment...")
+        
+        # Stop any running Docker containers from the project
+        try:
+            # Get project-specific containers
+            result = subprocess.run(
+                ["docker", "ps", "-q", "--filter", "name=agent-context"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                container_ids = result.stdout.strip().split("\n")
+                for container_id in container_ids:
+                    subprocess.run(
+                        ["docker", "stop", container_id],
+                        capture_output=True,
+                        timeout=30,
+                    )
+                print(f"    ✅ Stopped {len(container_ids)} Docker containers")
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            print(f"    ⚠️  Could not stop Docker containers: {e}")
+        
+        # Clean up any dangling pytest processes
+        try:
+            subprocess.run(
+                ["pkill", "-f", "pytest"],
+                capture_output=True,
+                timeout=10,
+            )
+        except Exception:
+            pass  # pkill might not be available or no processes to kill
+        
+        # Give processes time to clean up
+        time.sleep(2)
+        print("    ✅ Test environment cleaned up")
 
     def _generate_template_content(self, issue_title: str, issue_body: str, labels: list) -> str:
         """Generate task template content."""
@@ -610,6 +650,10 @@ will be enhanced in future iterations.
                 print(f"    ❌ Docker tests failed: {e}")
                 if hasattr(e, "stdout") and e.stdout:
                     print(f"    Output: {e.stdout}")
+                
+                # Clean up even on failure
+                self._cleanup_test_environment()
+                
                 return {
                     "tests_run": True,
                     "docker_tests_passed": False,
@@ -622,6 +666,9 @@ will be enhanced in future iterations.
         else:
             print("    ⚠️  CI script not found, skipping Docker tests")
             docker_tests_passed = True  # Don't fail if no CI script
+
+        # Clean up before ARC reviewer to ensure clean environment
+        self._cleanup_test_environment()
 
         # Phase 2: Run ARC reviewer in Claude Code with LLM mode
         print("  🤖 Phase 2: Running ARC reviewer with LLM mode...")
