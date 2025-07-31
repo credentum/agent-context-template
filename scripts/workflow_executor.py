@@ -87,7 +87,7 @@ class WorkflowExecutor:
         """Fetch issue data from GitHub CLI and cache it."""
         if self._issue_data_cache is not None:
             return self._issue_data_cache
-        
+
         try:
             result = subprocess.run(
                 ["gh", "issue", "view", str(self.issue_number), "--json", "title,body,labels"],
@@ -102,22 +102,23 @@ class WorkflowExecutor:
             return {
                 "title": f"Issue {self.issue_number}",
                 "body": "No description provided",
-                "labels": []
+                "labels": [],
             }
-    
+
     def _generate_title_slug(self, title: str) -> str:
         """Generate a URL-safe slug from issue title."""
         # Remove special characters and replace spaces with hyphens
         import re
-        slug = re.sub(r'[^a-zA-Z0-9\s-]', '', title.lower())
-        slug = re.sub(r'\s+', '-', slug.strip())
+
+        slug = re.sub(r"[^a-zA-Z0-9\s-]", "", title.lower())
+        slug = re.sub(r"\s+", "-", slug.strip())
         # Limit length to 50 characters
-        return slug[:50].rstrip('-')
-    
+        return slug[:50].rstrip("-")
+
     def _determine_branch_type(self, labels: list) -> str:
         """Determine branch type based on issue labels."""
         label_names = [label.get("name", "").lower() for label in labels]
-        
+
         # Check for specific label types
         if "bug" in label_names:
             return "fix"
@@ -334,14 +335,14 @@ class WorkflowExecutor:
                 issue_title = issue_data.get("title", f"Issue {self.issue_number}")
                 title_slug = self._generate_title_slug(issue_title)
                 branch_type = self._determine_branch_type(issue_data.get("labels", []))
-                
+
                 # Create feature branch with meaningful name
                 branch_name = f"{branch_type}/{self.issue_number}-{title_slug}"
-                
+
                 # Show user what branch will be created
                 print(f"  ⚠️  On main branch. Will create: {branch_name}")
                 print("     Tip: You can manually create a branch and use --resume option")
-                
+
                 subprocess.run(["git", "checkout", "-b", branch_name], check=True)
                 print(f"  ✅ Created branch: {branch_name}")
                 current_branch = branch_name
