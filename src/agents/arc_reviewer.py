@@ -14,7 +14,6 @@ Usage:
 """
 
 import json
-import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -63,22 +62,21 @@ class ARCReviewer:
         # Determine review mode
         self.use_llm = use_llm
         if self.use_llm is None:
-            # Auto-detect: use LLM if API key is available
-            api_key = os.getenv("CLAUDE_CODE_OAUTH_TOKEN")
-            self.use_llm = bool(api_key and LLMREVIEWER_AVAILABLE)
+            # Auto-detect: use LLM if LLMReviewer is available (no API key needed)
+            self.use_llm = LLMREVIEWER_AVAILABLE
 
         # Initialize LLM reviewer if requested and available
         self.llm_reviewer = None
         if self.use_llm:
             if not LLMREVIEWER_AVAILABLE:
                 if self.verbose:
-                    print("❌ LLM mode requested but anthropic package not available")
+                    print("❌ LLM mode requested but LLMReviewer not available")
                 self.use_llm = False
             else:
                 try:
                     self.llm_reviewer = LLMReviewer(verbose=verbose, timeout=timeout)
                     if self.verbose:
-                        print("✅ LLM mode enabled with Claude API")
+                        print("✅ LLM mode enabled with internal Claude capability")
                 except Exception as e:
                     if self.verbose:
                         print(f"❌ Failed to initialize LLM reviewer: {e}")
