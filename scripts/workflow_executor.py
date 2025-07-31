@@ -17,6 +17,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+# Configuration constants to avoid hardcoded values
+class WorkflowConfig:
+    """Configuration constants for workflow execution."""
+    DOCKER_CI_TIMEOUT = 300  # 5 minutes for Docker CI operations
+    ARC_REVIEWER_TIMEOUT = 180  # 3 minutes for ARC reviewer
+    COVERAGE_BASELINE = 71.82  # Minimum coverage percentage required
+    GENERAL_TIMEOUT = 120  # 2 minutes for general operations
+
 
 class WorkflowExecutor:
     """Direct executor for workflow phases."""
@@ -407,7 +415,7 @@ class WorkflowExecutor:
                         capture_output=True,
                         text=True,
                         check=True,
-                        timeout=300,  # 5 minute timeout
+                        timeout=WorkflowConfig.DOCKER_CI_TIMEOUT,
                     )
                 except subprocess.CalledProcessError:
                     # Fallback to standard CI if flag not supported
@@ -417,7 +425,7 @@ class WorkflowExecutor:
                         capture_output=True,
                         text=True,
                         check=True,
-                        timeout=300,
+                        timeout=WorkflowConfig.DOCKER_CI_TIMEOUT,
                     )
                 
                 print("    ✅ Docker tests passed")
@@ -432,7 +440,7 @@ class WorkflowExecutor:
                                 if part.endswith("%"):
                                     coverage_percentage = part
                                     coverage_value = float(part.rstrip("%"))
-                                    coverage_maintained = coverage_value >= 71.82
+                                    coverage_maintained = coverage_value >= WorkflowConfig.COVERAGE_BASELINE
                                     break
                             break
                 
@@ -487,7 +495,7 @@ class WorkflowExecutor:
                     cmd_args,
                     capture_output=True,
                     text=True,
-                    timeout=180,  # 3 minute timeout for ARC reviewer
+                    timeout=WorkflowConfig.ARC_REVIEWER_TIMEOUT,
                 )
                 
                 # Parse ARC reviewer verdict from output
@@ -557,7 +565,7 @@ class WorkflowExecutor:
                 capture_output=True,
                 text=True,
                 check=True,
-                timeout=180,
+                timeout=WorkflowConfig.ARC_REVIEWER_TIMEOUT,
             )
             print("  ✅ Pre-commit hooks passed")
         except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
@@ -609,7 +617,7 @@ class WorkflowExecutor:
                 ["git", "rev-parse", f"origin/{branch_name}"],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=WorkflowConfig.GENERAL_TIMEOUT//4,
             )
             branch_exists_remote = check_result.returncode == 0
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
@@ -622,7 +630,7 @@ class WorkflowExecutor:
                 subprocess.run(
                     ["git", "push", "-u", "origin", branch_name],
                     check=True,
-                    timeout=120,  # 2 minute timeout for push
+                    timeout=WorkflowConfig.GENERAL_TIMEOUT,  # 2 minute timeout for push
                 )
                 print("  ✅ Branch pushed successfully")
             except subprocess.CalledProcessError as e:
@@ -656,12 +664,12 @@ class WorkflowExecutor:
 
         # Commit documentation updates if any
         try:
-            subprocess.run(["git", "add", "context/trace/"], check=True, timeout=30)
+            subprocess.run(["git", "add", "context/trace/"], check=True, timeout=WorkflowConfig.GENERAL_TIMEOUT//4)
             result = subprocess.run(
                 ["git", "diff", "--cached", "--quiet"],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=WorkflowConfig.GENERAL_TIMEOUT//4,
             )
             if result.returncode != 0:  # There are staged changes
                 subprocess.run(
@@ -673,10 +681,10 @@ class WorkflowExecutor:
                         f"add completion log for issue #{self.issue_number}",
                     ],
                     check=True,
-                    timeout=60,
+                    timeout=WorkflowConfig.GENERAL_TIMEOUT//2,
                 )
                 print("  ✅ Documentation updates committed")
-                subprocess.run(["git", "push"], check=True, timeout=120)
+                subprocess.run(["git", "push"], check=True, timeout=WorkflowConfig.GENERAL_TIMEOUT)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
             print(f"  ⚠️  Could not commit documentation updates: {e}")
             # Don't fail PR creation if documentation commit fails
@@ -736,7 +744,7 @@ class WorkflowExecutor:
                 capture_output=True,
                 text=True,
                 check=True,
-                timeout=60,  # 1 minute timeout
+                timeout=WorkflowConfig.GENERAL_TIMEOUT//2,  # 1 minute timeout
             )
             pr_output = result.stdout
             # Extract PR URL from output

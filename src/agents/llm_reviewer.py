@@ -22,7 +22,7 @@ class LLMReviewer:
     without requiring external API keys.
     """
 
-    def __init__(self, verbose: bool = False, timeout: int = 120):
+    def __init__(self, verbose: bool = False, timeout: int = 180):
         """Initialize the LLM Reviewer.
 
         Args:
@@ -477,7 +477,8 @@ automated_issues:
             
             # Look for hardcoded timeout values in method parameters - BLOCKING like PR reviewer
             if ("timeout=" in line and any(val in line for val in ["300", "180", "120"]) and 
-                ("subprocess.run" in line or "timeout=" in line) and "# " not in line):
+                ("subprocess.run" in line or "timeout=" in line) and "# " not in line and
+                "any(val in line for val in" not in line):  # Exclude detection code itself
                 issues["blocking"].append({
                     "description": f"Hardcoded timeout value in {file_path.split('/')[-1]}",
                     "file": file_path,
