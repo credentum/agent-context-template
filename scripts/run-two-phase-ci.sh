@@ -80,15 +80,23 @@ if [ "$PHASE1" = "true" ]; then
         echo -e "${GREEN}✅ Phase 1 completed successfully${NC}"
         
         # Check if coverage files were generated
-        if [ -f "test-artifacts/coverage.json" ] && [ -f "test-artifacts/coverage.xml" ]; then
+        if [ -f "test-artifacts/coverage.json" ]; then
             echo -e "${GREEN}✅ Coverage artifacts generated:${NC}"
             echo "  - test-artifacts/coverage.json"
-            echo "  - test-artifacts/coverage.xml"
+            if [ -f "test-artifacts/coverage.xml" ]; then
+                echo "  - test-artifacts/coverage.xml"
+            else
+                echo -e "${YELLOW}  ⚠️  test-artifacts/coverage.xml not generated (optional)${NC}"
+            fi
         else
-            echo -e "${RED}❌ Coverage artifacts not found!${NC}"
-            echo "Expected files:"
-            echo "  - test-artifacts/coverage.json"
-            echo "  - test-artifacts/coverage.xml"
+            echo -e "${RED}❌ Critical coverage artifact not found!${NC}"
+            echo "Expected file: test-artifacts/coverage.json"
+            echo ""
+            echo "Troubleshooting:"
+            echo "1. Check if tests ran successfully in the CI output above"
+            echo "2. Verify pytest is configured with coverage plugins"
+            echo "3. Check Docker volume mount permissions"
+            echo "4. Try running: docker-compose -f docker-compose.yml -f docker-compose.ci.yml logs"
             exit 1
         fi
     else
@@ -119,8 +127,24 @@ if [ "$PHASE2" = "true" ]; then
     # Copy coverage files to standard locations if they're in test-artifacts
     if [ -f "test-artifacts/coverage.json" ] && [ "$COVERAGE_FILE" = "test-artifacts/coverage.json" ]; then
         echo -e "${YELLOW}Copying coverage files to standard locations...${NC}"
-        cp test-artifacts/coverage.json coverage.json 2>/dev/null || true
-        cp test-artifacts/coverage.xml coverage.xml 2>/dev/null || true
+        
+        # Copy coverage.json with error handling
+        if cp test-artifacts/coverage.json coverage.json 2>&1; then
+            echo -e "${GREEN}✅ Copied coverage.json successfully${NC}"
+        else
+            echo -e "${RED}❌ Failed to copy coverage.json${NC}"
+            echo "Please ensure you have write permissions in the current directory"
+            exit 1
+        fi
+        
+        # Copy coverage.xml if it exists (optional file)
+        if [ -f "test-artifacts/coverage.xml" ]; then
+            if cp test-artifacts/coverage.xml coverage.xml 2>&1; then
+                echo -e "${GREEN}✅ Copied coverage.xml successfully${NC}"
+            else
+                echo -e "${YELLOW}⚠️  Warning: Failed to copy coverage.xml (non-critical)${NC}"
+            fi
+        fi
     fi
     
     # Run ARC reviewer with LLM mode
