@@ -39,43 +39,117 @@ class WorkflowExecutor:
         self._issue_data_cache: Dict[str, Any] | None = None
 
     def _cleanup_test_environment(self) -> None:
-        """Clean up Docker containers and test processes."""
+        """Comprehensive cleanup of Docker containers, test processes, and resources."""
         print("  🧹 Cleaning up test environment...")
         
-        # Stop any running Docker containers from the project
+        # Step 1: Kill all test-related processes aggressively
+        test_processes_killed = 0
         try:
-            # Get project-specific containers
+            # Kill pytest processes (multiple patterns to catch all variants)
+            for pattern in ["pytest", "python.*pytest", "python.*--cov", "pre-commit"]:
+                try:
+                    result = subprocess.run(
+                        ["pkill", "-f", pattern],
+                        capture_output=True,
+                        timeout=5,
+                    )
+                    if result.returncode == 0:
+                        test_processes_killed += 1
+                except Exception:
+                    pass
+            
+            if test_processes_killed > 0:
+                print(f"    🔪 Killed {test_processes_killed} types of test processes")
+                
+        except Exception as e:
+            print(f"    ⚠️  Process cleanup had issues: {e}")
+        
+        # Step 2: Stop ALL running Docker containers (not just project-specific)
+        containers_stopped = 0
+        try:
+            # Get ALL running containers
             result = subprocess.run(
-                ["docker", "ps", "-q", "--filter", "name=agent-context"],
+                ["docker", "ps", "-q"],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=10,
             )
             if result.returncode == 0 and result.stdout.strip():
                 container_ids = result.stdout.strip().split("\n")
                 for container_id in container_ids:
-                    subprocess.run(
-                        ["docker", "stop", container_id],
-                        capture_output=True,
-                        timeout=30,
-                    )
-                print(f"    ✅ Stopped {len(container_ids)} Docker containers")
+                    try:
+                        subprocess.run(
+                            ["docker", "stop", container_id],
+                            capture_output=True,
+                            timeout=15,
+                        )
+                        containers_stopped += 1
+                    except Exception:
+                        pass  # Some containers might already be stopping
+                        
+                if containers_stopped > 0:
+                    print(f"    🐳 Stopped {containers_stopped} Docker containers")
+                    
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-            print(f"    ⚠️  Could not stop Docker containers: {e}")
+            print(f"    ⚠️  Docker cleanup had issues: {e}")
         
-        # Clean up any dangling pytest processes
+        # Step 3: Clean up Docker system resources
         try:
             subprocess.run(
-                ["pkill", "-f", "pytest"],
+                ["docker", "system", "prune", "-f", "--volumes"],
                 capture_output=True,
-                timeout=10,
+                timeout=30,
+            )
+            print("    🗑️  Cleaned Docker system resources")
+        except Exception as e:
+            print(f"    ⚠️  Docker system prune failed: {e}")
+        
+        # Step 4: Force kill any remaining coverage processes
+        try:
+            subprocess.run(
+                ["pkill", "-9", "-f", "coverage"],
+                capture_output=True,
+                timeout=5,
             )
         except Exception:
-            pass  # pkill might not be available or no processes to kill
+            pass
         
-        # Give processes time to clean up
-        time.sleep(2)
-        print("    ✅ Test environment cleaned up")
+        # Step 5: Extended wait for cleanup completion
+        print("    ⏳ Waiting for cleanup to complete...")
+        time.sleep(5)
+        
+        # Step 6: Verify cleanup effectiveness
+        remaining_processes = 0
+        try:
+            result = subprocess.run(
+                ["pgrep", "-f", "pytest"],
+                capture_output=True,
+                timeout=5,
+            )
+            if result.returncode == 0:
+                remaining_processes = len(result.stdout.decode().strip().split('\n'))
+        except Exception:
+            pass
+            
+        remaining_containers = 0
+        try:
+            result = subprocess.run(
+                ["docker", "ps", "-q"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                remaining_containers = len(result.stdout.strip().split('\n'))
+        except Exception:
+            pass
+        
+        if remaining_processes > 0 or remaining_containers > 0:
+            print(f"    ⚠️  {remaining_processes} processes, {remaining_containers} containers still running")
+        else:
+            print("    ✅ Environment fully cleaned")
+        
+        print("    ✅ Test environment cleanup completed")
 
     def _extract_coverage_data(self, stdout_output: str) -> tuple[str, bool]:
         """Extract coverage percentage and maintenance status using multiple methods."""
@@ -697,6 +771,10 @@ will be enhanced in future iterations.
 
         validation_attempts = context.get("validation_attempts", 0) + 1
         print(f"  📊 Validation attempt #{validation_attempts}")
+        
+        # Clean environment before starting validation
+        print("  🧹 Pre-validation cleanup...")
+        self._cleanup_test_environment()
 
         # Phase 1: Run Docker tests without ARC reviewer
         print("  🐳 Phase 1: Running Docker tests...")
