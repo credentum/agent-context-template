@@ -475,27 +475,32 @@ automated_issues:
             # Only flag hardcoded values in specific problematic contexts (like PR reviewer)
             line_stripped = line.strip()
             
-            # Look for hardcoded timeout values in method parameters - BLOCKING like PR reviewer
-            if ("timeout=" in line and any(val in line for val in ["300", "180", "120"]) and 
-                ("subprocess.run" in line or "timeout=" in line) and "# " not in line and
-                "any(val in line for val in" not in line):  # Exclude detection code itself
-                issues["blocking"].append({
-                    "description": f"Hardcoded timeout value in {file_path.split('/')[-1]}",
-                    "file": file_path,
-                    "line": i,
-                    "category": "code_quality",
-                    "fix_guidance": f"Replace hardcoded timeout={self._extract_timeout_value(line)} with configurable parameter or constant"
-                })
+            # Look for hardcoded timeout values - match PR reviewer exactly
+            # Check for timeout=300, timeout=180, timeout=120, timeout=60, timeout=30
+            if "timeout=" in line and "# " not in line and "any(val in line for val in" not in line:
+                timeout_match = self._extract_timeout_value(line)
+                if timeout_match and timeout_match in ["300", "180", "120", "60", "30"]:
+                    # Exclude WorkflowConfig references
+                    if "WorkflowConfig" not in line:
+                        issues["blocking"].append({
+                            "description": f"Hardcoded timeout value in {file_path.split('/')[-1]}",
+                            "file": file_path,
+                            "line": i,
+                            "category": "code_quality",
+                            "fix_guidance": f"Replace hardcoded timeout={timeout_match} with WorkflowConfig constant"
+                        })
             
-            # Look for hardcoded coverage thresholds in comparisons - BLOCKING like PR reviewer  
-            if ("71.82" in line and ("coverage" in line or ">=" in line)) and "# " not in line:
-                issues["blocking"].append({
-                    "description": f"Hardcoded coverage threshold in {file_path.split('/')[-1]}",
-                    "file": file_path,
-                    "line": i,
-                    "category": "code_quality", 
-                    "fix_guidance": "Replace hardcoded 71.82 with configurable baseline threshold"
-                })
+            # Look for hardcoded coverage thresholds - match PR reviewer exactly
+            if "71.82" in line and "# " not in line:
+                # Exclude WorkflowConfig references
+                if "WorkflowConfig" not in line and "COVERAGE_BASELINE" not in line:
+                    issues["blocking"].append({
+                        "description": f"Hardcoded coverage threshold in {file_path.split('/')[-1]}",
+                        "file": file_path,
+                        "line": i,
+                        "category": "code_quality", 
+                        "fix_guidance": "Replace hardcoded 71.82 with WorkflowConfig.COVERAGE_BASELINE"
+                    })
             
             # Only flag 78.0/90.0 in specific threshold contexts as warnings (less critical)
             elif (("78.0" in line or "90.0" in line) and 
