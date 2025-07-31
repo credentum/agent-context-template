@@ -11,6 +11,7 @@ consider adding appropriate contracts for tool exposure.
 """
 
 import json
+import re
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -24,6 +25,7 @@ class WorkflowExecutor:
         """Initialize executor."""
         self.issue_number = issue_number
         self.workspace_root = Path.cwd()
+        self._issue_data_cache = None
 
     def _generate_template_content(self, issue_title: str, issue_body: str, labels: list) -> str:
         """Generate task template content."""
@@ -81,6 +83,58 @@ class WorkflowExecutor:
 - Created: {datetime.now().isoformat()}
 - Issue: #{self.issue_number}
 """
+
+    def _fetch_issue_data(self) -> Dict[str, Any]:
+        """Fetch issue data from GitHub CLI and cache it."""
+        if self._issue_data_cache is not None:
+            return self._issue_data_cache
+
+        try:
+            result = subprocess.run(
+                ["gh", "issue", "view", str(self.issue_number), "--json", "title,body,labels"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self._issue_data_cache = json.loads(result.stdout)
+            return self._issue_data_cache
+        except subprocess.CalledProcessError:
+            # Return default data if issue fetch fails
+            return {
+                "title": f"Issue {self.issue_number}",
+                "body": "No description provided",
+                "labels": [],
+            }
+
+    def _generate_title_slug(self, title: str) -> str:
+        """Generate a URL-safe slug from issue title."""
+        try:
+            # Remove special characters and replace spaces with hyphens
+            slug = re.sub(r"[^a-zA-Z0-9\s-]", "", title.lower())
+            slug = re.sub(r"\s+", "-", slug.strip())
+            # Limit length to 50 characters
+            return slug[:50].rstrip("-")
+        except Exception as e:
+            # Fallback to simple replacement if regex fails
+            print(f"Warning: Regex error in title slug generation: {e}")
+            return title.lower().replace(" ", "-")[:50].rstrip("-")
+
+    def _determine_branch_type(self, labels: list) -> str:
+        """Determine branch type based on issue labels."""
+        label_names = [label.get("name", "").lower() for label in labels]
+
+        # Check for specific label types
+        if "bug" in label_names:
+            return "fix"
+        elif "enhancement" in label_names or "feature" in label_names:
+            return "feature"
+        elif "documentation" in label_names:
+            return "docs"
+        elif "chore" in label_names or "maintenance" in label_names:
+            return "chore"
+        else:
+            # Default to fix for unlabeled issues
+            return "fix"
 
     def execute_investigation(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute investigation phase directly."""
@@ -180,23 +234,11 @@ class WorkflowExecutor:
         print("📝 Executing planning phase...")
 
         # Get issue details for planning
-        issue_title = ""
-        issue_body = ""
-        try:
-            result = subprocess.run(
-                ["gh", "issue", "view", str(self.issue_number), "--json", "title,body,labels"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            issue_data = json.loads(result.stdout)
-            issue_title = issue_data.get("title", f"Issue {self.issue_number}")
-            issue_body = issue_data.get("body", "No description provided")
-            title_slug = issue_title.lower().replace(" ", "-")[:50]
-            labels = [label.get("name", "") for label in issue_data.get("labels", [])]
-        except subprocess.CalledProcessError:
-            title_slug = f"issue-{self.issue_number}"
-            labels = []
+        issue_data = self._fetch_issue_data()
+        issue_title = issue_data.get("title", f"Issue {self.issue_number}")
+        issue_body = issue_data.get("body", "No description provided")
+        title_slug = self._generate_title_slug(issue_title)
+        labels = [label.get("name", "") for label in issue_data.get("labels", [])]
 
         # Create task template
         template_dir = self.workspace_root / "context" / "trace" / "task-templates"
@@ -292,8 +334,19 @@ class WorkflowExecutor:
             print(f"  📌 Current branch: {current_branch}")
 
             if current_branch == "main":
-                # Create feature branch
-                branch_name = f"fix/{self.issue_number}-workflow-persistence"
+                # Get issue data to generate meaningful branch name
+                issue_data = self._fetch_issue_data()
+                issue_title = issue_data.get("title", f"Issue {self.issue_number}")
+                title_slug = self._generate_title_slug(issue_title)
+                branch_type = self._determine_branch_type(issue_data.get("labels", []))
+
+                # Create feature branch with meaningful name
+                branch_name = f"{branch_type}/{self.issue_number}-{title_slug}"
+
+                # Show user what branch will be created
+                print(f"  ⚠️  On main branch. Will create: {branch_name}")
+                print("     Tip: You can manually create a branch and use --resume option")
+
                 subprocess.run(["git", "checkout", "-b", branch_name], check=True)
                 print(f"  ✅ Created branch: {branch_name}")
                 current_branch = branch_name

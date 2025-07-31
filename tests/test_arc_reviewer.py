@@ -199,6 +199,7 @@ class TestARCReviewer:
         context_file = context_dir / "test.yaml"
 
         with open(context_file, "w") as f:
+            f.write("---\n")
             yaml.dump({"schema_version": "1.0", "data": "test"}, f)
 
         issues = reviewer._check_context_integrity(["context/test.yaml"])
@@ -216,6 +217,7 @@ class TestARCReviewer:
         context_file = context_dir / "test.yaml"
 
         with open(context_file, "w") as f:
+            f.write("---\n")
             yaml.dump({"data": "test"}, f)
 
         issues = reviewer._check_context_integrity(["context/test.yaml"])
