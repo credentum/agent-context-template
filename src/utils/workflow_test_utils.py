@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """Utility functions for workflow testing."""
 
-from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def verify_workflow_phase_outputs(phase_name: str, outputs: Dict[str, Any]) -> bool:
     """
     Verify that workflow phase outputs meet expected criteria.
-    
+
     Args:
         phase_name: Name of the workflow phase
         outputs: Dictionary of phase outputs
-        
+
     Returns:
         bool: True if outputs are valid, False otherwise
     """
@@ -23,17 +22,17 @@ def verify_workflow_phase_outputs(phase_name: str, outputs: Dict[str, Any]) -> b
         "implementation": ["branch_created", "commits_made", "implementation_complete"],
         "validation": ["tests_run", "ci_passed", "quality_checks_passed"],
         "pr_creation": ["pr_created", "branch_pushed", "labels_applied"],
-        "monitoring": ["documentation_verified", "workflow_completed"]
+        "monitoring": ["documentation_verified", "workflow_completed"],
     }
-    
+
     if phase_name not in required_outputs:
         return False
-        
+
     # Check all required outputs are present
     for output in required_outputs[phase_name]:
         if output not in outputs:
             return False
-            
+
     return True
 
 
@@ -45,11 +44,11 @@ def get_workflow_test_issue_number() -> int:
 def create_test_workflow_state(issue_number: int, current_phase: str) -> Dict[str, Any]:
     """
     Create a test workflow state for testing purposes.
-    
+
     Args:
         issue_number: Issue number for the workflow
         current_phase: Current phase of the workflow
-        
+
     Returns:
         dict: Test workflow state
     """
@@ -61,19 +60,16 @@ def create_test_workflow_state(issue_number: int, current_phase: str) -> Dict[st
             "investigation": {
                 "phase_name": "investigation",
                 "status": "completed",
-                "outputs": {
-                    "investigation_completed": True,
-                    "scope_clarity": "clear"
-                }
+                "outputs": {"investigation_completed": True, "scope_clarity": "clear"},
             },
             "planning": {
-                "phase_name": "planning", 
+                "phase_name": "planning",
                 "status": "completed" if current_phase != "planning" else "in_progress",
                 "outputs": {
                     "task_template_created": True,
                     "scratchpad_created": True,
-                    "documentation_committed": True
-                }
-            }
-        }
+                    "documentation_committed": True,
+                },
+            },
+        },
     }
