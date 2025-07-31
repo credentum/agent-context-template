@@ -11,6 +11,7 @@ consider adding appropriate contracts for tool exposure.
 """
 
 import json
+import re
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -107,13 +108,16 @@ class WorkflowExecutor:
 
     def _generate_title_slug(self, title: str) -> str:
         """Generate a URL-safe slug from issue title."""
-        # Remove special characters and replace spaces with hyphens
-        import re
-
-        slug = re.sub(r"[^a-zA-Z0-9\s-]", "", title.lower())
-        slug = re.sub(r"\s+", "-", slug.strip())
-        # Limit length to 50 characters
-        return slug[:50].rstrip("-")
+        try:
+            # Remove special characters and replace spaces with hyphens
+            slug = re.sub(r"[^a-zA-Z0-9\s-]", "", title.lower())
+            slug = re.sub(r"\s+", "-", slug.strip())
+            # Limit length to 50 characters
+            return slug[:50].rstrip("-")
+        except Exception as e:
+            # Fallback to simple replacement if regex fails
+            print(f"Warning: Regex error in title slug generation: {e}")
+            return title.lower().replace(" ", "-")[:50].rstrip("-")
 
     def _determine_branch_type(self, labels: list) -> str:
         """Determine branch type based on issue labels."""

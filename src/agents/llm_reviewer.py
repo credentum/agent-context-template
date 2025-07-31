@@ -360,7 +360,9 @@ Please review the entire PR state and provide your assessment in the required YA
                             result = self._tool_read(tool_input["file_path"])  # type: ignore
                         elif tool_name == "grep":
                             file_pattern = tool_input.get("file_pattern", "**/*")  # type: ignore
-                            result = self._tool_grep(tool_input["pattern"], file_pattern)  # type: ignore
+                            result = self._tool_grep(
+                                tool_input["pattern"], file_pattern  # type: ignore
+                            )
                         elif tool_name == "glob":
                             result = self._tool_glob(tool_input["pattern"])  # type: ignore
                         else:
