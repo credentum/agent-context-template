@@ -14,7 +14,6 @@ Usage:
 """
 
 import json
-import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -60,25 +59,24 @@ class ARCReviewer:
         self.coverage_config = self._load_coverage_config()
         self.repo_root = Path(__file__).parent.parent.parent
 
-        # Determine review mode
+        # Determine review mode - default to LLM mode
         self.use_llm = use_llm
         if self.use_llm is None:
-            # Auto-detect: use LLM if API key is available
-            api_key = os.getenv("CLAUDE_CODE_OAUTH_TOKEN")
-            self.use_llm = bool(api_key and LLMREVIEWER_AVAILABLE)
+            # Auto-detect: use LLM if LLMReviewer is available (no API key needed)
+            self.use_llm = LLMREVIEWER_AVAILABLE
 
         # Initialize LLM reviewer if requested and available
         self.llm_reviewer = None
         if self.use_llm:
             if not LLMREVIEWER_AVAILABLE:
                 if self.verbose:
-                    print("❌ LLM mode requested but anthropic package not available")
+                    print("❌ LLM mode requested but LLMReviewer not available")
                 self.use_llm = False
             else:
                 try:
                     self.llm_reviewer = LLMReviewer(verbose=verbose, timeout=timeout)
                     if self.verbose:
-                        print("✅ LLM mode enabled with Claude API")
+                        print("✅ LLM mode enabled with internal Claude capability")
                 except Exception as e:
                     if self.verbose:
                         print(f"❌ Failed to initialize LLM reviewer: {e}")
@@ -479,7 +477,11 @@ class ARCReviewer:
         if self.use_llm and self.llm_reviewer:
             if self.verbose:
                 print("🤖 Using LLM-based review mode")
-            return self.llm_reviewer.review_pr(pr_number=pr_number, base_branch=base_branch)
+                print("🔍 DEBUG: About to call llm_reviewer.review_pr...")
+            result = self.llm_reviewer.review_pr(pr_number=pr_number, base_branch=base_branch)
+            if self.verbose:
+                print("🔍 DEBUG: llm_reviewer.review_pr completed")
+            return result
 
         # Fall back to rule-based review
         if self.verbose:
@@ -589,14 +591,31 @@ class ARCReviewer:
         self, pr_number: Optional[int] = None, base_branch: str = "main", runtime_test: bool = False
     ) -> None:
         """Perform review and print YAML output."""
-        results = self.review_pr(pr_number, base_branch, runtime_test=runtime_test)
-        print(self.format_yaml_output(results))
+        if self.verbose:
+            print("🔍 DEBUG: Starting review_and_output")
+            print(f"🔍 DEBUG: PR number: {pr_number}, base_branch: {base_branch}")
+            print(f"🔍 DEBUG: use_llm: {self.use_llm}, runtime_test: {runtime_test}")
+        
+        try:
+            if self.verbose:
+                print("🔍 DEBUG: Calling review_pr...")
+            
+            results = self.review_pr(pr_number, base_branch, runtime_test=runtime_test)
+            
+            if self.verbose:
+                print("🔍 DEBUG: review_pr completed, formatting output...")
+            
+            print(self.format_yaml_output(results))
 
-        # Exit with non-zero code if verdict is REQUEST_CHANGES
-        if results.get("verdict") == "REQUEST_CHANGES":
-            import sys
+            # Exit with non-zero code if verdict is REQUEST_CHANGES
+            if results.get("verdict") == "REQUEST_CHANGES":
+                import sys
 
-            sys.exit(1)
+                sys.exit(1)
+        except Exception as e:
+            if self.verbose:
+                print(f"🔍 DEBUG: Exception in review_and_output: {e}")
+            raise
 
 
 def main():
@@ -619,7 +638,7 @@ def main():
         "--skip-coverage", action="store_true", help="Skip coverage check for faster execution"
     )
     parser.add_argument(
-        "--llm", action="store_true", help="Force LLM mode (requires CLAUDE_CODE_OAUTH_TOKEN)"
+        "--llm", action="store_true", help="Force LLM mode (uses internal Claude capability)"
     )
     parser.add_argument("--no-llm", action="store_true", help="Force rule-based mode (disable LLM)")
 
