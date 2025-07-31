@@ -786,13 +786,9 @@ will be enhanced in future iterations.
             arc_reviewer_script = self.workspace_root / "src" / "agents" / "arc_reviewer.py"
             if arc_reviewer_script.exists():
                 print("    🔧 Running ARC reviewer...")
-                coverage_file = self.workspace_root / "test-artifacts" / "coverage.json"
-                cmd_args = ["python", "-m", "src.agents.arc_reviewer", "--llm"]
-                if coverage_file.exists():
-                    cmd_args.extend(["--coverage-file", str(coverage_file)])
-
+                
                 result = subprocess.run(
-                    cmd_args,
+                    ["python", "-m", "src.agents.arc_reviewer", "--llm", "--verbose"],
                     capture_output=True,
                     text=True,
                     timeout=WorkflowConfig.ARC_REVIEWER_TIMEOUT,
