@@ -256,6 +256,39 @@ Runs the exact same environment as GitHub Actions:
 - Uses Python 3.11 like CI
 - Isolated from your system
 
+### 2.1 Two-Phase CI Architecture
+
+For enhanced code review with LLM capabilities, we support a two-phase CI workflow:
+
+```bash
+# Run complete two-phase workflow
+./scripts/run-two-phase-ci.sh
+
+# Run only Phase 1 (Docker tests)
+./scripts/run-two-phase-ci.sh --phase1-only
+
+# Run only Phase 2 (ARC reviewer with LLM)
+./scripts/run-two-phase-ci.sh --phase2-only
+```
+
+**Phase 1 (Docker):**
+- Runs all CI checks (linting, tests, coverage)
+- Generates coverage artifacts in `test-artifacts/`
+- Skips ARC reviewer to avoid token issues
+- Command: `./scripts/run-ci-docker.sh all --no-arc-reviewer`
+
+**Phase 2 (Claude Code):**
+- Runs ARC reviewer with `--llm` flag
+- Uses Claude Code's OAuth token automatically
+- Reads coverage from `test-artifacts/coverage.json`
+- Provides AI-powered code review insights
+
+**Advantages:**
+- OAuth token stays secure in Claude Code environment
+- No need to pass sensitive tokens to Docker
+- Enables full LLM-powered code reviews
+- Maintains test isolation and reproducibility
+
 ### 3. Make Method
 
 Traditional approach using Makefile:

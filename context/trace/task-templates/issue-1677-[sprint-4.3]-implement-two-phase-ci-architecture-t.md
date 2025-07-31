@@ -48,7 +48,7 @@
 - [x] **Breaking change assessment** (backward compatibility)
 
 ## Pre-Execution Context
-**Key Files**: 
+**Key Files**:
 - `docker-compose.ci.yml`
 - `scripts/test-comprehensive-ci.sh`
 - `scripts/run-ci-docker.sh`
@@ -60,11 +60,11 @@
 - anthropic package (>=0.8.0)
 - CLAUDE_CODE_OAUTH_TOKEN (automatically available in Claude Code)
 
-**Configuration**: 
+**Configuration**:
 - Coverage output paths in pyproject.toml
 - Docker volume mounts for test artifacts
 
-**Related Issues/PRs**: 
+**Related Issues/PRs**:
 - #1673 (Fix ARC reviewer LLM mode)
 - #1675 (PR for fixing ARC reviewer)
 
@@ -89,7 +89,7 @@ Split CI workflow into two phases:
    ```bash
    # Phase 1: Run Docker tests
    ./scripts/run-ci-docker.sh --no-arc-reviewer
-   
+
    # Phase 2: Run ARC reviewer in Claude Code
    python -m src.agents.arc_reviewer --llm --coverage-file test-artifacts/coverage.json
    ```

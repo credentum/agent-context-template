@@ -30,6 +30,9 @@ show_help() {
     echo "  build     Build/rebuild the CI Docker image"
     echo "  clean     Stop and remove containers"
     echo ""
+    echo "Options:"
+    echo "  --no-arc-reviewer  Skip ARC reviewer checks (for two-phase CI)"
+    echo ""
     echo "Examples:"
     echo "  $0              # Run all checks"
     echo "  $0 coverage     # Run coverage tests"
@@ -38,10 +41,35 @@ show_help() {
     echo "  $0 black        # Run only Black check"
     echo "  $0 build        # Rebuild image after requirements change"
     echo "  $0 debug        # Interactive shell for debugging"
+    echo "  $0 all --no-arc-reviewer  # Phase 1 of two-phase CI"
+    echo ""
+    echo "Two-Phase CI:"
+    echo "  Use ./scripts/run-two-phase-ci.sh for the complete workflow"
 }
 
-# Default command
-COMMAND=${1:-all}
+# Parse arguments
+COMMAND=""
+EXTRA_ARGS=""
+
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --no-arc-reviewer)
+            EXTRA_ARGS="$EXTRA_ARGS --no-arc-reviewer"
+            ;;
+        *)
+            if [ -z "$COMMAND" ]; then
+                COMMAND=$1
+            else
+                echo "Unknown parameter: $1"
+                exit 1
+            fi
+            ;;
+    esac
+    shift
+done
+
+# Default command if none specified
+COMMAND=${COMMAND:-all}
 
 # Function to run a service with proper timeout handling
 run_service() {
@@ -57,7 +85,12 @@ run_service() {
 
     # Always use both compose files since CI file has dependencies on base services
     # Use timeout command as additional safety net
-    timeout 720 docker-compose -f docker-compose.yml -f docker-compose.ci.yml run --rm $service
+    # Pass extra args via environment variable
+    if [ -n "$EXTRA_ARGS" ]; then
+        CI_EXTRA_ARGS="$EXTRA_ARGS" timeout 720 docker-compose -f docker-compose.yml -f docker-compose.ci.yml run --rm -e CI_EXTRA_ARGS="$EXTRA_ARGS" $service
+    else
+        timeout 720 docker-compose -f docker-compose.yml -f docker-compose.ci.yml run --rm $service
+    fi
     local exit_code=$?
 
     if [ $exit_code -eq 124 ]; then
