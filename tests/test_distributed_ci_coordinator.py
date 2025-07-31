@@ -1,8 +1,6 @@
 """Unit tests for Distributed CI Coordinator."""
 
 import json
-
-# Import the module under test
 import sys
 import unittest
 from datetime import datetime

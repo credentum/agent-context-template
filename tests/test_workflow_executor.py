@@ -10,9 +10,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+# Add scripts directory to Python path for importing workflow_executor
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-
-from workflow_executor import WorkflowExecutor
+from workflow_executor import WorkflowExecutor  # noqa: E402
 
 
 class TestWorkflowExecutor(unittest.TestCase):
@@ -56,6 +56,15 @@ class TestWorkflowExecutor(unittest.TestCase):
             ("Multiple-----hyphens", "multiple-----hyphens"),
             ("[SPRINT-4.3] Fix issue", "sprint-43-fix-issue"),
             ("Issue #123: Bug fix", "issue-123-bug-fix"),
+            # Additional edge cases
+            ("Unicode: 你好世界 🌍", "unicode"),
+            ("Mixed: Test_123-ABC!@#", "mixed-test123-abc"),
+            ("   Spaces   everywhere   ", "spaces-everywhere"),
+            ("", ""),  # Empty string
+            ("123-numbers-first", "123-numbers-first"),
+            ("ALL CAPS TITLE!!!", "all-caps-title"),
+            ("snake_case_title", "snakecasetitle"),
+            ("camelCaseTitle", "camelcasetitle"),
         ]
 
         for title, expected in test_cases:
