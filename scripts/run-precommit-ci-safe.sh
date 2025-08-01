@@ -40,7 +40,7 @@ trap cleanup EXIT
 # Copy the original config and modify it for CI
 if [ -f ".pre-commit-config.yaml" ]; then
     cp .pre-commit-config.yaml "$TEMP_CONFIG"
-    
+
     # Use Python to modify the config to add --check flags where needed
     python3 - <<EOF
 import yaml
@@ -53,7 +53,7 @@ with open("$TEMP_CONFIG", 'r') as f:
 for repo in config.get('repos', []):
     for hook in repo.get('hooks', []):
         hook_id = hook.get('id', '')
-        
+
         # For file-modifying hooks, add check-only flags
         if hook_id == 'black':
             hook['args'] = hook.get('args', []) + ['--check', '--diff']
@@ -62,7 +62,7 @@ for repo in config.get('repos', []):
         elif hook_id in ['trailing-whitespace', 'end-of-file-fixer', 'mixed-line-ending']:
             # These hooks don't have check-only mode, skip them in CI
             hook['exclude'] = '.*'  # Exclude all files to skip these hooks
-            
+
 # Save modified config
 with open("$TEMP_CONFIG", 'w') as f:
     yaml.dump(config, f, default_flow_style=False)

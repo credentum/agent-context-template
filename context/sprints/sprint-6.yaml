@@ -89,26 +89,26 @@ phases:
             import keyring
             from cryptography.fernet import Fernet
             import platform
-            
+
             class SecureCredentialManager:
                 def __init__(self):
                     self.service_name = "claude-modal-oauth"
                     self._ensure_encryption_key()
-                
+
                 def get_credentials(self):
                     # Use OS-specific secure storage
                     access_token = keyring.get_password(self.service_name, "access_token")
                     refresh_token = keyring.get_password(self.service_name, "refresh_token")
-                    
+
                     if not access_token:
                         # Migrate from old file-based storage if exists
                         self._migrate_legacy_credentials()
-                    
+
                     return {
                         "access_token": self._decrypt(access_token),
                         "refresh_token": self._decrypt(refresh_token)
                     }
-                
+
                 def _ensure_encryption_key(self):
                     # Store encryption key in OS keychain
                     key = keyring.get_password(self.service_name, "encryption_key")
@@ -143,23 +143,23 @@ phases:
             from modal import Image, Secret, Redis
             import json
             from typing import Optional
-            
+
             # Modal app with Redis
             app = modal.App("workflow-oauth")
             redis_image = Image.debian_slim().pip_install("redis", "hiredis")
-            
+
             @app.function(
                 image=redis_image,
                 secrets=[modal.Secret.from_name("redis-config")]
             )
             async def manage_workflow_state(
-                issue_number: int, 
-                operation: str, 
+                issue_number: int,
+                operation: str,
                 data: Optional[dict] = None
             ) -> dict:
                 redis_client = Redis()
                 key = f"workflow:state:{issue_number}"
-                
+
                 if operation == "get":
                     state = await redis_client.get(key)
                     return json.loads(state) if state else {}
@@ -197,37 +197,37 @@ phases:
             from sklearn.ensemble import RandomForestClassifier
             import numpy as np
             from typing import Dict, Tuple
-            
+
             class IssueClassifier:
                 def __init__(self):
                     self.complexity_model = self._load_complexity_model()
                     self.autonomy_threshold = 0.85
                     self.vector_db = ChromaDB()
-                    
+
                 async def classify_issue(self, issue: Dict) -> IssueClassification:
                     # 1. Extract features
                     features = await self._extract_features(issue)
-                    
+
                     # 2. Get embeddings for semantic search
                     embedding = await self._get_issue_embedding(issue)
-                    
+
                     # 3. Find similar resolved issues
                     similar_issues = await self.vector_db.similarity_search(
-                        embedding, 
+                        embedding,
                         k=10,
                         filter={"status": "resolved"}
                     )
-                    
+
                     # 4. Calculate complexity score
                     complexity_score = self.complexity_model.predict_proba(features)[0][1]
-                    
+
                     # 5. Determine autonomy eligibility
                     autonomy_score = await self._calculate_autonomy_score(
-                        issue, 
+                        issue,
                         similar_issues,
                         complexity_score
                     )
-                    
+
                     # 6. Classification decision
                     return IssueClassification(
                         type=self._determine_issue_type(features),
@@ -237,7 +237,7 @@ phases:
                         suggested_approach=self._suggest_approach(similar_issues),
                         escalation_reasons=self._get_escalation_reasons(autonomy_score)
                     )
-                
+
                 async def _calculate_autonomy_score(self, issue, similar_issues, complexity):
                     # Factors for autonomy decision
                     factors = {
@@ -247,7 +247,7 @@ phases:
                         "breaking_change_risk": 1 - await self._assess_breaking_change_risk(issue),
                         "security_sensitive": 1 - await self._is_security_sensitive(issue)
                     }
-                    
+
                     # Weighted average
                     weights = {
                         "complexity": 0.3,
@@ -256,9 +256,9 @@ phases:
                         "breaking_change_risk": 0.15,
                         "security_sensitive": 0.1
                     }
-                    
+
                     return sum(factors[k] * weights[k] for k in factors)
-            
+
             @modal.function(
                 schedule=modal.Period(minutes=5),
                 image=modal.Image.debian_slim().pip_install(
@@ -268,13 +268,13 @@ phases:
             async def autonomous_issue_monitor():
                 classifier = IssueClassifier()
                 github = GitHubAppClient()
-                
+
                 # Get new issues
                 new_issues = await github.get_unprocessed_issues()
-                
+
                 for issue in new_issues:
                     classification = await classifier.classify_issue(issue)
-                    
+
                     if classification.autonomy_eligible:
                         # Trigger autonomous workflow
                         await trigger_autonomous_workflow.spawn(
@@ -284,7 +284,7 @@ phases:
                     else:
                         # Notify human with reasons
                         await github.add_labels(
-                            issue["number"], 
+                            issue["number"],
                             ["needs-human-review"] + classification.escalation_reasons
                         )
                         await github.comment(
@@ -320,29 +320,29 @@ phases:
             from chromadb import Client
             from sentence_transformers import SentenceTransformer
             import modal
-            
+
             class LearningDatabase:
                 def __init__(self):
                     self.vector_client = Client()
                     self.outcome_db = PostgresClient()
                     self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
-                    
+
                     # Create collections
                     self.issues_collection = self.vector_client.create_collection(
                         "issues",
                         metadata={"hnsw:space": "cosine"}
                     )
-                    
+
                     self.solutions_collection = self.vector_client.create_collection(
                         "solutions",
                         metadata={"hnsw:space": "cosine"}
                     )
-                
+
                 async def store_issue_resolution(self, issue_id: str, resolution: Dict):
                     # 1. Generate embeddings
                     issue_embedding = self.embedder.encode(resolution["issue_text"])
                     solution_embedding = self.embedder.encode(resolution["solution_text"])
-                    
+
                     # 2. Store in vector DB
                     self.issues_collection.add(
                         embeddings=[issue_embedding],
@@ -355,7 +355,7 @@ phases:
                         }],
                         ids=[issue_id]
                     )
-                    
+
                     self.solutions_collection.add(
                         embeddings=[solution_embedding],
                         documents=[resolution["solution_text"]],
@@ -367,7 +367,7 @@ phases:
                         }],
                         ids=[f"solution_{issue_id}"]
                     )
-                    
+
                     # 3. Store outcome for learning
                     await self.outcome_db.insert("outcomes", {
                         "issue_id": issue_id,
@@ -376,23 +376,23 @@ phases:
                         "human_feedback": resolution.get("human_feedback"),
                         "auto_merged": resolution.get("auto_merged", False)
                     })
-                
+
                 async def find_similar_solutions(self, issue_text: str, k: int = 5):
                     embedding = self.embedder.encode(issue_text)
-                    
+
                     results = self.issues_collection.query(
                         query_embeddings=[embedding],
                         n_results=k,
                         where={"success": True}  # Only successful resolutions
                     )
-                    
+
                     # Enrich with solution details
                     enriched_results = []
                     for i, issue_id in enumerate(results["ids"][0]):
                         solution = self.solutions_collection.get(
                             ids=[f"solution_{issue_id}"]
                         )
-                        
+
                         enriched_results.append({
                             "issue": results["documents"][0][i],
                             "solution": solution["documents"][0],
@@ -402,9 +402,9 @@ phases:
                             },
                             "similarity": 1 - results["distances"][0][i]
                         })
-                    
+
                     return enriched_results
-            
+
             @modal.function(
                 image=modal.Image.debian_slim().pip_install(
                     "chromadb", "sentence-transformers", "psycopg2-binary"
@@ -415,17 +415,17 @@ phases:
                 """One-time indexing of historical issues for learning"""
                 db = LearningDatabase()
                 github = GitHubAppClient()
-                
+
                 # Get all resolved issues from past 6 months
                 historical_issues = await github.get_resolved_issues(
                     since=datetime.now() - timedelta(days=180)
                 )
-                
+
                 for issue in historical_issues:
                     # Extract resolution details from PR
                     resolution = await extract_resolution_details(issue)
                     await db.store_issue_resolution(issue["number"], resolution)
-                
+
                 print(f"Indexed {len(historical_issues)} historical issues")
             ```
         labels:
@@ -468,12 +468,12 @@ phases:
             from datetime import datetime, timedelta
             import asyncio
             from authlib.integrations.httpx_client import AsyncOAuth2Client
-            
+
             app = modal.App("workflow-oauth")
-            
+
             # Secure credential manager (from Phase 0)
             credential_manager = SecureCredentialManager()
-            
+
             class OAuthTokenManager:
                 def __init__(self):
                     self._lock = asyncio.Lock()
@@ -483,40 +483,40 @@ phases:
                         failure_threshold=5,
                         recovery_timeout=300
                     )
-                    
+
                 async def get_valid_token(self):
                     async with self._lock:
                         try:
                             # Check circuit breaker
                             if self._circuit_breaker.is_open():
                                 return await self._use_fallback_auth()
-                            
+
                             # Check if token is still valid
                             if self._is_token_valid():
                                 return self._token_cache["access_token"]
-                            
+
                             # Refresh token with retry logic
                             return await self._refresh_token_with_retry()
-                            
+
                         except Exception as e:
                             self._circuit_breaker.record_failure()
                             logger.error(f"OAuth token error: {e}")
                             return await self._use_fallback_auth()
-                
+
                 async def _refresh_token_with_retry(self):
                     max_attempts = oauth_config["error_handling"]["max_refresh_attempts"]
                     backoff_seconds = oauth_config["error_handling"]["refresh_backoff_seconds"]
-                    
+
                     for attempt in range(max_attempts):
                         try:
                             token = await self._refresh_token()
                             self._circuit_breaker.record_success()
                             self._refresh_attempts = 0
                             return token
-                            
+
                         except (httpx.HTTPError, AsyncOAuth2Error) as e:
                             self._refresh_attempts += 1
-                            
+
                             if attempt < max_attempts - 1:
                                 wait_time = backoff_seconds[min(attempt, len(backoff_seconds)-1)]
                                 logger.warning(f"Token refresh attempt {attempt+1} failed, retrying in {wait_time}s")
@@ -524,59 +524,59 @@ phases:
                             else:
                                 logger.error(f"All token refresh attempts failed: {e}")
                                 raise
-                
+
                 async def _refresh_token(self):
                     creds = credential_manager.get_credentials()
-                    
+
                     # Add timeout to prevent hanging
                     timeout = httpx.Timeout(10.0, connect=5.0)
-                    
+
                     async with httpx.AsyncClient(timeout=timeout) as client:
                         oauth_client = AsyncOAuth2Client(
                             client_id=oauth_config["client_id"],
                             client=client,
                             token=creds
                         )
-                        
+
                         try:
                             new_token = await oauth_client.refresh_token(
                                 oauth_config["token_endpoint"],
                                 refresh_token=creds["refresh_token"]
                             )
-                            
+
                             # Validate token before storing
                             if not self._validate_token(new_token):
                                 raise ValueError("Invalid token received")
-                            
+
                             # Update secure storage
                             await credential_manager.store_credentials(new_token)
                             self._token_cache = new_token
-                            
+
                             # Log successful refresh (without sensitive data)
                             await self._audit_log_refresh(success=True)
-                            
+
                             return new_token["access_token"]
-                            
+
                         except Exception as e:
                             await self._audit_log_refresh(success=False, error=str(e))
                             raise
-                
+
                 async def _use_fallback_auth(self):
                     """Fallback to GitHub App authentication if OAuth fails"""
                     fallback_method = oauth_config["error_handling"]["fallback_authentication"]
-                    
+
                     if fallback_method == "github_app":
                         # Use GitHub App JWT for Claude API if supported
                         logger.warning("Using fallback GitHub App authentication")
                         return await self._get_github_app_token()
                     else:
                         raise AuthenticationError("No fallback authentication available")
-                
+
                 def _validate_token(self, token):
                     """Validate token structure and claims"""
                     required_fields = ["access_token", "token_type", "expires_at"]
                     return all(field in token for field in required_fields)
-                
+
                 async def _audit_log_refresh(self, success, error=None):
                     """Audit log for security tracking"""
                     await audit_logger.log({
@@ -586,7 +586,7 @@ phases:
                         "error": error,
                         "function_id": os.environ.get("MODAL_FUNCTION_ID")
                     })
-            
+
             # Scheduled token rotation
             @app.function(schedule=modal.Period(hours=4))
             def rotate_oauth_tokens():
@@ -626,7 +626,7 @@ phases:
             import asyncio
             from collections import deque
             from datetime import datetime, timedelta
-            
+
             class ClaudeOAuthClient:
                 def __init__(self, token_manager: OAuthTokenManager):
                     self.token_manager = token_manager
@@ -635,7 +635,7 @@ phases:
                         time_window=timedelta(minutes=1)
                     )
                     self.usage_tracker = UsageTracker()
-                    
+
                 async def _get_client(self):
                     token = await self.token_manager.get_valid_token()
                     return Anthropic(
@@ -645,7 +645,7 @@ phases:
                         ),
                         base_url="https://api.anthropic.com/v1"
                     )
-                
+
                 @retry(
                     stop=stop_after_attempt(3),
                     wait=wait_exponential(multiplier=1, min=4, max=10)
@@ -654,7 +654,7 @@ phases:
                 async def chat(self, messages, model="claude-3-opus-20240229", **kwargs):
                     # Rate limiting check
                     await self.rate_limiter.acquire()
-                    
+
                     try:
                         client = await self._get_client()
                         response = await client.messages.create(
@@ -662,16 +662,16 @@ phases:
                             messages=messages,
                             **kwargs
                         )
-                        
+
                         # Track usage
                         self.usage_tracker.record(
                             model=model,
                             input_tokens=response.usage.input_tokens,
                             output_tokens=response.usage.output_tokens
                         )
-                        
+
                         return response
-                        
+
                     except APIError as e:
                         if e.status_code == 401:
                             # Force token refresh
@@ -683,11 +683,11 @@ phases:
                             raise
                         else:
                             raise
-                
+
                 async def stream_chat(self, messages, model="claude-3-opus-20240229", **kwargs):
                     # Streaming support with rate limiting
                     await self.rate_limiter.acquire()
-                    
+
                     client = await self._get_client()
                     async with client.messages.stream(
                         model=model,
@@ -696,26 +696,26 @@ phases:
                     ) as stream:
                         async for chunk in stream:
                             yield chunk
-            
+
             class RateLimiter:
                 def __init__(self, max_requests, time_window):
                     self.max_requests = max_requests
                     self.time_window = time_window
                     self.requests = deque()
                     self._lock = asyncio.Lock()
-                
+
                 async def acquire(self):
                     async with self._lock:
                         now = datetime.utcnow()
                         # Remove old requests outside time window
                         while self.requests and self.requests[0] < now - self.time_window:
                             self.requests.popleft()
-                        
+
                         if len(self.requests) >= self.max_requests:
                             sleep_time = (self.requests[0] + self.time_window - now).total_seconds()
                             await asyncio.sleep(sleep_time)
                             return await self.acquire()
-                        
+
                         self.requests.append(now)
             ```
         labels:
@@ -749,56 +749,56 @@ phases:
             from fastapi import Request, Response, HTTPException
             import re
             from datetime import datetime, timedelta
-            
+
             @modal.web_endpoint(method="POST")
             async def github_webhook(request: Request):
                 # Validate GitHub signature
                 signature = request.headers.get("X-Hub-Signature-256")
                 if not signature:
                     raise HTTPException(status_code=401, detail="Missing signature")
-                
+
                 body = await request.body()
                 secret = os.environ["GITHUB_WEBHOOK_SECRET"]
-                
+
                 expected_signature = "sha256=" + hmac.new(
                     secret.encode(),
                     body,
                     hashlib.sha256
                 ).hexdigest()
-                
+
                 if not hmac.compare_digest(signature, expected_signature):
                     # Log security event
                     await log_security_event("Invalid webhook signature")
                     raise HTTPException(status_code=401, detail="Invalid signature")
-                
+
                 # Check delivery ID for idempotency
                 delivery_id = request.headers.get("X-GitHub-Delivery")
                 if await is_duplicate_delivery(delivery_id):
                     return Response(status_code=200, content="Already processed")
-                
+
                 payload = await request.json()
-                
+
                 # Validate timestamp to prevent replay attacks
                 if "timestamp" in payload:
                     event_time = datetime.fromisoformat(payload["timestamp"])
                     if datetime.utcnow() - event_time > timedelta(minutes=5):
                         return Response(status_code=200, content="Event too old")
-                
+
                 # Handle different event types
                 if payload.get("action") == "created" and "comment" in payload:
                     await handle_comment_created(payload)
                 elif payload.get("action") == "opened" and "issue" in payload:
                     await handle_issue_opened(payload)
-                
+
                 # Mark delivery as processed
                 await mark_delivery_processed(delivery_id)
-                
+
                 return Response(status_code=200)
-            
+
             async def handle_comment_created(payload):
                 comment_body = payload["comment"]["body"]
                 mentions = extract_claude_mentions(comment_body)
-                
+
                 for mention in mentions:
                     # Parse command with context awareness
                     command_context = {
@@ -807,31 +807,31 @@ phases:
                         "repository": payload["repository"],
                         "sender": payload["sender"]
                     }
-                    
+
                     parsed_command = await parse_claude_command(
                         mention["text"],
                         command_context
                     )
-                    
+
                     # Trigger workflow asynchronously
                     await trigger_workflow.spawn(
                         command=parsed_command,
                         context=command_context,
                         correlation_id=f"{payload['issue']['number']}-{payload['comment']['id']}"
                     )
-                    
+
                     # Post acknowledgment
                     await post_github_comment(
                         repo=payload["repository"]["full_name"],
                         issue_number=payload["issue"]["number"],
                         body=f"👋 @{payload['sender']['login']}, I'm processing your request: `{parsed_command['intent']}`"
                     )
-            
+
             def extract_claude_mentions(text):
                 # Handle multiple mentions and quoted text
                 pattern = r'@claude\s+([^@]+?)(?=@claude|$)'
                 mentions = []
-                
+
                 for match in re.finditer(pattern, text, re.IGNORECASE | re.DOTALL):
                     command_text = match.group(1).strip()
                     # Filter out quoted replies
@@ -841,7 +841,7 @@ phases:
                             "end": match.end(),
                             "text": command_text
                         })
-                
+
                 return mentions
             ```
         labels:
@@ -874,13 +874,13 @@ phases:
             from github import Github, GithubIntegration
             from cryptography.hazmat.primitives import serialization
             from cryptography.hazmat.backends import default_backend
-            
+
             class GitHubAppClient:
                 def __init__(self, app_id: str, private_key_path: str):
                     self.app_id = app_id
                     self.private_key = self._load_private_key(private_key_path)
                     self._installation_tokens = {}  # Cache by installation_id
-                    
+
                 def _load_private_key(self, key_path):
                     with open(key_path, 'rb') as key_file:
                         return serialization.load_pem_private_key(
@@ -888,7 +888,7 @@ phases:
                             password=None,
                             backend=default_backend()
                         )
-                
+
                 def _generate_jwt(self):
                     # JWT valid for 10 minutes (GitHub max)
                     now = int(time.time())
@@ -897,13 +897,13 @@ phases:
                         'exp': now + 600,
                         'iss': self.app_id
                     }
-                    
+
                     return jwt.encode(
                         payload,
                         self.private_key,
                         algorithm='RS256'
                     )
-                
+
                 async def get_installation_client(self, repo_full_name: str):
                     # Get installation ID for repository
                     jwt_token = self._generate_jwt()
@@ -911,10 +911,10 @@ phases:
                         integration_id=self.app_id,
                         private_key=self.private_key
                     )
-                    
+
                     # Find installation for this repo
                     installation = integration.get_repo_installation(repo_full_name)
-                    
+
                     # Get or refresh installation token
                     if installation.id not in self._installation_tokens or \
                        self._is_token_expired(self._installation_tokens[installation.id]):
@@ -923,43 +923,43 @@ phases:
                             'token': token.token,
                             'expires_at': token.expires_at
                         }
-                    
+
                     return Github(self._installation_tokens[installation.id]['token'])
-                
+
                 # GitHub operations that replace gh CLI
-                async def create_pull_request(self, repo_full_name: str, 
-                                            title: str, body: str, 
+                async def create_pull_request(self, repo_full_name: str,
+                                            title: str, body: str,
                                             head: str, base: str = "main"):
                     client = await self.get_installation_client(repo_full_name)
                     repo = client.get_repo(repo_full_name)
-                    
+
                     pr = repo.create_pull(
                         title=title,
                         body=body,
                         head=head,
                         base=base
                     )
-                    
+
                     return {
                         "number": pr.number,
                         "url": pr.html_url,
                         "id": pr.id
                     }
-                
+
                 async def create_issue_comment(self, repo_full_name: str,
                                              issue_number: int, body: str):
                     client = await self.get_installation_client(repo_full_name)
                     repo = client.get_repo(repo_full_name)
                     issue = repo.get_issue(issue_number)
-                    
+
                     comment = issue.create_comment(body)
                     return comment.id
-                
+
                 async def get_issue(self, repo_full_name: str, issue_number: int):
                     client = await self.get_installation_client(repo_full_name)
                     repo = client.get_repo(repo_full_name)
                     issue = repo.get_issue(issue_number)
-                    
+
                     return {
                         "number": issue.number,
                         "title": issue.title,
@@ -967,7 +967,7 @@ phases:
                         "state": issue.state,
                         "labels": [label.name for label in issue.labels]
                     }
-            
+
             # Modal function using GitHub App
             @modal.function(
                 secrets=[modal.Secret.from_name("github-app-credentials")],
@@ -976,9 +976,9 @@ phases:
             async def github_operation(operation: str, **kwargs):
                 app_id = os.environ["GITHUB_APP_ID"]
                 private_key = os.environ["GITHUB_APP_PRIVATE_KEY"]
-                
+
                 github_client = GitHubAppClient(app_id, private_key)
-                
+
                 # Route to appropriate operation
                 if operation == "create_pr":
                     return await github_client.create_pull_request(**kwargs)
@@ -1026,22 +1026,22 @@ phases:
                 )
             )
             async def autonomous_investigate_issue(
-                issue: dict, 
+                issue: dict,
                 classification: IssueClassification
             ) -> InvestigationResult:
                 # Initialize services
                 claude = ClaudeOAuthClient(oauth_token)
                 learning_db = LearningDatabase()
-                
+
                 # 1. Find similar resolved issues
                 similar_issues = await learning_db.find_similar_solutions(
                     issue["title"] + "\n" + issue["body"],
                     k=10
                 )
-                
+
                 # 2. Generate multiple investigation hypotheses
                 hypotheses = []
-                
+
                 # Hypothesis from similar issues
                 if similar_issues:
                     pattern_hypothesis = await claude.chat([
@@ -1049,7 +1049,7 @@ phases:
                         {"role": "user", "content": f"""
                         Current issue: {issue}
                         Similar resolved issues: {similar_issues}
-                        
+
                         What patterns do you see? What's likely the root cause?
                         """}
                     ])
@@ -1058,14 +1058,14 @@ phases:
                         "hypothesis": pattern_hypothesis.content,
                         "confidence": calculate_pattern_confidence(similar_issues)
                     })
-                
+
                 # Direct investigation hypothesis
                 direct_hypothesis = await claude.chat([
                     {"role": "system", "content": "You are an expert issue investigator..."},
                     {"role": "user", "content": f"""
                     Investigate this issue and identify root causes:
                     {issue}
-                    
+
                     Consider:
                     1. Error messages and stack traces
                     2. Recent changes that might be related
@@ -1078,7 +1078,7 @@ phases:
                     "hypothesis": direct_hypothesis.content,
                     "confidence": 0.7  # Base confidence
                 })
-                
+
                 # 3. Validate hypotheses with code analysis
                 validated_hypotheses = []
                 for hypothesis in hypotheses:
@@ -1087,20 +1087,20 @@ phases:
                         issue,
                         codebase_context
                     )
-                    
+
                     validated_hypotheses.append({
                         **hypothesis,
                         "validation_score": validation.score,
                         "evidence": validation.evidence,
                         "final_confidence": hypothesis["confidence"] * validation.score
                     })
-                
+
                 # 4. Select best hypothesis
                 best_hypothesis = max(
-                    validated_hypotheses, 
+                    validated_hypotheses,
                     key=lambda h: h["final_confidence"]
                 )
-                
+
                 # 5. Determine if we need human escalation
                 max_confidence = best_hypothesis["final_confidence"]
                 needs_escalation = (
@@ -1108,7 +1108,7 @@ phases:
                     classification.complexity > 0.8 or
                     any(trigger in str(issue) for trigger in ESCALATION_TRIGGERS)
                 )
-                
+
                 # 6. Generate investigation report
                 investigation = InvestigationResult(
                     issue_id=issue["number"],
@@ -1121,22 +1121,22 @@ phases:
                     needs_human_review=needs_escalation,
                     escalation_reasons=get_escalation_reasons(max_confidence, classification)
                 )
-                
+
                 # 7. Store for learning
                 await learning_db.store_investigation(issue["number"], investigation)
-                
+
                 return investigation
-            
+
             def calculate_pattern_confidence(similar_issues):
                 """Calculate confidence based on similarity and success of past resolutions"""
                 if not similar_issues:
                     return 0.0
-                
+
                 # Factors: similarity score, number of similar issues, success rate
                 avg_similarity = np.mean([issue["similarity"] for issue in similar_issues])
                 success_rate = np.mean([issue["metadata"]["success"] for issue in similar_issues])
                 volume_factor = min(len(similar_issues) / 5, 1.0)  # Max confidence at 5+ similar
-                
+
                 return avg_similarity * success_rate * volume_factor * 0.9  # Max 0.9 from patterns
             ```
         labels:
@@ -1177,7 +1177,7 @@ phases:
             ) -> ImplementationResult:
                 claude = ClaudeOAuthClient(oauth_token)
                 learning_db = LearningDatabase()
-                
+
                 # 1. Generate implementation plan from investigation
                 plan = await generate_implementation_plan(
                     investigation,
@@ -1185,14 +1185,14 @@ phases:
                         investigation.issue_id
                     )
                 )
-                
+
                 # 2. Set up isolated git worktree
                 worktree_path = f"/tmp/worktree-{investigation.issue_id}"
                 repo = setup_git_worktree(worktree_path, f"fix/{investigation.issue_id}")
-                
+
                 # 3. Implement incrementally with validation
                 implementation_state = ImplementationState()
-                
+
                 for step in plan.steps:
                     # Generate code for this step
                     code_generation = await generate_code_for_step(
@@ -1200,20 +1200,20 @@ phases:
                         investigation,
                         current_state=implementation_state
                     )
-                    
+
                     # Apply changes
                     files_changed = apply_code_changes(
                         repo,
                         code_generation.changes
                     )
-                    
+
                     # Validate changes
                     validation = await validate_changes(
                         repo,
                         files_changed,
                         step.validation_criteria
                     )
-                    
+
                     if validation.passed:
                         # Update state and continue
                         implementation_state.record_success(step, validation)
@@ -1226,20 +1226,20 @@ phases:
                             implementation_state,
                             max_attempts=3
                         )
-                        
+
                         if healing_result.success:
                             implementation_state.record_healing(step, healing_result)
                         else:
                             # Rollback this step and try different approach
                             repo.index.reset(commit=implementation_state.last_good_commit)
-                            
+
                             # Try alternative implementation strategy
                             alternative = await generate_alternative_approach(
                                 step,
                                 validation.errors,
                                 implementation_state.attempted_approaches
                             )
-                            
+
                             if alternative:
                                 plan.replace_step(step, alternative)
                             else:
@@ -1250,7 +1250,7 @@ phases:
                                     partial_implementation=implementation_state,
                                     escalation_reason=f"Cannot implement step: {step.description}"
                                 )
-                    
+
                     # Check if confidence is still acceptable
                     if implementation_state.confidence < 0.6:
                         return ImplementationResult(
@@ -1259,31 +1259,31 @@ phases:
                             partial_implementation=implementation_state,
                             escalation_reason="Confidence dropped below threshold"
                         )
-                
+
                 # 4. Final validation
                 final_validation = await comprehensive_validation(repo, plan)
-                
+
                 # 5. Create commits with meaningful messages
                 commit_messages = await generate_commit_messages(
                     implementation_state,
                     investigation
                 )
-                
+
                 for commit in commit_messages:
                     repo.index.add(commit.files)
                     repo.index.commit(commit.message)
-                
+
                 # 6. Push to remote
                 origin = repo.remote("origin")
                 origin.push(f"fix/{investigation.issue_id}")
-                
+
                 # 7. Store outcome for learning
                 await learning_db.store_implementation_outcome(
                     investigation.issue_id,
                     implementation_state,
                     final_validation
                 )
-                
+
                 return ImplementationResult(
                     success=True,
                     branch_name=f"fix/{investigation.issue_id}",
@@ -1293,10 +1293,10 @@ phases:
                     implementation_time=implementation_state.elapsed_time,
                     self_healing_count=implementation_state.healing_count
                 )
-            
+
             async def self_heal_implementation(step, errors, state, max_attempts):
                 """Self-healing mechanism that learns from errors"""
-                
+
                 for attempt in range(max_attempts):
                     # Analyze errors with AI
                     error_analysis = await claude.chat([
@@ -1305,27 +1305,27 @@ phases:
                         Step: {step}
                         Errors: {errors}
                         Current implementation: {state.current_code}
-                        
+
                         What went wrong and how can we fix it?
                         """}
                     ])
-                    
+
                     # Generate fix
                     fix = await generate_fix(error_analysis, step, state)
-                    
+
                     # Apply and test fix
                     validation = await validate_changes(repo, fix.changes, step.validation_criteria)
-                    
+
                     if validation.passed:
                         return HealingResult(
                             success=True,
                             fix_applied=fix,
                             attempts=attempt + 1
                         )
-                    
+
                     # Learn from this failure
                     state.record_failed_approach(fix, validation.errors)
-                
+
                 return HealingResult(success=False, attempts=max_attempts)
             ```
         labels:
@@ -1366,7 +1366,7 @@ phases:
             ) -> TestValidationResult:
                 claude = ClaudeOAuthClient(oauth_token)
                 learning_db = LearningDatabase()
-                
+
                 # 1. Predict which tests might fail
                 test_predictions = await predict_test_failures(
                     implementation.files_changed,
@@ -1374,41 +1374,41 @@ phases:
                         implementation.files_changed
                     )
                 )
-                
+
                 # 2. Generate missing tests if needed
                 coverage_analysis = await analyze_test_coverage(implementation)
-                
+
                 if coverage_analysis.uncovered_critical_paths:
                     generated_tests = await generate_missing_tests(
                         coverage_analysis.uncovered_critical_paths,
                         implementation,
                         investigation
                     )
-                    
+
                     # Add generated tests to the repository
                     for test in generated_tests:
                         write_test_file(test.path, test.content)
                         implementation.tests_added.append(test.path)
-                
+
                 # 3. Prioritize test execution
                 test_priority = await prioritize_tests(
                     all_tests=get_all_tests(),
                     changed_files=implementation.files_changed,
                     predictions=test_predictions
                 )
-                
+
                 # 4. Run tests in priority order with early stopping
                 test_results = TestResults()
                 confidence = 1.0
-                
+
                 for test_batch in test_priority.batches:
                     batch_results = await run_test_batch(test_batch)
                     test_results.add_batch(batch_results)
-                    
+
                     # Update confidence based on results
                     if batch_results.failures:
                         confidence *= 0.8 ** len(batch_results.failures)
-                        
+
                         # Try to self-heal failing tests
                         for failure in batch_results.failures:
                             healing = await attempt_test_healing(
@@ -1416,7 +1416,7 @@ phases:
                                 implementation,
                                 max_attempts=2
                             )
-                            
+
                             if healing.success:
                                 test_results.record_healing(failure, healing)
                                 confidence *= 1.1  # Boost confidence for successful healing
@@ -1427,7 +1427,7 @@ phases:
                                     implementation,
                                     investigation
                                 )
-                                
+
                                 if failure_analysis.is_implementation_bug:
                                     # Real bug found
                                     return TestValidationResult(
@@ -1437,18 +1437,18 @@ phases:
                                         bug_found=failure_analysis,
                                         needs_implementation_fix=True
                                     )
-                    
+
                     # Early stopping if confidence too low
                     if confidence < 0.5:
                         break
-                
+
                 # 5. Predict production impact
                 production_impact = await predict_production_impact(
                     implementation,
                     test_results,
                     historical_incidents=await learning_db.get_production_incidents()
                 )
-                
+
                 # 6. Generate comprehensive test report
                 test_report = await generate_test_report(
                     test_results,
@@ -1456,21 +1456,21 @@ phases:
                     production_impact,
                     confidence
                 )
-                
+
                 # 7. Determine if safe to proceed
                 safe_to_proceed = (
                     confidence > 0.7 and
                     test_results.pass_rate > 0.95 and
                     production_impact.risk_score < 0.3
                 )
-                
+
                 # 8. Store outcomes for learning
                 await learning_db.store_test_outcome(
                     implementation.issue_id,
                     test_results,
                     production_impact
                 )
-                
+
                 return TestValidationResult(
                     success=safe_to_proceed,
                     confidence=confidence,
@@ -1481,10 +1481,10 @@ phases:
                     generated_tests=len(generated_tests) if 'generated_tests' in locals() else 0,
                     healed_tests=len(test_results.healed_tests)
                 )
-            
+
             async def attempt_test_healing(failure, implementation, max_attempts):
                 """Self-heal failing tests by understanding and fixing the root cause"""
-                
+
                 for attempt in range(max_attempts):
                     # Analyze why test is failing
                     failure_analysis = await claude.chat([
@@ -1493,37 +1493,37 @@ phases:
                         Test: {failure.test_name}
                         Error: {failure.error}
                         Stack trace: {failure.stack_trace}
-                        
+
                         Implementation changes: {implementation.summary}
-                        
+
                         Is this a test that needs updating or a real bug?
                         If it's the test, how should we fix it?
                         """}
                     ])
-                    
+
                     if "real bug" in failure_analysis.content.lower():
                         return TestHealingResult(success=False, is_real_bug=True)
-                    
+
                     # Generate test fix
                     test_fix = await generate_test_fix(
                         failure,
                         failure_analysis,
                         implementation
                     )
-                    
+
                     # Apply and verify fix
                     apply_test_fix(test_fix)
-                    
+
                     # Re-run the test
                     rerun_result = await run_single_test(failure.test_name)
-                    
+
                     if rerun_result.passed:
                         return TestHealingResult(
                             success=True,
                             fix_applied=test_fix,
                             attempts=attempt + 1
                         )
-                
+
                 return TestHealingResult(success=False, attempts=max_attempts)
             ```
         labels:
@@ -1565,7 +1565,7 @@ phases:
                 claude = ClaudeOAuthClient(oauth_token)
                 github = GitHubAppClient()
                 learning_db = LearningDatabase()
-                
+
                 # 1. Generate optimal PR description
                 pr_description = await generate_optimal_pr_description(
                     implementation,
@@ -1573,7 +1573,7 @@ phases:
                     investigation,
                     similar_prs=await learning_db.get_successful_pr_examples()
                 )
-                
+
                 # 2. Create PR
                 pr = await github.create_pull_request(
                     repo_full_name=get_repo_name(),
@@ -1582,21 +1582,21 @@ phases:
                     head=implementation.branch_name,
                     base="main"
                 )
-                
+
                 # 3. Add metadata labels
                 await github.add_labels(pr.number, [
                     f"autonomous-confidence-{int(implementation.confidence * 100)}",
                     f"complexity-{investigation.complexity_category}",
                     "auto-generated"
                 ])
-                
+
                 # 4. Perform self-review
                 self_review = await perform_ai_code_review(
                     pr_diff=await github.get_pr_diff(pr.number),
                     implementation_context=implementation,
                     test_results=test_validation
                 )
-                
+
                 if self_review.issues_found:
                     # Post review comments
                     for issue in self_review.issues_found:
@@ -1606,36 +1606,36 @@ phases:
                             path=issue.file_path,
                             line=issue.line_number
                         )
-                    
+
                     # Attempt to fix issues autonomously
                     if self_review.auto_fixable:
                         fixes = await generate_review_fixes(
                             self_review.issues_found,
                             implementation
                         )
-                        
+
                         # Apply fixes and push
                         apply_fixes_to_branch(fixes, implementation.branch_name)
-                        
+
                         # Comment about fixes
                         await github.comment(
                             pr.number,
                             f"🤖 I've automatically addressed {len(fixes)} review comments. Please review the updates."
                         )
-                
+
                 # 5. Monitor for human reviews
                 pr_monitor = PRMonitor(pr.number)
-                
+
                 @pr_monitor.on_review_comment
                 async def handle_review_comment(comment):
                     # Analyze if we can address the comment
                     analysis = await analyze_review_comment(comment)
-                    
+
                     if analysis.can_address_autonomously:
                         # Generate and apply fix
                         fix = await generate_comment_fix(comment, implementation)
                         apply_fix_to_branch(fix, implementation.branch_name)
-                        
+
                         # Respond to comment
                         await github.reply_to_comment(
                             comment.id,
@@ -1648,7 +1648,7 @@ phases:
                             comment.id,
                             f"📝 {context.explanation}\n\n{context.suggestions}"
                         )
-                
+
                 # 6. Auto-merge decision
                 merge_confidence = await calculate_merge_confidence(
                     implementation,
@@ -1656,7 +1656,7 @@ phases:
                     self_review,
                     pr_approvals=await github.get_pr_approvals(pr.number)
                 )
-                
+
                 if merge_confidence > 0.85 and await all_checks_passed(pr.number):
                     # Auto-merge
                     await github.merge_pr(
@@ -1664,14 +1664,14 @@ phases:
                         merge_method="squash",
                         commit_message=generate_merge_commit_message(pr_description)
                     )
-                    
+
                     # Set up post-merge monitoring
                     await setup_production_monitoring(
                         pr.number,
                         implementation.files_changed,
                         monitoring_duration_hours=24
                     )
-                    
+
                     result_status = "auto_merged"
                 else:
                     # Request human review
@@ -1679,19 +1679,19 @@ phases:
                         pr.number,
                         reviewers=get_relevant_reviewers(implementation.files_changed)
                     )
-                    
+
                     await github.comment(
                         pr.number,
                         f"""🤔 This PR needs human review before merging.
-                        
+
                         Confidence: {merge_confidence:.0%}
                         Reasons: {get_human_review_reasons(merge_confidence, self_review)}
-                        
+
                         You can ask @claude for clarification on any changes."""
                     )
-                    
+
                     result_status = "awaiting_human_review"
-                
+
                 # 7. Store outcome for learning
                 await learning_db.store_pr_outcome(
                     pr.number,
@@ -1700,7 +1700,7 @@ phases:
                     merge_confidence,
                     result_status
                 )
-                
+
                 return PRResult(
                     pr_number=pr.number,
                     pr_url=pr.html_url,
@@ -1709,10 +1709,10 @@ phases:
                     self_review_issues=len(self_review.issues_found),
                     auto_fixes_applied=len(fixes) if 'fixes' in locals() else 0
                 )
-            
+
             async def calculate_merge_confidence(implementation, test_validation, self_review, pr_approvals):
                 """Calculate confidence for auto-merge decision"""
-                
+
                 factors = {
                     "implementation_confidence": implementation.confidence,
                     "test_confidence": test_validation.confidence,
@@ -1722,7 +1722,7 @@ phases:
                     "has_approvals": 1.0 if pr_approvals else 0.7,
                     "complexity_factor": 1.0 - (implementation.complexity * 0.5)
                 }
-                
+
                 weights = {
                     "implementation_confidence": 0.25,
                     "test_confidence": 0.25,
@@ -1732,7 +1732,7 @@ phases:
                     "has_approvals": 0.05,
                     "complexity_factor": 0.05
                 }
-                
+
                 return sum(factors[k] * weights[k] for k in factors)
             ```
         labels:
@@ -1781,10 +1781,10 @@ phases:
                 command: str = None
             ) -> PipelineResult:
                 """Master orchestrator for autonomous issue resolution"""
-                
+
                 claude = ClaudeOAuthClient(oauth_token)
                 learning_db = LearningDatabase()
-                
+
                 # Initialize pipeline state
                 pipeline_state = PipelineState(
                     issue_id=issue["number"],
@@ -1792,28 +1792,28 @@ phases:
                     confidence_threshold=0.7,
                     max_retries=3
                 )
-                
+
                 try:
                     # 1. Investigation Phase (can run in parallel with historical analysis)
                     investigation_task = asyncio.create_task(
                         autonomous_investigate_issue(issue, classification)
                     )
-                    
+
                     historical_analysis_task = asyncio.create_task(
                         learning_db.analyze_historical_patterns(issue)
                     )
-                    
+
                     investigation, historical = await asyncio.gather(
                         investigation_task,
                         historical_analysis_task
                     )
-                    
+
                     pipeline_state.record_phase_completion(
                         "investigation",
                         investigation.confidence,
                         investigation.to_dict()
                     )
-                    
+
                     # Check if we should continue autonomously
                     if investigation.needs_human_review:
                         return await escalate_to_human(
@@ -1821,19 +1821,19 @@ phases:
                             "Investigation requires human review",
                             investigation
                         )
-                    
+
                     # 2. Implementation Phase (with self-healing)
                     implementation = await autonomous_implement(
                         investigation,
                         classification
                     )
-                    
+
                     pipeline_state.record_phase_completion(
                         "implementation",
                         implementation.confidence,
                         implementation.to_dict()
                     )
-                    
+
                     # Handle implementation failures with retry
                     if not implementation.success:
                         if pipeline_state.can_retry("implementation"):
@@ -1843,36 +1843,36 @@ phases:
                                 implementation.partial_implementation,
                                 historical
                             )
-                            
+
                             implementation = await autonomous_implement(
                                 investigation,
                                 classification,
                                 approach_override=alternative_approach
                             )
-                            
+
                             if not implementation.success:
                                 return await escalate_to_human(
                                     pipeline_state,
                                     "Implementation failed after retry",
                                     implementation
                                 )
-                    
+
                     # 3. Validation Phase (can partially run in parallel)
                     validation_tasks = [
                         autonomous_test_validation(implementation, investigation),
                         security_validation(implementation),
                         performance_validation(implementation)
                     ]
-                    
+
                     validations = await asyncio.gather(*validation_tasks)
                     test_validation = validations[0]
-                    
+
                     pipeline_state.record_phase_completion(
                         "validation",
                         test_validation.confidence,
                         test_validation.to_dict()
                     )
-                    
+
                     # Handle test failures with implementation fixes
                     if test_validation.needs_implementation_fix:
                         if pipeline_state.can_retry("validation"):
@@ -1881,33 +1881,33 @@ phases:
                                 implementation,
                                 test_validation.bug_found
                             )
-                            
+
                             # Re-run validation
                             test_validation = await autonomous_test_validation(
                                 healing_implementation,
                                 investigation
                             )
-                            
+
                             if not test_validation.success:
                                 return await escalate_to_human(
                                     pipeline_state,
                                     "Tests still failing after healing attempt",
                                     test_validation
                                 )
-                    
+
                     # 4. PR Creation and Management Phase
                     pr_result = await autonomous_pr_manager(
                         implementation,
                         test_validation,
                         investigation
                     )
-                    
+
                     pipeline_state.record_phase_completion(
                         "pr_creation",
                         pr_result.merge_confidence,
                         pr_result.to_dict()
                     )
-                    
+
                     # 5. Learning Phase (async, non-blocking)
                     asyncio.create_task(
                         record_pipeline_outcome(
@@ -1916,7 +1916,7 @@ phases:
                             learning_db
                         )
                     )
-                    
+
                     # 6. Adjust thresholds based on outcome
                     if pr_result.status == "auto_merged":
                         # Success - can be slightly more aggressive
@@ -1932,10 +1932,10 @@ phases:
                             direction="decrease",
                             factor=0.98
                         )
-                    
+
                     # Calculate overall pipeline metrics
                     pipeline_metrics = calculate_pipeline_metrics(pipeline_state)
-                    
+
                     return PipelineResult(
                         success=True,
                         issue_id=issue["number"],
@@ -1947,7 +1947,7 @@ phases:
                         self_healing_count=pipeline_state.total_healing_attempts,
                         metrics=pipeline_metrics
                     )
-                    
+
                 except Exception as e:
                     # Graceful failure with learning
                     await record_pipeline_failure(
@@ -1955,42 +1955,42 @@ phases:
                         e,
                         learning_db
                     )
-                    
+
                     return await escalate_to_human(
                         pipeline_state,
                         f"Pipeline error: {str(e)}",
                         {"error": str(e), "traceback": traceback.format_exc()}
                     )
-            
+
             async def escalate_to_human(pipeline_state, reason, context):
                 """Gracefully escalate to human with full context"""
-                
+
                 # Create comprehensive context document
                 context_doc = await generate_escalation_context(
                     pipeline_state,
                     reason,
                     context
                 )
-                
+
                 # Create GitHub issue comment with context
                 await github.comment(
                     pipeline_state.issue_id,
                     f"""🤖 I need human assistance to complete this issue.
-                    
+
                     **Reason**: {reason}
                     **Progress**: {pipeline_state.progress_summary}
                     **Confidence**: {pipeline_state.overall_confidence:.0%}
-                    
+
                     <details>
                     <summary>Full Context</summary>
-                    
+
                     {context_doc}
                     </details>
-                    
+
                     You can pick up where I left off or provide guidance via @claude mentions.
                     """
                 )
-                
+
                 return PipelineResult(
                     success=False,
                     needs_human_intervention=True,
@@ -2033,59 +2033,59 @@ phases:
             )
             async def continuous_learning_pipeline():
                 """Continuously improve the autonomous pipeline based on outcomes"""
-                
+
                 learning_db = LearningDatabase()
                 claude = ClaudeOAuthClient(oauth_token)
-                
+
                 # 1. Collect recent outcomes (past 24 hours)
                 recent_outcomes = await learning_db.get_recent_outcomes(
                     hours=24,
                     include_human_feedback=True
                 )
-                
+
                 # 2. Analyze success patterns
                 success_analysis = await analyze_success_patterns(recent_outcomes)
-                
+
                 # 3. Identify failure patterns
                 failure_patterns = await identify_failure_patterns(
                     recent_outcomes,
                     min_occurrences=3  # Need 3+ similar failures to identify pattern
                 )
-                
+
                 # 4. Retrain classification model if needed
                 if should_retrain_classifier(recent_outcomes):
                     new_classifier = await retrain_issue_classifier(
                         recent_outcomes,
                         current_model=load_current_classifier()
                     )
-                    
+
                     # Validate new model
                     validation_score = await validate_classifier(
                         new_classifier,
                         test_set=recent_outcomes[-100:]  # Last 100 issues
                     )
-                    
+
                     if validation_score > current_model_score:
                         await deploy_new_classifier(new_classifier)
                         print(f"Deployed new classifier with score: {validation_score}")
-                
+
                 # 5. Adjust confidence thresholds
                 threshold_adjustments = calculate_threshold_adjustments(
                     success_analysis,
                     failure_patterns
                 )
-                
+
                 await apply_threshold_adjustments(threshold_adjustments)
-                
+
                 # 6. Optimize prompts based on outcomes
                 prompt_improvements = await optimize_prompts(
                     recent_outcomes,
                     claude
                 )
-                
+
                 for improvement in prompt_improvements:
                     await test_and_deploy_prompt(improvement)
-                
+
                 # 7. Generate learning report
                 report = await generate_learning_report(
                     recent_outcomes,
@@ -2094,23 +2094,23 @@ phases:
                     threshold_adjustments,
                     prompt_improvements
                 )
-                
+
                 # 8. Update metrics dashboard
                 await update_metrics_dashboard(report)
-                
+
                 return report
-            
+
             async def analyze_success_patterns(outcomes):
                 """Identify what makes issues succeed autonomously"""
-                
+
                 successful_outcomes = [o for o in outcomes if o["autonomous_completion"]]
-                
+
                 # Extract features from successful cases
                 success_features = extract_features_from_outcomes(successful_outcomes)
-                
+
                 # Cluster to find patterns
                 clusters = cluster_outcomes(success_features)
-                
+
                 patterns = []
                 for cluster in clusters:
                     pattern = {
@@ -2121,54 +2121,54 @@ phases:
                         "example_issues": cluster[:3]  # Top 3 examples
                     }
                     patterns.append(pattern)
-                
+
                 return patterns
-            
+
             async def optimize_prompts(outcomes, claude):
                 """Use AI to improve prompts based on outcomes"""
-                
+
                 # Group outcomes by prompt type
                 prompt_groups = group_by_prompt_type(outcomes)
-                
+
                 improvements = []
                 for prompt_type, group_outcomes in prompt_groups.items():
                     if len(group_outcomes) < 10:
                         continue  # Need enough data
-                    
+
                     # Analyze what worked and what didn't
                     analysis = await claude.chat([
                         {"role": "system", "content": "You are analyzing prompt effectiveness..."},
                         {"role": "user", "content": f"""
                         Analyze these outcomes for {prompt_type} prompts:
-                        
+
                         Successful cases: {[o for o in group_outcomes if o["success"]]}
                         Failed cases: {[o for o in group_outcomes if not o["success"]]}
-                        
+
                         Current prompt template: {get_current_prompt(prompt_type)}
-                        
+
                         How can we improve this prompt to increase success rate?
                         """}
                     ])
-                    
+
                     # Generate improved prompt variations
                     variations = await generate_prompt_variations(
                         analysis.content,
                         prompt_type,
                         current_prompt=get_current_prompt(prompt_type)
                     )
-                    
+
                     improvements.append({
                         "prompt_type": prompt_type,
                         "current_success_rate": calculate_success_rate(group_outcomes),
                         "variations": variations,
                         "analysis": analysis.content
                     })
-                
+
                 return improvements
-            
+
             async def generate_learning_report(outcomes, success_patterns, failure_patterns, adjustments, improvements):
                 """Generate comprehensive learning report"""
-                
+
                 report = {
                     "period": "last_24_hours",
                     "total_issues": len(outcomes),
@@ -2184,7 +2184,7 @@ phases:
                         failure_patterns
                     )
                 }
-                
+
                 # Create visualizations
                 report["visualizations"] = {
                     "success_rate_trend": create_success_rate_chart(outcomes),
@@ -2192,7 +2192,7 @@ phases:
                     "resolution_time_by_complexity": create_time_complexity_scatter(outcomes),
                     "failure_heatmap": create_failure_pattern_heatmap(failure_patterns)
                 }
-                
+
                 return report
             ```
         labels:
@@ -2282,7 +2282,7 @@ phases:
             from enum import Enum
             import json
             from typing import Dict, Any
-            
+
             class MigrationStage(Enum):
                 LEGACY_ONLY = "legacy_only"
                 CANARY_5_PERCENT = "canary_5"
@@ -2290,23 +2290,23 @@ phases:
                 CANARY_50_PERCENT = "canary_50"
                 MODAL_PRIMARY = "modal_primary"
                 MODAL_ONLY = "modal_only"
-            
+
             class MigrationController:
                 def __init__(self):
                     self.redis_client = get_redis_client()
                     self.metrics_client = get_metrics_client()
-                    
+
                 async def get_current_stage(self) -> MigrationStage:
                     stage = await self.redis_client.get("migration:stage")
                     return MigrationStage(stage) if stage else MigrationStage.LEGACY_ONLY
-                
+
                 async def route_request(self, request_context: Dict[str, Any]):
                     stage = await self.get_current_stage()
-                    
+
                     # Check for forced routing (testing)
                     if force_route := request_context.get("force_route"):
                         return force_route
-                    
+
                     # Determine routing based on stage
                     if stage == MigrationStage.LEGACY_ONLY:
                         return "legacy"
@@ -2321,51 +2321,51 @@ phases:
                             MigrationStage.CANARY_50_PERCENT: 50,
                             MigrationStage.MODAL_PRIMARY: 95
                         }.get(stage, 0)
-                        
+
                         route = "modal" if user_hash < canary_threshold else "legacy"
-                        
+
                         # Track routing decision
                         await self.metrics_client.increment(
                             f"migration.routing.{route}",
                             tags={"stage": stage.value}
                         )
-                        
+
                         return route
-                
+
                 async def advance_stage(self) -> bool:
                     current = await self.get_current_stage()
-                    
+
                     # Check health metrics before advancing
                     if not await self._check_health_metrics():
                         return False
-                    
+
                     # Advance to next stage
                     stages = list(MigrationStage)
                     current_index = stages.index(current)
-                    
+
                     if current_index < len(stages) - 1:
                         next_stage = stages[current_index + 1]
                         await self.redis_client.set("migration:stage", next_stage.value)
-                        
+
                         # Log stage transition
                         await self._log_stage_transition(current, next_stage)
                         return True
-                    
+
                     return False
-                
+
                 async def rollback(self, target_stage: MigrationStage = None):
                     current = await self.get_current_stage()
                     target = target_stage or MigrationStage.LEGACY_ONLY
-                    
+
                     # Immediate rollback
                     await self.redis_client.set("migration:stage", target.value)
-                    
+
                     # Alert on rollback
                     await self._send_rollback_alert(current, target)
-                    
+
                     # Preserve state for analysis
                     await self._capture_rollback_state(current, target)
-                
+
                 async def _check_health_metrics(self) -> bool:
                     # Check error rates, latency, success rates
                     metrics = await self.metrics_client.query({
@@ -2373,24 +2373,24 @@ phases:
                         "p99_latency": "histogram_quantile(0.99, latency[5m])",
                         "success_rate": "rate(success[5m])"
                     })
-                    
+
                     return (
                         metrics["error_rate"] < 0.01 and  # <1% errors
                         metrics["p99_latency"] < 2000 and  # <2s p99
                         metrics["success_rate"] > 0.99      # >99% success
                     )
-            
+
             # Usage in webhook handler
             @modal.web_endpoint(method="POST")
             async def github_webhook_with_migration(request: Request):
                 controller = MigrationController()
-                
+
                 # Determine routing
                 route = await controller.route_request({
                     "user_id": request.headers.get("X-GitHub-Delivery"),
                     "endpoint": "webhook"
                 })
-                
+
                 if route == "modal":
                     return await github_webhook_modal(request)
                 else:
@@ -2428,29 +2428,29 @@ phases:
             )
             import time
             from functools import wraps
-            
+
             # Initialize telemetry
             tracer = trace.get_tracer("modal-oauth-workflow")
             meter = metrics.get_meter("modal-oauth-workflow")
-            
+
             # Create metrics
             workflow_counter = meter.create_counter(
                 "workflow_executions",
                 description="Number of workflow executions"
             )
-            
+
             oauth_refresh_histogram = meter.create_histogram(
                 "oauth_token_refresh_duration",
                 description="OAuth token refresh duration",
                 unit="ms"
             )
-            
+
             api_call_histogram = meter.create_histogram(
                 "claude_api_call_duration",
                 description="Claude API call duration",
                 unit="ms"
             )
-            
+
             def monitor_function(operation_name: str):
                 def decorator(func):
                     @wraps(func)
@@ -2464,31 +2464,31 @@ phases:
                             }
                         ) as span:
                             start_time = time.time()
-                            
+
                             try:
                                 # Execute function
                                 result = await func(*args, **kwargs)
-                                
+
                                 # Record success metrics
                                 workflow_counter.add(
                                     1,
                                     {"status": "success", "operation": operation_name}
                                 )
-                                
+
                                 return result
-                                
+
                             except Exception as e:
                                 # Record error
                                 span.record_exception(e)
                                 span.set_status(trace.Status(trace.StatusCode.ERROR))
-                                
+
                                 workflow_counter.add(
                                     1,
                                     {"status": "error", "operation": operation_name}
                                 )
-                                
+
                                 raise
-                                
+
                             finally:
                                 # Record duration
                                 duration_ms = (time.time() - start_time) * 1000
@@ -2496,10 +2496,10 @@ phases:
                                     duration_ms,
                                     {"operation": operation_name}
                                 )
-                    
+
                     return wrapper
                 return decorator
-            
+
             # Cost tracking
             class CostTracker:
                 def __init__(self):
@@ -2507,14 +2507,14 @@ phases:
                         "estimated_cost_usd",
                         description="Estimated cost in USD"
                     )
-                    
+
                 async def track_modal_invocation(self, cpu_hours: float, memory_gb_hours: float):
                     # Modal pricing (example rates)
                     cpu_cost = cpu_hours * 0.00001  # $0.00001 per CPU millisecond
                     memory_cost = memory_gb_hours * 0.0000015  # $0.0000015 per GB millisecond
-                    
+
                     total_cost = cpu_cost + memory_cost
-                    
+
                     self.cost_meter.add(
                         total_cost,
                         {
@@ -2522,7 +2522,7 @@ phases:
                             "resource": "compute"
                         }
                     )
-                
+
                 async def track_claude_api_usage(self, model: str, input_tokens: int, output_tokens: int):
                     # Claude pricing per 1K tokens (example rates)
                     rates = {
@@ -2530,10 +2530,10 @@ phases:
                         "claude-3-sonnet": {"input": 0.003, "output": 0.015},
                         "claude-3-haiku": {"input": 0.00025, "output": 0.00125}
                     }
-                    
+
                     rate = rates.get(model, rates["claude-3-sonnet"])
                     cost = (input_tokens * rate["input"] + output_tokens * rate["output"]) / 1000
-                    
+
                     self.cost_meter.add(
                         cost,
                         {
@@ -2542,7 +2542,7 @@ phases:
                             "operation": "chat"
                         }
                     )
-            
+
             # Grafana dashboard config (as code)
             dashboard_config = {
                 "title": "Modal OAuth Workflow Dashboard",
@@ -2662,7 +2662,7 @@ success_metrics:
     target: 70
     unit: percent
     description: "Cost reduction per issue resolved"
-    
+
     # Detailed cost breakdown:
     # Current manual approach: ~$25/issue (30 min dev time @ $50/hr)
     # Autonomous pipeline target: ~$7.50/issue
@@ -2702,7 +2702,7 @@ config:
     refresh_interval_hours: 4
     token_endpoint: "https://api.anthropic.com/oauth/token"
     authorization_endpoint: "https://api.anthropic.com/oauth/authorize"
-    
+
     # Security constraints
     security:
       storage_backend: "os_keychain"  # Never file-based storage
@@ -2710,7 +2710,7 @@ config:
       audit_logging: true
       token_rotation_enabled: true
       max_token_lifetime_hours: 24
-      
+
     # Validation schema
     validation:
       require_https: true
@@ -2718,7 +2718,7 @@ config:
       allowed_redirect_uris:
         - "https://modal.com/oauth/callback"
         - "http://localhost:8080/oauth/callback"  # Development only
-      
+
     # Error handling
     error_handling:
       max_refresh_attempts: 3
@@ -2740,7 +2740,7 @@ config:
       max_memory_gb: 16
       gpu_enabled: true
       gpu_type: "T4"
-    
+
     cost_controls:
       daily_budget_usd: 100
       per_issue_budget_usd: 5

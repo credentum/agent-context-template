@@ -62,21 +62,21 @@ These systems don't communicate, causing the WorkflowEnforcer to reject phase ex
 - [x] **Breaking change assessment** (ensure existing workflows continue to work)
 
 ## Pre-Execution Context
-**Key Files**: 
+**Key Files**:
 - `scripts/workflow_phase_runner.py` - Phase execution orchestrator
 - `scripts/workflow_enforcer.py` - Phase validation and state tracking
 - `scripts/workflow_cli.py` - CLI interface that connects them
 - `scripts/agent_hooks.py` - Pre/post phase hooks
 
-**External Dependencies**: 
+**External Dependencies**:
 - JSON state files
 - WorkflowConfig constants
 
-**Configuration**: 
+**Configuration**:
 - PHASE_TIMEOUT_SECONDS = 90
 - State file locations
 
-**Related Issues/PRs**: 
+**Related Issues/PRs**:
 - Discovered during #1702 workflow execution
 - Affects all workflow-issue --hybrid executions
 

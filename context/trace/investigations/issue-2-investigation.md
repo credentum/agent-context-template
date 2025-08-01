@@ -2,7 +2,7 @@
 
 **Date**: 2025-08-01T15:54:30.517502
 **Title**: Switch GitHub Actions to OAuth authentication
-**Labels**: 
+**Labels**:
 
 ## Analysis
 

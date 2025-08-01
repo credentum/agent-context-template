@@ -7,7 +7,7 @@ echo "🔧 Setting up autonomous PR environment..."
 # Fix authentication issues
 if [[ -n "$GITHUB_TOKEN" && "$GITHUB_TOKEN" == ghu_* ]]; then
     echo "⚠️  Detected codespace token - configuring for autonomous PR creation"
-    
+
     # Don't unset here, but add warning to profile
     echo 'export AUTONOMOUS_PR_WARNING="Warning: Use unset GITHUB_TOKEN before creating PRs"' >> ~/.bashrc
 fi

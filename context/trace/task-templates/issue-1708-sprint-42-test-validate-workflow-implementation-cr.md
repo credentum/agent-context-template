@@ -72,7 +72,7 @@ After workflow completion, we will manually verify:
 - [x] **Breaking change assessment** (no breaking changes, new utilities only)
 
 ## Pre-Execution Context
-**Key Files**: 
+**Key Files**:
 - `scripts/workflow_executor.py` (reference for implementation)
 - `scripts/workflow_test_utils.py` (to be created)
 - `tests/test_workflow_test_utils.py` (to be created)
@@ -83,7 +83,7 @@ After workflow completion, we will manually verify:
 
 **Configuration**: None required
 
-**Related Issues/PRs**: 
+**Related Issues/PRs**:
 - #1706 (workflow implementation fix)
 - #1694 (previous test that exposed the bug)
 - #1697 (PR that only created docs instead of code)
@@ -95,7 +95,7 @@ After workflow completion, we will manually verify:
 def validate_implementation_phase(issue_number: int) -> bool:
     """
     Check if the implementation phase created actual code changes.
-    
+
     Returns True if:
     - Code files (not just docs) were modified
     - Commits contain actual implementation
@@ -105,7 +105,7 @@ def validate_implementation_phase(issue_number: int) -> bool:
 def count_code_commits(branch_name: str) -> int:
     """
     Count commits that modified actual code files.
-    
+
     Excludes commits that only touch:
     - Documentation (*.md)
     - Context files
@@ -115,7 +115,7 @@ def count_code_commits(branch_name: str) -> int:
 def verify_task_completion(task_template_path: Path) -> Dict[str, bool]:
     """
     Parse task template and verify each acceptance criterion.
-    
+
     Returns dict mapping each criterion to completion status.
     """
 ```

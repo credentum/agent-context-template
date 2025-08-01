@@ -35,7 +35,7 @@ find . -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" \) -exec md5sum {
 
 Priority Assignment for Duplicates:
 - P1: Core business logic or model duplication
-- P2: Service/utility function duplication  
+- P2: Service/utility function duplication
 - P3: Test files or configuration duplication
 
 ### 2.2 Unnecessary Abstraction Layers
@@ -153,7 +153,7 @@ Estimated effort: [1-8 points based on complexity]
 ## Implementation Notes
 ### Issue Details
 **Category**: [duplicate|abstraction|circular|boundary|overlap]
-**Affected Files**: 
+**Affected Files**:
 - `path/to/file1.py`
 - `path/to/file2.py`
 
@@ -201,7 +201,7 @@ cat > architecture-analysis-summary.md << 'EOF'
 
 ## Issues Found by Category
 - Duplicate Code: X issues
-- Unnecessary Abstractions: Y issues  
+- Unnecessary Abstractions: Y issues
 - Circular Dependencies: Z issues
 - Poor Module Boundaries: A issues
 - Overlapping Functionality: B issues
@@ -239,7 +239,7 @@ gh issue create \
   --label "P1,architecture,technical-debt,duplicate" \
   --body "..."
 
-# Circular dependency issue  
+# Circular dependency issue
 gh issue create \
   --title "[ARCH] [P0]: Circular dependency between models.user and services.auth" \
   --label "P0,architecture,technical-debt,circular" \

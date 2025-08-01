@@ -53,21 +53,21 @@ During CI execution in Docker containers, pre-commit hooks fail with read-only f
 - [x] **Breaking change assessment** (No breaking changes, only CI improvements)
 
 ## Pre-Execution Context
-**Key Files**: 
+**Key Files**:
 - `docker-compose.ci.yml` - Docker CI service configurations
 - `Dockerfile.ci` - CI container image definition
 - `scripts/run-ci-docker.sh` - CI runner script
 - `.pre-commit-config.yaml` - Pre-commit hook configuration
 
-**External Dependencies**: 
+**External Dependencies**:
 - Docker volume mounts
 - Pre-commit framework
 
-**Configuration**: 
+**Configuration**:
 - Volume mount permissions in docker-compose.ci.yml
 - Pre-commit hook configurations
 
-**Related Issues/PRs**: 
+**Related Issues/PRs**:
 - This issue discovered during workflow-issue --hybrid for issue 993
 - Affects all CI runs in Docker environment
 

@@ -20,7 +20,7 @@ create-pr --repo credentum/context-store --title "feat: New feature" --body "Des
 
 ### Issue 1: Authentication Override
 **Problem**: `GITHUB_TOKEN` environment variable (codespace token) overrides personal access token
-**Symptoms**: 
+**Symptoms**:
 - `gh pr create` fails with "Resource not accessible by integration"
 - API calls return "Bad credentials" despite valid token
 
@@ -32,7 +32,7 @@ unset GITHUB_TOKEN  # Clear the environment variable
 
 ### Issue 2: Branch History Mismatch
 **Problem**: Branch created with unrelated history (no common ancestor with main)
-**Symptoms**: 
+**Symptoms**:
 - Error: "branch has no history in common with main"
 
 **Solution**:
@@ -45,7 +45,7 @@ git checkout -b feature/new-branch
 
 ### Issue 3: GraphQL vs REST API
 **Problem**: GitHub CLI GraphQL endpoint treats requests as "integration"
-**Symptoms**: 
+**Symptoms**:
 - "Resource not accessible by integration" error
 - Works for git operations but not PR creation
 

@@ -421,18 +421,18 @@ jobs:
 
           # Determine if we have corrected YAML or need to parse raw response
           format_corrected = "${{ env.FORMAT_CORRECTED }}" == "true"
-          
+
           if format_corrected:
               # Parse from corrected YAML
               try:
                   with open('corrected_review.yaml', 'r') as f:
                       data = yaml.safe_load(f)
-                  
+
                   # Extract key fields for status check
                   verdict = data.get('verdict', 'UNKNOWN')
                   has_blockers = bool(data.get('issues', {}).get('blocking', []))
                   coverage_pct = data.get('coverage', {}).get('current_pct', 0)
-                  
+
                   review_json = {
                       "verdict": verdict,
                       "has_blockers": has_blockers,
@@ -449,7 +449,7 @@ jobs:
           else:
               # Fallback: try to parse from raw response
               review_text = sys.argv[1] if len(sys.argv) > 1 else ""
-              
+
               # Try to extract verdict from YAML format first
               verdict_yaml_match = re.search(r'verdict:\s*["\'"]?(APPROVE|REQUEST[_ ]CHANGES)["\'"]?', review_text)
               if verdict_yaml_match:
@@ -458,10 +458,10 @@ jobs:
                   # Fallback to markdown format
                   verdict_match = re.search(r'\*\*PR Verdict:\*\* (APPROVE|REQUEST CHANGES)', review_text)
                   verdict = verdict_match.group(1) if verdict_match else "UNKNOWN"
-              
+
               # Check for blocking issues
               has_blockers = 'blocking:' in review_text and not re.search(r'blocking:\s*\[\]', review_text)
-              
+
               review_json = {
                   "verdict": verdict,
                   "has_blockers": has_blockers,
@@ -641,21 +641,21 @@ jobs:
                 // Strategy 0: Try to parse YAML format (for corrected format)
                 if (formatCorrected) {
                   console.log('🔍 Parsing YAML format using regex...');
-                  
+
                   // Regex parsing for YAML automated_issues
                   const automatedIssuesMatch = text.match(/automated_issues:\s*\n((?:\s*-[\s\S]*?(?=\n\w|\n$))*)/);
                   if (automatedIssuesMatch) {
                     const yamlList = automatedIssuesMatch[1];
                     const issues = [];
-                    
+
                     // Split by issue entries (lines starting with -)
                     const issueMatches = yamlList.matchAll(/^\s*-\s*([\s\S]*?)(?=^\s*-|\s*$)/gm);
-                    
+
                     for (const match of issueMatches) {
                       const block = match[1];
                       if (block.trim()) {
                         const issue = {};
-                        
+
                         // Extract fields with multiline support
                         const titleMatch = block.match(/title:\s*["']?(.*?)["']?\s*(?=\n|$)/);
                         const descMatch = block.match(/description:\s*["']?([\s\S]*?)["']?\s*(?=\n\s*\w+:|$)/);

@@ -63,7 +63,7 @@ if [ -d ".git" ]; then
     cp -r .git/HEAD "$OVERLAY_DIR/.git/HEAD" 2>/dev/null || true
     cp -r .git/refs "$OVERLAY_DIR/.git/refs" 2>/dev/null || true
     cp -r .git/objects "$OVERLAY_DIR/.git/objects" 2>/dev/null || true
-    
+
     # Create a minimal gitconfig if needed
     if [ ! -f "$OVERLAY_DIR/.git/config" ]; then
         echo "[core]" > "$OVERLAY_DIR/.git/config"

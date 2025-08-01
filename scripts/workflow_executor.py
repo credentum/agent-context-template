@@ -1504,7 +1504,7 @@ Manual implementation required following the task template.
             # Filter out documentation files
             doc_extensions = {".md", ".txt", ".rst", ".adoc", ".org", ".html", ".htm"}
             doc_directories = {"docs/", "documentation/", "doc/", "context/trace/"}
-            code_changes = []
+            modified_code_files = []
 
             for file_path in changed_files:
                 if file_path:  # Skip empty lines
@@ -1516,14 +1516,14 @@ Manual implementation required following the task template.
                     )
 
                     if not (is_doc_by_ext or is_doc_by_dir):
-                        code_changes.append(file_path)
+                        modified_code_files.append(file_path)
 
-            print(f"📄 Code files changed: {code_changes}")
+            print(f"📄 Code files changed: {modified_code_files}")
             print(
-                f"📊 Total changed files: {len(changed_files)}, Code changes: {len(code_changes)}"
+                f"📊 Total changed files: {len(changed_files)}, Code changes: {len(modified_code_files)}"
             )
 
-            return len(code_changes) > 0
+            return len(modified_code_files) > 0
 
         except subprocess.TimeoutExpired:
             print("❌ Error: Git diff command timed out")
