@@ -1,9 +1,13 @@
 ---
 ###############################################################################
 # 🛠️  Enhanced GitHub Workflow — Claude Code Review (Agent-First, ARC-Reviewer)
-# Version: 2025-07-16 with comment format consistency improvements
+# Version: 2025-08-01 with automated_issues extraction and status check fixes
 #
 # Recent improvements:
+# - Fixed automated_issues extraction from YAML format in Create Automation Comment
+# - Added robust regex parsing for YAML automated_issues field
+# - Fixed verdict parsing to properly extract from YAML format for status checks
+# - Updated blocking issues check to use parsed verdict instead of text search
 # - Added explicit formatting instructions to direct_prompt
 # - Added comment format validation step
 # - Ensured consistent YAML structure across review iterations
@@ -412,46 +416,63 @@ jobs:
           cat > parse_review.py << 'EOF'
           import sys
           import json
+          import yaml
           import re
 
-          # Read review content from file
-          try:
-              with open('review.txt', 'r') as f:
-                  review_text = f.read()
-          except FileNotFoundError:
+          # Determine if we have corrected YAML or need to parse raw response
+          format_corrected = "${{ env.FORMAT_CORRECTED }}" == "true"
+          
+          if format_corrected:
+              # Parse from corrected YAML
+              try:
+                  with open('corrected_review.yaml', 'r') as f:
+                      data = yaml.safe_load(f)
+                  
+                  # Extract key fields for status check
+                  verdict = data.get('verdict', 'UNKNOWN')
+                  has_blockers = bool(data.get('issues', {}).get('blocking', []))
+                  coverage_pct = data.get('coverage', {}).get('current_pct', 0)
+                  
+                  review_json = {
+                      "verdict": verdict,
+                      "has_blockers": has_blockers,
+                      "coverage_pct": coverage_pct,
+                      "yaml_data": data
+                  }
+              except Exception as e:
+                  print(f"Error parsing YAML: {e}", file=sys.stderr)
+                  review_json = {
+                      "verdict": "UNKNOWN",
+                      "has_blockers": False,
+                      "coverage_pct": float(sys.argv[2]) if len(sys.argv) > 2 else 0
+                  }
+          else:
+              # Fallback: try to parse from raw response
               review_text = sys.argv[1] if len(sys.argv) > 1 else ""
-
-          # Parse structured review
-          verdict_match = re.search(r'\*\*PR Verdict:\*\* (APPROVE|REQUEST CHANGES)', review_text)
-          verdict = verdict_match.group(1) if verdict_match else "UNKNOWN"
-
-          # Extract sections
-          blocking = re.findall(r'(?<=Blocking Issues \(❌\):)(.*?)(?=\*\*|$)', review_text, re.DOTALL)
-          warnings = re.findall(r'(?<=Warnings \(⚠️\):)(.*?)(?=\*\*|$)', review_text, re.DOTALL)
-          nits = re.findall(r'(?<=Nits \(💡\):)(.*?)(?=\*\*|$)', review_text, re.DOTALL)
-          followups = re.findall(r'(?<=Suggested Follow-ups:)(.*?)(?=End of report|$)', review_text, re.DOTALL)
-
-          review_json = {
-              "verdict": verdict,
-              "has_blockers": bool(blocking and blocking[0].strip()),
-              "coverage_pct": float(sys.argv[2]) if len(sys.argv) > 2 else None,
-              "sections": {
-                  "blocking": blocking[0].strip() if blocking else "",
-                  "warnings": warnings[0].strip() if warnings else "",
-                  "nits": nits[0].strip() if nits else "",
-                  "followups": followups[0].strip() if followups else ""
+              
+              # Try to extract verdict from YAML format first
+              verdict_yaml_match = re.search(r'verdict:\s*["\'"]?(APPROVE|REQUEST[_ ]CHANGES)["\'"]?', review_text)
+              if verdict_yaml_match:
+                  verdict = verdict_yaml_match.group(1).replace('_', ' ')
+              else:
+                  # Fallback to markdown format
+                  verdict_match = re.search(r'\*\*PR Verdict:\*\* (APPROVE|REQUEST CHANGES)', review_text)
+                  verdict = verdict_match.group(1) if verdict_match else "UNKNOWN"
+              
+              # Check for blocking issues
+              has_blockers = 'blocking:' in review_text and not re.search(r'blocking:\s*\[\]', review_text)
+              
+              review_json = {
+                  "verdict": verdict,
+                  "has_blockers": has_blockers,
+                  "coverage_pct": float(sys.argv[2]) if len(sys.argv) > 2 else 0
               }
-          }
 
           print(json.dumps(review_json, indent=2))
           EOF
 
-          # Use review.txt if available, otherwise fallback to action output
-          if [ -f review.txt ]; then
-            python parse_review.py "" "${COVERAGE_PCT:-0}" > review.json
-          else
-            python parse_review.py "${{ steps.claude-review.outputs.response }}" "${COVERAGE_PCT:-0}" > review.json
-          fi
+          # Run the parser
+          python parse_review.py "${{ steps.claude-review.outputs.response }}" "${COVERAGE_PCT:-0}" > review.json
 
           # Store parsed review for downstream steps
           echo "REVIEW_JSON<<EOF" >> $GITHUB_ENV
@@ -617,55 +638,69 @@ jobs:
             // ROBUST: Extract automation data from both YAML and JSON formats
             function extractAutomationData(text) {
               try {
-                // Strategy 1: If we have corrected YAML format, extract automated_issues field
+                // Strategy 0: Try to parse YAML format (for corrected format)
                 if (formatCorrected) {
-                  console.log('🔍 Parsing corrected YAML format...');
-                  const automatedIssuesMatch = text.match(/automated_issues:\s*\n((?:\s*-[\s\S]*?(?=\n\S|\n$))*)/);
+                  console.log('🔍 Parsing YAML format using regex...');
+                  
+                  // Regex parsing for YAML automated_issues
+                  const automatedIssuesMatch = text.match(/automated_issues:\s*\n((?:\s*-[\s\S]*?(?=\n\w|\n$))*)/);
                   if (automatedIssuesMatch) {
-                    // Convert YAML list to simple structure for processing
                     const yamlList = automatedIssuesMatch[1];
                     const issues = [];
-                    const issueBlocks = yamlList.split(/\n\s*-\s*(?=\w)/);
-
-                    for (let block of issueBlocks) {
+                    
+                    // Split by issue entries (lines starting with -)
+                    const issueMatches = yamlList.matchAll(/^\s*-\s*([\s\S]*?)(?=^\s*-|\s*$)/gm);
+                    
+                    for (const match of issueMatches) {
+                      const block = match[1];
                       if (block.trim()) {
                         const issue = {};
-                        const titleMatch = block.match(/title:\s*["']?(.*?)["']?\s*$/m);
-                        const descMatch = block.match(/description:\s*["']?(.*?)["']?\s*$/m);
+                        
+                        // Extract fields with multiline support
+                        const titleMatch = block.match(/title:\s*["']?(.*?)["']?\s*(?=\n|$)/);
+                        const descMatch = block.match(/description:\s*["']?([\s\S]*?)["']?\s*(?=\n\s*\w+:|$)/);
                         const labelsMatch = block.match(/labels:\s*\[(.*?)\]/);
-                        const phaseMatch = block.match(/phase:\s*["']?(.*?)["']?\s*$/m);
+                        const phaseMatch = block.match(/phase:\s*["']?(.*?)["']?\s*(?=\n|$)/);
+                        const priorityMatch = block.match(/priority:\s*["']?(.*?)["']?\s*(?=\n|$)/);
+                        const categoryMatch = block.match(/category:\s*["']?(.*?)["']?\s*(?=\n|$)/);
 
-                        if (titleMatch) issue.title = titleMatch[1];
-                        if (descMatch) issue.description = descMatch[1];
-                        if (labelsMatch) issue.labels = labelsMatch[1].split(',').map(l => l.trim().replace(/["']/g, ''));
-                        if (phaseMatch) issue.phase = phaseMatch[1];
+                        if (titleMatch) issue.title = titleMatch[1].trim();
+                        if (descMatch) issue.description = descMatch[1].trim();
+                        if (labelsMatch) {
+                          issue.labels = labelsMatch[1].split(',').map(l => l.trim().replace(/["']/g, ''));
+                        }
+                        if (phaseMatch) issue.phase = phaseMatch[1].trim();
+                        if (priorityMatch) issue.priority = priorityMatch[1].trim();
+                        if (categoryMatch) issue.category = categoryMatch[1].trim();
 
-                        if (issue.title) issues.push(issue);
+                        if (issue.title) {
+                          issues.push(issue);
+                        }
                       }
                     }
 
                     if (issues.length > 0) {
-                      console.log(`✅ Found ${issues.length} automated_issues in YAML format`);
+                      console.log(`✅ Found ${issues.length} automated_issues via regex parsing`);
                       return { automated_issues: issues };
                     }
                   }
                 }
 
-                // Strategy 2: Look for JSON blocks
+                // Strategy 1: Look for JSON blocks
                 let match = text.match(/```json\s*(\{[\s\S]*?"automated_issues"[\s\S]*?\})\s*```/);
                 if (match) {
                   console.log('✅ Found JSON block with automated_issues');
                   return JSON.parse(match[1]);
                 }
 
-                // Strategy 3: Handle escaped JSON
+                // Strategy 2: Handle escaped JSON
                 match = text.match(/```json\s*(\{[^`]*"automated_issues"[^`]*\})\s*```/);
                 if (match) {
                   console.log('✅ Found escaped JSON with automated_issues');
                   return JSON.parse(match[1]);
                 }
 
-                // Strategy 4: Find JSON object with automated_issues anywhere
+                // Strategy 3: Find JSON object with automated_issues anywhere
                 match = text.match(/(\{[^{}]*"automated_issues"[^{}]*\})/);
                 if (match) {
                   console.log('✅ Found JSON object with automated_issues');
@@ -753,12 +788,14 @@ jobs:
       # ---------- Block pipeline on blocking issues or coverage regression ----------
       - name: Check for Blocking Issues
         if: |
-          contains(steps.claude-review.outputs.response, 'REQUEST CHANGES') ||
-          contains(steps.claude-review.outputs.response, 'Blocking Issues (❌):') ||
+          fromJson(env.REVIEW_JSON).verdict == 'REQUEST CHANGES' ||
+          fromJson(env.REVIEW_JSON).verdict == 'REQUEST_CHANGES' ||
+          fromJson(env.REVIEW_JSON).has_blockers == true ||
           env.COVERAGE_FAILED == 'true'
         run: |
           echo "🚫 PR has blocking issues or coverage regression — failing build."
           echo "Review verdict: ${{ fromJson(env.REVIEW_JSON).verdict }}"
+          echo "Has blockers: ${{ fromJson(env.REVIEW_JSON).has_blockers }}"
           echo "Coverage: ${{ env.COVERAGE_PCT }}% (minimum: ${{ env.COVERAGE_BASELINE }}%)"
           exit 1
 
