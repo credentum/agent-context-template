@@ -58,9 +58,23 @@ done
 # Create .git directory structure for pre-commit
 mkdir -p "$OVERLAY_DIR/.git"
 if [ -d ".git" ]; then
-    # Link git config files
-    ln -s "$(pwd)/.git/config" "$OVERLAY_DIR/.git/config" 2>/dev/null || true
-    ln -s "$(pwd)/.git/HEAD" "$OVERLAY_DIR/.git/HEAD" 2>/dev/null || true
+    # Copy essential git files for pre-commit to work
+    cp -r .git/config "$OVERLAY_DIR/.git/config" 2>/dev/null || true
+    cp -r .git/HEAD "$OVERLAY_DIR/.git/HEAD" 2>/dev/null || true
+    cp -r .git/refs "$OVERLAY_DIR/.git/refs" 2>/dev/null || true
+    cp -r .git/objects "$OVERLAY_DIR/.git/objects" 2>/dev/null || true
+    
+    # Create a minimal gitconfig if needed
+    if [ ! -f "$OVERLAY_DIR/.git/config" ]; then
+        echo "[core]" > "$OVERLAY_DIR/.git/config"
+        echo "    repositoryformatversion = 0" >> "$OVERLAY_DIR/.git/config"
+        echo "    filemode = true" >> "$OVERLAY_DIR/.git/config"
+    fi
+else
+    # If no git directory, create a minimal one
+    cd "$OVERLAY_DIR"
+    git init --quiet
+    cd - >/dev/null
 fi
 
 echo -e "${GREEN}✓ Overlay setup complete${NC}"

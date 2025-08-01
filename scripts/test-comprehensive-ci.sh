@@ -108,7 +108,7 @@ echo -e "\n${YELLOW}📋 1. PRE-COMMIT HOOKS (PRIORITY)${NC}"
 echo "==================================="
 echo "Running pre-commit first as it includes Black, isort, and other checks..."
 
-run_check "Pre-commit checks" "/bin/bash scripts/run-precommit-with-overlay.sh" "false" "Run 'pre-commit run --all-files' locally and fix issues" "2-3 min"
+run_check "Pre-commit checks" "/bin/bash scripts/run-precommit-ci-safe.sh" "false" "Run 'pre-commit run --all-files' locally and fix issues" "2-3 min"
 
 # 2. INDIVIDUAL LINT CHECKS (for detailed error reporting)
 echo -e "\n${YELLOW}📋 2. INDIVIDUAL LINT CHECKS${NC}"

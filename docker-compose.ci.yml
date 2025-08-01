@@ -413,7 +413,7 @@ services:
       - PYTHONUNBUFFERED=1
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
-    command: /bin/bash scripts/run-precommit-with-overlay.sh
+    command: /bin/bash scripts/run-precommit-ci-safe.sh
     stop_signal: SIGTERM
     stop_grace_period: 120s
 
