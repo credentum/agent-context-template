@@ -18,7 +18,10 @@
 ## 🛠️ Subtasks
 | File | Action | Prompt Tech | Purpose | Context Impact |
 |------|--------|-------------|---------|----------------|
-| TBD | TBD | TBD | TBD | TBD |
+| scripts/run-precommit-ci-safe.sh | create | Direct implementation | CI-safe pre-commit runner | Low |
+| docker-compose.ci.yml | modify | Pattern matching | Update pre-commit service command | Low |
+| scripts/test-comprehensive-ci.sh | modify | Pattern matching | Use CI-safe script | Low |
+| scripts/test-quick-ci.sh | modify | Pattern matching | Use CI-safe script | Low |
 
 ## 📝 Issue Description
 ## Task Context
