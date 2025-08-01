@@ -132,19 +132,20 @@ class TestWorkflowPipelineE2E:
         # Create workflow artifacts
         task_template_dir = temp_repo / "context" / "trace" / "task-templates"
         task_template_dir.mkdir(parents=True, exist_ok=True)
-        
+
         scratchpad_dir = temp_repo / "context" / "trace" / "scratchpad"
         scratchpad_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Create sample artifacts
         (task_template_dir / "issue-9999-test.md").write_text("# Task Template")
         (scratchpad_dir / "2024-01-01-issue-9999-test.md").write_text("# Scratchpad")
         (temp_repo / ".workflow-state-9999.json").write_text('{"issue_number": 9999}')
-        
+
         # Verify artifacts
         from src.utils.workflow_test_utils import verify_workflow_artifacts
+
         results = verify_workflow_artifacts(temp_repo, 9999)
-        
+
         assert results["context/trace/task-templates/issue-9999-*.md"]
         assert results["context/trace/scratchpad/*-issue-9999-*.md"]
         assert results[".workflow-state-*.json"]
@@ -152,7 +153,7 @@ class TestWorkflowPipelineE2E:
     def test_workflow_phase_outputs(self):
         """Test that phase outputs are validated correctly."""
         from src.utils.workflow_test_utils import verify_workflow_phase_outputs
-        
+
         # Test valid outputs
         valid_outputs = {
             "branch_created": True,
@@ -160,7 +161,7 @@ class TestWorkflowPipelineE2E:
             "implementation_complete": True,
         }
         assert verify_workflow_phase_outputs("implementation", valid_outputs)
-        
+
         # Test invalid outputs (missing required field)
         invalid_outputs = {
             "branch_created": True,
@@ -185,7 +186,7 @@ def test_goodbye():
     assert goodbye() == 'Goodbye, World!'
 """
         (repo_path / "tests" / "test_example.py").write_text(test_content)
-        
+
         # Commit changes
         os.system(f"cd {repo_path} && git add . && git commit -m 'feat: add goodbye function' -q")
 
@@ -211,8 +212,10 @@ def test_subtract():
     assert subtract(0, 5) == -5
 """
         (repo_path / "tests" / "test_calculator.py").write_text(test_content)
-        
-        os.system(f"cd {repo_path} && git add . && git commit -m 'feat: create calculator module' -q")
+
+        os.system(
+            f"cd {repo_path} && git add . && git commit -m 'feat: create calculator module' -q"
+        )
 
     def _simulate_bug_fix(self, repo_path: Path):
         """Simulate fixing a bug."""
@@ -223,7 +226,7 @@ def test_subtract():
     return a / b
 """
         (repo_path / "src" / "math_utils.py").write_text(fixed_code)
-        
+
         test_content = """import pytest
 from src.math_utils import divide
 
@@ -233,8 +236,10 @@ def test_divide():
     assert divide(10, 0) is None  # Zero division returns None
 """
         (repo_path / "tests" / "test_math_utils.py").write_text(test_content)
-        
-        os.system(f"cd {repo_path} && git add . && git commit -m 'fix: handle zero division in divide function' -q")
+
+        os.system(
+            f"cd {repo_path} && git add . && git commit -m 'fix: handle zero division in divide function' -q"
+        )
 
     def _simulate_documentation_only(self, repo_path: Path):
         """Simulate documentation-only changes (the bug)."""
@@ -242,7 +247,9 @@ def test_divide():
         doc_content = "# Documentation for logging feature"
         (repo_path / "docs").mkdir(exist_ok=True)
         (repo_path / "docs" / "logging.md").write_text(doc_content)
-        os.system(f"cd {repo_path} && git add . && git commit -m 'docs: add logging documentation' -q")
+        os.system(
+            f"cd {repo_path} && git add . && git commit -m 'docs: add logging documentation' -q"
+        )
 
     def _simulate_code_modification(self, repo_path: Path):
         """Simulate modifying existing code."""
@@ -255,7 +262,9 @@ def test_divide():
     return data.upper()
 """
         (repo_path / "src" / "processor.py").write_text(modified_code)
-        os.system(f"cd {repo_path} && git add . && git commit -m 'fix: handle None values in processor' -q")
+        os.system(
+            f"cd {repo_path} && git add . && git commit -m 'fix: handle None values in processor' -q"
+        )
 
 
 # Verification helper functions
@@ -282,10 +291,12 @@ def assert_commits_contain_code_changes(repo_path: Path):
     """Verify real commits made with code changes."""
     # Get list of commits
     result = os.popen(f"cd {repo_path} && git log --oneline").read()
-    commits = result.strip().split('\n')
-    
+    commits = result.strip().split("\n")
+
     # Check for code commits (not just docs)
-    code_commits = [c for c in commits if not c.startswith(('docs:', 'chore:')) and 'Initial commit' not in c]
+    code_commits = [
+        c for c in commits if not c.startswith(("docs:", "chore:")) and "Initial commit" not in c
+    ]
     assert len(code_commits) > 0, "No code commits found"
 
 
@@ -293,14 +304,16 @@ def assert_no_documentation_only_implementation(repo_path: Path):
     """Catch the #1706 bug - ensure not just documentation."""
     # Check git diff for latest commit
     result = os.popen(f"cd {repo_path} && git diff HEAD~1 --name-only").read()
-    changed_files = result.strip().split('\n')
-    
+    changed_files = result.strip().split("\n")
+
     # Check if any code files were changed
-    code_extensions = {'.py', '.js', '.ts', '.java', '.go', '.rs', '.cpp', '.c'}
+    code_extensions = {".py", ".js", ".ts", ".java", ".go", ".rs", ".cpp", ".c"}
     code_files = [f for f in changed_files if any(f.endswith(ext) for ext in code_extensions)]
-    
+
     if not code_files:
         # Check if only docs/config files were changed
-        doc_patterns = ['docs/', '.md', '.txt', '.yml', '.yaml', '.json', 'context/']
+        doc_patterns = ["docs/", ".md", ".txt", ".yml", ".yaml", ".json", "context/"]
         if all(any(pattern in f for pattern in doc_patterns) for f in changed_files):
-            raise AssertionError("No code changes detected - only documentation files were modified!")
+            raise AssertionError(
+                "No code changes detected - only documentation files were modified!"
+            )
