@@ -17,7 +17,7 @@ services:
     image: agent-context-ci:latest
     container_name: ci-lint-runner
     volumes:
-      # Mount source code for real-time changes (read-only)
+      # Mount source code for real-time changes
       - ./src:/app/src
       - ./tests:/app/tests
       - ./scripts:/app/scripts
@@ -413,7 +413,7 @@ services:
       - PYTHONUNBUFFERED=1
       - CACHE_VERSION=v2025-07-16
       - PYTHON_VERSION=3.11
-    command: pre-commit run --all-files
+    command: /bin/bash scripts/run-precommit-with-overlay.sh
     stop_signal: SIGTERM
     stop_grace_period: 120s
 
