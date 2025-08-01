@@ -25,7 +25,7 @@ class TestPhaseRunner(unittest.TestCase):
     def tearDown(self):
         """Clean up test files."""
         # Clean up any test state files
-        state_file = Path(f".workflow-phase-state-{self.issue_number}.json")
+        state_file = Path(f".workflow-state-{self.issue_number}.json")
         if state_file.exists():
             state_file.unlink()
 
@@ -35,7 +35,7 @@ class TestPhaseRunner(unittest.TestCase):
         self.assertFalse(self.runner.hybrid)
         self.assertEqual(self.runner.completed_phases, [])
         self.assertEqual(
-            self.runner.state_file, Path(f".workflow-phase-state-{self.issue_number}.json")
+            self.runner.state_file, Path(f".workflow-state-{self.issue_number}.json")
         )
 
     def test_init_hybrid(self):
