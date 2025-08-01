@@ -17,6 +17,14 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
+# Import workflow configuration
+try:
+    from workflow_config import WorkflowConfig
+    COVERAGE_BASELINE = WorkflowConfig.COVERAGE_BASELINE
+except ImportError:
+    # Fallback if workflow_config is not available
+    COVERAGE_BASELINE = 78.0
+
 
 @dataclass
 class PhaseState:
@@ -101,7 +109,7 @@ class WorkflowEnforcer:
                     },
                     "validation": {
                         "required_outputs": ["tests_run", "ci_passed", "coverage_maintained"],
-                        "min_coverage": 71.82,
+                        "min_coverage": COVERAGE_BASELINE,
                         "required_commands": [
                             "./scripts/run-ci-docker.sh",
                             "pre-commit run --all-files",
@@ -155,7 +163,7 @@ class WorkflowEnforcer:
             json.dump(self.state, f, indent=2)
 
     def enforce_phase_entry(
-        self, phase_name: str, agent_type: str
+        self, phase_name: str, agent_type: str, skip_phases: Optional[List[int]] = None
     ) -> Tuple[bool, str, Dict[str, Any]]:
         """
         Enforce requirements before entering a phase.
@@ -184,6 +192,23 @@ class WorkflowEnforcer:
             # Check if previous phases are completed (except investigation which can be skipped)
             for i in range(phase_idx):
                 prev_phase = self.PHASE_ORDER[i]
+
+                # If this phase index is in skip_phases, it means it was already completed
+                # in a previous workflow run (e.g., by PhaseRunner)
+                if skip_phases and i in skip_phases:
+                    # Mark the phase as completed if not already in state
+                    if prev_phase not in self.state["phases"]:
+                        self.state["phases"][prev_phase] = {
+                            "phase_name": prev_phase,
+                            "status": "completed",
+                            "started_at": datetime.now().isoformat(),
+                            "completed_at": datetime.now().isoformat(),
+                            "outputs": {"skipped_by_phase_runner": True},
+                            "errors": [],
+                            "agent_type": "phase-runner",
+                        }
+                    continue
+
                 if prev_phase == "investigation":
                     # Investigation can be skipped if scope is clear
                     continue
