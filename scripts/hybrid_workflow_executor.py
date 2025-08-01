@@ -257,17 +257,19 @@ class HybridWorkflowExecutor(WorkflowExecutor):
             futures = {}
             for agent_config in agents:
                 # Extract agent type from the config dict
-                agent_type = agent_config.get("type") if isinstance(agent_config, dict) else agent_config
-                
+                agent_type = (
+                    agent_config.get("type") if isinstance(agent_config, dict) else agent_config
+                )
+
                 # Extract config details for display
                 if isinstance(agent_config, dict):
                     desc = agent_config.get("description", agent_type)
-                    timeout = agent_config.get("timeout", self.specialist_timeout)
-                    capabilities = agent_config.get("capabilities", [])
+                    # timeout = agent_config.get("timeout", self.specialist_timeout)  # TODO: Use
+                    # capabilities = agent_config.get("capabilities", [])  # TODO: Use capabilities
                     print(f"    📤 Sending request to {agent_type}: {desc}...")
                 else:
                     print(f"    📤 Sending request to {agent_type}...")
-                
+
                 prompt = self._build_validation_prompt(agent_type, context)
                 future = executor.submit(self._consult_specialist, agent_type, prompt, context)
                 futures[future] = agent_type  # Use string type as key

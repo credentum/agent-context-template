@@ -41,7 +41,7 @@ class WorkflowExecutor:
     def _cleanup_test_environment(self) -> None:
         """Comprehensive cleanup of Docker containers, test processes, and resources."""
         print("  🧹 Cleaning up test environment...")
-        
+
         # Step 1: Kill all test-related processes aggressively
         test_processes_killed = 0
         try:
@@ -57,13 +57,13 @@ class WorkflowExecutor:
                         test_processes_killed += 1
                 except Exception:
                     pass
-            
+
             if test_processes_killed > 0:
                 print(f"    🔪 Killed {test_processes_killed} types of test processes")
-                
+
         except Exception as e:
             print(f"    ⚠️  Process cleanup had issues: {e}")
-        
+
         # Step 2: Stop ALL running Docker containers (not just project-specific)
         containers_stopped = 0
         try:
@@ -86,24 +86,24 @@ class WorkflowExecutor:
                         containers_stopped += 1
                     except Exception:
                         pass  # Some containers might already be stopping
-                        
+
                 if containers_stopped > 0:
                     print(f"    🐳 Stopped {containers_stopped} Docker containers")
-                    
+
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
             print(f"    ⚠️  Docker cleanup had issues: {e}")
-        
+
         # Step 3: Clean up Docker system resources
         try:
             subprocess.run(
                 ["docker", "system", "prune", "-f", "--volumes"],
                 capture_output=True,
-                timeout=30,
+                timeout=WorkflowConfig.GENERAL_TIMEOUT // 4,  # 30 seconds
             )
             print("    🗑️  Cleaned Docker system resources")
         except Exception as e:
             print(f"    ⚠️  Docker system prune failed: {e}")
-        
+
         # Step 4: Force kill any remaining coverage processes
         try:
             subprocess.run(
@@ -113,11 +113,11 @@ class WorkflowExecutor:
             )
         except Exception:
             pass
-        
+
         # Step 5: Extended wait for cleanup completion
         print("    ⏳ Waiting for cleanup to complete...")
         time.sleep(5)
-        
+
         # Step 6: Verify cleanup effectiveness
         remaining_processes = 0
         try:
@@ -127,10 +127,10 @@ class WorkflowExecutor:
                 timeout=5,
             )
             if result.returncode == 0:
-                remaining_processes = len(result.stdout.decode().strip().split('\n'))
+                remaining_processes = len(result.stdout.decode().strip().split("\n"))
         except Exception:
             pass
-            
+
         remaining_containers = 0
         try:
             result = subprocess.run(
@@ -140,44 +140,83 @@ class WorkflowExecutor:
                 timeout=5,
             )
             if result.returncode == 0 and result.stdout.strip():
-                remaining_containers = len(result.stdout.strip().split('\n'))
+                remaining_containers = len(result.stdout.strip().split("\n"))
         except Exception:
             pass
-        
+
         if remaining_processes > 0 or remaining_containers > 0:
-            print(f"    ⚠️  {remaining_processes} processes, {remaining_containers} containers still running")
+            print(
+                f"    ⚠️  {remaining_processes} processes, "
+                f"{remaining_containers} containers still running"
+            )
         else:
             print("    ✅ Environment fully cleaned")
-        
+
         print("    ✅ Test environment cleanup completed")
 
     def _extract_coverage_data(self, stdout_output: str) -> tuple[str, bool]:
         """Extract coverage percentage and maintenance status using multiple methods."""
         coverage_percentage = "unknown"
         coverage_maintained = False
-        
+
         # Ensure stdout_output is a string
         if isinstance(stdout_output, bytes):
-            stdout_output = stdout_output.decode('utf-8', errors='ignore')
-        
-        # Method 1: Try to read from JSON file (most reliable)
-        coverage_json_path = self.workspace_root / "test-artifacts" / "coverage.json"
-        if coverage_json_path.exists():
+            stdout_output = stdout_output.decode("utf-8", errors="ignore")
+
+        # Method 1: Try to read from pytest-generated JSON files (most reliable)
+        import json
+
+        # Check multiple possible locations for coverage JSON
+        coverage_json_paths = [
+            self.workspace_root / "coverage.json",  # Pytest default location
+            self.workspace_root / "test-artifacts" / "coverage.json",  # Workflow location
+        ]
+
+        for coverage_json_path in coverage_json_paths:
+            if coverage_json_path.exists():
+                try:
+                    with open(coverage_json_path, "r") as f:
+                        coverage_data = json.load(f)
+
+                    # Handle pytest-generated JSON format
+                    if "totals" in coverage_data:
+                        coverage_value = coverage_data["totals"]["percent_covered"]
+                        coverage_percentage = f"{coverage_value:.2f}%"
+                        coverage_maintained = coverage_value >= WorkflowConfig.COVERAGE_BASELINE
+                        print(
+                            f"    📊 Coverage from JSON ({coverage_json_path.name}): "
+                            f"{coverage_percentage}"
+                        )
+                        return coverage_percentage, coverage_maintained
+
+                    # Handle workflow-generated JSON format
+                    elif "percentage" in coverage_data and "maintained" in coverage_data:
+                        coverage_percentage = coverage_data["percentage"]
+                        coverage_maintained = coverage_data["maintained"]
+                        print(f"    📊 Coverage from workflow JSON: {coverage_percentage}")
+                        return coverage_percentage, coverage_maintained
+
+                except Exception as e:
+                    print(f"    ⚠️  Could not read coverage JSON ({coverage_json_path.name}): {e}")
+
+        # Method 1b: Try to read from XML file (fallback)
+        coverage_xml_path = self.workspace_root / "coverage.xml"
+        if coverage_xml_path.exists():
             try:
-                import json
-                with open(coverage_json_path, 'r') as f:
-                    coverage_data = json.load(f)
-                    
-                if 'totals' in coverage_data:
-                    coverage_value = coverage_data['totals']['percent_covered']
-                    coverage_percentage = f"{coverage_value:.2f}%"
-                    coverage_maintained = coverage_value >= WorkflowConfig.COVERAGE_BASELINE
-                    print(f"    📊 Coverage from JSON: {coverage_percentage}")
-                    return coverage_percentage, coverage_maintained
-                    
+                import xml.etree.ElementTree as ET
+
+                tree = ET.parse(coverage_xml_path)
+                root = tree.getroot()
+                line_rate = float(root.get("line-rate", 0))
+                coverage_value = line_rate * 100
+                coverage_percentage = f"{coverage_value:.2f}%"
+                coverage_maintained = coverage_value >= WorkflowConfig.COVERAGE_BASELINE
+                print(f"    📊 Coverage from XML: {coverage_percentage}")
+                return coverage_percentage, coverage_maintained
+
             except Exception as e:
-                print(f"    ⚠️  Could not read coverage JSON: {e}")
-        
+                print(f"    ⚠️  Could not read coverage XML: {e}")
+
         # Method 2: Parse pytest stdout format (fallback)
         try:
             for line in stdout_output.split("\n"):
@@ -191,10 +230,10 @@ class WorkflowExecutor:
                             coverage_maintained = coverage_value >= WorkflowConfig.COVERAGE_BASELINE
                             print(f"    📊 Coverage from stdout: {coverage_percentage}")
                             return coverage_percentage, coverage_maintained
-                            
+
         except Exception as e:
             print(f"    ⚠️  Could not parse coverage from stdout: {e}")
-        
+
         # Method 3: Original parsing method (legacy fallback)
         try:
             if "coverage:" in stdout_output.lower():
@@ -205,23 +244,25 @@ class WorkflowExecutor:
                             if part.endswith("%"):
                                 coverage_percentage = part
                                 coverage_value = float(part.rstrip("%"))
-                                coverage_maintained = coverage_value >= WorkflowConfig.COVERAGE_BASELINE
+                                coverage_maintained = (
+                                    coverage_value >= WorkflowConfig.COVERAGE_BASELINE
+                                )
                                 print(f"    📊 Coverage from legacy parsing: {coverage_percentage}")
                                 return coverage_percentage, coverage_maintained
-                                
+
         except Exception as e:
             print(f"    ⚠️  Legacy coverage parsing failed: {e}")
-        
-        print(f"    ⚠️  Could not extract coverage data, using defaults")
+
+        print("    ⚠️  Could not extract coverage data, using defaults")
         return coverage_percentage, coverage_maintained
 
     def _analyze_ci_failure(self, stdout_output: str, exception) -> bool:
         """Analyze CI failure to determine if tests actually failed or just lint issues."""
-        
+
         # Ensure stdout_output is a string
         if isinstance(stdout_output, bytes):
-            stdout_output = stdout_output.decode('utf-8', errors='ignore')
-        
+            stdout_output = stdout_output.decode("utf-8", errors="ignore")
+
         # Check for timeout - if timeout, tests may not have completed
         if isinstance(exception, subprocess.TimeoutExpired):
             # Look for test completion indicators in stdout
@@ -229,7 +270,7 @@ class WorkflowExecutor:
                 print("    📊 Tests appeared to complete successfully before timeout")
                 return False  # Tests didn't fail, just timed out after passing
             return True  # Tests likely didn't complete
-        
+
         # Check for specific test failure indicators
         test_failure_indicators = [
             "FAILED tests/",
@@ -239,10 +280,10 @@ class WorkflowExecutor:
             "ERROR at setup",
             "collected 0 items",
         ]
-        
+
         lint_only_indicators = [
             "black....................................................................Failed",
-            "flake8...................................................................Failed", 
+            "flake8...................................................................Failed",
             "mypy.....................................................................Failed",
             "✗ FAILED",
             "Fix: Run 'black",
@@ -250,19 +291,19 @@ class WorkflowExecutor:
             "line too long",
             "W293 blank line contains whitespace",
         ]
-        
+
         # If we see test failures, it's a real test failure
         for indicator in test_failure_indicators:
             if indicator in stdout_output:
                 print(f"    🔍 Found test failure indicator: {indicator}")
                 return True
-        
+
         # If we only see lint failures and no test failures, it's just lint
         lint_failures = sum(1 for indicator in lint_only_indicators if indicator in stdout_output)
         if lint_failures > 0:
             print(f"    🔍 Found {lint_failures} lint failure indicators, no test failures")
             return False
-        
+
         # Default: if we can't determine, assume tests failed
         print("    🔍 Could not determine failure type, assuming test failure")
         return True
@@ -771,7 +812,7 @@ will be enhanced in future iterations.
 
         validation_attempts = context.get("validation_attempts", 0) + 1
         print(f"  📊 Validation attempt #{validation_attempts}")
-        
+
         # Clean environment before starting validation
         print("  🧹 Pre-validation cleanup...")
         self._cleanup_test_environment()
@@ -799,7 +840,9 @@ will be enhanced in future iterations.
                 docker_tests_passed = True
 
                 # Extract coverage from CI output - try multiple methods
-                coverage_percentage, coverage_maintained = self._extract_coverage_data(result.stdout)
+                coverage_percentage, coverage_maintained = self._extract_coverage_data(
+                    result.stdout
+                )
 
                 # Create test artifacts directory for coverage sharing
                 artifacts_dir = self.workspace_root / "test-artifacts"
@@ -821,27 +864,29 @@ will be enhanced in future iterations.
                 if hasattr(e, "stdout") and e.stdout:
                     # Handle both bytes and string output
                     if isinstance(e.stdout, bytes):
-                        stdout_output = e.stdout.decode('utf-8', errors='ignore')
+                        stdout_output = e.stdout.decode("utf-8", errors="ignore")
                     else:
                         stdout_output = e.stdout
-                
+
                 # Try to extract coverage even on failure/timeout
-                coverage_percentage, coverage_maintained = self._extract_coverage_data(stdout_output)
-                
+                coverage_percentage, coverage_maintained = self._extract_coverage_data(
+                    stdout_output
+                )
+
                 # Analyze the failure - distinguish between test failures and lint failures
                 tests_actually_failed = self._analyze_ci_failure(stdout_output, e)
-                
+
                 if tests_actually_failed:
                     print(f"    ❌ Docker tests failed: {e}")
                     docker_tests_passed = False
                 else:
-                    print(f"    🟡 Docker CI failed due to lint issues, but tests passed")
+                    print("    🟡 Docker CI failed due to lint issues, but tests passed")
                     print(f"    Details: {e}")
                     docker_tests_passed = True  # Tests passed, only lint failed
-                
+
                 # Clean up even on failure
                 self._cleanup_test_environment()
-                
+
                 # Only fail validation if tests actually failed
                 if tests_actually_failed:
                     return {
@@ -876,7 +921,7 @@ will be enhanced in future iterations.
             arc_reviewer_script = self.workspace_root / "src" / "agents" / "arc_reviewer.py"
             if arc_reviewer_script.exists():
                 print("    🔧 Running ARC reviewer...")
-                
+
                 result = subprocess.run(
                     ["python", "-m", "src.agents.arc_reviewer", "--llm", "--verbose"],
                     capture_output=True,

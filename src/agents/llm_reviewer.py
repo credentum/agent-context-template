@@ -607,7 +607,7 @@ automated_issues:
         # Last resort: return baseline
         if self.verbose:
             print("⚠️  Using baseline coverage as fallback")
-        return WorkflowConfig.COVERAGE_BASELINE
+        return float(WorkflowConfig.COVERAGE_BASELINE)
 
     def format_yaml_output(self, review_data: Dict[str, Any]) -> str:
         """Format review results as YAML string matching workflow output."""
