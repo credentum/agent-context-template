@@ -45,7 +45,7 @@ class TestAsyncWorkflowExecutor(unittest.TestCase):
         mock_process.pid = 12345
         mock_popen.return_value = mock_process
         
-        with patch("builtins.open", mock_open()) as mock_file:
+        with patch("builtins.open", mock_open()):
             result = self.executor.start_workflow(hybrid=True, skip_phases=[0, 1])
             
         self.assertTrue(result)

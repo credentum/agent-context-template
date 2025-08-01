@@ -269,96 +269,94 @@ class TestWorkflowIntegration(unittest.TestCase):
     def test_async_executor_error_handling(self):
         """Test async executor error handling paths."""
         executor = AsyncWorkflowExecutor(999)
-        
+
         # Test get_logs with subprocess error
         executor.log_file.touch()
         with patch("subprocess.run") as mock_run:
             mock_run.side_effect = Exception("Command failed")
             result = executor.get_logs()
             self.assertIn("Error reading logs", result)
-            
+
     def test_async_executor_windows_support(self):
         """Test async executor Windows-specific code paths."""
         executor = AsyncWorkflowExecutor(444)
-        
+
         # Test Windows process termination
         with patch("platform.system") as mock_platform:
             mock_platform.return_value = "Windows"
-            
+
             # Create test PID file
             with open(executor.pid_file, "w") as f:
                 f.write("12345")
-                
+
             with patch.object(executor, "_is_running", return_value=True):
                 with patch("subprocess.run") as mock_run:
                     mock_run.side_effect = subprocess.CalledProcessError(1, "taskkill")
                     result = executor.stop_workflow()
                     self.assertFalse(result)
-                    
+
                     # Verify taskkill was called
                     mock_run.assert_called_with(
-                        ["taskkill", "/F", "/PID", "12345", "/T"],
-                        check=True,
-                        capture_output=True
+                        ["taskkill", "/F", "/PID", "12345", "/T"], check=True, capture_output=True
                     )
-                
+
     def test_async_executor_windows_start(self):
         """Test async executor Windows-specific start functionality."""
         executor = AsyncWorkflowExecutor(333)
-        
+
         with patch("platform.system") as mock_platform:
             mock_platform.return_value = "Windows"
-            
+
             with patch("subprocess.Popen") as mock_popen:
                 mock_process = MagicMock()
                 mock_process.pid = 54321
                 mock_popen.return_value = mock_process
-                
+
                 result = executor.start_workflow(hybrid=True)
                 self.assertTrue(result)
-                
+
                 # Verify Windows-specific flags were used
                 _, kwargs = mock_popen.call_args
                 self.assertIn("creationflags", kwargs)
                 # Should use the correct process group creation flag
                 self.assertEqual(kwargs["creationflags"], 0x00000200)
-                
+
     def test_phase_runner_edge_cases(self):
         """Test phase runner edge cases and error paths."""
         runner = PhaseRunner(666, hybrid=True)
-        
+
         # Test with pre-existing completed phases
         runner.completed_phases = [0, 1, 2]
         runner._save_state()
-        
+
         # Create new runner and load state
         runner2 = PhaseRunner(666, hybrid=False)
         self.assertEqual(runner2.completed_phases, [])
         runner2._load_state()
         self.assertEqual(runner2.completed_phases, [0, 1, 2])
-        
+
     def test_phase_runner_subprocess_stderr(self):
         """Test phase runner handling of subprocess stderr."""
         runner = PhaseRunner(99)
-        
+
         with patch("subprocess.run") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 1
             mock_result.stderr = None  # No stderr
             mock_run.return_value = mock_result
-            
+
             result = runner._run_single_phase(3)
             self.assertFalse(result)
-            
+
     def test_concurrent_execution_handling(self):
         """Test handling of concurrent executions."""
         executor1 = AsyncWorkflowExecutor(66)
         executor2 = AsyncWorkflowExecutor(66)
-        
+
         # Simulate first executor running
         with open(executor1.pid_file, "w") as f:
             f.write(str(os.getpid()))  # Current process PID
-            
+
         # Second executor should detect it's already running
         result = executor2.start_workflow()
         self.assertFalse(result)

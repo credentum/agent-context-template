@@ -6,7 +6,7 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 # Add scripts directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
@@ -309,6 +309,96 @@ class TestPhaseRunnerCLI(unittest.TestCase):
         mock_runner._load_state.assert_called_once()
         mock_runner.run_all_phases.assert_called_once_with([0, 1])
         mock_exit.assert_called_once_with(1)
+
+    def test_save_state_permission_error(self):
+        """Test save state with permission error."""
+        runner = PhaseRunner(543)
+        runner.completed_phases = [0, 1]
+        
+        # Mock open to raise PermissionError
+        with patch("builtins.open") as mock_open:
+            mock_open.side_effect = PermissionError("Permission denied")
+            
+            with patch("builtins.print") as mock_print:
+                runner._save_state()
+                
+            # Should print warning
+            printed_messages = [call[0][0] for call in mock_print.call_args_list]
+            self.assertTrue(any("Could not save state" in msg for msg in printed_messages))
+            
+    def test_save_state_os_error(self):
+        """Test save state with OSError."""
+        runner = PhaseRunner(432)
+        runner.completed_phases = [2, 3]
+        
+        # Mock open to raise OSError
+        with patch("builtins.open") as mock_open_func:
+            mock_open_func.side_effect = OSError("Disk full")
+            
+            with patch("builtins.print") as mock_print:
+                runner._save_state()
+                
+            # Should print warning
+            printed_messages = [call[0][0] for call in mock_print.call_args_list]
+            self.assertTrue(any("Could not save state" in msg for msg in printed_messages))
+            
+    def test_cleanup_state_permission_error(self):
+        """Test cleanup state with permission error."""
+        runner = PhaseRunner(321)
+        
+        # Create state file
+        runner.state_file.touch()
+        
+        # Mock Path.unlink to raise PermissionError  
+        with patch("pathlib.Path.unlink") as mock_unlink:
+            mock_unlink.side_effect = PermissionError("Permission denied")
+            
+            with patch("builtins.print") as mock_print:
+                # Should not raise exception
+                runner._cleanup_state()
+                
+            mock_unlink.assert_called_once()
+            # Should print warning
+            printed_messages = [call[0][0] for call in mock_print.call_args_list]
+            self.assertTrue(any("Could not remove state file" in msg for msg in printed_messages))
+            
+    def test_load_state_permission_error(self):
+        """Test load state with permission error."""
+        runner = PhaseRunner(210)
+        
+        # Create state file that exists
+        runner.state_file.touch()
+        
+        # Mock open to raise PermissionError
+        with patch("builtins.open") as mock_open_func:
+            mock_open_func.side_effect = PermissionError("Permission denied")
+            
+            with patch("builtins.print") as mock_print:
+                runner._load_state()
+                
+            # Should print warning and keep empty completed_phases
+            self.assertEqual(runner.completed_phases, [])
+            printed_messages = [call[0][0] for call in mock_print.call_args_list]
+            self.assertTrue(any("Could not load state" in msg for msg in printed_messages))
+            
+    def test_run_single_phase_with_stderr(self):
+        """Test single phase with stderr output."""
+        runner = PhaseRunner(111)
+        
+        with patch("subprocess.run") as mock_run:
+            mock_result = MagicMock()
+            mock_result.returncode = 1
+            mock_result.stderr = "Test error output"
+            mock_run.return_value = mock_result
+            
+            with patch("builtins.print") as mock_print:
+                result = runner._run_single_phase(2)
+                
+            self.assertFalse(result)
+            # Should print both exit code and stderr
+            printed_messages = [str(call) for call in mock_print.call_args_list]
+            self.assertTrue(any("exit code: 1" in msg for msg in printed_messages))
+            self.assertTrue(any("Test error output" in msg for msg in printed_messages))
 
 
 if __name__ == "__main__":
