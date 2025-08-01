@@ -2,16 +2,15 @@
 """Unit tests for AsyncWorkflowExecutor."""
 
 import json
-import os
-import subprocess
-import tempfile
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
-import sys
+# Add scripts directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-from workflow_async_executor import AsyncWorkflowExecutor
+
+from workflow_async_executor import AsyncWorkflowExecutor  # noqa: E402
 
 
 class TestAsyncWorkflowExecutor(unittest.TestCase):
@@ -217,6 +216,75 @@ class TestAsyncWorkflowExecutor(unittest.TestCase):
         self.assertEqual(data["message"], "Test message")
         self.assertEqual(data["issue_number"], self.issue_number)
         self.assertIn("updated", data)
+
+
+class TestAsyncWorkflowExecutorCLI(unittest.TestCase):
+    """Test cases for AsyncWorkflowExecutor CLI."""
+    
+    @patch("workflow_async_executor.AsyncWorkflowExecutor")
+    @patch("argparse.ArgumentParser.parse_args")
+    def test_main_start_command(self, mock_args, mock_executor_class):
+        """Test main function with start command."""
+        from workflow_async_executor import main
+        
+        # Mock arguments
+        mock_args.return_value = MagicMock(
+            command="start",
+            issue_number=123,
+            hybrid=True,
+            skip_phases=[0, 1]
+        )
+        
+        # Mock executor instance
+        mock_executor = MagicMock()
+        mock_executor.start_workflow.return_value = True
+        mock_executor_class.return_value = mock_executor
+        
+        with patch("sys.exit") as mock_exit:
+            main()
+            
+        mock_executor.start_workflow.assert_called_once_with(True, [0, 1])
+        mock_exit.assert_called_once_with(0)
+        
+    @patch("workflow_async_executor.AsyncWorkflowExecutor")
+    @patch("argparse.ArgumentParser.parse_args")
+    @patch("builtins.print")
+    def test_main_status_command(self, mock_print, mock_args, mock_executor_class):
+        """Test main function with status command."""
+        from workflow_async_executor import main
+        
+        # Mock arguments
+        mock_args.return_value = MagicMock(
+            command="status",
+            issue_number=456
+        )
+        
+        # Mock executor instance
+        mock_executor = MagicMock()
+        mock_executor.check_status.return_value = {"status": "running", "message": "Test"}
+        mock_executor_class.return_value = mock_executor
+        
+        main()
+        
+        mock_executor.check_status.assert_called_once()
+        # Check that JSON was printed
+        calls = mock_print.call_args_list
+        self.assertTrue(any('"status": "running"' in str(call) for call in calls))
+        
+    @patch("workflow_async_executor.AsyncWorkflowExecutor")
+    @patch("argparse.ArgumentParser.parse_args")
+    def test_main_no_command(self, mock_args, mock_executor_class):
+        """Test main function with no command."""
+        from workflow_async_executor import main
+        
+        # Mock arguments
+        mock_args.return_value = MagicMock(command=None)
+        
+        with patch("sys.exit") as mock_exit:
+            with patch("argparse.ArgumentParser.print_help") as mock_help:
+                main()
+                
+        mock_exit.assert_called_once_with(1)
 
 
 if __name__ == "__main__":

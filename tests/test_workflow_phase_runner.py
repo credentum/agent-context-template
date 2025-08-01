@@ -3,13 +3,15 @@
 
 import json
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
-import sys
+# Add scripts directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-from workflow_phase_runner import PhaseRunner
+
+from workflow_phase_runner import PhaseRunner  # noqa: E402
 
 
 class TestPhaseRunner(unittest.TestCase):
@@ -250,6 +252,63 @@ class TestPhaseRunner(unittest.TestCase):
             "validation", "pr_creation", "monitoring"
         ]
         self.assertEqual(phase_names, expected_names)
+
+
+class TestPhaseRunnerCLI(unittest.TestCase):
+    """Test cases for PhaseRunner CLI."""
+    
+    @patch("workflow_phase_runner.PhaseRunner")
+    @patch("argparse.ArgumentParser.parse_args")
+    def test_main_basic(self, mock_args, mock_runner_class):
+        """Test main function basic execution."""
+        from workflow_phase_runner import main
+        
+        # Mock arguments
+        mock_args.return_value = MagicMock(
+            issue_number=123,
+            hybrid=False,
+            resume=False,
+            skip_phases=None
+        )
+        
+        # Mock runner instance
+        mock_runner = MagicMock()
+        mock_runner.run_all_phases.return_value = True
+        mock_runner_class.return_value = mock_runner
+        
+        with patch("sys.exit") as mock_exit:
+            main()
+            
+        mock_runner_class.assert_called_once_with(123, False)
+        mock_runner.run_all_phases.assert_called_once_with(None)
+        mock_exit.assert_called_once_with(0)
+        
+    @patch("workflow_phase_runner.PhaseRunner")
+    @patch("argparse.ArgumentParser.parse_args")
+    def test_main_with_resume(self, mock_args, mock_runner_class):
+        """Test main function with resume flag."""
+        from workflow_phase_runner import main
+        
+        # Mock arguments
+        mock_args.return_value = MagicMock(
+            issue_number=456,
+            hybrid=True,
+            resume=True,
+            skip_phases=[0, 1]
+        )
+        
+        # Mock runner instance
+        mock_runner = MagicMock()
+        mock_runner.run_all_phases.return_value = False
+        mock_runner_class.return_value = mock_runner
+        
+        with patch("sys.exit") as mock_exit:
+            main()
+            
+        mock_runner_class.assert_called_once_with(456, True)
+        mock_runner._load_state.assert_called_once()
+        mock_runner.run_all_phases.assert_called_once_with([0, 1])
+        mock_exit.assert_called_once_with(1)
 
 
 if __name__ == "__main__":

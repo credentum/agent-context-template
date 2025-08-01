@@ -30,7 +30,7 @@ class PhaseRunner:
     def __init__(self, issue_number: int, hybrid: bool = False):
         self.issue_number = issue_number
         self.hybrid = hybrid
-        self.completed_phases = []
+        self.completed_phases: List[int] = []
         self.state_file = Path(f".workflow-phase-state-{issue_number}.json")
 
     def run_all_phases(self, skip_phases: Optional[List[int]] = None) -> bool:
@@ -125,7 +125,7 @@ class PhaseRunner:
                     data = json.load(f)
                     self.completed_phases = data.get("completed_phases", [])
                     print(f"📂 Loaded state: {len(self.completed_phases)} phases completed")
-            except Exception as e:
+            except (json.JSONDecodeError, IOError) as e:
                 print(f"⚠️  Could not load state: {e}")
 
     def _save_state(self) -> None:
@@ -134,7 +134,7 @@ class PhaseRunner:
         try:
             with open(self.state_file, "w") as f:
                 json.dump({"completed_phases": self.completed_phases}, f)
-        except Exception as e:
+        except (IOError, OSError) as e:
             print(f"⚠️  Could not save state: {e}")
 
     def _cleanup_state(self) -> None:

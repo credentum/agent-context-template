@@ -11,7 +11,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class AsyncWorkflowExecutor:
@@ -65,7 +65,7 @@ class AsyncWorkflowExecutor:
         print(f"📄 View logs: tail -f {self.log_file}")
         return True
 
-    def check_status(self) -> Dict:
+    def check_status(self) -> Dict[str, Any]:
         """Check workflow status."""
         if not self.status_file.exists():
             return {"status": "not_found", "message": "No workflow found"}
