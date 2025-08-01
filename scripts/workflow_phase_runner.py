@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from workflow_config import WorkflowConfig
+from workflow_enforcer import WorkflowEnforcer
 
 
 class PhaseRunner:
@@ -34,7 +35,9 @@ class PhaseRunner:
         self.issue_number = issue_number
         self.hybrid = hybrid
         self.completed_phases: List[int] = []
-        self.state_file = Path(f".workflow-phase-state-{issue_number}.json")
+        # Use WorkflowEnforcer's state file for unified state management
+        self.state_file = Path(f".workflow-state-{issue_number}.json")
+        self.enforcer = WorkflowEnforcer(issue_number)
 
     def run_all_phases(self, skip_phases: Optional[List[int]] = None) -> bool:
         """
@@ -75,8 +78,26 @@ class PhaseRunner:
             success = self._run_single_phase(phase_num)
 
             if success:
+                # Mark phase as completed in WorkflowEnforcer
+                phase_name, _, _ = self.PHASES[phase_num]
+                outputs = {f"phase_{phase_num}_complete": True}
+                
+                # For phases that were executed, mark them as complete
+                # This ensures state synchronization
+                if phase_name not in self.enforcer.state.get("phases", {}):
+                    # Phase wasn't tracked by enforcer, add it
+                    self.enforcer.state["phases"][phase_name] = {
+                        "phase_name": phase_name,
+                        "status": "completed",
+                        "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                        "completed_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                        "outputs": outputs,
+                        "errors": [],
+                        "agent_type": "phase-runner"
+                    }
+                    self.enforcer._save_state()
+                
                 self.completed_phases.append(phase_num)
-                self._save_state()
                 print(f"✅ Phase {phase_num} completed successfully")
 
                 # Brief pause between phases
@@ -136,33 +157,35 @@ class PhaseRunner:
             return False
 
     def _load_state(self) -> None:
-        """Load previous execution state."""
-        if self.state_file.exists():
-
-            try:
-                with open(self.state_file) as f:
-                    data = json.load(f)
-                    self.completed_phases = data.get("completed_phases", [])
-                    print(f"📂 Loaded state: {len(self.completed_phases)} phases completed")
-            except (json.JSONDecodeError, IOError) as e:
-                print(f"⚠️  Could not load state: {e}")
+        """Load previous execution state from WorkflowEnforcer."""
+        # Get state from WorkflowEnforcer
+        state = self.enforcer.get_current_state()
+        
+        # Convert phase names to phase numbers
+        self.completed_phases = []
+        for phase_name, phase_num, _ in self.PHASES:
+            if phase_name in state.get("phases", {}):
+                phase_state = state["phases"][phase_name]
+                if phase_state.get("status") == "completed":
+                    self.completed_phases.append(phase_num)
+        
+        if self.completed_phases:
+            print(f"📂 Loaded state: {len(self.completed_phases)} phases completed")
 
     def _save_state(self) -> None:
-        """Save execution state."""
-
-        try:
-            with open(self.state_file, "w") as f:
-                json.dump({"completed_phases": self.completed_phases}, f)
-        except (IOError, OSError) as e:
-            print(f"⚠️  Could not save state: {e}")
+        """Save execution state through WorkflowEnforcer."""
+        # State is already saved by WorkflowEnforcer after each phase completion
+        # This method is kept for compatibility but doesn't need to do anything
+        pass
 
     def _cleanup_state(self) -> None:
         """Remove state file after successful completion."""
-        if self.state_file.exists():
-            try:
-                self.state_file.unlink()
-            except (OSError, PermissionError) as e:
-                print(f"⚠️  Could not remove state file: {e}")
+        # Keep the state file for workflow history
+        # Only mark workflow as complete
+        if hasattr(self, 'enforcer'):
+            self.enforcer.state["workflow_complete"] = True
+            self.enforcer.state["completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            self.enforcer._save_state()
 
 
 def main() -> None:

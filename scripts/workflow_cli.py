@@ -196,6 +196,7 @@ class WorkflowCLI:
                 "agent_type": agent_type,
                 "use_agents": args.use_agents,
                 "hybrid_mode": getattr(args, "hybrid", False),
+                "skip_phases": list(skip_phases),  # Pass skip_phases for state synchronization
             }
 
             # Special handling for investigation

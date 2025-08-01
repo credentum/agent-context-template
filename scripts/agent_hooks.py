@@ -56,8 +56,10 @@ class AgentHooks:
                     return False, f"Failed to skip investigation: {message}", {}
 
         # Enforce phase entry
+        # Pass skip_phases from context if available (used by PhaseRunner)
+        skip_phases = context.get("skip_phases", None)
         can_proceed, message, context_updates = self.enforcer.enforce_phase_entry(
-            phase_name, agent_type
+            phase_name, agent_type, skip_phases
         )
 
         # Log the attempt
