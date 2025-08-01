@@ -16,7 +16,7 @@ import yaml
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
-from workflow_executor import WorkflowConfig  # noqa: E402
+from workflow_config import WorkflowConfig  # noqa: E402
 
 
 class LLMReviewer:
