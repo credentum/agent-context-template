@@ -18,9 +18,9 @@ services:
     container_name: ci-lint-runner
     volumes:
       # Mount source code for real-time changes (read-only)
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
       - ./context:/app/context
       - ./.github:/app/.github:ro
       # Mount config files
@@ -56,9 +56,9 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
     environment:
       - CI=true
       - PYTHONUNBUFFERED=1
@@ -75,9 +75,9 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
     environment:
       - CI=true
       - PYTHONUNBUFFERED=1
@@ -94,9 +94,9 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
       - ./.flake8:/app/.flake8:ro
     environment:
       - CI=true
@@ -114,7 +114,7 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
+      - ./src:/app/src
       - ./mypy.ini:/app/mypy.ini:ro
     environment:
       - CI=true
@@ -132,7 +132,7 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
+      - ./src:/app/src
       - ./context:/app/context
     environment:
       - CI=true
@@ -150,8 +150,8 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
     environment:
       - CI=true
       - PYTHONPATH=/app
@@ -196,9 +196,9 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
       - ./context:/app/context
       - ./.github:/app/.github:ro
       - ./infra:/app/infra:ro
@@ -219,9 +219,9 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
       - ./context:/app/context
       - ./.claude:/app/.claude:ro
       - ./.coverage-config.json:/app/.coverage-config.json:ro
@@ -258,9 +258,9 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
       - ./context:/app/context
       - ./.claude:/app/.claude:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
@@ -294,9 +294,9 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
       - ./context:/app/context
       - ./.claude:/app/.claude:ro
       - ./pyproject.toml:/app/pyproject.toml:ro
@@ -330,9 +330,9 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
       - ./context:/app/context
       - ./.github:/app/.github:ro
       - ./mypy.ini:/app/mypy.ini:ro
@@ -356,9 +356,9 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
       - ./.flake8:/app/.flake8:ro
     environment:
       - PYTHONPATH=/app
@@ -377,7 +377,7 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
+      - ./src:/app/src
       - ./mypy.ini:/app/mypy.ini:ro
     environment:
       - CI=true
@@ -396,9 +396,9 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
       - ./context:/app/context
       - ./.github:/app/.github:ro
       - ./.pre-commit-config.yaml:/app/.pre-commit-config.yaml:ro
@@ -424,9 +424,9 @@ services:
       dockerfile: Dockerfile.ci
     image: agent-context-ci:latest
     volumes:
-      - ./src:/app/src:ro
-      - ./tests:/app/tests:ro
-      - ./scripts:/app/scripts:ro
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
       - ./context:/app/context
       - ./mypy.ini:/app/mypy.ini:ro
       - ./pyproject.toml:/app/pyproject.toml:ro

@@ -255,21 +255,35 @@ class HybridWorkflowExecutor(WorkflowExecutor):
         with ThreadPoolExecutor(max_workers=min(len(agents), self.parallel_limit)) as executor:
             # Submit all specialist tasks
             futures = {}
-            for agent in agents:
-                prompt = self._build_validation_prompt(agent, context)
-                future = executor.submit(self._consult_specialist, agent, prompt, context)
-                futures[future] = agent
+            for agent_config in agents:
+                # Extract agent type from the config dict
+                agent_type = (
+                    agent_config.get("type") if isinstance(agent_config, dict) else agent_config
+                )
+
+                # Extract config details for display
+                if isinstance(agent_config, dict):
+                    desc = agent_config.get("description", agent_type)
+                    # timeout = agent_config.get("timeout", self.specialist_timeout)  # TODO: Use
+                    # capabilities = agent_config.get("capabilities", [])  # TODO: Use capabilities
+                    print(f"    📤 Sending request to {agent_type}: {desc}...")
+                else:
+                    print(f"    📤 Sending request to {agent_type}...")
+
+                prompt = self._build_validation_prompt(agent_type, context)
+                future = executor.submit(self._consult_specialist, agent_type, prompt, context)
+                futures[future] = agent_type  # Use string type as key
 
             # Collect results with timeout
             for future in futures:
-                agent = futures[future]
+                agent_type = futures[future]
                 try:
                     result = future.result(timeout=self.specialist_timeout)
-                    results[agent] = result
-                    print(f"    ✅ {agent} completed")
+                    results[agent_type] = result
+                    print(f"    ✅ {agent_type} completed")
                 except Exception as e:
-                    print(f"    ❌ {agent} failed: {e}")
-                    results[agent] = {"error": str(e)}
+                    print(f"    ❌ {agent_type} failed: {e}")
+                    results[agent_type] = {"error": str(e)}
 
         return results
 
