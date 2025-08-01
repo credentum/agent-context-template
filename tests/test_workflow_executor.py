@@ -402,5 +402,156 @@ issues:
         self.assertEqual(result["phase"], "validation_needs_fixes")
 
 
+class TestWorkflowExecutorVerification(unittest.TestCase):
+    """Test verification methods in WorkflowExecutor."""
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        self.executor = WorkflowExecutor(1709)
+
+    @patch('subprocess.run')
+    def test_verify_code_changes_with_code_files(self, mock_run):
+        """Test _verify_code_changes returns True when code files are modified."""
+        # Mock git diff output with code files
+        mock_run.return_value = Mock(
+            returncode=0,
+            stdout="scripts/workflow_executor.py\ntests/test_workflow.py\nREADME.md\n"
+        )
+        
+        result = self.executor._verify_code_changes()
+        self.assertTrue(result)
+        mock_run.assert_called_once()
+
+    @patch('subprocess.run')
+    def test_verify_code_changes_only_docs(self, mock_run):
+        """Test _verify_code_changes returns False when only doc files are modified."""
+        # Mock git diff output with only documentation files
+        mock_run.return_value = Mock(
+            returncode=0,
+            stdout="README.md\ndocs/guide.txt\ncontext/trace/task-templates/test.md\n"
+        )
+        
+        result = self.executor._verify_code_changes()
+        self.assertFalse(result)
+
+    @patch('subprocess.run')
+    def test_verify_code_changes_no_files(self, mock_run):
+        """Test _verify_code_changes returns False when no files are modified."""
+        # Mock git diff output with no files
+        mock_run.return_value = Mock(
+            returncode=0,
+            stdout=""
+        )
+        
+        result = self.executor._verify_code_changes()
+        self.assertFalse(result)
+
+    @patch('subprocess.run')
+    def test_verify_code_changes_git_error(self, mock_run):
+        """Test _verify_code_changes handles git errors gracefully."""
+        # Mock git diff failure
+        mock_run.return_value = Mock(
+            returncode=1,
+            stderr="fatal: not a git repository"
+        )
+        
+        result = self.executor._verify_code_changes()
+        self.assertFalse(result)
+
+    @patch('subprocess.run')
+    def test_verify_acceptance_criteria_addressed(self, mock_run):
+        """Test _verify_acceptance_criteria_addressed parses and checks criteria."""
+        # Mock git log output
+        mock_run.return_value = Mock(
+            returncode=0,
+            stdout="abc123 feat: add _verify_code_changes method\ndef456 test: add verification tests\n"
+        )
+        
+        # Mock method existence checks
+        with patch.object(self.executor, '_method_exists', return_value=True), \
+             patch.object(self.executor, '_test_files_exist', return_value=True):
+            
+            result = self.executor._verify_acceptance_criteria_addressed()
+            
+            self.assertIsInstance(result, dict)
+            # Should have multiple criteria checked
+            self.assertGreater(len(result), 0)
+            # At least some criteria should pass based on our mocked data
+            self.assertTrue(any(result.values()))
+
+    @patch('subprocess.run')
+    @patch('glob.glob')
+    def test_verify_implementation_matches_template(self, mock_glob, mock_run):
+        """Test _verify_implementation_matches_template checks against task plan."""
+        # Mock task plan file exists
+        mock_glob.return_value = ['/path/to/context/trace/task-templates/issue-1709-test.md']
+        
+        # Mock git diff output
+        mock_run.return_value = Mock(
+            returncode=0,
+            stdout="scripts/workflow_executor.py\ntests/test_workflow_executor.py\n"
+        )
+        
+        # Mock method existence
+        with patch.object(self.executor, '_method_exists', return_value=True):
+            result = self.executor._verify_implementation_matches_template()
+            self.assertTrue(result)
+
+    @patch('glob.glob')
+    def test_verify_implementation_matches_template_no_plan(self, mock_glob):
+        """Test _verify_implementation_matches_template when no task plan exists."""
+        # Mock task plan file doesn't exist
+        mock_glob.return_value = []
+        
+        with patch('subprocess.run') as mock_run:
+            # Mock git diff output
+            mock_run.return_value = Mock(
+                returncode=0,
+                stdout="scripts/workflow_executor.py\n"
+            )
+            
+            # Mock method existence
+            with patch.object(self.executor, '_method_exists', return_value=True):
+                result = self.executor._verify_implementation_matches_template()
+                self.assertTrue(result)  # Should still pass with basic verification
+
+    def test_method_exists(self):
+        """Test _method_exists helper method."""
+        # Test with existing method
+        result = self.executor._method_exists('_verify_code_changes')
+        self.assertTrue(result)
+        
+        # Test with non-existing method
+        result = self.executor._method_exists('non_existent_method')
+        self.assertFalse(result)
+
+    @patch('pathlib.Path.exists')
+    def test_test_files_exist(self, mock_exists):
+        """Test _test_files_exist helper method."""
+        mock_exists.return_value = True
+        result = self.executor._test_files_exist()
+        self.assertTrue(result)
+        
+        mock_exists.return_value = False
+        result = self.executor._test_files_exist()
+        self.assertFalse(result)
+
+    @patch('subprocess.run')
+    def test_verification_timeout_handling(self, mock_run):
+        """Test that verification methods handle timeouts gracefully."""
+        from subprocess import TimeoutExpired
+        
+        # Mock timeout for git operations
+        mock_run.side_effect = TimeoutExpired('git', 30)
+        
+        # All verification methods should handle timeouts
+        self.assertFalse(self.executor._verify_code_changes())
+        
+        result = self.executor._verify_acceptance_criteria_addressed()
+        self.assertEqual(result, {"timeout_error": False})
+        
+        self.assertFalse(self.executor._verify_implementation_matches_template())
+
+
 if __name__ == "__main__":
     unittest.main()
