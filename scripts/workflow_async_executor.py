@@ -21,6 +21,10 @@ class AsyncWorkflowExecutor:
     """Execute workflow asynchronously with progress tracking."""
 
     def __init__(self, issue_number: int):
+        # Validate issue_number to prevent command injection
+        if not isinstance(issue_number, int) or issue_number <= 0:
+            raise ValueError(f"Issue number must be a positive integer, got: {issue_number}")
+            
         self.issue_number = issue_number
         self.log_file = Path(f".workflow-async-{issue_number}.log")
         self.pid_file = Path(f".workflow-async-{issue_number}.pid")
