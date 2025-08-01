@@ -184,7 +184,7 @@ class WorkflowEnforcer:
             # Check if previous phases are completed (except investigation which can be skipped)
             for i in range(phase_idx):
                 prev_phase = self.PHASE_ORDER[i]
-                
+
                 # If this phase index is in skip_phases, it means it was already completed
                 # in a previous workflow run (e.g., by PhaseRunner)
                 if skip_phases and i in skip_phases:
@@ -197,10 +197,10 @@ class WorkflowEnforcer:
                             "completed_at": datetime.now().isoformat(),
                             "outputs": {"skipped_by_phase_runner": True},
                             "errors": [],
-                            "agent_type": "phase-runner"
+                            "agent_type": "phase-runner",
                         }
                     continue
-                
+
                 if prev_phase == "investigation":
                     # Investigation can be skipped if scope is clear
                     continue
