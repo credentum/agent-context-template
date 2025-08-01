@@ -1,9 +1,11 @@
 ---
 ###############################################################################
 # 🛠️  Enhanced GitHub Workflow — Claude Code Review (Agent-First, ARC-Reviewer)
-# Version: 2025-07-16 with comment format consistency improvements
+# Version: 2025-08-01 with automated_issues extraction fix
 #
 # Recent improvements:
+# - Fixed automated_issues extraction from YAML format in Create Automation Comment
+# - Added robust regex parsing for YAML automated_issues field
 # - Added explicit formatting instructions to direct_prompt
 # - Added comment format validation step
 # - Ensured consistent YAML structure across review iterations
@@ -617,55 +619,69 @@ jobs:
             // ROBUST: Extract automation data from both YAML and JSON formats
             function extractAutomationData(text) {
               try {
-                // Strategy 1: If we have corrected YAML format, extract automated_issues field
+                // Strategy 0: Try to parse YAML format (for corrected format)
                 if (formatCorrected) {
-                  console.log('🔍 Parsing corrected YAML format...');
-                  const automatedIssuesMatch = text.match(/automated_issues:\s*\n((?:\s*-[\s\S]*?(?=\n\S|\n$))*)/);
+                  console.log('🔍 Parsing YAML format using regex...');
+                  
+                  // Regex parsing for YAML automated_issues
+                  const automatedIssuesMatch = text.match(/automated_issues:\s*\n((?:\s*-[\s\S]*?(?=\n\w|\n$))*)/);
                   if (automatedIssuesMatch) {
-                    // Convert YAML list to simple structure for processing
                     const yamlList = automatedIssuesMatch[1];
                     const issues = [];
-                    const issueBlocks = yamlList.split(/\n\s*-\s*(?=\w)/);
-
-                    for (let block of issueBlocks) {
+                    
+                    // Split by issue entries (lines starting with -)
+                    const issueMatches = yamlList.matchAll(/^\s*-\s*([\s\S]*?)(?=^\s*-|\s*$)/gm);
+                    
+                    for (const match of issueMatches) {
+                      const block = match[1];
                       if (block.trim()) {
                         const issue = {};
-                        const titleMatch = block.match(/title:\s*["']?(.*?)["']?\s*$/m);
-                        const descMatch = block.match(/description:\s*["']?(.*?)["']?\s*$/m);
+                        
+                        // Extract fields with multiline support
+                        const titleMatch = block.match(/title:\s*["']?(.*?)["']?\s*(?=\n|$)/);
+                        const descMatch = block.match(/description:\s*["']?([\s\S]*?)["']?\s*(?=\n\s*\w+:|$)/);
                         const labelsMatch = block.match(/labels:\s*\[(.*?)\]/);
-                        const phaseMatch = block.match(/phase:\s*["']?(.*?)["']?\s*$/m);
+                        const phaseMatch = block.match(/phase:\s*["']?(.*?)["']?\s*(?=\n|$)/);
+                        const priorityMatch = block.match(/priority:\s*["']?(.*?)["']?\s*(?=\n|$)/);
+                        const categoryMatch = block.match(/category:\s*["']?(.*?)["']?\s*(?=\n|$)/);
 
-                        if (titleMatch) issue.title = titleMatch[1];
-                        if (descMatch) issue.description = descMatch[1];
-                        if (labelsMatch) issue.labels = labelsMatch[1].split(',').map(l => l.trim().replace(/["']/g, ''));
-                        if (phaseMatch) issue.phase = phaseMatch[1];
+                        if (titleMatch) issue.title = titleMatch[1].trim();
+                        if (descMatch) issue.description = descMatch[1].trim();
+                        if (labelsMatch) {
+                          issue.labels = labelsMatch[1].split(',').map(l => l.trim().replace(/["']/g, ''));
+                        }
+                        if (phaseMatch) issue.phase = phaseMatch[1].trim();
+                        if (priorityMatch) issue.priority = priorityMatch[1].trim();
+                        if (categoryMatch) issue.category = categoryMatch[1].trim();
 
-                        if (issue.title) issues.push(issue);
+                        if (issue.title) {
+                          issues.push(issue);
+                        }
                       }
                     }
 
                     if (issues.length > 0) {
-                      console.log(`✅ Found ${issues.length} automated_issues in YAML format`);
+                      console.log(`✅ Found ${issues.length} automated_issues via regex parsing`);
                       return { automated_issues: issues };
                     }
                   }
                 }
 
-                // Strategy 2: Look for JSON blocks
+                // Strategy 1: Look for JSON blocks
                 let match = text.match(/```json\s*(\{[\s\S]*?"automated_issues"[\s\S]*?\})\s*```/);
                 if (match) {
                   console.log('✅ Found JSON block with automated_issues');
                   return JSON.parse(match[1]);
                 }
 
-                // Strategy 3: Handle escaped JSON
+                // Strategy 2: Handle escaped JSON
                 match = text.match(/```json\s*(\{[^`]*"automated_issues"[^`]*\})\s*```/);
                 if (match) {
                   console.log('✅ Found escaped JSON with automated_issues');
                   return JSON.parse(match[1]);
                 }
 
-                // Strategy 4: Find JSON object with automated_issues anywhere
+                // Strategy 3: Find JSON object with automated_issues anywhere
                 match = text.match(/(\{[^{}]*"automated_issues"[^{}]*\})/);
                 if (match) {
                   console.log('✅ Found JSON object with automated_issues');
