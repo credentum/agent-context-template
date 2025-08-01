@@ -34,9 +34,7 @@ class TestPhaseRunner(unittest.TestCase):
         self.assertEqual(self.runner.issue_number, 456)
         self.assertFalse(self.runner.hybrid)
         self.assertEqual(self.runner.completed_phases, [])
-        self.assertEqual(
-            self.runner.state_file, Path(f".workflow-state-{self.issue_number}.json")
-        )
+        self.assertEqual(self.runner.state_file, Path(f".workflow-state-{self.issue_number}.json"))
 
     def test_init_hybrid(self):
         """Test runner initialization with hybrid mode."""

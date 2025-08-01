@@ -81,7 +81,7 @@ class PhaseRunner:
                 # Mark phase as completed in WorkflowEnforcer
                 phase_name, _, _ = self.PHASES[phase_num]
                 outputs = {f"phase_{phase_num}_complete": True}
-                
+
                 # For phases that were executed, mark them as complete
                 # This ensures state synchronization
                 if phase_name not in self.enforcer.state.get("phases", {}):
@@ -93,10 +93,10 @@ class PhaseRunner:
                         "completed_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
                         "outputs": outputs,
                         "errors": [],
-                        "agent_type": "phase-runner"
+                        "agent_type": "phase-runner",
                     }
                     self.enforcer._save_state()
-                
+
                 self.completed_phases.append(phase_num)
                 print(f"✅ Phase {phase_num} completed successfully")
 
@@ -160,7 +160,7 @@ class PhaseRunner:
         """Load previous execution state from WorkflowEnforcer."""
         # Get state from WorkflowEnforcer
         state = self.enforcer.get_current_state()
-        
+
         # Convert phase names to phase numbers
         self.completed_phases = []
         for phase_name, phase_num, _ in self.PHASES:
@@ -168,7 +168,7 @@ class PhaseRunner:
                 phase_state = state["phases"][phase_name]
                 if phase_state.get("status") == "completed":
                     self.completed_phases.append(phase_num)
-        
+
         if self.completed_phases:
             print(f"📂 Loaded state: {len(self.completed_phases)} phases completed")
 
@@ -182,7 +182,7 @@ class PhaseRunner:
         """Remove state file after successful completion."""
         # Keep the state file for workflow history
         # Only mark workflow as complete
-        if hasattr(self, 'enforcer'):
+        if hasattr(self, "enforcer"):
             self.enforcer.state["workflow_complete"] = True
             self.enforcer.state["completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
             self.enforcer._save_state()
