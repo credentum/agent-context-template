@@ -20,6 +20,7 @@ import yaml
 # Import workflow configuration
 try:
     from workflow_config import WorkflowConfig
+
     COVERAGE_BASELINE = WorkflowConfig.COVERAGE_BASELINE
 except ImportError:
     # Fallback if workflow_config is not available

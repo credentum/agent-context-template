@@ -1,3 +1,7 @@
+---
+schema_version: '1.0'
+---
+
 # ────────────────────────────────────────────────────────────────────────
 # TASK: issue-1708-[sprint-4.2-test]-validate-workflow-implementation
 # Generated from GitHub Issue #1708

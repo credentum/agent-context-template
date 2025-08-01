@@ -666,7 +666,7 @@ class WorkflowExecutor:
         template_content = template_path.read_text()
         acceptance_criteria = self._extract_acceptance_criteria(template_content)
         problem_description = self._extract_problem_description(template_content)
-        
+
         print("  🔍 Analyzing issue requirements...")
 
         # Special case for issue #1706 - fixing the workflow executor itself
@@ -695,7 +695,7 @@ class WorkflowExecutor:
 
                 subprocess.run(["git", "commit", "-m", commit_msg], check=True)
                 print("  ✅ Implementation changes committed")
-                
+
                 return {
                     "branch_created": current_branch != "main",
                     "implementation_complete": True,
@@ -721,17 +721,19 @@ class WorkflowExecutor:
 
         # Generic implementation for all other issues
         print("  🤖 Using Task tool for code implementation...")
-        
+
         # Prepare implementation prompt for the Task tool
         implementation_prompt = f"""You are implementing code changes for GitHub Issue #{self.issue_number}.
 
 Issue Title: {issue_title}
 
 Problem Description:
-{problem_description if problem_description else self._extract_section(issue_body, "Problem Description", "Problem Statement")}
+{problem_description if problem_description else 
+ self._extract_section(issue_body, "Problem Description", "Problem Statement")}
 
 Acceptance Criteria:
-{acceptance_criteria if acceptance_criteria else self._extract_section(issue_body, "Acceptance Criteria")}
+{acceptance_criteria if acceptance_criteria else 
+ self._extract_section(issue_body, "Acceptance Criteria")}
 
 Task Template Location: {template_path}
 
@@ -756,10 +758,10 @@ Please implement the required changes now."""
             # Import and use the Task tool for implementation
             # Note: In a real implementation, we would invoke the claude_cli Task tool
             # For now, we'll simulate the approach and create documentation
-            
+
             print("  🔨 Executing implementation via Task tool...")
             print("  📋 Task: Implement code changes based on issue requirements")
-            
+
             # Create implementation plan as fallback
             implementation_plan_path = (
                 self.workspace_root
@@ -769,7 +771,7 @@ Please implement the required changes now."""
                 / f"issue-{self.issue_number}-plan.md"
             )
             implementation_plan_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             plan_content = f"""# Implementation Plan for Issue #{self.issue_number}
 
 **Title**: {issue_title}
@@ -790,12 +792,12 @@ This plan serves as a record of the implementation approach.
 
 Note: Full automation requires Task tool integration in the workflow executor.
 """
-            
+
             implementation_plan_path.write_text(plan_content)
-            
+
             # For demonstration, commit the plan
             subprocess.run(["git", "add", str(implementation_plan_path)], check=True)
-            
+
             commit_msg = (
                 f"docs(plan): create implementation plan for issue #{self.issue_number}\n\n"
                 f"- Generated Task tool prompt for implementation\n"
@@ -803,17 +805,17 @@ Note: Full automation requires Task tool integration in the workflow executor.
                 f"- Ready for automated code generation\n\n"
                 f"Related to #{self.issue_number}"
             )
-            
+
             subprocess.run(["git", "commit", "-m", commit_msg], check=True)
             print("  ✅ Implementation plan created and committed")
             print("  ℹ️  Note: Full Task tool integration pending")
-            
+
             # In a real implementation, we would:
             # 1. Call the Task tool with the implementation prompt
             # 2. Let it analyze and modify the code
             # 3. Check if actual code changes were made
             # 4. Set code_changes_applied = True only if real changes occurred
-            
+
             return {
                 "branch_created": current_branch != "main",
                 "implementation_complete": True,
@@ -823,10 +825,10 @@ Note: Full automation requires Task tool integration in the workflow executor.
                 "task_template_followed": True,
                 "next_phase": 3,
             }
-            
+
         except Exception as e:
             print(f"  ❌ Implementation failed: {e}")
-            
+
             # Fallback: Create documentation of what should be implemented
             try:
                 error_doc_path = (
@@ -837,7 +839,7 @@ Note: Full automation requires Task tool integration in the workflow executor.
                     / f"issue-{self.issue_number}-error.md"
                 )
                 error_doc_path.parent.mkdir(parents=True, exist_ok=True)
-                
+
                 error_content = f"""# Implementation Error for Issue #{self.issue_number}
 
 **Error**: {str(e)}
@@ -849,18 +851,23 @@ Note: Full automation requires Task tool integration in the workflow executor.
 ## What Needs to be Done:
 Manual implementation required following the task template.
 """
-                
+
                 error_doc_path.write_text(error_content)
-                
+
                 subprocess.run(["git", "add", str(error_doc_path)], check=True)
-                subprocess.run([
-                    "git", "commit", "-m", 
-                    f"docs(error): document implementation error for issue #{self.issue_number}"
-                ], check=True)
-                
+                subprocess.run(
+                    [
+                        "git",
+                        "commit",
+                        "-m",
+                        f"docs(error): document implementation error for issue #{self.issue_number}",
+                    ],
+                    check=True,
+                )
+
             except Exception:
                 pass
-            
+
             return {
                 "branch_created": current_branch != "main",
                 "implementation_complete": False,
@@ -1318,37 +1325,37 @@ Manual implementation required following the task template.
         lines = template_content.split("\n")
         in_criteria_section = False
         criteria_lines = []
-        
+
         for line in lines:
             if "## ✅ Acceptance Criteria" in line or "## Acceptance Criteria" in line:
                 in_criteria_section = True
                 continue
-            
+
             if in_criteria_section and line.startswith("## "):
                 break
-                
+
             if in_criteria_section and line.strip():
                 criteria_lines.append(line)
-                
+
         return "\n".join(criteria_lines)
-    
+
     def _extract_problem_description(self, template_content: str) -> str:
         """Extract problem description from task template."""
         lines = template_content.split("\n")
         in_problem_section = False
         problem_lines = []
-        
+
         for line in lines:
             if "## Problem Description" in line or "## 📝 Issue Description" in line:
                 in_problem_section = True
                 continue
-                
+
             if in_problem_section and line.startswith("## "):
                 break
-                
+
             if in_problem_section and line.strip():
                 problem_lines.append(line)
-                
+
         return "\n".join(problem_lines)
 
     def _parse_subtasks_from_template(self, template_content: str) -> list[str]:
