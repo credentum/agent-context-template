@@ -69,16 +69,16 @@ echo "=========================="
 if [ "$PHASE1" = "true" ]; then
     echo -e "\n${BLUE}📦 Phase 1: Running Docker CI tests (without ARC reviewer)${NC}"
     echo "------------------------------------------------------------"
-    
+
     # Clean up any existing test artifacts
     rm -rf test-artifacts
     mkdir -p test-artifacts
-    
+
     # Run CI tests with --no-arc-reviewer flag
     echo -e "${YELLOW}Running comprehensive CI checks...${NC}"
     if ./scripts/run-ci-docker.sh all --no-arc-reviewer; then
         echo -e "${GREEN}✅ Phase 1 completed successfully${NC}"
-        
+
         # Check if coverage files were generated
         if [ -f "test-artifacts/coverage.json" ]; then
             echo -e "${GREEN}✅ Coverage artifacts generated:${NC}"
@@ -109,25 +109,25 @@ fi
 if [ "$PHASE2" = "true" ]; then
     echo -e "\n${BLUE}🤖 Phase 2: Running ARC reviewer with LLM mode${NC}"
     echo "-----------------------------------------------"
-    
+
     # Check if we're in a Claude Code session
     if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
         echo -e "${YELLOW}⚠️  Warning: CLAUDE_CODE_OAUTH_TOKEN not found${NC}"
         echo "This phase requires running in a Claude Code session for LLM access."
         echo "The OAuth token is automatically provided in Claude Code environments."
     fi
-    
+
     # Check if coverage file exists
     if [ ! -f "$COVERAGE_FILE" ]; then
         echo -e "${RED}❌ Coverage file not found: $COVERAGE_FILE${NC}"
         echo "Please run Phase 1 first to generate coverage artifacts."
         exit 1
     fi
-    
+
     # Copy coverage files to standard locations if they're in test-artifacts
     if [ -f "test-artifacts/coverage.json" ] && [ "$COVERAGE_FILE" = "test-artifacts/coverage.json" ]; then
         echo -e "${YELLOW}Copying coverage files to standard locations...${NC}"
-        
+
         # Copy coverage.json with error handling
         if cp test-artifacts/coverage.json coverage.json 2>&1; then
             echo -e "${GREEN}✅ Copied coverage.json successfully${NC}"
@@ -136,7 +136,7 @@ if [ "$PHASE2" = "true" ]; then
             echo "Please ensure you have write permissions in the current directory"
             exit 1
         fi
-        
+
         # Copy coverage.xml if it exists (optional file)
         if [ -f "test-artifacts/coverage.xml" ]; then
             if cp test-artifacts/coverage.xml coverage.xml 2>&1; then
@@ -146,14 +146,14 @@ if [ "$PHASE2" = "true" ]; then
             fi
         fi
     fi
-    
+
     # Run ARC reviewer with LLM mode
     echo -e "${YELLOW}Running ARC reviewer with LLM mode...${NC}"
     echo "Using coverage from standard location (coverage.json)"
-    
+
     # Set PYTHONPATH to ensure imports work correctly
     export PYTHONPATH="${PYTHONPATH}:$(pwd)"
-    
+
     # Run ARC reviewer with LLM flag
     if python -m src.agents.arc_reviewer --llm; then
         echo -e "${GREEN}✅ Phase 2 completed successfully${NC}"

@@ -1,7 +1,7 @@
 ---
 # Production Docker Compose configuration with SSL/TLS enabled
 # Use this for production deployments where security is critical
-# 
+#
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
 
 # Docker image references with SHA pinning for security

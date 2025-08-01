@@ -41,7 +41,7 @@ The workflow validation phase (Phase 3) is timing out after 90 seconds when runn
 ## Current CI Execution Times
 Based on local testing:
 - Pre-commit hooks: 2-3 minutes
-- Individual lint checks: 3-4 minutes  
+- Individual lint checks: 3-4 minutes
 - Unit tests: 1-2 minutes
 - Integration tests: 2-3 minutes
 - Coverage analysis: 2-3 minutes
@@ -59,7 +59,7 @@ Based on local testing:
 1. **Option 1**: Increase `PHASE_TIMEOUT_SECONDS` for validation phase only
    - Add phase-specific timeout configuration
    - Keep other phases at 90 seconds for quick feedback
-   
+
 2. **Option 2**: Run CI validation asynchronously
    - Start CI in background process
    - Poll for completion with progress updates
@@ -89,13 +89,13 @@ Key files to modify:
 - [x] **Breaking change assessment** (backward compatible)
 
 ## Pre-Execution Context
-**Key Files**: 
+**Key Files**:
 - `scripts/workflow_phase_runner.py`
 - `scripts/workflow_config.py`
 - `scripts/workflow_executor.py`
 - `scripts/run-ci-docker.sh`
 
-**Related Issues/PRs**: 
+**Related Issues/PRs**:
 - #1708 (workflow test that exposed timeout issue)
 - #1709 (verification improvements)
 - #1710 (e2e test suite)

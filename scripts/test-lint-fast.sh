@@ -25,9 +25,9 @@ run_background_check() {
     local name=$1
     local cmd=$2
     local output_file="/tmp/ci-check-$name.out"
-    
+
     echo -e "${BLUE}▶ Starting $name...${NC}"
-    
+
     # Run command in background and capture output
     (
         if eval "$cmd" > "$output_file" 2>&1; then
@@ -55,13 +55,13 @@ echo -e "${BLUE}========================================${NC}"
 
 for check in black isort flake8; do
     status=$(cat "/tmp/ci-check-$check.status" 2>/dev/null || echo "UNKNOWN")
-    
+
     if [ "$status" = "PASSED" ]; then
         echo -e "✅ $check: ${GREEN}PASSED${NC}"
     else
         echo -e "❌ $check: ${RED}FAILED${NC}"
         FAILED=$((FAILED + 1))
-        
+
         # Show output for failed checks
         if [ -f "/tmp/ci-check-$check.out" ]; then
             echo -e "${YELLOW}Output from $check:${NC}"
@@ -69,7 +69,7 @@ for check in black isort flake8; do
             echo
         fi
     fi
-    
+
     # Clean up temp files
     rm -f "/tmp/ci-check-$check.status" "/tmp/ci-check-$check.out"
 done

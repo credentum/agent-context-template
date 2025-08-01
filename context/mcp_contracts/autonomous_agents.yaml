@@ -11,7 +11,7 @@ contracts:
     description: "Classifies GitHub issues for autonomous eligibility and complexity scoring"
     version: "1.0.0"
     category: "analysis"
-    
+
     input_schema:
       type: "object"
       required: ["issue", "repository_context"]
@@ -47,7 +47,7 @@ contracts:
               type: "number"
               minimum: 0
               maximum: 100
-    
+
     output_schema:
       type: "object"
       required: ["classification", "confidence", "reasoning"]
@@ -83,7 +83,7 @@ contracts:
           items:
             type: "string"
           description: "Reasons for human escalation if applicable"
-    
+
     capabilities:
       - "Pattern recognition from historical issues"
       - "Complexity analysis based on code impact"
@@ -95,7 +95,7 @@ contracts:
     description: "Performs root cause analysis with multiple hypotheses and confidence scoring"
     version: "1.0.0"
     category: "analysis"
-    
+
     input_schema:
       type: "object"
       required: ["issue", "classification", "similar_issues"]
@@ -117,7 +117,7 @@ contracts:
                 type: "number"
               resolution_summary:
                 type: "string"
-    
+
     output_schema:
       type: "object"
       required: ["investigation_result", "confidence", "hypotheses"]
@@ -168,7 +168,7 @@ contracts:
     description: "Generates code with incremental validation and self-healing capabilities"
     version: "1.0.0"
     category: "generation"
-    
+
     input_schema:
       type: "object"
       required: ["investigation", "target_branch", "repository_path"]
@@ -192,7 +192,7 @@ contracts:
               type: "array"
               items:
                 type: "object"
-    
+
     output_schema:
       type: "object"
       required: ["success", "implementation_result"]
@@ -240,7 +240,7 @@ contracts:
           type: "boolean"
         escalation_reason:
           type: "string"
-    
+
     capabilities:
       - "Incremental code generation with validation"
       - "Self-healing on test failures"
@@ -252,7 +252,7 @@ contracts:
     description: "Validates implementation with predictive testing and auto-generation"
     version: "1.0.0"
     category: "validation"
-    
+
     input_schema:
       type: "object"
       required: ["implementation", "investigation"]
@@ -272,7 +272,7 @@ contracts:
                 type: "string"
               failure_probability:
                 type: "number"
-    
+
     output_schema:
       type: "object"
       required: ["success", "confidence", "test_results"]
@@ -335,7 +335,7 @@ contracts:
             severity:
               type: "string"
               enum: ["low", "medium", "high", "critical"]
-    
+
     capabilities:
       - "Predictive test failure analysis"
       - "Automatic test generation for uncovered paths"
@@ -347,7 +347,7 @@ contracts:
     description: "Manages PR creation, review responses, and auto-merge decisions"
     version: "1.0.0"
     category: "deployment"
-    
+
     input_schema:
       type: "object"
       required: ["implementation", "test_validation", "investigation", "repository"]
@@ -369,7 +369,7 @@ contracts:
               description: "owner/repo format"
             default_branch:
               type: "string"
-    
+
     output_schema:
       type: "object"
       required: ["pr_number", "pr_url", "status", "merge_confidence"]
@@ -404,7 +404,7 @@ contracts:
         monitoring_enabled:
           type: "boolean"
           description: "Whether post-merge monitoring is active"
-    
+
     capabilities:
       - "Optimal PR description generation"
       - "AI-powered self code review"
@@ -417,7 +417,7 @@ contracts:
     description: "Master orchestrator coordinating all autonomous agents"
     version: "1.0.0"
     category: "orchestration"
-    
+
     input_schema:
       type: "object"
       required: ["issue", "repository"]
@@ -437,7 +437,7 @@ contracts:
           maximum: 1
           default: 0.7
           description: "Minimum confidence for autonomous operation"
-    
+
     output_schema:
       type: "object"
       required: ["success", "pipeline_result"]
@@ -488,7 +488,7 @@ contracts:
         partial_progress:
           type: "object"
           description: "Progress made before escalation"
-    
+
     capabilities:
       - "End-to-end workflow orchestration"
       - "Parallel agent execution"

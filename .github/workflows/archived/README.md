@@ -1,7 +1,7 @@
 # Archived GitHub Workflows
 
-**Archived Date**: 2025-07-31  
-**Reason**: Migration to Local CI with Automatic Issue Fixing  
+**Archived Date**: 2025-07-31
+**Reason**: Migration to Local CI with Automatic Issue Fixing
 **Related Issues**: #173, #1291, #1694
 
 ## Overview

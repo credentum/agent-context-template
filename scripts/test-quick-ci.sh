@@ -28,13 +28,13 @@ run_check() {
     local name=$1
     local cmd=$2
     local section=$3
-    
+
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     echo -e "\n${BLUE}[$section] $name${NC}"
-    
+
     # Show progress indicator
     echo -n "  Running... "
-    
+
     if eval "$cmd"; then
         echo -e "\r  ${GREEN}✓ PASSED${NC}    "
     else
