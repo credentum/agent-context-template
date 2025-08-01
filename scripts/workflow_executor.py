@@ -800,28 +800,31 @@ Executing actual code implementation via Task tool.
             # Create a task request for Claude Code to execute
             print("  🤖 Creating Task tool execution request...")
             print(f"  📝 Working directory: {self.workspace_root}")
-            
+
             # Use the workflow task bridge to request implementation
-            from scripts.workflow_task_bridge import WorkflowTaskBridge, create_implementation_script
-            
+            from scripts.workflow_task_bridge import (
+                WorkflowTaskBridge,
+                create_implementation_script,
+            )
+
             bridge = WorkflowTaskBridge(self.issue_number)
-            
+
             # Create implementation script that can be executed by Claude Code
             impl_script = create_implementation_script(self.issue_number, implementation_prompt)
             print(f"  📄 Created implementation script: {impl_script.name}")
-            
+
             # Request Task tool execution
             task_result = bridge.request_task_execution(
                 prompt=implementation_prompt,
-                description=f"Implement issue #{self.issue_number}: {issue_title}"
+                description=f"Implement issue #{self.issue_number}: {issue_title}",
             )
-            
+
             print(f"  📋 Task request status: {task_result['status']}")
-            
+
             # For now, since we're in a subprocess without Task tool access,
             # we'll create a clear signal that manual implementation is needed
             # The parent Claude Code process should detect this and run the Task tool
-            
+
             impl_needed_path = (
                 self.workspace_root
                 / "context"
@@ -830,7 +833,7 @@ Executing actual code implementation via Task tool.
                 / f"issue-{self.issue_number}-IMPLEMENT.md"
             )
             impl_needed_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             impl_content = f"""# IMPLEMENTATION NEEDED: Issue #{self.issue_number}
 
 **IMPORTANT**: The workflow has reached the implementation phase but needs the Task tool to proceed.
@@ -874,35 +877,32 @@ After implementation, the workflow will continue with:
             print(f"  📌 Implementation marker created: {impl_needed_path.name}")
             print("  ⚠️  Manual implementation required - Task tool not available in subprocess")
             print("  💡 To proceed: Implement the code changes based on the requirements above")
-            
+
             # Check if any changes were made
             git_status_result = subprocess.run(
-                ["git", "status", "--porcelain"], 
-                capture_output=True, 
-                text=True, 
-                check=True
+                ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
             )
-            
+
             has_changes = bool(git_status_result.stdout.strip())
-            
+
             if has_changes:
                 print("  ✅ Code changes detected")
                 code_changes_applied = True
-                
+
                 # Stage all changes
                 subprocess.run(["git", "add", "-A"], check=True)
-                
+
                 # Check what files were changed
                 staged_result = subprocess.run(
                     ["git", "diff", "--cached", "--name-only"],
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=True,
                 )
-                
-                changed_files = staged_result.stdout.strip().split('\n')
+
+                changed_files = staged_result.stdout.strip().split("\n")
                 print(f"  📝 Files changed: {changed_files}")
-                
+
                 # Commit the changes
                 commit_msg = (
                     f"feat: implement issue #{self.issue_number} requirements\n\n"
@@ -914,13 +914,13 @@ After implementation, the workflow will continue with:
                     if file:
                         commit_msg += f"- {file}\n"
                 commit_msg += f"\nRelated to #{self.issue_number}"
-                
+
                 subprocess.run(["git", "commit", "-m", commit_msg], check=True)
                 print("  ✅ Changes committed")
             else:
                 print("  ⚠️  No code changes detected")
                 code_changes_applied = False
-                
+
                 # Create fallback documentation for debugging
                 implementation_plan_path = (
                     self.workspace_root
@@ -954,14 +954,14 @@ Manual review may be required.
 
                 implementation_plan_path.write_text(plan_content)
                 subprocess.run(["git", "add", str(implementation_plan_path)], check=True)
-                
+
                 commit_msg = (
                     f"docs(debug): Task tool execution record for issue #{self.issue_number}\n\n"
                     f"- Task tool was executed but no code changes detected\n"
                     f"- Recorded execution details for debugging\n\n"
                     f"Related to #{self.issue_number}"
                 )
-                
+
                 subprocess.run(["git", "commit", "-m", commit_msg], check=True)
 
             # Perform verification after implementation
