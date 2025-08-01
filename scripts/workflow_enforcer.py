@@ -17,6 +17,14 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
+# Import workflow configuration
+try:
+    from workflow_config import WorkflowConfig
+    COVERAGE_BASELINE = WorkflowConfig.COVERAGE_BASELINE
+except ImportError:
+    # Fallback if workflow_config is not available
+    COVERAGE_BASELINE = 78.0
+
 
 @dataclass
 class PhaseState:
@@ -101,7 +109,7 @@ class WorkflowEnforcer:
                     },
                     "validation": {
                         "required_outputs": ["tests_run", "ci_passed", "coverage_maintained"],
-                        "min_coverage": 71.82,
+                        "min_coverage": COVERAGE_BASELINE,
                         "required_commands": [
                             "./scripts/run-ci-docker.sh",
                             "pre-commit run --all-files",
