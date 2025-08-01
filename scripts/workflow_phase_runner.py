@@ -129,13 +129,25 @@ class PhaseRunner:
         if self.hybrid:
             cmd.append("--hybrid")
 
+        # Get phase-specific timeout
+        phase_name = self.PHASES[phase_num][0]
+        timeout = WorkflowConfig.get_phase_timeout(phase_name)
+
+        if phase_name == "validation":
+            print(
+                f"⏰ Using extended timeout for validation phase: {timeout}s ({timeout//60} minutes)"
+            )
+            print(
+                "   This allows full CI execution including Docker tests, coverage, and quality checks"
+            )
+
         try:
-            # Run with configurable timeout per phase (under 2-minute limit)
+            # Run with phase-specific timeout
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=WorkflowConfig.PHASE_TIMEOUT_SECONDS,
+                timeout=timeout,
                 cwd=Path.cwd(),
                 shell=False,  # Explicit for security
             )
@@ -149,7 +161,7 @@ class PhaseRunner:
                 return False
 
         except subprocess.TimeoutExpired:
-            print(f"⏱️  Phase timed out after {WorkflowConfig.PHASE_TIMEOUT_SECONDS} seconds")
+            print(f"⏱️  Phase timed out after {timeout} seconds")
             return False
         except Exception as e:
             print(f"❌ Unexpected error: {e}")
