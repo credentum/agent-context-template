@@ -4,6 +4,7 @@ Phase-based workflow runner that executes phases individually to avoid timeouts.
 Each phase runs in its own process with automatic progression.
 """
 
+import json
 import subprocess
 import sys
 import time
@@ -14,6 +15,9 @@ from typing import List, Optional
 class PhaseRunner:
     """Runs workflow phases individually with timeout protection."""
 
+    # Configurable timeout per phase
+    PHASE_TIMEOUT_SECONDS = 90
+    
     PHASES = [
         ("investigation", 0, "Analyze issue scope and requirements"),
         ("planning", 1, "Create implementation plan"),
@@ -29,7 +33,7 @@ class PhaseRunner:
         self.completed_phases = []
         self.state_file = Path(f".workflow-phase-state-{issue_number}.json")
 
-    def run_all_phases(self, skip_phases: Optional[List[int]] = None):
+    def run_all_phases(self, skip_phases: Optional[List[int]] = None) -> bool:
         """Run all phases with automatic progression."""
         skip_phases = skip_phases or []
 
@@ -84,7 +88,7 @@ class PhaseRunner:
         ]
 
         # Skip all phases except the one we want
-        for i in range(6):
+        for i in range(len(self.PHASES)):
             if i != phase_num:
                 cmd.append(str(i))
 
@@ -92,8 +96,10 @@ class PhaseRunner:
             cmd.append("--hybrid")
 
         try:
-            # Run with 90-second timeout per phase (under 2-minute limit)
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=90, cwd=Path.cwd())
+            # Run with configurable timeout per phase (under 2-minute limit)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=self.PHASE_TIMEOUT_SECONDS, cwd=Path.cwd()
+            )
 
             if result.returncode == 0:
                 return True
@@ -104,16 +110,15 @@ class PhaseRunner:
                 return False
 
         except subprocess.TimeoutExpired:
-            print("⏱️  Phase timed out after 90 seconds")
+            print(f"⏱️  Phase timed out after {self.PHASE_TIMEOUT_SECONDS} seconds")
             return False
         except Exception as e:
             print(f"❌ Unexpected error: {e}")
             return False
 
-    def _load_state(self):
+    def _load_state(self) -> None:
         """Load previous execution state."""
         if self.state_file.exists():
-            import json
 
             try:
                 with open(self.state_file) as f:
@@ -123,9 +128,8 @@ class PhaseRunner:
             except Exception as e:
                 print(f"⚠️  Could not load state: {e}")
 
-    def _save_state(self):
+    def _save_state(self) -> None:
         """Save execution state."""
-        import json
 
         try:
             with open(self.state_file, "w") as f:
@@ -133,13 +137,13 @@ class PhaseRunner:
         except Exception as e:
             print(f"⚠️  Could not save state: {e}")
 
-    def _cleanup_state(self):
+    def _cleanup_state(self) -> None:
         """Remove state file after successful completion."""
         if self.state_file.exists():
             self.state_file.unlink()
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     import argparse
 

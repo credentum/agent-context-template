@@ -5,11 +5,13 @@ Avoids timeout by launching workflow in background and providing status updates.
 """
 
 import json
+import os
+import signal
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 
 class AsyncWorkflowExecutor:
@@ -21,7 +23,7 @@ class AsyncWorkflowExecutor:
         self.pid_file = Path(f".workflow-async-{issue_number}.pid")
         self.status_file = Path(f".workflow-async-{issue_number}.status")
 
-    def start_workflow(self, hybrid: bool = False, skip_phases: Optional[list] = None):
+    def start_workflow(self, hybrid: bool = False, skip_phases: Optional[List[int]] = None) -> bool:
         """Start workflow in background."""
         # Check if already running
         if self._is_running():
@@ -106,10 +108,14 @@ class AsyncWorkflowExecutor:
                 pid = int(f.read().strip())
 
             # Terminate process group
-            import signal
-            import os
-
-            os.killpg(os.getpgid(pid), signal.SIGTERM)
+            try:
+                os.killpg(os.getpgid(pid), signal.SIGTERM)
+            except ProcessLookupError:
+                print(f"Process {pid} not found")
+                return False
+            except PermissionError:
+                print(f"Permission denied to stop process {pid}")
+                return False
 
             self._update_status("stopped", "Workflow stopped by user")
             print(f"✅ Workflow stopped (PID: {pid})")
@@ -128,14 +134,12 @@ class AsyncWorkflowExecutor:
                 pid = int(f.read().strip())
 
             # Check if process exists
-            import os
-
             os.kill(pid, 0)
             return True
         except (OSError, ValueError):
             return False
 
-    def _update_status(self, status: str, message: str):
+    def _update_status(self, status: str, message: str) -> None:
         """Update status file."""
         data = {
             "status": status,
