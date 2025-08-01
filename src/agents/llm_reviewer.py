@@ -462,8 +462,7 @@ automated_issues:
                         "line": 385,  # Match PR reviewer's line number
                         "category": "test_coverage",
                         "fix_guidance": (
-                            "Add unit tests for the new execute_validation "
-                            "two-phase CI logic"
+                            "Add unit tests for the new execute_validation " "two-phase CI logic"
                         ),
                     }
                 )
@@ -485,8 +484,7 @@ automated_issues:
                 issues["warnings"].append(
                     {
                         "description": (
-                            f"Limited test coverage for major new functionality "
-                            f"in {file_path}"
+                            f"Limited test coverage for major new functionality " f"in {file_path}"
                         ),
                         "file": file_path,
                         "line": 1,
@@ -570,8 +568,7 @@ automated_issues:
                             "line": i,
                             "category": "code_quality",
                             "fix_guidance": (
-                                "Replace hardcoded 71.82 with "
-                                "WorkflowConfig.COVERAGE_BASELINE"
+                                "Replace hardcoded 71.82 with " "WorkflowConfig.COVERAGE_BASELINE"
                             ),
                         }
                     )
@@ -586,15 +583,13 @@ automated_issues:
                 issues["warnings"].append(
                     {
                         "description": (
-                            f"Hardcoded coverage thresholds in "
-                            f"{file_path.split('/')[-1]}"
+                            f"Hardcoded coverage thresholds in " f"{file_path.split('/')[-1]}"
                         ),
                         "file": file_path,
                         "line": i,
                         "category": "code_quality",
                         "fix_guidance": (
-                            "Make coverage thresholds (78.0%, 90%) "
-                            "configurable via settings"
+                            "Make coverage thresholds (78.0%, 90%) " "configurable via settings"
                         ),
                     }
                 )
