@@ -136,7 +136,7 @@ Consider all issues that may exist across the entire changeset, including:
 - Cumulative effects of all changes together
 
 Review criteria (any failure = REQUEST_CHANGES):
-- Test Coverage: validators/* ≥ 90%, overall ≥ {WorkflowConfig.COVERAGE_BASELINE}%
+- Test Coverage: validators/* ≥ {WorkflowConfig.VALIDATORS_COVERAGE_THRESHOLD}%, overall ≥ {WorkflowConfig.COVERAGE_BASELINE}%
 - MCP Compatibility: Tool contracts updated, valid JSON schema
 - Context Integrity: All YAML has schema_version, context/ structure intact
 - Code Quality: Python typed, docstrings, pre-commit passes
@@ -573,23 +573,28 @@ automated_issues:
                         }
                     )
 
-            # Only flag 78.0/90.0 in specific threshold contexts as warnings (less critical)
+            # Only flag hardcoded thresholds if they match our constants
             elif (
-                ("78.0" in line or "90.0" in line)
+                (str(WorkflowConfig.COVERAGE_BASELINE) in line 
+                 or str(WorkflowConfig.VALIDATORS_COVERAGE_THRESHOLD) in line)
                 and ("if " in line or ">=" in line or "<" in line)
                 and ("coverage" in line or "baseline" in line)
                 and "# " not in line
+                and "WorkflowConfig" not in line  # Exclude proper usage
             ):
                 issues["warnings"].append(
                     {
                         "description": (
-                            f"Hardcoded coverage thresholds in " f"{file_path.split('/')[-1]}"
+                            f"Hardcoded coverage thresholds in "
+                            f"{file_path.split('/')[-1]}"
                         ),
                         "file": file_path,
                         "line": i,
                         "category": "code_quality",
                         "fix_guidance": (
-                            "Make coverage thresholds (78.0%, 90%) " "configurable via settings"
+                            f"Replace hardcoded {WorkflowConfig.COVERAGE_BASELINE}% "
+                            f"or {WorkflowConfig.VALIDATORS_COVERAGE_THRESHOLD}% with "
+                            f"WorkflowConfig constants"
                         ),
                     }
                 )

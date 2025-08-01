@@ -22,3 +22,9 @@ class WorkflowConfig:
 
     # Delay between retry attempts (seconds)
     RETRY_DELAY_SECONDS = int(os.environ.get("WORKFLOW_RETRY_DELAY", "5"))
+    
+    # Coverage baseline requirement (percentage)
+    COVERAGE_BASELINE = float(os.environ.get("COVERAGE_BASELINE", "78.0"))
+    
+    # Coverage requirement for validators directory (percentage)
+    VALIDATORS_COVERAGE_THRESHOLD = float(os.environ.get("VALIDATORS_COVERAGE_THRESHOLD", "90.0"))
