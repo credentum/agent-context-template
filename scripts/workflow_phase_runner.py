@@ -16,7 +16,7 @@ from workflow_config import WorkflowConfig
 
 class PhaseRunner:
     """Runs workflow phases individually with timeout protection."""
-    
+
     PHASES = [
         ("investigation", 0, "Analyze issue scope and requirements"),
         ("planning", 1, "Create implementation plan"),
@@ -35,13 +35,13 @@ class PhaseRunner:
     def run_all_phases(self, skip_phases: Optional[List[int]] = None) -> bool:
         """
         Run all workflow phases with automatic progression.
-        
+
         Args:
             skip_phases: Optional list of phase numbers (0-5) to skip
-            
+
         Returns:
             bool: True if all phases completed successfully, False if any phase failed
-            
+
         The method will load any previous state, execute each phase in order,
         save state after each successful phase, and clean up state on completion.
         """

@@ -37,9 +37,11 @@ class TestWorkflowConfig(unittest.TestCase):
         """Test phase timeout can be overridden by environment variable."""
         # Need to reload the module to pick up env changes
         import importlib
+
         import workflow_config
+
         importlib.reload(workflow_config)
-        
+
         self.assertEqual(workflow_config.WorkflowConfig.PHASE_TIMEOUT_SECONDS, 120)
 
     @patch.dict(os.environ, {"WORKFLOW_BACKGROUND_TIMEOUT": "600"})
@@ -47,9 +49,11 @@ class TestWorkflowConfig(unittest.TestCase):
         """Test background timeout can be overridden by environment variable."""
         # Need to reload the module to pick up env changes
         import importlib
+
         import workflow_config
+
         importlib.reload(workflow_config)
-        
+
         self.assertEqual(workflow_config.WorkflowConfig.BACKGROUND_PROCESS_TIMEOUT, 600)
 
     @patch.dict(os.environ, {"WORKFLOW_MAX_RETRIES": "5"})
@@ -57,9 +61,11 @@ class TestWorkflowConfig(unittest.TestCase):
         """Test max retries can be overridden by environment variable."""
         # Need to reload the module to pick up env changes
         import importlib
+
         import workflow_config
+
         importlib.reload(workflow_config)
-        
+
         self.assertEqual(workflow_config.WorkflowConfig.MAX_RETRY_ATTEMPTS, 5)
 
     @patch.dict(os.environ, {"WORKFLOW_RETRY_DELAY": "10"})
@@ -67,9 +73,11 @@ class TestWorkflowConfig(unittest.TestCase):
         """Test retry delay can be overridden by environment variable."""
         # Need to reload the module to pick up env changes
         import importlib
+
         import workflow_config
+
         importlib.reload(workflow_config)
-        
+
         self.assertEqual(workflow_config.WorkflowConfig.RETRY_DELAY_SECONDS, 10)
 
 

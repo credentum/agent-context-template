@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-__all__ = ['AsyncWorkflowExecutor']
+__all__ = ["AsyncWorkflowExecutor"]
 
 
 class AsyncWorkflowExecutor:
@@ -51,8 +51,8 @@ class AsyncWorkflowExecutor:
         with open(self.log_file, "w") as log:
             if platform.system() == "Windows":
                 # Windows uses CREATE_NEW_PROCESS_GROUP
-                creation_flags = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0x00000200)
-                
+                creation_flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+
                 process = subprocess.Popen(
                     cmd,
                     stdout=log,
@@ -128,9 +128,7 @@ class AsyncWorkflowExecutor:
                     # Windows doesn't support process groups in the same way
                     # Use taskkill command for Windows
                     subprocess.run(
-                        ["taskkill", "/F", "/PID", str(pid), "/T"],
-                        check=True,
-                        capture_output=True
+                        ["taskkill", "/F", "/PID", str(pid), "/T"], check=True, capture_output=True
                     )
                 else:
                     # Unix-like systems (Linux, macOS)
