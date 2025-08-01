@@ -2,14 +2,12 @@
 """Extended unit tests for AsyncWorkflowExecutor to improve coverage."""
 
 import json
-import os
-import platform
-import subprocess
+import subprocess  # noqa: F401 - Used for subprocess.TimeoutExpired
 import sys
 import unittest
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, call, mock_open, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 # Add scripts directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
@@ -114,7 +112,7 @@ class TestAsyncWorkflowExecutorExtended(unittest.TestCase):
         self.executor.pid_file.touch()
 
         result = self.executor.check_status()
-        
+
         self.assertEqual(result["status"], "completed")
         # PID file should be cleaned up
         self.assertFalse(self.executor.pid_file.exists())
@@ -127,7 +125,7 @@ class TestAsyncWorkflowExecutorExtended(unittest.TestCase):
             f.write(log_content)
 
         logs = self.executor.get_logs(lines=2)
-        
+
         self.assertIn("Line 2", logs)
         self.assertIn("Line 3", logs)
         self.assertNotIn("Line 1", logs)
@@ -138,7 +136,7 @@ class TestAsyncWorkflowExecutorExtended(unittest.TestCase):
         self.executor.log_file.touch()
 
         logs = self.executor.get_logs()
-        
+
         self.assertEqual(logs, "")
 
     def test_get_logs_with_encoding_error(self):
@@ -147,7 +145,7 @@ class TestAsyncWorkflowExecutorExtended(unittest.TestCase):
         with open(self.executor.log_file, "wb") as f:
             f.write(b"\xff\xfe Invalid UTF-8")
 
-        with patch("builtins.print") as mock_print:
+        with patch("builtins.print"):
             logs = self.executor.get_logs()
 
         # Should handle error gracefully
@@ -180,7 +178,7 @@ class TestAsyncWorkflowExecutorExtended(unittest.TestCase):
         mock_kill.side_effect = ProcessLookupError()
 
         result = self.executor._is_running()
-        
+
         self.assertFalse(result)
 
     def test_is_running_with_invalid_pid(self):
@@ -190,7 +188,7 @@ class TestAsyncWorkflowExecutorExtended(unittest.TestCase):
             f.write("not_a_number")
 
         result = self.executor._is_running()
-        
+
         self.assertFalse(result)
 
     def test_update_status_with_io_error(self):
@@ -203,13 +201,13 @@ class TestAsyncWorkflowExecutorExtended(unittest.TestCase):
                 self.executor._update_status("error", "Test")
 
             # Should print error message
-            printed_messages = [str(call) for call in mock_print.call_args_list]
+            printed_messages = [str(c) for c in mock_print.call_args_list]
             self.assertTrue(any("Disk full" in msg for msg in printed_messages))
 
     def test_file_paths_consistency(self):
         """Test that all file paths use same pattern."""
         base_name = f".workflow-async-{self.issue_number}"
-        
+
         self.assertEqual(str(self.executor.log_file), f"{base_name}.log")
         self.assertEqual(str(self.executor.pid_file), f"{base_name}.pid")
         self.assertEqual(str(self.executor.status_file), f"{base_name}.status")
@@ -249,7 +247,7 @@ class TestAsyncWorkflowExecutorExtended(unittest.TestCase):
     def test_all_attribute(self):
         """Test __all__ module attribute."""
         import workflow_async_executor
-        
+
         self.assertEqual(workflow_async_executor.__all__, ["AsyncWorkflowExecutor"])
 
     def test_datetime_format_in_status(self):
@@ -272,18 +270,18 @@ class TestAsyncWorkflowExecutorPlatformSpecific(unittest.TestCase):
     def test_windows_creation_flags(self, mock_platform):
         """Test Windows-specific process creation flags."""
         mock_platform.return_value = "Windows"
-        
+
         executor = AsyncWorkflowExecutor(777)
-        
+
         with patch("workflow_async_executor.subprocess.Popen") as mock_popen:
             with patch.object(executor, "_is_running", return_value=False):
                 mock_process = MagicMock()
                 mock_process.pid = 77777
                 mock_popen.return_value = mock_process
-                
+
                 with patch("builtins.open", mock_open()):
                     executor.start_workflow()
-        
+
         # Check that Windows flags were used
         kwargs = mock_popen.call_args[1]
         self.assertEqual(kwargs.get("creationflags"), 0x00000200)

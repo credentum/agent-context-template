@@ -30,7 +30,7 @@ class PhaseRunner:
         # Validate issue_number to prevent command injection
         if not isinstance(issue_number, int) or issue_number <= 0:
             raise ValueError(f"Issue number must be a positive integer, got: {issue_number}")
-        
+
         self.issue_number = issue_number
         self.hybrid = hybrid
         self.completed_phases: List[int] = []

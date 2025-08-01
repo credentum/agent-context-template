@@ -438,7 +438,6 @@ phases:
         estimate: "14 hours"
         assignee: "data-engineer"
 
-phases:
   - phase: 1
     name: "Infrastructure Setup with OAuth"
     status: pending
