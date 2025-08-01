@@ -1,22 +1,23 @@
 schema_version: 1.0.0
 document_type: sprint
-id: "sprint-6-modal-migration-oauth"
-title: "Sprint 6 - Migrate Workflow-Issue System to Modal Architecture with Claude OAuth"
+id: "sprint-6-autonomous-pipeline"
+title: "Sprint 6 - Build Autonomous Software Development Pipeline with Modal OAuth Architecture"
 status: planning
 created_date: "2025-01-31"
 sprint_number: 6
 start_date: "2025-02-01"
-end_date: "2025-03-14"
-last_modified: "2025-01-31"
-last_referenced: "2025-01-31"
+end_date: "2025-03-21"
+last_modified: "2025-02-01"
+last_referenced: "2025-02-01"
 
 goals:
-  - "Transform existing workflow-issue system into scalable Modal.com serverless architecture using Claude OAuth authentication"
-  - "Implement modular agent design with OAuth-based Claude SDK integration"
-  - "Eliminate API key management overhead using Claude subscription OAuth tokens"
-  - "Enable @claude-style mentions for natural agent interactions"
-  - "Ensure zero-downtime migration with comprehensive rollback capabilities"
-  - "Implement robust security measures for OAuth token management"
+  - "Build autonomous software development pipeline from GitHub issue to PR with 80%+ automation rate"
+  - "Implement confidence-based decision making with self-healing capabilities"
+  - "Create continuous learning system that improves with every issue resolved"
+  - "Transform workflow-issue system into serverless Modal architecture with OAuth"
+  - "Enable predictive validation and parallel solution exploration"
+  - "Achieve 50% reduction in time-to-resolution through intelligent automation"
+  - "Implement zero-downtime migration with comprehensive rollback capabilities"
 
 phases:
   - phase: 0
@@ -170,6 +171,265 @@ phases:
         dependencies: []
         estimate: "10 hours"
         assignee: "backend-engineer"
+
+      - title: "Build AI-Powered Issue Classification System"
+        description: |
+          Create intelligent issue classification that determines autonomy
+          eligibility and complexity scoring.
+
+          ## Acceptance Criteria
+          - [ ] Issue classification model with 95%+ accuracy
+          - [ ] Complexity scoring algorithm implemented
+          - [ ] Autonomy eligibility decision tree
+          - [ ] Historical issue analysis for pattern recognition
+          - [ ] Real-time classification API endpoint
+          - [ ] Human escalation triggers defined
+
+          ## Implementation Notes
+            ```python
+            from sklearn.ensemble import RandomForestClassifier
+            import numpy as np
+            from typing import Dict, Tuple
+            
+            class IssueClassifier:
+                def __init__(self):
+                    self.complexity_model = self._load_complexity_model()
+                    self.autonomy_threshold = 0.85
+                    self.vector_db = ChromaDB()
+                    
+                async def classify_issue(self, issue: Dict) -> IssueClassification:
+                    # 1. Extract features
+                    features = await self._extract_features(issue)
+                    
+                    # 2. Get embeddings for semantic search
+                    embedding = await self._get_issue_embedding(issue)
+                    
+                    # 3. Find similar resolved issues
+                    similar_issues = await self.vector_db.similarity_search(
+                        embedding, 
+                        k=10,
+                        filter={"status": "resolved"}
+                    )
+                    
+                    # 4. Calculate complexity score
+                    complexity_score = self.complexity_model.predict_proba(features)[0][1]
+                    
+                    # 5. Determine autonomy eligibility
+                    autonomy_score = await self._calculate_autonomy_score(
+                        issue, 
+                        similar_issues,
+                        complexity_score
+                    )
+                    
+                    # 6. Classification decision
+                    return IssueClassification(
+                        type=self._determine_issue_type(features),
+                        complexity=complexity_score,
+                        autonomy_eligible=autonomy_score > self.autonomy_threshold,
+                        autonomy_score=autonomy_score,
+                        suggested_approach=self._suggest_approach(similar_issues),
+                        escalation_reasons=self._get_escalation_reasons(autonomy_score)
+                    )
+                
+                async def _calculate_autonomy_score(self, issue, similar_issues, complexity):
+                    # Factors for autonomy decision
+                    factors = {
+                        "complexity": 1 - complexity,  # Lower complexity = higher autonomy
+                        "similarity_to_resolved": len(similar_issues) / 10,
+                        "test_coverage_available": await self._check_test_coverage(issue),
+                        "breaking_change_risk": 1 - await self._assess_breaking_change_risk(issue),
+                        "security_sensitive": 1 - await self._is_security_sensitive(issue)
+                    }
+                    
+                    # Weighted average
+                    weights = {
+                        "complexity": 0.3,
+                        "similarity_to_resolved": 0.25,
+                        "test_coverage_available": 0.2,
+                        "breaking_change_risk": 0.15,
+                        "security_sensitive": 0.1
+                    }
+                    
+                    return sum(factors[k] * weights[k] for k in factors)
+            
+            @modal.function(
+                schedule=modal.Period(minutes=5),
+                image=modal.Image.debian_slim().pip_install(
+                    "scikit-learn", "numpy", "chromadb", "anthropic"
+                )
+            )
+            async def autonomous_issue_monitor():
+                classifier = IssueClassifier()
+                github = GitHubAppClient()
+                
+                # Get new issues
+                new_issues = await github.get_unprocessed_issues()
+                
+                for issue in new_issues:
+                    classification = await classifier.classify_issue(issue)
+                    
+                    if classification.autonomy_eligible:
+                        # Trigger autonomous workflow
+                        await trigger_autonomous_workflow.spawn(
+                            issue_number=issue["number"],
+                            classification=classification
+                        )
+                    else:
+                        # Notify human with reasons
+                        await github.add_labels(
+                            issue["number"], 
+                            ["needs-human-review"] + classification.escalation_reasons
+                        )
+                        await github.comment(
+                            issue["number"],
+                            f"This issue requires human review. Reasons: {classification.escalation_reasons}"
+                        )
+            ```
+        labels:
+          - "sprint-6"
+          - "phase-0"
+          - "ai-classification"
+          - "autonomous-pipeline"
+        dependencies:
+          - "Build OAuth + Modal Proof of Concept"
+        estimate: "16 hours"
+        assignee: "ai-engineer"
+
+      - title: "Implement Learning Database and Vector Store"
+        description: |
+          Set up vector database for semantic search and learning from
+          past issue resolutions.
+
+          ## Acceptance Criteria
+          - [ ] Vector database deployed (Pinecone/Chroma/Weaviate)
+          - [ ] Issue embedding generation pipeline
+          - [ ] Solution pattern storage schema
+          - [ ] Outcome tracking database
+          - [ ] Learning feedback loop infrastructure
+          - [ ] Performance benchmarks established
+
+          ## Implementation Notes
+            ```python
+            from chromadb import Client
+            from sentence_transformers import SentenceTransformer
+            import modal
+            
+            class LearningDatabase:
+                def __init__(self):
+                    self.vector_client = Client()
+                    self.outcome_db = PostgresClient()
+                    self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
+                    
+                    # Create collections
+                    self.issues_collection = self.vector_client.create_collection(
+                        "issues",
+                        metadata={"hnsw:space": "cosine"}
+                    )
+                    
+                    self.solutions_collection = self.vector_client.create_collection(
+                        "solutions",
+                        metadata={"hnsw:space": "cosine"}
+                    )
+                
+                async def store_issue_resolution(self, issue_id: str, resolution: Dict):
+                    # 1. Generate embeddings
+                    issue_embedding = self.embedder.encode(resolution["issue_text"])
+                    solution_embedding = self.embedder.encode(resolution["solution_text"])
+                    
+                    # 2. Store in vector DB
+                    self.issues_collection.add(
+                        embeddings=[issue_embedding],
+                        documents=[resolution["issue_text"]],
+                        metadatas=[{
+                            "issue_id": issue_id,
+                            "complexity": resolution["complexity"],
+                            "resolution_time": resolution["time_taken"],
+                            "success": resolution["success"]
+                        }],
+                        ids=[issue_id]
+                    )
+                    
+                    self.solutions_collection.add(
+                        embeddings=[solution_embedding],
+                        documents=[resolution["solution_text"]],
+                        metadatas=[{
+                            "issue_id": issue_id,
+                            "approach": resolution["approach"],
+                            "files_changed": resolution["files_changed"],
+                            "tests_added": resolution["tests_added"]
+                        }],
+                        ids=[f"solution_{issue_id}"]
+                    )
+                    
+                    # 3. Store outcome for learning
+                    await self.outcome_db.insert("outcomes", {
+                        "issue_id": issue_id,
+                        "timestamp": datetime.utcnow(),
+                        "metrics": resolution["metrics"],
+                        "human_feedback": resolution.get("human_feedback"),
+                        "auto_merged": resolution.get("auto_merged", False)
+                    })
+                
+                async def find_similar_solutions(self, issue_text: str, k: int = 5):
+                    embedding = self.embedder.encode(issue_text)
+                    
+                    results = self.issues_collection.query(
+                        query_embeddings=[embedding],
+                        n_results=k,
+                        where={"success": True}  # Only successful resolutions
+                    )
+                    
+                    # Enrich with solution details
+                    enriched_results = []
+                    for i, issue_id in enumerate(results["ids"][0]):
+                        solution = self.solutions_collection.get(
+                            ids=[f"solution_{issue_id}"]
+                        )
+                        
+                        enriched_results.append({
+                            "issue": results["documents"][0][i],
+                            "solution": solution["documents"][0],
+                            "metadata": {
+                                **results["metadatas"][0][i],
+                                **solution["metadatas"][0]
+                            },
+                            "similarity": 1 - results["distances"][0][i]
+                        })
+                    
+                    return enriched_results
+            
+            @modal.function(
+                image=modal.Image.debian_slim().pip_install(
+                    "chromadb", "sentence-transformers", "psycopg2-binary"
+                ),
+                gpu="T4"  # For embedding generation
+            )
+            async def index_historical_issues():
+                """One-time indexing of historical issues for learning"""
+                db = LearningDatabase()
+                github = GitHubAppClient()
+                
+                # Get all resolved issues from past 6 months
+                historical_issues = await github.get_resolved_issues(
+                    since=datetime.now() - timedelta(days=180)
+                )
+                
+                for issue in historical_issues:
+                    # Extract resolution details from PR
+                    resolution = await extract_resolution_details(issue)
+                    await db.store_issue_resolution(issue["number"], resolution)
+                
+                print(f"Indexed {len(historical_issues)} historical issues")
+            ```
+        labels:
+          - "sprint-6"
+          - "phase-0"
+          - "learning-system"
+          - "vector-database"
+        dependencies:
+          - "Design State Management Architecture"
+        estimate: "14 hours"
+        assignee: "data-engineer"
 
 phases:
   - phase: 1
@@ -650,42 +910,148 @@ phases:
         assignee: "devops-engineer"
 
   - phase: 2
-    name: "Agent Migration with OAuth"
+    name: "Autonomous Agent Development"
     status: pending
     priority: high
-    component: agent-migration
-    description: "Migrate all agents to use Claude OAuth authentication"
+    component: autonomous-agents
+    description: "Build autonomous agents with confidence scoring and self-healing"
     duration_days: 14
     tasks:
-      - title: "Migrate issue-investigator to OAuth-based Modal"
+      - title: "Build Autonomous Issue Investigator with Confidence Scoring"
         description: |
-          Port issue-investigator to use Claude OAuth client for all
-          AI interactions without API keys.
+          Create autonomous issue investigator that uses similar issue
+          patterns and provides confidence scores for its findings.
 
           ## Acceptance Criteria
-          - [ ] `investigate_agent_oauth.py` Modal function created
-          - [ ] Claude OAuth client integrated for investigations
-          - [ ] Natural language processing using Claude SDK
-          - [ ] Investigation results match existing quality
-          - [ ] No API key dependencies
+          - [ ] Autonomous investigation with confidence scoring
+          - [ ] Similar issue pattern recognition
+          - [ ] Root cause analysis with multiple hypotheses
+          - [ ] Automatic scope expansion when needed
+          - [ ] Self-validation of investigation results
+          - [ ] Escalation triggers for complex issues
 
           ## Implementation Notes
+            ```python
             @modal.function(
                 secrets=[modal.Secret.from_name("claude-oauth-tokens")],
-                image=modal.Image.debian_slim().pip_install("anthropic", "httpx")
+                image=modal.Image.debian_slim().pip_install(
+                    "anthropic", "httpx", "numpy", "scikit-learn"
+                )
             )
-            def investigate_issue(issue: dict, oauth_token: str) -> dict:
-                # Initialize Claude with OAuth
+            async def autonomous_investigate_issue(
+                issue: dict, 
+                classification: IssueClassification
+            ) -> InvestigationResult:
+                # Initialize services
                 claude = ClaudeOAuthClient(oauth_token)
+                learning_db = LearningDatabase()
                 
-                # Use Claude SDK for investigation
-                response = claude.chat([
-                    {"role": "system", "content": "You are an issue investigator..."},
-                    {"role": "user", "content": f"Investigate: {issue['title']}\n{issue['body']}"}
+                # 1. Find similar resolved issues
+                similar_issues = await learning_db.find_similar_solutions(
+                    issue["title"] + "\n" + issue["body"],
+                    k=10
+                )
+                
+                # 2. Generate multiple investigation hypotheses
+                hypotheses = []
+                
+                # Hypothesis from similar issues
+                if similar_issues:
+                    pattern_hypothesis = await claude.chat([
+                        {"role": "system", "content": "You are analyzing patterns in similar issues..."},
+                        {"role": "user", "content": f"""
+                        Current issue: {issue}
+                        Similar resolved issues: {similar_issues}
+                        
+                        What patterns do you see? What's likely the root cause?
+                        """}
+                    ])
+                    hypotheses.append({
+                        "source": "pattern_analysis",
+                        "hypothesis": pattern_hypothesis.content,
+                        "confidence": calculate_pattern_confidence(similar_issues)
+                    })
+                
+                # Direct investigation hypothesis
+                direct_hypothesis = await claude.chat([
+                    {"role": "system", "content": "You are an expert issue investigator..."},
+                    {"role": "user", "content": f"""
+                    Investigate this issue and identify root causes:
+                    {issue}
+                    
+                    Consider:
+                    1. Error messages and stack traces
+                    2. Recent changes that might be related
+                    3. System dependencies
+                    4. Environmental factors
+                    """}
                 ])
+                hypotheses.append({
+                    "source": "direct_analysis",
+                    "hypothesis": direct_hypothesis.content,
+                    "confidence": 0.7  # Base confidence
+                })
                 
-                # Parse and structure investigation results
-                return parse_investigation(response.content)
+                # 3. Validate hypotheses with code analysis
+                validated_hypotheses = []
+                for hypothesis in hypotheses:
+                    validation = await validate_hypothesis(
+                        hypothesis,
+                        issue,
+                        codebase_context
+                    )
+                    
+                    validated_hypotheses.append({
+                        **hypothesis,
+                        "validation_score": validation.score,
+                        "evidence": validation.evidence,
+                        "final_confidence": hypothesis["confidence"] * validation.score
+                    })
+                
+                # 4. Select best hypothesis
+                best_hypothesis = max(
+                    validated_hypotheses, 
+                    key=lambda h: h["final_confidence"]
+                )
+                
+                # 5. Determine if we need human escalation
+                max_confidence = best_hypothesis["final_confidence"]
+                needs_escalation = (
+                    max_confidence < 0.7 or
+                    classification.complexity > 0.8 or
+                    any(trigger in str(issue) for trigger in ESCALATION_TRIGGERS)
+                )
+                
+                # 6. Generate investigation report
+                investigation = InvestigationResult(
+                    issue_id=issue["number"],
+                    root_cause=best_hypothesis["hypothesis"],
+                    confidence=max_confidence,
+                    evidence=best_hypothesis["evidence"],
+                    alternative_hypotheses=[h for h in validated_hypotheses if h != best_hypothesis],
+                    recommended_approach=await generate_approach(best_hypothesis),
+                    estimated_effort=estimate_effort(best_hypothesis, similar_issues),
+                    needs_human_review=needs_escalation,
+                    escalation_reasons=get_escalation_reasons(max_confidence, classification)
+                )
+                
+                # 7. Store for learning
+                await learning_db.store_investigation(issue["number"], investigation)
+                
+                return investigation
+            
+            def calculate_pattern_confidence(similar_issues):
+                """Calculate confidence based on similarity and success of past resolutions"""
+                if not similar_issues:
+                    return 0.0
+                
+                # Factors: similarity score, number of similar issues, success rate
+                avg_similarity = np.mean([issue["similarity"] for issue in similar_issues])
+                success_rate = np.mean([issue["metadata"]["success"] for issue in similar_issues])
+                volume_factor = min(len(similar_issues) / 5, 1.0)  # Max confidence at 5+ similar
+                
+                return avg_similarity * success_rate * volume_factor * 0.9  # Max 0.9 from patterns
+            ```
         labels:
           - "sprint-6"
           - "phase-2"
@@ -696,41 +1062,185 @@ phases:
         estimate: "10 hours"
         assignee: "ai-engineer"
 
-      - title: "Migrate task-planner to OAuth-based Modal"
+      - title: "Build Autonomous Implementation Engine with Self-Healing"
         description: |
-          Port task-planner to use Claude OAuth for comprehensive
-          planning without API key management.
+          Create autonomous implementation engine that generates code,
+          validates it, and self-heals when tests fail.
 
           ## Acceptance Criteria
-          - [ ] `plan_agent_oauth.py` Modal function created
-          - [ ] Claude OAuth integration for planning logic
-          - [ ] Plan generation using Claude SDK conversations
-          - [ ] Multi-turn planning conversations supported
-          - [ ] Context preservation across planning steps
+          - [ ] Autonomous code generation with confidence tracking
+          - [ ] Incremental implementation with validation checkpoints
+          - [ ] Self-healing when tests fail
+          - [ ] Parallel solution exploration
+          - [ ] Automatic rollback on confidence drop
+          - [ ] Learning from implementation outcomes
 
           ## Implementation Notes
+            ```python
             @modal.function(
                 secrets=[modal.Secret.from_name("claude-oauth-tokens")],
-                image=modal.Image.debian_slim().pip_install("anthropic", "pydantic")
+                image=modal.Image.debian_slim().pip_install(
+                    "anthropic", "pydantic", "gitpython", "pytest", "ast"
+                ),
+                timeout=1800  # 30 minutes for complex implementations
             )
-            def create_plan(investigation: dict, oauth_token: str) -> dict:
+            async def autonomous_implement(
+                investigation: InvestigationResult,
+                classification: IssueClassification
+            ) -> ImplementationResult:
                 claude = ClaudeOAuthClient(oauth_token)
+                learning_db = LearningDatabase()
                 
-                # Multi-turn conversation for comprehensive planning
-                messages = [
-                    {"role": "system", "content": "You are a technical task planner..."},
-                    {"role": "user", "content": f"Create plan for: {json.dumps(investigation)}"}
-                ]
+                # 1. Generate implementation plan from investigation
+                plan = await generate_implementation_plan(
+                    investigation,
+                    similar_implementations=await learning_db.get_similar_implementations(
+                        investigation.issue_id
+                    )
+                )
                 
-                # Initial plan
-                response = claude.chat(messages)
-                messages.append({"role": "assistant", "content": response.content})
+                # 2. Set up isolated git worktree
+                worktree_path = f"/tmp/worktree-{investigation.issue_id}"
+                repo = setup_git_worktree(worktree_path, f"fix/{investigation.issue_id}")
                 
-                # Refine with dependencies
-                messages.append({"role": "user", "content": "Add task dependencies and time estimates"})
-                refined = claude.chat(messages)
+                # 3. Implement incrementally with validation
+                implementation_state = ImplementationState()
                 
-                return parse_plan(refined.content)
+                for step in plan.steps:
+                    # Generate code for this step
+                    code_generation = await generate_code_for_step(
+                        step,
+                        investigation,
+                        current_state=implementation_state
+                    )
+                    
+                    # Apply changes
+                    files_changed = apply_code_changes(
+                        repo,
+                        code_generation.changes
+                    )
+                    
+                    # Validate changes
+                    validation = await validate_changes(
+                        repo,
+                        files_changed,
+                        step.validation_criteria
+                    )
+                    
+                    if validation.passed:
+                        # Update state and continue
+                        implementation_state.record_success(step, validation)
+                        implementation_state.confidence *= validation.confidence_factor
+                    else:
+                        # Self-healing: try alternative approach
+                        healing_result = await self_heal_implementation(
+                            step,
+                            validation.errors,
+                            implementation_state,
+                            max_attempts=3
+                        )
+                        
+                        if healing_result.success:
+                            implementation_state.record_healing(step, healing_result)
+                        else:
+                            # Rollback this step and try different approach
+                            repo.index.reset(commit=implementation_state.last_good_commit)
+                            
+                            # Try alternative implementation strategy
+                            alternative = await generate_alternative_approach(
+                                step,
+                                validation.errors,
+                                implementation_state.attempted_approaches
+                            )
+                            
+                            if alternative:
+                                plan.replace_step(step, alternative)
+                            else:
+                                # Escalate to human
+                                return ImplementationResult(
+                                    success=False,
+                                    needs_human_intervention=True,
+                                    partial_implementation=implementation_state,
+                                    escalation_reason=f"Cannot implement step: {step.description}"
+                                )
+                    
+                    # Check if confidence is still acceptable
+                    if implementation_state.confidence < 0.6:
+                        return ImplementationResult(
+                            success=False,
+                            needs_human_intervention=True,
+                            partial_implementation=implementation_state,
+                            escalation_reason="Confidence dropped below threshold"
+                        )
+                
+                # 4. Final validation
+                final_validation = await comprehensive_validation(repo, plan)
+                
+                # 5. Create commits with meaningful messages
+                commit_messages = await generate_commit_messages(
+                    implementation_state,
+                    investigation
+                )
+                
+                for commit in commit_messages:
+                    repo.index.add(commit.files)
+                    repo.index.commit(commit.message)
+                
+                # 6. Push to remote
+                origin = repo.remote("origin")
+                origin.push(f"fix/{investigation.issue_id}")
+                
+                # 7. Store outcome for learning
+                await learning_db.store_implementation_outcome(
+                    investigation.issue_id,
+                    implementation_state,
+                    final_validation
+                )
+                
+                return ImplementationResult(
+                    success=True,
+                    branch_name=f"fix/{investigation.issue_id}",
+                    files_changed=implementation_state.all_files_changed,
+                    tests_added=implementation_state.tests_added,
+                    confidence=implementation_state.confidence,
+                    implementation_time=implementation_state.elapsed_time,
+                    self_healing_count=implementation_state.healing_count
+                )
+            
+            async def self_heal_implementation(step, errors, state, max_attempts):
+                """Self-healing mechanism that learns from errors"""
+                
+                for attempt in range(max_attempts):
+                    # Analyze errors with AI
+                    error_analysis = await claude.chat([
+                        {"role": "system", "content": "You are debugging a failed implementation..."},
+                        {"role": "user", "content": f"""
+                        Step: {step}
+                        Errors: {errors}
+                        Current implementation: {state.current_code}
+                        
+                        What went wrong and how can we fix it?
+                        """}
+                    ])
+                    
+                    # Generate fix
+                    fix = await generate_fix(error_analysis, step, state)
+                    
+                    # Apply and test fix
+                    validation = await validate_changes(repo, fix.changes, step.validation_criteria)
+                    
+                    if validation.passed:
+                        return HealingResult(
+                            success=True,
+                            fix_applied=fix,
+                            attempts=attempt + 1
+                        )
+                    
+                    # Learn from this failure
+                    state.record_failed_approach(fix, validation.errors)
+                
+                return HealingResult(success=False, attempts=max_attempts)
+            ```
         labels:
           - "sprint-6"
           - "phase-2"
@@ -741,42 +1251,194 @@ phases:
         estimate: "12 hours"
         assignee: "ai-engineer"
 
-      - title: "Migrate test-runner to OAuth-based Modal"
+      - title: "Build Autonomous Test Validation with Predictive Analysis"
         description: |
-          Port test-runner to use Claude OAuth for intelligent test
-          validation and analysis.
+          Create autonomous test runner that predicts test failures,
+          generates missing tests, and provides confidence scoring.
 
           ## Acceptance Criteria
-          - [ ] `validate_agent_oauth.py` Modal function created
-          - [ ] Claude OAuth for test result analysis
-          - [ ] Intelligent failure diagnosis using Claude
-          - [ ] Test coverage insights via Claude SDK
-          - [ ] Natural language test summaries
+          - [ ] Predictive test failure analysis before running tests
+          - [ ] Automatic test generation for uncovered code
+          - [ ] Intelligent test prioritization
+          - [ ] Self-healing test fixes
+          - [ ] Production impact prediction
+          - [ ] Confidence scoring for test coverage
 
           ## Implementation Notes
+            ```python
             @modal.function(
                 secrets=[modal.Secret.from_name("claude-oauth-tokens")],
                 image=modal.Image.debian_slim()
-                    .pip_install("anthropic", "pytest", "coverage")
-                    .run_commands("apt-get update && apt-get install -y docker.io")
+                    .pip_install("anthropic", "pytest", "coverage", "ast", "numpy")
+                    .run_commands("apt-get update && apt-get install -y docker.io"),
+                timeout=1200  # 20 minutes for comprehensive testing
             )
-            def run_validation(implementation: dict, oauth_token: str) -> dict:
-                # Run tests in container
-                test_results = execute_tests()
-                
-                # Use Claude for intelligent analysis
+            async def autonomous_test_validation(
+                implementation: ImplementationResult,
+                investigation: InvestigationResult
+            ) -> TestValidationResult:
                 claude = ClaudeOAuthClient(oauth_token)
+                learning_db = LearningDatabase()
                 
-                analysis = claude.chat([
-                    {"role": "system", "content": "You are a test analysis expert..."},
-                    {"role": "user", "content": f"Analyze test results: {json.dumps(test_results)}"}
-                ])
+                # 1. Predict which tests might fail
+                test_predictions = await predict_test_failures(
+                    implementation.files_changed,
+                    similar_changes=await learning_db.get_similar_test_outcomes(
+                        implementation.files_changed
+                    )
+                )
                 
-                return {
-                    "test_results": test_results,
-                    "analysis": analysis.content,
-                    "recommendations": extract_recommendations(analysis.content)
-                }
+                # 2. Generate missing tests if needed
+                coverage_analysis = await analyze_test_coverage(implementation)
+                
+                if coverage_analysis.uncovered_critical_paths:
+                    generated_tests = await generate_missing_tests(
+                        coverage_analysis.uncovered_critical_paths,
+                        implementation,
+                        investigation
+                    )
+                    
+                    # Add generated tests to the repository
+                    for test in generated_tests:
+                        write_test_file(test.path, test.content)
+                        implementation.tests_added.append(test.path)
+                
+                # 3. Prioritize test execution
+                test_priority = await prioritize_tests(
+                    all_tests=get_all_tests(),
+                    changed_files=implementation.files_changed,
+                    predictions=test_predictions
+                )
+                
+                # 4. Run tests in priority order with early stopping
+                test_results = TestResults()
+                confidence = 1.0
+                
+                for test_batch in test_priority.batches:
+                    batch_results = await run_test_batch(test_batch)
+                    test_results.add_batch(batch_results)
+                    
+                    # Update confidence based on results
+                    if batch_results.failures:
+                        confidence *= 0.8 ** len(batch_results.failures)
+                        
+                        # Try to self-heal failing tests
+                        for failure in batch_results.failures:
+                            healing = await attempt_test_healing(
+                                failure,
+                                implementation,
+                                max_attempts=2
+                            )
+                            
+                            if healing.success:
+                                test_results.record_healing(failure, healing)
+                                confidence *= 1.1  # Boost confidence for successful healing
+                            else:
+                                # Analyze if this is a real issue or test problem
+                                failure_analysis = await analyze_test_failure(
+                                    failure,
+                                    implementation,
+                                    investigation
+                                )
+                                
+                                if failure_analysis.is_implementation_bug:
+                                    # Real bug found
+                                    return TestValidationResult(
+                                        success=False,
+                                        confidence=confidence * 0.5,
+                                        test_results=test_results,
+                                        bug_found=failure_analysis,
+                                        needs_implementation_fix=True
+                                    )
+                    
+                    # Early stopping if confidence too low
+                    if confidence < 0.5:
+                        break
+                
+                # 5. Predict production impact
+                production_impact = await predict_production_impact(
+                    implementation,
+                    test_results,
+                    historical_incidents=await learning_db.get_production_incidents()
+                )
+                
+                # 6. Generate comprehensive test report
+                test_report = await generate_test_report(
+                    test_results,
+                    coverage_analysis,
+                    production_impact,
+                    confidence
+                )
+                
+                # 7. Determine if safe to proceed
+                safe_to_proceed = (
+                    confidence > 0.7 and
+                    test_results.pass_rate > 0.95 and
+                    production_impact.risk_score < 0.3
+                )
+                
+                # 8. Store outcomes for learning
+                await learning_db.store_test_outcome(
+                    implementation.issue_id,
+                    test_results,
+                    production_impact
+                )
+                
+                return TestValidationResult(
+                    success=safe_to_proceed,
+                    confidence=confidence,
+                    test_results=test_results,
+                    coverage=coverage_analysis.percentage,
+                    production_risk=production_impact.risk_score,
+                    test_report=test_report,
+                    generated_tests=len(generated_tests) if 'generated_tests' in locals() else 0,
+                    healed_tests=len(test_results.healed_tests)
+                )
+            
+            async def attempt_test_healing(failure, implementation, max_attempts):
+                """Self-heal failing tests by understanding and fixing the root cause"""
+                
+                for attempt in range(max_attempts):
+                    # Analyze why test is failing
+                    failure_analysis = await claude.chat([
+                        {"role": "system", "content": "You are analyzing a test failure..."},
+                        {"role": "user", "content": f"""
+                        Test: {failure.test_name}
+                        Error: {failure.error}
+                        Stack trace: {failure.stack_trace}
+                        
+                        Implementation changes: {implementation.summary}
+                        
+                        Is this a test that needs updating or a real bug?
+                        If it's the test, how should we fix it?
+                        """}
+                    ])
+                    
+                    if "real bug" in failure_analysis.content.lower():
+                        return TestHealingResult(success=False, is_real_bug=True)
+                    
+                    # Generate test fix
+                    test_fix = await generate_test_fix(
+                        failure,
+                        failure_analysis,
+                        implementation
+                    )
+                    
+                    # Apply and verify fix
+                    apply_test_fix(test_fix)
+                    
+                    # Re-run the test
+                    rerun_result = await run_single_test(failure.test_name)
+                    
+                    if rerun_result.passed:
+                        return TestHealingResult(
+                            success=True,
+                            fix_applied=test_fix,
+                            attempts=attempt + 1
+                        )
+                
+                return TestHealingResult(success=False, attempts=max_attempts)
+            ```
         labels:
           - "sprint-6"
           - "phase-2"
@@ -787,49 +1449,205 @@ phases:
         estimate: "14 hours"
         assignee: "qa-engineer"
 
-      - title: "Migrate pr-manager to OAuth-based Modal"
+      - title: "Build Autonomous PR Manager with Auto-Merge Capability"
         description: |
-          Port pr-manager to use Claude OAuth for PR description
-          generation and code review summaries.
+          Create autonomous PR manager that handles creation, review
+          responses, and auto-merge decisions with confidence scoring.
 
           ## Acceptance Criteria
-          - [ ] `submit_agent_oauth.py` Modal function created
-          - [ ] Claude OAuth for PR description generation
-          - [ ] Intelligent PR summaries using Claude SDK
-          - [ ] Code review insights via Claude
-          - [ ] @claude mention support in PR comments
+          - [ ] Autonomous PR creation with optimal descriptions
+          - [ ] AI-powered code review and response generation
+          - [ ] Auto-merge decision making with confidence thresholds
+          - [ ] Review comment handling and implementation
+          - [ ] Conflict resolution assistance
+          - [ ] Post-merge monitoring setup
 
           ## Implementation Notes
+            ```python
             @modal.function(
-                secrets=[modal.Secret.from_name("claude-oauth-tokens", "github-token")],
-                image=modal.Image.debian_slim().pip_install("anthropic", "PyGithub")
+                secrets=[modal.Secret.from_name("claude-oauth-tokens", "github-app-credentials")],
+                image=modal.Image.debian_slim().pip_install(
+                    "anthropic", "PyGithub", "unidiff", "gitpython"
+                )
             )
-            def create_pr(plan: dict, test_results: dict, oauth_token: str) -> dict:
+            async def autonomous_pr_manager(
+                implementation: ImplementationResult,
+                test_validation: TestValidationResult,
+                investigation: InvestigationResult
+            ) -> PRResult:
                 claude = ClaudeOAuthClient(oauth_token)
+                github = GitHubAppClient()
+                learning_db = LearningDatabase()
                 
-                # Generate comprehensive PR description
-                pr_description = claude.chat([
-                    {"role": "system", "content": "You are a PR description expert..."},
-                    {"role": "user", "content": f"""
-                    Create PR description for:
-                    Plan: {json.dumps(plan)}
-                    Test Results: {json.dumps(test_results)}
-                    """}
+                # 1. Generate optimal PR description
+                pr_description = await generate_optimal_pr_description(
+                    implementation,
+                    test_validation,
+                    investigation,
+                    similar_prs=await learning_db.get_successful_pr_examples()
+                )
+                
+                # 2. Create PR
+                pr = await github.create_pull_request(
+                    repo_full_name=get_repo_name(),
+                    title=pr_description.title,
+                    body=pr_description.body,
+                    head=implementation.branch_name,
+                    base="main"
+                )
+                
+                # 3. Add metadata labels
+                await github.add_labels(pr.number, [
+                    f"autonomous-confidence-{int(implementation.confidence * 100)}",
+                    f"complexity-{investigation.complexity_category}",
+                    "auto-generated"
                 ])
                 
-                # Create PR with Claude-generated content
-                github = Github(os.environ["GITHUB_TOKEN"])
-                pr = create_github_pr(
-                    title=generate_title(plan),
-                    body=pr_description.content
+                # 4. Perform self-review
+                self_review = await perform_ai_code_review(
+                    pr_diff=await github.get_pr_diff(pr.number),
+                    implementation_context=implementation,
+                    test_results=test_validation
                 )
                 
-                # Add comment mentioning @claude is available
-                pr.create_issue_comment(
-                    "PR created! You can ask @claude for code review insights or modifications."
+                if self_review.issues_found:
+                    # Post review comments
+                    for issue in self_review.issues_found:
+                        await github.create_review_comment(
+                            pr.number,
+                            body=issue.description,
+                            path=issue.file_path,
+                            line=issue.line_number
+                        )
+                    
+                    # Attempt to fix issues autonomously
+                    if self_review.auto_fixable:
+                        fixes = await generate_review_fixes(
+                            self_review.issues_found,
+                            implementation
+                        )
+                        
+                        # Apply fixes and push
+                        apply_fixes_to_branch(fixes, implementation.branch_name)
+                        
+                        # Comment about fixes
+                        await github.comment(
+                            pr.number,
+                            f"🤖 I've automatically addressed {len(fixes)} review comments. Please review the updates."
+                        )
+                
+                # 5. Monitor for human reviews
+                pr_monitor = PRMonitor(pr.number)
+                
+                @pr_monitor.on_review_comment
+                async def handle_review_comment(comment):
+                    # Analyze if we can address the comment
+                    analysis = await analyze_review_comment(comment)
+                    
+                    if analysis.can_address_autonomously:
+                        # Generate and apply fix
+                        fix = await generate_comment_fix(comment, implementation)
+                        apply_fix_to_branch(fix, implementation.branch_name)
+                        
+                        # Respond to comment
+                        await github.reply_to_comment(
+                            comment.id,
+                            f"✅ I've addressed this in commit {fix.commit_sha}. {fix.explanation}"
+                        )
+                    else:
+                        # Provide helpful context
+                        context = await generate_helpful_context(comment, implementation)
+                        await github.reply_to_comment(
+                            comment.id,
+                            f"📝 {context.explanation}\n\n{context.suggestions}"
+                        )
+                
+                # 6. Auto-merge decision
+                merge_confidence = await calculate_merge_confidence(
+                    implementation,
+                    test_validation,
+                    self_review,
+                    pr_approvals=await github.get_pr_approvals(pr.number)
                 )
                 
-                return {"pr_url": pr.html_url, "pr_number": pr.number}
+                if merge_confidence > 0.85 and await all_checks_passed(pr.number):
+                    # Auto-merge
+                    await github.merge_pr(
+                        pr.number,
+                        merge_method="squash",
+                        commit_message=generate_merge_commit_message(pr_description)
+                    )
+                    
+                    # Set up post-merge monitoring
+                    await setup_production_monitoring(
+                        pr.number,
+                        implementation.files_changed,
+                        monitoring_duration_hours=24
+                    )
+                    
+                    result_status = "auto_merged"
+                else:
+                    # Request human review
+                    await github.request_review(
+                        pr.number,
+                        reviewers=get_relevant_reviewers(implementation.files_changed)
+                    )
+                    
+                    await github.comment(
+                        pr.number,
+                        f"""🤔 This PR needs human review before merging.
+                        
+                        Confidence: {merge_confidence:.0%}
+                        Reasons: {get_human_review_reasons(merge_confidence, self_review)}
+                        
+                        You can ask @claude for clarification on any changes."""
+                    )
+                    
+                    result_status = "awaiting_human_review"
+                
+                # 7. Store outcome for learning
+                await learning_db.store_pr_outcome(
+                    pr.number,
+                    implementation,
+                    test_validation,
+                    merge_confidence,
+                    result_status
+                )
+                
+                return PRResult(
+                    pr_number=pr.number,
+                    pr_url=pr.html_url,
+                    status=result_status,
+                    merge_confidence=merge_confidence,
+                    self_review_issues=len(self_review.issues_found),
+                    auto_fixes_applied=len(fixes) if 'fixes' in locals() else 0
+                )
+            
+            async def calculate_merge_confidence(implementation, test_validation, self_review, pr_approvals):
+                """Calculate confidence for auto-merge decision"""
+                
+                factors = {
+                    "implementation_confidence": implementation.confidence,
+                    "test_confidence": test_validation.confidence,
+                    "test_coverage": min(test_validation.coverage / 80, 1.0),  # 80% is ideal
+                    "self_review_clean": 1.0 if not self_review.issues_found else 0.5,
+                    "production_risk": 1.0 - test_validation.production_risk,
+                    "has_approvals": 1.0 if pr_approvals else 0.7,
+                    "complexity_factor": 1.0 - (implementation.complexity * 0.5)
+                }
+                
+                weights = {
+                    "implementation_confidence": 0.25,
+                    "test_confidence": 0.25,
+                    "test_coverage": 0.15,
+                    "self_review_clean": 0.1,
+                    "production_risk": 0.15,
+                    "has_approvals": 0.05,
+                    "complexity_factor": 0.05
+                }
+                
+                return sum(factors[k] * weights[k] for k in factors)
+            ```
         labels:
           - "sprint-6"
           - "phase-2"
@@ -841,52 +1659,258 @@ phases:
         assignee: "devops-engineer"
 
   - phase: 3
-    name: "OAuth Orchestration Implementation"
+    name: "Autonomous Pipeline Orchestration"
     status: pending
     priority: high
     component: orchestration
-    description: "Build OAuth-aware orchestration with natural language commands"
+    description: "Build complete autonomous orchestration with learning feedback loops"
     duration_days: 7
     tasks:
-      - title: "Implement OAuth Orchestrator with Natural Language Processing"
+      - title: "Build Autonomous Pipeline Orchestrator with Learning Loops"
         description: |
-          Create orchestrator that processes @claude mentions and natural
-          language commands using OAuth authentication.
+          Create master orchestrator that coordinates autonomous agents,
+          manages confidence thresholds, and implements learning feedback.
 
           ## Acceptance Criteria
-          - [ ] `orchestrator_oauth.py` Modal function created
-          - [ ] Natural language command parsing via Claude
-          - [ ] OAuth token management across agent calls
-          - [ ] Conversation context preservation
-          - [ ] Interactive workflow adjustments via @claude
+          - [ ] End-to-end autonomous pipeline orchestration
+          - [ ] Confidence-based decision routing
+          - [ ] Parallel agent execution where possible
+          - [ ] Real-time learning and threshold adjustment
+          - [ ] Human escalation with context preservation
+          - [ ] Performance metrics and optimization
 
           ## Implementation Notes
+            ```python
             @modal.function(
                 secrets=[modal.Secret.from_name("claude-oauth-tokens")],
-                image=modal.Image.debian_slim().pip_install("anthropic", "pydantic")
+                image=modal.Image.debian_slim().pip_install(
+                    "anthropic", "pydantic", "numpy", "asyncio"
+                ),
+                timeout=3600  # 1 hour for complete workflow
             )
-            def orchestrate_workflow(issue: dict, command: str, oauth_token: str) -> dict:
+            async def autonomous_pipeline_orchestrator(
+                issue: dict,
+                classification: IssueClassification,
+                command: str = None
+            ) -> PipelineResult:
+                """Master orchestrator for autonomous issue resolution"""
+                
                 claude = ClaudeOAuthClient(oauth_token)
+                learning_db = LearningDatabase()
                 
-                # Parse natural language command
-                intent = claude.chat([
-                    {"role": "system", "content": "You are a workflow orchestrator..."},
-                    {"role": "user", "content": f"Parse command: '{command}' for issue: {issue['title']}"}
-                ])
+                # Initialize pipeline state
+                pipeline_state = PipelineState(
+                    issue_id=issue["number"],
+                    start_time=datetime.utcnow(),
+                    confidence_threshold=0.7,
+                    max_retries=3
+                )
                 
-                workflow_steps = parse_intent(intent.content)
+                try:
+                    # 1. Investigation Phase (can run in parallel with historical analysis)
+                    investigation_task = asyncio.create_task(
+                        autonomous_investigate_issue(issue, classification)
+                    )
+                    
+                    historical_analysis_task = asyncio.create_task(
+                        learning_db.analyze_historical_patterns(issue)
+                    )
+                    
+                    investigation, historical = await asyncio.gather(
+                        investigation_task,
+                        historical_analysis_task
+                    )
+                    
+                    pipeline_state.record_phase_completion(
+                        "investigation",
+                        investigation.confidence,
+                        investigation.to_dict()
+                    )
+                    
+                    # Check if we should continue autonomously
+                    if investigation.needs_human_review:
+                        return await escalate_to_human(
+                            pipeline_state,
+                            "Investigation requires human review",
+                            investigation
+                        )
+                    
+                    # 2. Implementation Phase (with self-healing)
+                    implementation = await autonomous_implement(
+                        investigation,
+                        classification
+                    )
+                    
+                    pipeline_state.record_phase_completion(
+                        "implementation",
+                        implementation.confidence,
+                        implementation.to_dict()
+                    )
+                    
+                    # Handle implementation failures with retry
+                    if not implementation.success:
+                        if pipeline_state.can_retry("implementation"):
+                            # Try alternative approach based on learning
+                            alternative_approach = await generate_alternative_strategy(
+                                investigation,
+                                implementation.partial_implementation,
+                                historical
+                            )
+                            
+                            implementation = await autonomous_implement(
+                                investigation,
+                                classification,
+                                approach_override=alternative_approach
+                            )
+                            
+                            if not implementation.success:
+                                return await escalate_to_human(
+                                    pipeline_state,
+                                    "Implementation failed after retry",
+                                    implementation
+                                )
+                    
+                    # 3. Validation Phase (can partially run in parallel)
+                    validation_tasks = [
+                        autonomous_test_validation(implementation, investigation),
+                        security_validation(implementation),
+                        performance_validation(implementation)
+                    ]
+                    
+                    validations = await asyncio.gather(*validation_tasks)
+                    test_validation = validations[0]
+                    
+                    pipeline_state.record_phase_completion(
+                        "validation",
+                        test_validation.confidence,
+                        test_validation.to_dict()
+                    )
+                    
+                    # Handle test failures with implementation fixes
+                    if test_validation.needs_implementation_fix:
+                        if pipeline_state.can_retry("validation"):
+                            # Self-heal implementation based on test failures
+                            healing_implementation = await heal_implementation_from_tests(
+                                implementation,
+                                test_validation.bug_found
+                            )
+                            
+                            # Re-run validation
+                            test_validation = await autonomous_test_validation(
+                                healing_implementation,
+                                investigation
+                            )
+                            
+                            if not test_validation.success:
+                                return await escalate_to_human(
+                                    pipeline_state,
+                                    "Tests still failing after healing attempt",
+                                    test_validation
+                                )
+                    
+                    # 4. PR Creation and Management Phase
+                    pr_result = await autonomous_pr_manager(
+                        implementation,
+                        test_validation,
+                        investigation
+                    )
+                    
+                    pipeline_state.record_phase_completion(
+                        "pr_creation",
+                        pr_result.merge_confidence,
+                        pr_result.to_dict()
+                    )
+                    
+                    # 5. Learning Phase (async, non-blocking)
+                    asyncio.create_task(
+                        record_pipeline_outcome(
+                            pipeline_state,
+                            pr_result,
+                            learning_db
+                        )
+                    )
+                    
+                    # 6. Adjust thresholds based on outcome
+                    if pr_result.status == "auto_merged":
+                        # Success - can be slightly more aggressive
+                        await adjust_confidence_thresholds(
+                            learning_db,
+                            direction="increase",
+                            factor=1.02
+                        )
+                    elif pr_result.status == "awaiting_human_review":
+                        # Needed human - be more conservative
+                        await adjust_confidence_thresholds(
+                            learning_db,
+                            direction="decrease",
+                            factor=0.98
+                        )
+                    
+                    # Calculate overall pipeline metrics
+                    pipeline_metrics = calculate_pipeline_metrics(pipeline_state)
+                    
+                    return PipelineResult(
+                        success=True,
+                        issue_id=issue["number"],
+                        pr_number=pr_result.pr_number if pr_result else None,
+                        total_time=pipeline_state.elapsed_time,
+                        confidence_score=pipeline_state.overall_confidence,
+                        autonomous_completion=pr_result.status == "auto_merged",
+                        phases_completed=pipeline_state.completed_phases,
+                        self_healing_count=pipeline_state.total_healing_attempts,
+                        metrics=pipeline_metrics
+                    )
+                    
+                except Exception as e:
+                    # Graceful failure with learning
+                    await record_pipeline_failure(
+                        pipeline_state,
+                        e,
+                        learning_db
+                    )
+                    
+                    return await escalate_to_human(
+                        pipeline_state,
+                        f"Pipeline error: {str(e)}",
+                        {"error": str(e), "traceback": traceback.format_exc()}
+                    )
+            
+            async def escalate_to_human(pipeline_state, reason, context):
+                """Gracefully escalate to human with full context"""
                 
-                # Execute workflow with OAuth token passed to each agent
-                state = {"oauth_token": oauth_token}
+                # Create comprehensive context document
+                context_doc = await generate_escalation_context(
+                    pipeline_state,
+                    reason,
+                    context
+                )
                 
-                for step in workflow_steps:
-                    if step == "investigate":
-                        state["investigation"] = investigate_issue.remote(issue, oauth_token)
-                    elif step == "plan":
-                        state["plan"] = create_plan.remote(state["investigation"], oauth_token)
-                    # ... continue for all steps
+                # Create GitHub issue comment with context
+                await github.comment(
+                    pipeline_state.issue_id,
+                    f"""🤖 I need human assistance to complete this issue.
+                    
+                    **Reason**: {reason}
+                    **Progress**: {pipeline_state.progress_summary}
+                    **Confidence**: {pipeline_state.overall_confidence:.0%}
+                    
+                    <details>
+                    <summary>Full Context</summary>
+                    
+                    {context_doc}
+                    </details>
+                    
+                    You can pick up where I left off or provide guidance via @claude mentions.
+                    """
+                )
                 
-                return state
+                return PipelineResult(
+                    success=False,
+                    needs_human_intervention=True,
+                    escalation_reason=reason,
+                    partial_progress=pipeline_state.to_dict()
+                )
+            ```
         labels:
           - "sprint-6"
           - "phase-3"
@@ -897,53 +1921,193 @@ phases:
         estimate: "16 hours"
         assignee: "architecture-lead"
 
-      - title: "Add Implementation Agent with Claude Code Generation"
+      - title: "Build Continuous Learning and Model Training System"
         description: |
-          Create implementation agent that uses Claude OAuth for code
-          generation based on natural language plans.
+          Create continuous learning system that improves the pipeline
+          based on outcomes and human feedback.
 
           ## Acceptance Criteria
-          - [ ] `implement_agent_oauth.py` Modal function created
-          - [ ] Claude OAuth for code generation
-          - [ ] Multi-file code generation support
-          - [ ] Interactive refinement via @claude mentions
-          - [ ] Git operations with Claude-generated commits
+          - [ ] Automated outcome collection and analysis
+          - [ ] Model retraining pipeline for classification
+          - [ ] Threshold adjustment based on success rates
+          - [ ] Pattern recognition for common failures
+          - [ ] Prompt optimization system
+          - [ ] Performance dashboard and metrics
 
           ## Implementation Notes
+            ```python
             @modal.function(
-                secrets=[modal.Secret.from_name("claude-oauth-tokens", "github-token")],
-                image=modal.Image.debian_slim()
-                    .pip_install("anthropic", "gitpython")
-                    .run_commands("apt-get update && apt-get install -y git")
+                schedule=modal.Period(hours=6),  # Run 4 times daily
+                secrets=[modal.Secret.from_name("claude-oauth-tokens")],
+                image=modal.Image.debian_slim().pip_install(
+                    "scikit-learn", "pandas", "numpy", "anthropic", "plotly"
+                ),
+                gpu="T4"  # For model training
             )
-            def implement_code(plan: dict, oauth_token: str) -> dict:
+            async def continuous_learning_pipeline():
+                """Continuously improve the autonomous pipeline based on outcomes"""
+                
+                learning_db = LearningDatabase()
                 claude = ClaudeOAuthClient(oauth_token)
                 
-                # Clone repository
-                repo = git.Repo.clone_from(plan["repo_url"], "/tmp/repo")
+                # 1. Collect recent outcomes (past 24 hours)
+                recent_outcomes = await learning_db.get_recent_outcomes(
+                    hours=24,
+                    include_human_feedback=True
+                )
                 
-                implementations = {}
-                for task in plan["tasks"]:
-                    # Generate code for each task
-                    code = claude.chat([
-                        {"role": "system", "content": "You are an expert programmer..."},
-                        {"role": "user", "content": f"Implement: {task['description']}"}
+                # 2. Analyze success patterns
+                success_analysis = await analyze_success_patterns(recent_outcomes)
+                
+                # 3. Identify failure patterns
+                failure_patterns = await identify_failure_patterns(
+                    recent_outcomes,
+                    min_occurrences=3  # Need 3+ similar failures to identify pattern
+                )
+                
+                # 4. Retrain classification model if needed
+                if should_retrain_classifier(recent_outcomes):
+                    new_classifier = await retrain_issue_classifier(
+                        recent_outcomes,
+                        current_model=load_current_classifier()
+                    )
+                    
+                    # Validate new model
+                    validation_score = await validate_classifier(
+                        new_classifier,
+                        test_set=recent_outcomes[-100:]  # Last 100 issues
+                    )
+                    
+                    if validation_score > current_model_score:
+                        await deploy_new_classifier(new_classifier)
+                        print(f"Deployed new classifier with score: {validation_score}")
+                
+                # 5. Adjust confidence thresholds
+                threshold_adjustments = calculate_threshold_adjustments(
+                    success_analysis,
+                    failure_patterns
+                )
+                
+                await apply_threshold_adjustments(threshold_adjustments)
+                
+                # 6. Optimize prompts based on outcomes
+                prompt_improvements = await optimize_prompts(
+                    recent_outcomes,
+                    claude
+                )
+                
+                for improvement in prompt_improvements:
+                    await test_and_deploy_prompt(improvement)
+                
+                # 7. Generate learning report
+                report = await generate_learning_report(
+                    recent_outcomes,
+                    success_analysis,
+                    failure_patterns,
+                    threshold_adjustments,
+                    prompt_improvements
+                )
+                
+                # 8. Update metrics dashboard
+                await update_metrics_dashboard(report)
+                
+                return report
+            
+            async def analyze_success_patterns(outcomes):
+                """Identify what makes issues succeed autonomously"""
+                
+                successful_outcomes = [o for o in outcomes if o["autonomous_completion"]]
+                
+                # Extract features from successful cases
+                success_features = extract_features_from_outcomes(successful_outcomes)
+                
+                # Cluster to find patterns
+                clusters = cluster_outcomes(success_features)
+                
+                patterns = []
+                for cluster in clusters:
+                    pattern = {
+                        "cluster_size": len(cluster),
+                        "common_features": identify_common_features(cluster),
+                        "avg_confidence": np.mean([o["confidence"] for o in cluster]),
+                        "avg_time": np.mean([o["resolution_time"] for o in cluster]),
+                        "example_issues": cluster[:3]  # Top 3 examples
+                    }
+                    patterns.append(pattern)
+                
+                return patterns
+            
+            async def optimize_prompts(outcomes, claude):
+                """Use AI to improve prompts based on outcomes"""
+                
+                # Group outcomes by prompt type
+                prompt_groups = group_by_prompt_type(outcomes)
+                
+                improvements = []
+                for prompt_type, group_outcomes in prompt_groups.items():
+                    if len(group_outcomes) < 10:
+                        continue  # Need enough data
+                    
+                    # Analyze what worked and what didn't
+                    analysis = await claude.chat([
+                        {"role": "system", "content": "You are analyzing prompt effectiveness..."},
+                        {"role": "user", "content": f"""
+                        Analyze these outcomes for {prompt_type} prompts:
+                        
+                        Successful cases: {[o for o in group_outcomes if o["success"]]}
+                        Failed cases: {[o for o in group_outcomes if not o["success"]]}
+                        
+                        Current prompt template: {get_current_prompt(prompt_type)}
+                        
+                        How can we improve this prompt to increase success rate?
+                        """}
                     ])
                     
-                    # Parse and apply code changes
-                    changes = parse_code_blocks(code.content)
-                    apply_changes(repo, changes)
-                    implementations[task["id"]] = changes
+                    # Generate improved prompt variations
+                    variations = await generate_prompt_variations(
+                        analysis.content,
+                        prompt_type,
+                        current_prompt=get_current_prompt(prompt_type)
+                    )
+                    
+                    improvements.append({
+                        "prompt_type": prompt_type,
+                        "current_success_rate": calculate_success_rate(group_outcomes),
+                        "variations": variations,
+                        "analysis": analysis.content
+                    })
                 
-                # Generate commit message with Claude
-                commit_msg = claude.chat([
-                    {"role": "user", "content": f"Write commit message for: {list(implementations.keys())}"}
-                ])
+                return improvements
+            
+            async def generate_learning_report(outcomes, success_patterns, failure_patterns, adjustments, improvements):
+                """Generate comprehensive learning report"""
                 
-                repo.index.commit(commit_msg.content)
-                repo.remote().push()
+                report = {
+                    "period": "last_24_hours",
+                    "total_issues": len(outcomes),
+                    "autonomous_completion_rate": len([o for o in outcomes if o["autonomous_completion"]]) / len(outcomes),
+                    "avg_resolution_time": np.mean([o["resolution_time"] for o in outcomes]),
+                    "avg_confidence": np.mean([o["confidence"] for o in outcomes]),
+                    "success_patterns": success_patterns,
+                    "failure_patterns": failure_patterns,
+                    "threshold_adjustments": adjustments,
+                    "prompt_improvements": improvements,
+                    "recommendations": await generate_recommendations(
+                        success_patterns,
+                        failure_patterns
+                    )
+                }
                 
-                return {"implementations": implementations, "commit": repo.head.commit.hexsha}
+                # Create visualizations
+                report["visualizations"] = {
+                    "success_rate_trend": create_success_rate_chart(outcomes),
+                    "confidence_distribution": create_confidence_histogram(outcomes),
+                    "resolution_time_by_complexity": create_time_complexity_scatter(outcomes),
+                    "failure_heatmap": create_failure_pattern_heatmap(failure_patterns)
+                }
+                
+                return report
+            ```
         labels:
           - "sprint-6"
           - "phase-3"
@@ -1362,65 +2526,65 @@ team:
       - "Token rotation implementation"
 
 success_metrics:
-  - metric: oauth_migration_completion
-    target: 100
-    unit: percent
-    description: "All agents migrated to OAuth authentication"
-
-  - metric: api_key_elimination
-    target: 0
-    unit: count
-    description: "Zero API keys in codebase"
-
-  - metric: natural_language_accuracy
-    target: 95
-    unit: percent
-    description: "@claude mention command understanding"
-
-  - metric: oauth_token_refresh_success
-    target: 100
-    unit: percent
-    description: "Successful token refresh rate"
-
-  - metric: subscription_limit_efficiency
+  - metric: autonomous_completion_rate
     target: 80
     unit: percent
-    description: "Claude usage within subscription limits"
+    description: "Issues resolved without human intervention"
 
-  - metric: workflow_latency_improvement
-    target: 15
+  - metric: time_to_resolution_reduction
+    target: 50
     unit: percent
-    description: "Faster workflows with OAuth caching"
+    description: "Reduction in average issue resolution time"
 
-  - metric: rollback_time
-    target: 60
-    unit: seconds
-    description: "Maximum time to rollback to legacy system"
-
-  - metric: zero_downtime_achieved
-    target: 100
+  - metric: self_healing_success_rate
+    target: 75
     unit: percent
-    description: "No service interruption during migration"
+    description: "Percentage of failures that self-heal successfully"
 
-  - metric: cost_reduction
-    target: 30
+  - metric: confidence_prediction_accuracy
+    target: 90
     unit: percent
-    description: "Cost savings with Modal serverless vs current"
+    description: "Accuracy of confidence scoring predictions"
 
-  - metric: security_incidents
-    target: 0
-    unit: count
-    description: "Security incidents during migration"
+  - metric: auto_merge_success_rate
+    target: 95
+    unit: percent
+    description: "Success rate of auto-merged PRs in production"
 
-  - metric: modal_cold_start_p99
-    target: 2000
-    unit: milliseconds
-    description: "99th percentile cold start latency"
+  - metric: learning_improvement_rate
+    target: 5
+    unit: percent_per_month
+    description: "Monthly improvement in autonomous completion"
 
-  - metric: concurrent_workflow_capacity
-    target: 100
-    unit: workflows
-    description: "Parallel workflow execution capability"
+  - metric: test_generation_coverage
+    target: 85
+    unit: percent
+    description: "Code coverage from auto-generated tests"
+
+  - metric: human_escalation_resolution
+    target: 90
+    unit: percent
+    description: "Issues resolved after single human escalation"
+
+  - metric: production_incident_rate
+    target: 0.1
+    unit: percent
+    description: "Production incidents from autonomous changes"
+
+  - metric: cost_per_issue_reduction
+    target: 70
+    unit: percent
+    description: "Cost reduction per issue resolved"
+
+  - metric: parallel_issue_capacity
+    target: 50
+    unit: issues
+    description: "Concurrent autonomous issue resolution"
+
+  - metric: pattern_recognition_accuracy
+    target: 85
+    unit: percent
+    description: "Accuracy in identifying similar past issues"
 
 graph_metadata:
   node_type: sprint_document
