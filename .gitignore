@@ -106,6 +106,13 @@ context/.duckdb/
 
 # Workflow state files
 .workflow-state-*.json
+.workflow-phase-state-*.json
+.workflow-async-*.log
+.workflow-async-*.pid
+.workflow-async-*.status
+
+# Git worktree directories
+worktree/
 
 # Claude runtime logs
 context/trace/logs/claude-*.log

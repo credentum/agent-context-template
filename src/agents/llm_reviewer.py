@@ -16,7 +16,7 @@ import yaml
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
-from workflow_executor import WorkflowConfig  # noqa: E402
+from workflow_config import WorkflowConfig  # noqa: E402
 
 
 class LLMReviewer:
@@ -136,7 +136,8 @@ Consider all issues that may exist across the entire changeset, including:
 - Cumulative effects of all changes together
 
 Review criteria (any failure = REQUEST_CHANGES):
-- Test Coverage: validators/* ≥ 90%, overall ≥ {WorkflowConfig.COVERAGE_BASELINE}%
+- Test Coverage: validators/* ≥ {WorkflowConfig.VALIDATORS_COVERAGE_THRESHOLD}%,
+  overall ≥ {WorkflowConfig.COVERAGE_BASELINE}%
 - MCP Compatibility: Tool contracts updated, valid JSON schema
 - Context Integrity: All YAML has schema_version, context/ structure intact
 - Code Quality: Python typed, docstrings, pre-commit passes
@@ -321,11 +322,17 @@ automated_issues:
         if coverage_pct < 75.0:  # More lenient threshold to reduce noise
             issues["blocking"].append(
                 {
-                    "description": f"Overall test coverage {coverage_pct}% below baseline {WorkflowConfig.COVERAGE_BASELINE}%",
+                    "description": (
+                        f"Overall test coverage {coverage_pct}% below baseline "
+                        f"{WorkflowConfig.COVERAGE_BASELINE}%"
+                    ),
                     "file": "test_coverage",
                     "line": 0,
                     "category": "test_coverage",
-                    "fix_guidance": f"Improve test coverage to meet {WorkflowConfig.COVERAGE_BASELINE}% baseline requirement",
+                    "fix_guidance": (
+                        f"Improve test coverage to meet "
+                        f"{WorkflowConfig.COVERAGE_BASELINE}% baseline requirement"
+                    ),
                 }
             )
 
@@ -350,7 +357,10 @@ automated_issues:
                                     "file": file_path,
                                     "line": 1,
                                     "category": "context_integrity",
-                                    "fix_guidance": "Add YAML frontmatter with schema_version or exclude from validation",
+                                    "fix_guidance": (
+                                        "Add YAML frontmatter with schema_version "
+                                        "or exclude from validation"
+                                    ),
                                 }
                             )
                     except Exception:
@@ -452,7 +462,9 @@ automated_issues:
                         "file": file_path,
                         "line": 385,  # Match PR reviewer's line number
                         "category": "test_coverage",
-                        "fix_guidance": "Add unit tests for the new execute_validation two-phase CI logic",
+                        "fix_guidance": (
+                            "Add unit tests for the new execute_validation " "two-phase CI logic"
+                        ),
                     }
                 )
 
@@ -465,14 +477,16 @@ automated_issues:
                     and "def " in line
                     and "def _" not in line
                     and "def __" not in line
-                    and len(line) > 20
-                ):  # Only substantial new functions
+                    and len(line) > 20  # Only substantial new functions
+                ):
                     new_major_functions.append(line.strip()[1:].strip())
 
             if len(new_major_functions) > 2:  # Only if many new functions
                 issues["warnings"].append(
                     {
-                        "description": f"Limited test coverage for major new functionality in {file_path}",
+                        "description": (
+                            f"Limited test coverage for major new functionality " f"in {file_path}"
+                        ),
                         "file": file_path,
                         "line": 1,
                         "category": "test_coverage",
@@ -505,7 +519,9 @@ automated_issues:
                             "file": file_path,
                             "line": i,
                             "category": "error_handling",
-                            "fix_guidance": "Be more specific about exceptions and add logging for debugging",
+                            "fix_guidance": (
+                                "Be more specific about exceptions and add " "logging for debugging"
+                            ),
                         }
                     )
 
@@ -527,11 +543,16 @@ automated_issues:
                     if "WorkflowConfig" not in line:
                         issues["blocking"].append(
                             {
-                                "description": f"Hardcoded timeout value in {file_path.split('/')[-1]}",
+                                "description": (
+                                    f"Hardcoded timeout value in " f"{file_path.split('/')[-1]}"
+                                ),
                                 "file": file_path,
                                 "line": i,
                                 "category": "code_quality",
-                                "fix_guidance": f"Replace hardcoded timeout={timeout_match} with WorkflowConfig constant",
+                                "fix_guidance": (
+                                    f"Replace hardcoded timeout={timeout_match} "
+                                    f"with WorkflowConfig constant"
+                                ),
                             }
                         )
 
@@ -541,28 +562,41 @@ automated_issues:
                 if "WorkflowConfig" not in line and "COVERAGE_BASELINE" not in line:
                     issues["blocking"].append(
                         {
-                            "description": f"Hardcoded coverage threshold in {file_path.split('/')[-1]}",
+                            "description": (
+                                f"Hardcoded coverage threshold in " f"{file_path.split('/')[-1]}"
+                            ),
                             "file": file_path,
                             "line": i,
                             "category": "code_quality",
-                            "fix_guidance": "Replace hardcoded 71.82 with WorkflowConfig.COVERAGE_BASELINE",
+                            "fix_guidance": (
+                                "Replace hardcoded 71.82 with " "WorkflowConfig.COVERAGE_BASELINE"
+                            ),
                         }
                     )
 
-            # Only flag 78.0/90.0 in specific threshold contexts as warnings (less critical)
+            # Only flag hardcoded thresholds if they match our constants
             elif (
-                ("78.0" in line or "90.0" in line)
+                (str(WorkflowConfig.COVERAGE_BASELINE) in line
+                 or str(WorkflowConfig.VALIDATORS_COVERAGE_THRESHOLD) in line)
                 and ("if " in line or ">=" in line or "<" in line)
                 and ("coverage" in line or "baseline" in line)
                 and "# " not in line
+                and "WorkflowConfig" not in line  # Exclude proper usage
             ):
                 issues["warnings"].append(
                     {
-                        "description": f"Hardcoded coverage thresholds in {file_path.split('/')[-1]}",
+                        "description": (
+                            f"Hardcoded coverage thresholds in "
+                            f"{file_path.split('/')[-1]}"
+                        ),
                         "file": file_path,
                         "line": i,
                         "category": "code_quality",
-                        "fix_guidance": "Make coverage thresholds (78.0%, 90%) configurable via settings",
+                        "fix_guidance": (
+                            f"Replace hardcoded {WorkflowConfig.COVERAGE_BASELINE}% "
+                            f"or {WorkflowConfig.VALIDATORS_COVERAGE_THRESHOLD}% with "
+                            f"WorkflowConfig constants"
+                        ),
                     }
                 )
 
