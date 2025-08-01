@@ -174,3 +174,152 @@ def verify_code_changes(repo_path: Path, expected_files: List[str]) -> bool:
             return False
     
     return True
+
+
+def simulate_workflow_execution(
+    issue_number: int,
+    repo_path: Path,
+    phases: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Simulate workflow execution for testing.
+    
+    Args:
+        issue_number: Issue number to simulate
+        repo_path: Path to test repository
+        phases: Optional list of phases to execute (default: all)
+        
+    Returns:
+        Dictionary with execution results
+    """
+    from scripts.workflow_executor import WorkflowExecutor
+    
+    results = {
+        "issue_number": issue_number,
+        "phases_executed": [],
+        "phase_results": {},
+        "success": True,
+    }
+    
+    # Default phases if not specified
+    if phases is None:
+        phases = ["investigation", "planning", "implementation", "validation"]
+    
+    # Create executor
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(str(repo_path))
+        executor = WorkflowExecutor(issue_number)
+        
+        # Execute each phase
+        for phase in phases:
+            try:
+                # Mock external dependencies
+                with patch("subprocess.run") as mock_run:
+                    mock_run.return_value = MagicMock(returncode=0, stdout="")
+                    
+                    # Get the method name for the phase
+                    method_name = f"execute_{phase}"
+                    if hasattr(executor, method_name):
+                        phase_method = getattr(executor, method_name)
+                        phase_result = phase_method({})
+                    else:
+                        raise AttributeError(f"Method {method_name} not found")
+                    
+                    results["phases_executed"].append(phase)
+                    results["phase_results"][phase] = {
+                        "status": "completed",
+                        "result": phase_result,
+                    }
+            except Exception as e:
+                results["success"] = False
+                results["phase_results"][phase] = {
+                    "status": "failed",
+                    "error": str(e),
+                }
+                break
+    finally:
+        os.chdir(original_cwd)
+    
+    return results
+
+
+def create_test_issue(template: str, repo_path: Path) -> int:
+    """Create a temporary test issue from a template.
+    
+    Args:
+        template: Template name (e.g., 'simple_function_addition')
+        repo_path: Path to test repository
+        
+    Returns:
+        Generated issue number
+    """
+    # Load template
+    template_path = Path(__file__).parent.parent.parent / "tests" / "fixtures" / "workflow_test_issues" / f"{template}.json"
+    
+    if template_path.exists():
+        with open(template_path) as f:
+            issue_data = json.load(f)
+    else:
+        # Default template if file doesn't exist
+        issue_data = {
+            "number": 99999,
+            "title": f"Test Issue: {template}",
+            "body": "Test issue for workflow testing",
+        }
+    
+    # Generate unique issue number
+    import random
+    issue_number = random.randint(90000, 99999)
+    issue_data["number"] = issue_number
+    
+    # Create issue metadata file (simulate GitHub issue)
+    issue_file = repo_path / f".issue-{issue_number}.json"
+    with open(issue_file, 'w') as f:
+        json.dump(issue_data, f, indent=2)
+    
+    return issue_number
+
+
+def verify_workflow_artifacts(
+    repo_path: Path,
+    issue_number: int,
+    expected_artifacts: Optional[List[str]] = None,
+) -> Dict[str, bool]:
+    """Verify that workflow artifacts were created correctly.
+    
+    Args:
+        repo_path: Path to repository
+        issue_number: Issue number
+        expected_artifacts: Optional list of expected artifacts
+        
+    Returns:
+        Dictionary with verification results
+    """
+    if expected_artifacts is None:
+        expected_artifacts = [
+            f"context/trace/task-templates/issue-{issue_number}-*.md",
+            f"context/trace/scratchpad/*-issue-{issue_number}-*.md",
+            ".workflow-state-*.json",
+        ]
+    
+    results = {}
+    
+    for artifact_pattern in expected_artifacts:
+        # Check if any files match the pattern
+        import glob
+        matches = glob.glob(str(repo_path / artifact_pattern))
+        results[artifact_pattern] = len(matches) > 0
+    
+    return results
+
+
+def cleanup_test_repository(repo_path: Path):
+    """Clean up a test repository.
+    
+    Args:
+        repo_path: Path to repository to clean up
+    """
+    import shutil
+    
+    if repo_path.exists() and "tmp" in str(repo_path):
+        shutil.rmtree(repo_path)
