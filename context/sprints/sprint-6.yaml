@@ -10,6 +10,13 @@ end_date: "2025-03-21"
 last_modified: "2025-02-01"
 last_referenced: "2025-02-01"
 
+# NOTE: This file is large (2600+ lines) and should be split in future sprints:
+# - sprint-6-overview.yaml: Goals, phases, metrics
+# - sprint-6-agents.yaml: Agent task definitions
+# - sprint-6-learning.yaml: Learning system tasks
+# - sprint-6-config.yaml: Configuration and security settings
+# Keeping as single file for Sprint 6 to maintain context integrity
+
 goals:
   - "Build autonomous software development pipeline from GitHub issue to PR with 80%+ automation rate"
   - "Implement confidence-based decision making with self-healing capabilities"
@@ -472,33 +479,114 @@ phases:
                 def __init__(self):
                     self._lock = asyncio.Lock()
                     self._token_cache = {}
+                    self._refresh_attempts = 0
+                    self._circuit_breaker = CircuitBreaker(
+                        failure_threshold=5,
+                        recovery_timeout=300
+                    )
                     
                 async def get_valid_token(self):
                     async with self._lock:
-                        # Check if token is still valid
-                        if self._is_token_valid():
-                            return self._token_cache["access_token"]
-                        
-                        # Refresh token
-                        return await self._refresh_token()
+                        try:
+                            # Check circuit breaker
+                            if self._circuit_breaker.is_open():
+                                return await self._use_fallback_auth()
+                            
+                            # Check if token is still valid
+                            if self._is_token_valid():
+                                return self._token_cache["access_token"]
+                            
+                            # Refresh token with retry logic
+                            return await self._refresh_token_with_retry()
+                            
+                        except Exception as e:
+                            self._circuit_breaker.record_failure()
+                            logger.error(f"OAuth token error: {e}")
+                            return await self._use_fallback_auth()
+                
+                async def _refresh_token_with_retry(self):
+                    max_attempts = oauth_config["error_handling"]["max_refresh_attempts"]
+                    backoff_seconds = oauth_config["error_handling"]["refresh_backoff_seconds"]
+                    
+                    for attempt in range(max_attempts):
+                        try:
+                            token = await self._refresh_token()
+                            self._circuit_breaker.record_success()
+                            self._refresh_attempts = 0
+                            return token
+                            
+                        except (httpx.HTTPError, AsyncOAuth2Error) as e:
+                            self._refresh_attempts += 1
+                            
+                            if attempt < max_attempts - 1:
+                                wait_time = backoff_seconds[min(attempt, len(backoff_seconds)-1)]
+                                logger.warning(f"Token refresh attempt {attempt+1} failed, retrying in {wait_time}s")
+                                await asyncio.sleep(wait_time)
+                            else:
+                                logger.error(f"All token refresh attempts failed: {e}")
+                                raise
                 
                 async def _refresh_token(self):
                     creds = credential_manager.get_credentials()
-                    client = AsyncOAuth2Client(
-                        client_id=oauth_config["client_id"],
-                        token=creds
-                    )
                     
-                    new_token = await client.refresh_token(
-                        "https://api.anthropic.com/oauth/token",
-                        refresh_token=creds["refresh_token"]
-                    )
+                    # Add timeout to prevent hanging
+                    timeout = httpx.Timeout(10.0, connect=5.0)
                     
-                    # Update secure storage
-                    credential_manager.store_credentials(new_token)
-                    self._token_cache = new_token
+                    async with httpx.AsyncClient(timeout=timeout) as client:
+                        oauth_client = AsyncOAuth2Client(
+                            client_id=oauth_config["client_id"],
+                            client=client,
+                            token=creds
+                        )
+                        
+                        try:
+                            new_token = await oauth_client.refresh_token(
+                                oauth_config["token_endpoint"],
+                                refresh_token=creds["refresh_token"]
+                            )
+                            
+                            # Validate token before storing
+                            if not self._validate_token(new_token):
+                                raise ValueError("Invalid token received")
+                            
+                            # Update secure storage
+                            await credential_manager.store_credentials(new_token)
+                            self._token_cache = new_token
+                            
+                            # Log successful refresh (without sensitive data)
+                            await self._audit_log_refresh(success=True)
+                            
+                            return new_token["access_token"]
+                            
+                        except Exception as e:
+                            await self._audit_log_refresh(success=False, error=str(e))
+                            raise
+                
+                async def _use_fallback_auth(self):
+                    """Fallback to GitHub App authentication if OAuth fails"""
+                    fallback_method = oauth_config["error_handling"]["fallback_authentication"]
                     
-                    return new_token["access_token"]
+                    if fallback_method == "github_app":
+                        # Use GitHub App JWT for Claude API if supported
+                        logger.warning("Using fallback GitHub App authentication")
+                        return await self._get_github_app_token()
+                    else:
+                        raise AuthenticationError("No fallback authentication available")
+                
+                def _validate_token(self, token):
+                    """Validate token structure and claims"""
+                    required_fields = ["access_token", "token_type", "expires_at"]
+                    return all(field in token for field in required_fields)
+                
+                async def _audit_log_refresh(self, success, error=None):
+                    """Audit log for security tracking"""
+                    await audit_logger.log({
+                        "event": "oauth_token_refresh",
+                        "success": success,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "error": error,
+                        "function_id": os.environ.get("MODAL_FUNCTION_ID")
+                    })
             
             # Scheduled token rotation
             @app.function(schedule=modal.Period(hours=4))
@@ -2575,6 +2663,15 @@ success_metrics:
     target: 70
     unit: percent
     description: "Cost reduction per issue resolved"
+    
+    # Detailed cost breakdown:
+    # Current manual approach: ~$25/issue (30 min dev time @ $50/hr)
+    # Autonomous pipeline target: ~$7.50/issue
+    #   - Modal compute: ~$1.50 (CPU + memory for all agents)
+    #   - Claude API: ~$0.50 (avg 10k tokens per issue)
+    #   - GPU usage: ~$0.50 (for ML operations)
+    #   - Human review (20% of issues): ~$5.00
+    # Total savings: 70% reduction
 
   - metric: parallel_issue_capacity
     target: 50
@@ -2600,21 +2697,63 @@ graph_metadata:
 
 config:
   oauth_config:
-    client_id: "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+    client_id: "PLACEHOLDER_CLIENT_ID"  # TODO: Replace with actual Claude OAuth client ID
+    client_secret: "PLACEHOLDER_SECRET"  # TODO: Store in Modal secrets, never commit
     scopes: ["read:user", "read:org", "api:access"]
     refresh_interval_hours: 4
+    token_endpoint: "https://api.anthropic.com/oauth/token"
+    authorization_endpoint: "https://api.anthropic.com/oauth/authorize"
+    
+    # Security constraints
+    security:
+      storage_backend: "os_keychain"  # Never file-based storage
+      encryption_required: true
+      audit_logging: true
+      token_rotation_enabled: true
+      max_token_lifetime_hours: 24
+      
+    # Validation schema
+    validation:
+      require_https: true
+      validate_certificates: true
+      allowed_redirect_uris:
+        - "https://modal.com/oauth/callback"
+        - "http://localhost:8080/oauth/callback"  # Development only
+      
+    # Error handling
+    error_handling:
+      max_refresh_attempts: 3
+      refresh_backoff_seconds: [1, 5, 30]
+      fallback_authentication: "github_app"  # Fallback if OAuth fails
+      circuit_breaker_threshold: 5
+      circuit_breaker_timeout_seconds: 300
 
   webhook_config:
     events: ["issues", "issue_comment", "pull_request", "pull_request_review_comment"]
     mention_pattern: "@claude\\s+(.+)"
+    signature_validation: true
+    replay_protection_window_minutes: 5
+
+  modal_config:
+    compute_limits:
+      max_concurrent_functions: 50
+      max_function_duration_seconds: 3600
+      max_memory_gb: 16
+      gpu_enabled: true
+      gpu_type: "T4"
+    
+    cost_controls:
+      daily_budget_usd: 100
+      per_issue_budget_usd: 5
+      alert_threshold_percent: 80
 
   auto_create_issues: true
   issue_template: "sprint-task.md"
   default_labels:
     - "sprint-6"
-    - "modal-oauth"
+    - "autonomous-pipeline"
     - "architecture"
-  milestone: "Sprint 6 - Modal OAuth Migration"
+  milestone: "Sprint 6 - Autonomous Pipeline"
 
 # ------------------------------------------------------------------
 # References
