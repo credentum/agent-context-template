@@ -13,6 +13,9 @@ class WorkflowConfig:
 
     # Configurable timeout per phase (can be overridden by env var)
     PHASE_TIMEOUT_SECONDS = int(os.environ.get("WORKFLOW_PHASE_TIMEOUT", "90"))
+    
+    # Validation phase needs longer timeout for full CI execution (15 minutes)
+    VALIDATION_PHASE_TIMEOUT_SECONDS = int(os.environ.get("WORKFLOW_VALIDATION_TIMEOUT", "900"))
 
     # Default background process timeout
     BACKGROUND_PROCESS_TIMEOUT = int(os.environ.get("WORKFLOW_BACKGROUND_TIMEOUT", "300"))
