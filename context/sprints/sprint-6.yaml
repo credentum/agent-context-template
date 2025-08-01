@@ -1,444 +1,1466 @@
----
-# Sprint 6: Modal Migration Architecture
-# Transform the existing workflow-issue system into a scalable, modular agent
-# architecture using Modal.com platform
-
 schema_version: 1.0.0
 document_type: sprint
-id: "sprint-6-modal-migration"
-title: "Sprint 6 - Migrate Workflow-Issue System to Modal Architecture"
+id: "sprint-6-modal-migration-oauth"
+title: "Sprint 6 - Migrate Workflow-Issue System to Modal Architecture with Claude OAuth"
 status: planning
 created_date: "2025-01-31"
 sprint_number: 6
 start_date: "2025-02-01"
-end_date: "2025-03-07"
+end_date: "2025-03-14"
 last_modified: "2025-01-31"
 last_referenced: "2025-01-31"
 
-# High-level goals for this sprint
 goals:
-  - |
-    Transform existing workflow-issue system into scalable Modal.com 
-    serverless architecture
-  - "Implement modular agent design with isolated, stateless functions"
-  - |
-    Preserve all existing workflow capabilities while improving 
-    scalability and maintainability
-  - "Reduce operational overhead through serverless infrastructure"
+  - "Transform existing workflow-issue system into scalable Modal.com serverless architecture using Claude OAuth authentication"
+  - "Implement modular agent design with OAuth-based Claude SDK integration"
+  - "Eliminate API key management overhead using Claude subscription OAuth tokens"
+  - "Enable @claude-style mentions for natural agent interactions"
+  - "Ensure zero-downtime migration with comprehensive rollback capabilities"
+  - "Implement robust security measures for OAuth token management"
 
-# Phases represent major work areas
+phases:
+  - phase: 0
+    name: "Proof of Concept & Security Foundation"
+    status: pending
+    priority: critical
+    component: poc-security
+    description: |
+      Build minimal OAuth + Modal prototype to validate architecture
+      and establish secure credential management foundation
+    duration_days: 5
+    tasks:
+      - title: "Build OAuth + Modal Proof of Concept"
+        description: |
+          Create minimal working prototype to validate OAuth flow with Modal
+          before committing to full migration.
+
+          ## Acceptance Criteria
+          - [ ] Single Modal function with OAuth authentication working
+          - [ ] End-to-end OAuth flow validated (login, refresh, API calls)
+          - [ ] Performance benchmarks established (cold start, latency)
+          - [ ] Cost analysis completed with projected usage
+          - [ ] Security audit of OAuth implementation
+          - [ ] Decision checkpoint: proceed or pivot
+
+          ## Implementation Notes
+            ```python
+            # Minimal PoC structure
+            @modal.function(
+                secrets=[modal.Secret.from_name("claude-oauth-poc")],
+                image=modal.Image.debian_slim().pip_install("anthropic", "authlib")
+            )
+            def poc_oauth_function(prompt: str) -> dict:
+                # Test OAuth flow
+                oauth_client = ClaudeOAuthClient(get_secure_credentials())
+                response = oauth_client.chat([{"role": "user", "content": prompt}])
+                return {"success": True, "response": response.content}
+            ```
+        labels:
+          - "sprint-6"
+          - "phase-0"
+          - "poc"
+          - "critical-path"
+        dependencies: []
+        estimate: "16 hours"
+        assignee: "architecture-lead"
+
+      - title: "Implement Secure Credential Management"
+        description: |
+          Replace file-based credential storage with OS-native secure storage
+          using keyring/keychain integration.
+
+          ## Acceptance Criteria
+          - [ ] OS keychain integration implemented (macOS, Linux, Windows)
+          - [ ] Encrypted credential storage with automatic migration
+          - [ ] Credential rotation mechanism implemented
+          - [ ] Audit logging for all credential access
+          - [ ] Documentation for credential setup process
+
+          ## Implementation Notes
+            ```python
+            import keyring
+            from cryptography.fernet import Fernet
+            import platform
+            
+            class SecureCredentialManager:
+                def __init__(self):
+                    self.service_name = "claude-modal-oauth"
+                    self._ensure_encryption_key()
+                
+                def get_credentials(self):
+                    # Use OS-specific secure storage
+                    access_token = keyring.get_password(self.service_name, "access_token")
+                    refresh_token = keyring.get_password(self.service_name, "refresh_token")
+                    
+                    if not access_token:
+                        # Migrate from old file-based storage if exists
+                        self._migrate_legacy_credentials()
+                    
+                    return {
+                        "access_token": self._decrypt(access_token),
+                        "refresh_token": self._decrypt(refresh_token)
+                    }
+                
+                def _ensure_encryption_key(self):
+                    # Store encryption key in OS keychain
+                    key = keyring.get_password(self.service_name, "encryption_key")
+                    if not key:
+                        key = Fernet.generate_key().decode()
+                        keyring.set_password(self.service_name, "encryption_key", key)
+                    self.cipher = Fernet(key.encode())
+            ```
+        labels:
+          - "sprint-6"
+          - "phase-0"
+          - "security"
+          - "critical-path"
+        dependencies: []
+        estimate: "12 hours"
+        assignee: "security-engineer"
+
+      - title: "Design State Management Architecture"
+        description: |
+          Design and implement state management solution for stateless
+          Modal functions using Redis or external storage.
+
+          ## Acceptance Criteria
+          - [ ] State management design documented
+          - [ ] Modal Redis integration tested
+          - [ ] State persistence across function invocations
+          - [ ] Concurrent state access handling
+          - [ ] State recovery mechanisms
+
+          ## Implementation Notes
+            ```python
+            from modal import Image, Secret, Redis
+            import json
+            from typing import Optional
+            
+            # Modal app with Redis
+            app = modal.App("workflow-oauth")
+            redis_image = Image.debian_slim().pip_install("redis", "hiredis")
+            
+            @app.function(
+                image=redis_image,
+                secrets=[modal.Secret.from_name("redis-config")]
+            )
+            async def manage_workflow_state(
+                issue_number: int, 
+                operation: str, 
+                data: Optional[dict] = None
+            ) -> dict:
+                redis_client = Redis()
+                key = f"workflow:state:{issue_number}"
+                
+                if operation == "get":
+                    state = await redis_client.get(key)
+                    return json.loads(state) if state else {}
+                elif operation == "set":
+                    await redis_client.set(key, json.dumps(data), ex=86400)  # 24h TTL
+                    return {"success": True}
+                elif operation == "update":
+                    # Atomic update with optimistic locking
+                    # Implementation details...
+            ```
+        labels:
+          - "sprint-6"
+          - "phase-0"
+          - "architecture"
+          - "state-management"
+        dependencies: []
+        estimate: "10 hours"
+        assignee: "backend-engineer"
+
 phases:
   - phase: 1
-    name: "Infrastructure Setup"
+    name: "Infrastructure Setup with OAuth"
     status: pending
     priority: blocking
     component: modal-infrastructure
     description: |
-      Set up Modal.com infrastructure foundation including application 
-      structure, secrets management, and GitHub webhook integration
+      Set up Modal.com infrastructure with Claude OAuth authentication
+      instead of API keys, mirroring GitHub Actions @claude pattern
     duration_days: 7
     tasks:
-      - title: "Set up Modal Application Infrastructure"
+      - title: "Set up Modal Application with Secure OAuth Infrastructure"
         description: |
-          Create the foundational Modal application with shared resources
-          and development environment setup.
+          Create the foundational Modal application with secure Claude OAuth
+          authentication, automated token rotation, and monitoring.
 
           ## Acceptance Criteria
-          - [ ] Modal application created with basic structure (`modal_workflow.py`)
-          - [ ] Shared resources configured (secrets, volumes, state storage)
-          - [ ] Development environment set up with Modal CLI
-          - [ ] Basic health check endpoint implemented
-          - [ ] Documentation for Modal setup created
+          - [ ] Modal application created with secure OAuth structure
+          - [ ] Secure credential retrieval using OS keychain (not file-based)
+          - [ ] Automated OAuth token refresh with concurrent request handling
+          - [ ] Token rotation scheduled function implemented
+          - [ ] Monitoring and alerting for OAuth failures
+          - [ ] Rate limiting implementation for API calls
+          - [ ] Development and production environment separation
 
           ## Implementation Notes
-          - Use Modal.App for application structure
-          - Configure Modal.Secret for ANTHROPIC_API_KEY and GITHUB_TOKEN
-          - Set up Modal.Volume for workflow storage
-          - Create Modal.Dict for workflow state persistence
-          - Include error handling and logging setup
+            ```python
+            import modal
+            from datetime import datetime, timedelta
+            import asyncio
+            from authlib.integrations.httpx_client import AsyncOAuth2Client
+            
+            app = modal.App("workflow-oauth")
+            
+            # Secure credential manager (from Phase 0)
+            credential_manager = SecureCredentialManager()
+            
+            class OAuthTokenManager:
+                def __init__(self):
+                    self._lock = asyncio.Lock()
+                    self._token_cache = {}
+                    
+                async def get_valid_token(self):
+                    async with self._lock:
+                        # Check if token is still valid
+                        if self._is_token_valid():
+                            return self._token_cache["access_token"]
+                        
+                        # Refresh token
+                        return await self._refresh_token()
+                
+                async def _refresh_token(self):
+                    creds = credential_manager.get_credentials()
+                    client = AsyncOAuth2Client(
+                        client_id=oauth_config["client_id"],
+                        token=creds
+                    )
+                    
+                    new_token = await client.refresh_token(
+                        "https://api.anthropic.com/oauth/token",
+                        refresh_token=creds["refresh_token"]
+                    )
+                    
+                    # Update secure storage
+                    credential_manager.store_credentials(new_token)
+                    self._token_cache = new_token
+                    
+                    return new_token["access_token"]
+            
+            # Scheduled token rotation
+            @app.function(schedule=modal.Period(hours=4))
+            def rotate_oauth_tokens():
+                manager = OAuthTokenManager()
+                asyncio.run(manager._refresh_token())
+                print(f"Tokens rotated at {datetime.utcnow()}")
+            ```
         labels:
           - "sprint-6"
           - "phase-1"
-          - "modal-infrastructure"
+          - "oauth-infrastructure"
           - "priority-blocking"
         dependencies: []
-        estimate: "8 hours"
+        estimate: "10 hours"
         assignee: "engineering-lead"
 
-      - title: "Implement GitHub Webhook Handler"
+      - title: "Implement Claude SDK OAuth Client with Rate Limiting"
         description: |
-          Create GitHub webhook endpoint to receive issue events and 
-          trigger workflow execution.
+          Create a robust wrapper for Claude SDK that uses OAuth tokens with
+          automatic refresh, rate limiting, and usage tracking.
 
           ## Acceptance Criteria
-          - [ ] GitHub webhook endpoint created (`@modal.web_endpoint`)
-          - [ ] Webhook signature validation implemented
-          - [ ] Issue event parsing and routing logic
-          - [ ] Workflow trigger mechanism integrated
-          - [ ] Error handling and logging for webhook events
+          - [ ] Claude OAuth client wrapper with thread-safe token management
+          - [ ] Automatic token refresh with retry logic
+          - [ ] Rate limiting to prevent API exhaustion
+          - [ ] Circuit breaker for API failures
+          - [ ] Usage tracking and cost estimation
+          - [ ] Comprehensive error handling and logging
+          - [ ] Support for streaming responses
 
           ## Implementation Notes
-          - Validate GitHub webhook signatures for security
-          - Parse issue events (opened, labeled, commented)
-          - Trigger workflow orchestrator for relevant events
-          - Return immediate 200 response to GitHub
-          - Include payload validation and error handling
+            ```python
+            from anthropic import Anthropic, APIError
+            import httpx
+            from tenacity import retry, stop_after_attempt, wait_exponential
+            from circuitbreaker import circuit
+            import asyncio
+            from collections import deque
+            from datetime import datetime, timedelta
+            
+            class ClaudeOAuthClient:
+                def __init__(self, token_manager: OAuthTokenManager):
+                    self.token_manager = token_manager
+                    self.rate_limiter = RateLimiter(
+                        max_requests=100,
+                        time_window=timedelta(minutes=1)
+                    )
+                    self.usage_tracker = UsageTracker()
+                    
+                async def _get_client(self):
+                    token = await self.token_manager.get_valid_token()
+                    return Anthropic(
+                        http_client=httpx.AsyncClient(
+                            headers={"Authorization": f"Bearer {token}"},
+                            timeout=30.0
+                        ),
+                        base_url="https://api.anthropic.com/v1"
+                    )
+                
+                @retry(
+                    stop=stop_after_attempt(3),
+                    wait=wait_exponential(multiplier=1, min=4, max=10)
+                )
+                @circuit(failure_threshold=5, recovery_timeout=60)
+                async def chat(self, messages, model="claude-3-opus-20240229", **kwargs):
+                    # Rate limiting check
+                    await self.rate_limiter.acquire()
+                    
+                    try:
+                        client = await self._get_client()
+                        response = await client.messages.create(
+                            model=model,
+                            messages=messages,
+                            **kwargs
+                        )
+                        
+                        # Track usage
+                        self.usage_tracker.record(
+                            model=model,
+                            input_tokens=response.usage.input_tokens,
+                            output_tokens=response.usage.output_tokens
+                        )
+                        
+                        return response
+                        
+                    except APIError as e:
+                        if e.status_code == 401:
+                            # Force token refresh
+                            await self.token_manager._refresh_token()
+                            raise  # Let retry handle it
+                        elif e.status_code == 429:
+                            # Rate limit hit - back off
+                            await asyncio.sleep(60)
+                            raise
+                        else:
+                            raise
+                
+                async def stream_chat(self, messages, model="claude-3-opus-20240229", **kwargs):
+                    # Streaming support with rate limiting
+                    await self.rate_limiter.acquire()
+                    
+                    client = await self._get_client()
+                    async with client.messages.stream(
+                        model=model,
+                        messages=messages,
+                        **kwargs
+                    ) as stream:
+                        async for chunk in stream:
+                            yield chunk
+            
+            class RateLimiter:
+                def __init__(self, max_requests, time_window):
+                    self.max_requests = max_requests
+                    self.time_window = time_window
+                    self.requests = deque()
+                    self._lock = asyncio.Lock()
+                
+                async def acquire(self):
+                    async with self._lock:
+                        now = datetime.utcnow()
+                        # Remove old requests outside time window
+                        while self.requests and self.requests[0] < now - self.time_window:
+                            self.requests.popleft()
+                        
+                        if len(self.requests) >= self.max_requests:
+                            sleep_time = (self.requests[0] + self.time_window - now).total_seconds()
+                            await asyncio.sleep(sleep_time)
+                            return await self.acquire()
+                        
+                        self.requests.append(now)
+            ```
+        labels:
+          - "sprint-6"
+          - "phase-1"
+          - "oauth-client"
+          - "priority-high"
+        dependencies:
+          - "Set up Modal Application with Claude OAuth Infrastructure"
+        estimate: "8 hours"
+        assignee: "backend-engineer"
+
+      - title: "Implement Secure GitHub Webhook Handler with @claude Mention Support"
+        description: |
+          Create secure GitHub webhook endpoint with signature validation,
+          @claude mention detection, and natural language command parsing.
+
+          ## Acceptance Criteria
+          - [ ] GitHub webhook endpoint with cryptographic signature validation
+          - [ ] Robust @claude mention detection and command extraction
+          - [ ] Natural language command parsing with fallback handling
+          - [ ] Idempotency key support to prevent duplicate processing
+          - [ ] Webhook event replay protection
+          - [ ] Comprehensive audit logging
+          - [ ] Error responses that don't leak sensitive information
+
+          ## Implementation Notes
+            ```python
+            import hmac
+            import hashlib
+            from fastapi import Request, Response, HTTPException
+            import re
+            from datetime import datetime, timedelta
+            
+            @modal.web_endpoint(method="POST")
+            async def github_webhook(request: Request):
+                # Validate GitHub signature
+                signature = request.headers.get("X-Hub-Signature-256")
+                if not signature:
+                    raise HTTPException(status_code=401, detail="Missing signature")
+                
+                body = await request.body()
+                secret = os.environ["GITHUB_WEBHOOK_SECRET"]
+                
+                expected_signature = "sha256=" + hmac.new(
+                    secret.encode(),
+                    body,
+                    hashlib.sha256
+                ).hexdigest()
+                
+                if not hmac.compare_digest(signature, expected_signature):
+                    # Log security event
+                    await log_security_event("Invalid webhook signature")
+                    raise HTTPException(status_code=401, detail="Invalid signature")
+                
+                # Check delivery ID for idempotency
+                delivery_id = request.headers.get("X-GitHub-Delivery")
+                if await is_duplicate_delivery(delivery_id):
+                    return Response(status_code=200, content="Already processed")
+                
+                payload = await request.json()
+                
+                # Validate timestamp to prevent replay attacks
+                if "timestamp" in payload:
+                    event_time = datetime.fromisoformat(payload["timestamp"])
+                    if datetime.utcnow() - event_time > timedelta(minutes=5):
+                        return Response(status_code=200, content="Event too old")
+                
+                # Handle different event types
+                if payload.get("action") == "created" and "comment" in payload:
+                    await handle_comment_created(payload)
+                elif payload.get("action") == "opened" and "issue" in payload:
+                    await handle_issue_opened(payload)
+                
+                # Mark delivery as processed
+                await mark_delivery_processed(delivery_id)
+                
+                return Response(status_code=200)
+            
+            async def handle_comment_created(payload):
+                comment_body = payload["comment"]["body"]
+                mentions = extract_claude_mentions(comment_body)
+                
+                for mention in mentions:
+                    # Parse command with context awareness
+                    command_context = {
+                        "issue": payload["issue"],
+                        "comment": payload["comment"],
+                        "repository": payload["repository"],
+                        "sender": payload["sender"]
+                    }
+                    
+                    parsed_command = await parse_claude_command(
+                        mention["text"],
+                        command_context
+                    )
+                    
+                    # Trigger workflow asynchronously
+                    await trigger_workflow.spawn(
+                        command=parsed_command,
+                        context=command_context,
+                        correlation_id=f"{payload['issue']['number']}-{payload['comment']['id']}"
+                    )
+                    
+                    # Post acknowledgment
+                    await post_github_comment(
+                        repo=payload["repository"]["full_name"],
+                        issue_number=payload["issue"]["number"],
+                        body=f"👋 @{payload['sender']['login']}, I'm processing your request: `{parsed_command['intent']}`"
+                    )
+            
+            def extract_claude_mentions(text):
+                # Handle multiple mentions and quoted text
+                pattern = r'@claude\s+([^@]+?)(?=@claude|$)'
+                mentions = []
+                
+                for match in re.finditer(pattern, text, re.IGNORECASE | re.DOTALL):
+                    command_text = match.group(1).strip()
+                    # Filter out quoted replies
+                    if not command_text.startswith('>'):
+                        mentions.append({
+                            "start": match.start(),
+                            "end": match.end(),
+                            "text": command_text
+                        })
+                
+                return mentions
+            ```
         labels:
           - "sprint-6"
           - "phase-1"
           - "webhook-handler"
-          - "priority-high"
+          - "claude-mentions"
         dependencies:
-          - "Set up Modal Application Infrastructure"
+          - "Implement Claude SDK OAuth Client with Rate Limiting"
         estimate: "6 hours"
         assignee: "backend-engineer"
 
+      - title: "Migrate from GitHub CLI to GitHub App Authentication"
+        description: |
+          Replace GitHub CLI (gh) usage with GitHub App installation for
+          better authentication in serverless Modal environment.
+
+          ## Acceptance Criteria
+          - [ ] GitHub App created with appropriate permissions
+          - [ ] Installation token generation implemented
+          - [ ] JWT-based authentication for App
+          - [ ] All gh CLI commands replaced with API calls
+          - [ ] Token caching with automatic refresh
+          - [ ] Support for multiple repository installations
+
+          ## Implementation Notes
+            ```python
+            import jwt
+            import time
+            from github import Github, GithubIntegration
+            from cryptography.hazmat.primitives import serialization
+            from cryptography.hazmat.backends import default_backend
+            
+            class GitHubAppClient:
+                def __init__(self, app_id: str, private_key_path: str):
+                    self.app_id = app_id
+                    self.private_key = self._load_private_key(private_key_path)
+                    self._installation_tokens = {}  # Cache by installation_id
+                    
+                def _load_private_key(self, key_path):
+                    with open(key_path, 'rb') as key_file:
+                        return serialization.load_pem_private_key(
+                            key_file.read(),
+                            password=None,
+                            backend=default_backend()
+                        )
+                
+                def _generate_jwt(self):
+                    # JWT valid for 10 minutes (GitHub max)
+                    now = int(time.time())
+                    payload = {
+                        'iat': now,
+                        'exp': now + 600,
+                        'iss': self.app_id
+                    }
+                    
+                    return jwt.encode(
+                        payload,
+                        self.private_key,
+                        algorithm='RS256'
+                    )
+                
+                async def get_installation_client(self, repo_full_name: str):
+                    # Get installation ID for repository
+                    jwt_token = self._generate_jwt()
+                    integration = GithubIntegration(
+                        integration_id=self.app_id,
+                        private_key=self.private_key
+                    )
+                    
+                    # Find installation for this repo
+                    installation = integration.get_repo_installation(repo_full_name)
+                    
+                    # Get or refresh installation token
+                    if installation.id not in self._installation_tokens or \
+                       self._is_token_expired(self._installation_tokens[installation.id]):
+                        token = integration.get_access_token(installation.id)
+                        self._installation_tokens[installation.id] = {
+                            'token': token.token,
+                            'expires_at': token.expires_at
+                        }
+                    
+                    return Github(self._installation_tokens[installation.id]['token'])
+                
+                # GitHub operations that replace gh CLI
+                async def create_pull_request(self, repo_full_name: str, 
+                                            title: str, body: str, 
+                                            head: str, base: str = "main"):
+                    client = await self.get_installation_client(repo_full_name)
+                    repo = client.get_repo(repo_full_name)
+                    
+                    pr = repo.create_pull(
+                        title=title,
+                        body=body,
+                        head=head,
+                        base=base
+                    )
+                    
+                    return {
+                        "number": pr.number,
+                        "url": pr.html_url,
+                        "id": pr.id
+                    }
+                
+                async def create_issue_comment(self, repo_full_name: str,
+                                             issue_number: int, body: str):
+                    client = await self.get_installation_client(repo_full_name)
+                    repo = client.get_repo(repo_full_name)
+                    issue = repo.get_issue(issue_number)
+                    
+                    comment = issue.create_comment(body)
+                    return comment.id
+                
+                async def get_issue(self, repo_full_name: str, issue_number: int):
+                    client = await self.get_installation_client(repo_full_name)
+                    repo = client.get_repo(repo_full_name)
+                    issue = repo.get_issue(issue_number)
+                    
+                    return {
+                        "number": issue.number,
+                        "title": issue.title,
+                        "body": issue.body,
+                        "state": issue.state,
+                        "labels": [label.name for label in issue.labels]
+                    }
+            
+            # Modal function using GitHub App
+            @modal.function(
+                secrets=[modal.Secret.from_name("github-app-credentials")],
+                image=modal.Image.debian_slim().pip_install("PyGithub", "pyjwt", "cryptography")
+            )
+            async def github_operation(operation: str, **kwargs):
+                app_id = os.environ["GITHUB_APP_ID"]
+                private_key = os.environ["GITHUB_APP_PRIVATE_KEY"]
+                
+                github_client = GitHubAppClient(app_id, private_key)
+                
+                # Route to appropriate operation
+                if operation == "create_pr":
+                    return await github_client.create_pull_request(**kwargs)
+                elif operation == "comment":
+                    return await github_client.create_issue_comment(**kwargs)
+                # ... other operations
+            ```
+        labels:
+          - "sprint-6"
+          - "phase-1"
+          - "github-app"
+          - "authentication"
+        dependencies:
+          - "Implement Secure GitHub Webhook Handler with @claude Mention Support"
+        estimate: "12 hours"
+        assignee: "devops-engineer"
+
   - phase: 2
-    name: "Agent Migration"
+    name: "Agent Migration with OAuth"
     status: pending
     priority: high
     component: agent-migration
-    description: "Migrate all existing specialized agents to Modal functions"
+    description: "Migrate all agents to use Claude OAuth authentication"
     duration_days: 14
     tasks:
-      - title: "Migrate issue-investigator to Modal"
+      - title: "Migrate issue-investigator to OAuth-based Modal"
         description: |
-          Port the existing issue-investigator agent to Modal function 
-          with preserved functionality.
+          Port issue-investigator to use Claude OAuth client for all
+          AI interactions without API keys.
 
           ## Acceptance Criteria
-          - [ ] `investigate_agent.py` Modal function created
-          - [ ] Existing issue-investigator logic ported and adapted
-          - [ ] Input/output schema defined (GitHub issue → investigation.json)
-          - [ ] Modal container image configured with dependencies
-          - [ ] Integration tests with real GitHub issues
+          - [ ] `investigate_agent_oauth.py` Modal function created
+          - [ ] Claude OAuth client integrated for investigations
+          - [ ] Natural language processing using Claude SDK
+          - [ ] Investigation results match existing quality
+          - [ ] No API key dependencies
 
           ## Implementation Notes
-          - Preserve existing investigation methodology and output format
-          - Use Pydantic for structured investigation.json output
-          - Implement timeout handling for complex investigations
-          - Store investigation results in Modal Volume
-          - Include root cause analysis and scope assessment logic
+            @modal.function(
+                secrets=[modal.Secret.from_name("claude-oauth-tokens")],
+                image=modal.Image.debian_slim().pip_install("anthropic", "httpx")
+            )
+            def investigate_issue(issue: dict, oauth_token: str) -> dict:
+                # Initialize Claude with OAuth
+                claude = ClaudeOAuthClient(oauth_token)
+                
+                # Use Claude SDK for investigation
+                response = claude.chat([
+                    {"role": "system", "content": "You are an issue investigator..."},
+                    {"role": "user", "content": f"Investigate: {issue['title']}\n{issue['body']}"}
+                ])
+                
+                # Parse and structure investigation results
+                return parse_investigation(response.content)
         labels:
           - "sprint-6"
           - "phase-2"
-          - "agent-migration"
-          - "priority-high"
+          - "oauth-migration"
+          - "issue-investigator"
         dependencies:
-          - "Set up Modal Application Infrastructure"
+          - "Implement GitHub Webhook Handler with @claude Mention Support"
         estimate: "10 hours"
         assignee: "ai-engineer"
 
-      - title: "Migrate task-planner to Modal"
+      - title: "Migrate task-planner to OAuth-based Modal"
         description: |
-          Port the existing task-planner agent to Modal function with 
-          comprehensive planning capabilities.
+          Port task-planner to use Claude OAuth for comprehensive
+          planning without API key management.
 
           ## Acceptance Criteria
-          - [ ] `plan_agent.py` Modal function created
-          - [ ] Existing task-planner logic ported and adapted
-          - [ ] Input/output schema defined (investigation.json → plan.json)
-          - [ ] Task template generation preserved
-          - [ ] Integration with existing planning methodology
+          - [ ] `plan_agent_oauth.py` Modal function created
+          - [ ] Claude OAuth integration for planning logic
+          - [ ] Plan generation using Claude SDK conversations
+          - [ ] Multi-turn planning conversations supported
+          - [ ] Context preservation across planning steps
 
           ## Implementation Notes
-          - Preserve task decomposition methodology
-          - Generate comprehensive plan.json with time estimates
-          - Include task dependencies and validation criteria
-          - Maintain compatibility with existing task template format
-          - Implement context analysis and execution planning
+            @modal.function(
+                secrets=[modal.Secret.from_name("claude-oauth-tokens")],
+                image=modal.Image.debian_slim().pip_install("anthropic", "pydantic")
+            )
+            def create_plan(investigation: dict, oauth_token: str) -> dict:
+                claude = ClaudeOAuthClient(oauth_token)
+                
+                # Multi-turn conversation for comprehensive planning
+                messages = [
+                    {"role": "system", "content": "You are a technical task planner..."},
+                    {"role": "user", "content": f"Create plan for: {json.dumps(investigation)}"}
+                ]
+                
+                # Initial plan
+                response = claude.chat(messages)
+                messages.append({"role": "assistant", "content": response.content})
+                
+                # Refine with dependencies
+                messages.append({"role": "user", "content": "Add task dependencies and time estimates"})
+                refined = claude.chat(messages)
+                
+                return parse_plan(refined.content)
         labels:
           - "sprint-6"
           - "phase-2"
-          - "agent-migration"
-          - "priority-high"
+          - "oauth-migration"
+          - "task-planner"
         dependencies:
-          - "Migrate issue-investigator to Modal"
+          - "Migrate issue-investigator to OAuth-based Modal"
         estimate: "12 hours"
         assignee: "ai-engineer"
 
-      - title: "Migrate test-runner to Modal"
+      - title: "Migrate test-runner to OAuth-based Modal"
         description: |
-          Port the existing test-runner agent to Modal function with 
-          comprehensive validation capabilities.
+          Port test-runner to use Claude OAuth for intelligent test
+          validation and analysis.
 
           ## Acceptance Criteria
-          - [ ] `validate_agent.py` Modal function created
-          - [ ] Docker container integration for CI execution
-          - [ ] Test execution and coverage analysis preserved
-          - [ ] 71.82% coverage threshold enforcement
-          - [ ] Structured test_results.json output
+          - [ ] `validate_agent_oauth.py` Modal function created
+          - [ ] Claude OAuth for test result analysis
+          - [ ] Intelligent failure diagnosis using Claude
+          - [ ] Test coverage insights via Claude SDK
+          - [ ] Natural language test summaries
 
           ## Implementation Notes
-          - Use Modal container capabilities for isolated test execution
-          - Preserve existing CI validation logic from scripts/
-          - Generate comprehensive test_results.json
-          - Handle test failures and retry mechanisms
-          - Include performance and security validation
+            @modal.function(
+                secrets=[modal.Secret.from_name("claude-oauth-tokens")],
+                image=modal.Image.debian_slim()
+                    .pip_install("anthropic", "pytest", "coverage")
+                    .run_commands("apt-get update && apt-get install -y docker.io")
+            )
+            def run_validation(implementation: dict, oauth_token: str) -> dict:
+                # Run tests in container
+                test_results = execute_tests()
+                
+                # Use Claude for intelligent analysis
+                claude = ClaudeOAuthClient(oauth_token)
+                
+                analysis = claude.chat([
+                    {"role": "system", "content": "You are a test analysis expert..."},
+                    {"role": "user", "content": f"Analyze test results: {json.dumps(test_results)}"}
+                ])
+                
+                return {
+                    "test_results": test_results,
+                    "analysis": analysis.content,
+                    "recommendations": extract_recommendations(analysis.content)
+                }
         labels:
           - "sprint-6"
           - "phase-2"
-          - "agent-migration"
-          - "priority-high"
+          - "oauth-migration"
+          - "test-runner"
         dependencies:
-          - "Migrate task-planner to Modal"
+          - "Migrate task-planner to OAuth-based Modal"
         estimate: "14 hours"
         assignee: "qa-engineer"
 
-      - title: "Migrate pr-manager to Modal"
+      - title: "Migrate pr-manager to OAuth-based Modal"
         description: |
-          Port the existing pr-manager agent to Modal function for 
-          GitHub operations and PR lifecycle management.
+          Port pr-manager to use Claude OAuth for PR description
+          generation and code review summaries.
 
           ## Acceptance Criteria
-          - [ ] `submit_agent.py` Modal function created
-          - [ ] PR creation logic with existing template format
-          - [ ] Documentation inclusion (task templates, test results)
-          - [ ] GitHub CLI integration and monitoring setup
-          - [ ] Auto-merge configuration based on existing rules
+          - [ ] `submit_agent_oauth.py` Modal function created
+          - [ ] Claude OAuth for PR description generation
+          - [ ] Intelligent PR summaries using Claude SDK
+          - [ ] Code review insights via Claude
+          - [ ] @claude mention support in PR comments
 
           ## Implementation Notes
-          - Preserve comprehensive PR creation logic
-          - Include all documentation from previous phases
-          - Set up monitoring and auto-merge according to existing rules
-          - Handle PR status tracking and notifications
-          - Implement branch validation and conflict resolution
+            @modal.function(
+                secrets=[modal.Secret.from_name("claude-oauth-tokens", "github-token")],
+                image=modal.Image.debian_slim().pip_install("anthropic", "PyGithub")
+            )
+            def create_pr(plan: dict, test_results: dict, oauth_token: str) -> dict:
+                claude = ClaudeOAuthClient(oauth_token)
+                
+                # Generate comprehensive PR description
+                pr_description = claude.chat([
+                    {"role": "system", "content": "You are a PR description expert..."},
+                    {"role": "user", "content": f"""
+                    Create PR description for:
+                    Plan: {json.dumps(plan)}
+                    Test Results: {json.dumps(test_results)}
+                    """}
+                ])
+                
+                # Create PR with Claude-generated content
+                github = Github(os.environ["GITHUB_TOKEN"])
+                pr = create_github_pr(
+                    title=generate_title(plan),
+                    body=pr_description.content
+                )
+                
+                # Add comment mentioning @claude is available
+                pr.create_issue_comment(
+                    "PR created! You can ask @claude for code review insights or modifications."
+                )
+                
+                return {"pr_url": pr.html_url, "pr_number": pr.number}
         labels:
           - "sprint-6"
           - "phase-2"
-          - "agent-migration"
-          - "priority-high"
+          - "oauth-migration"
+          - "pr-manager"
         dependencies:
-          - "Migrate test-runner to Modal"
+          - "Migrate test-runner to OAuth-based Modal"
         estimate: "10 hours"
         assignee: "devops-engineer"
 
   - phase: 3
-    name: "Orchestration Implementation"
+    name: "OAuth Orchestration Implementation"
     status: pending
     priority: high
     component: orchestration
-    description: "Build workflow orchestration and implementation agents"
+    description: "Build OAuth-aware orchestration with natural language commands"
     duration_days: 7
     tasks:
-      - title: "Implement Workflow Orchestrator with Enforcement"
+      - title: "Implement OAuth Orchestrator with Natural Language Processing"
         description: |
-          Create the master orchestrator that coordinates all agents with 
-          comprehensive workflow enforcement.
+          Create orchestrator that processes @claude mentions and natural
+          language commands using OAuth authentication.
 
           ## Acceptance Criteria
-          - [ ] `orchestrator.py` Modal function created
-          - [ ] Workflow enforcement logic from existing validator ported
-          - [ ] State persistence using Modal Dict
-          - [ ] Resume capability for failed workflows
-          - [ ] Error handling and retry mechanisms
+          - [ ] `orchestrator_oauth.py` Modal function created
+          - [ ] Natural language command parsing via Claude
+          - [ ] OAuth token management across agent calls
+          - [ ] Conversation context preservation
+          - [ ] Interactive workflow adjustments via @claude
 
           ## Implementation Notes
-          - Port workflow state machine from existing validator
-          - Use Modal Dict for persistent state across agent executions
-          - Implement phase validation and error recovery
-          - Preserve resume capability from any failed phase
-          - Include comprehensive logging and monitoring
+            @modal.function(
+                secrets=[modal.Secret.from_name("claude-oauth-tokens")],
+                image=modal.Image.debian_slim().pip_install("anthropic", "pydantic")
+            )
+            def orchestrate_workflow(issue: dict, command: str, oauth_token: str) -> dict:
+                claude = ClaudeOAuthClient(oauth_token)
+                
+                # Parse natural language command
+                intent = claude.chat([
+                    {"role": "system", "content": "You are a workflow orchestrator..."},
+                    {"role": "user", "content": f"Parse command: '{command}' for issue: {issue['title']}"}
+                ])
+                
+                workflow_steps = parse_intent(intent.content)
+                
+                # Execute workflow with OAuth token passed to each agent
+                state = {"oauth_token": oauth_token}
+                
+                for step in workflow_steps:
+                    if step == "investigate":
+                        state["investigation"] = investigate_issue.remote(issue, oauth_token)
+                    elif step == "plan":
+                        state["plan"] = create_plan.remote(state["investigation"], oauth_token)
+                    # ... continue for all steps
+                
+                return state
         labels:
           - "sprint-6"
           - "phase-3"
-          - "orchestration"
-          - "priority-high"
+          - "oauth-orchestration"
+          - "natural-language"
         dependencies:
-          - "Migrate pr-manager to Modal"
+          - "Migrate pr-manager to OAuth-based Modal"
         estimate: "16 hours"
         assignee: "architecture-lead"
 
-      - title: "Add Implementation Agent with Git Operations"
+      - title: "Add Implementation Agent with Claude Code Generation"
         description: |
-          Create the implementation agent that handles code changes and 
-          git operations within Modal containers.
+          Create implementation agent that uses Claude OAuth for code
+          generation based on natural language plans.
 
           ## Acceptance Criteria
-          - [ ] `implement_agent.py` Modal function created
-          - [ ] Git operations integration (clone, branch, commit, push)
-          - [ ] Pre-commit hooks execution
-          - [ ] Code implementation based on plan.json
-          - [ ] Diff generation and artifact storage
+          - [ ] `implement_agent_oauth.py` Modal function created
+          - [ ] Claude OAuth for code generation
+          - [ ] Multi-file code generation support
+          - [ ] Interactive refinement via @claude mentions
+          - [ ] Git operations with Claude-generated commits
 
           ## Implementation Notes
-          - Handle git operations within Modal container
-          - Execute pre-commit hooks and handle modifications
-          - Generate implementation based on detailed plans
-          - Store artifacts for validation phase
-          - Include error handling for git conflicts and failures
+            @modal.function(
+                secrets=[modal.Secret.from_name("claude-oauth-tokens", "github-token")],
+                image=modal.Image.debian_slim()
+                    .pip_install("anthropic", "gitpython")
+                    .run_commands("apt-get update && apt-get install -y git")
+            )
+            def implement_code(plan: dict, oauth_token: str) -> dict:
+                claude = ClaudeOAuthClient(oauth_token)
+                
+                # Clone repository
+                repo = git.Repo.clone_from(plan["repo_url"], "/tmp/repo")
+                
+                implementations = {}
+                for task in plan["tasks"]:
+                    # Generate code for each task
+                    code = claude.chat([
+                        {"role": "system", "content": "You are an expert programmer..."},
+                        {"role": "user", "content": f"Implement: {task['description']}"}
+                    ])
+                    
+                    # Parse and apply code changes
+                    changes = parse_code_blocks(code.content)
+                    apply_changes(repo, changes)
+                    implementations[task["id"]] = changes
+                
+                # Generate commit message with Claude
+                commit_msg = claude.chat([
+                    {"role": "user", "content": f"Write commit message for: {list(implementations.keys())}"}
+                ])
+                
+                repo.index.commit(commit_msg.content)
+                repo.remote().push()
+                
+                return {"implementations": implementations, "commit": repo.head.commit.hexsha}
         labels:
           - "sprint-6"
           - "phase-3"
-          - "implementation"
-          - "priority-high"
+          - "code-generation"
+          - "oauth-implementation"
         dependencies:
-          - "Implement Workflow Orchestrator with Enforcement"
+          - "Implement OAuth Orchestrator with Natural Language Processing"
         estimate: "14 hours"
         assignee: "backend-engineer"
 
   - phase: 4
-    name: "Integration & Testing"
+    name: "OAuth Integration & Testing"
     status: pending
     priority: high
     component: integration
-    description: "Complete system integration, testing, and production readiness"
+    description: "Complete OAuth system integration and production readiness"
     duration_days: 7
     tasks:
-      - title: "End-to-End Integration Testing"
+      - title: "End-to-End OAuth Workflow Testing"
         description: |
-          Comprehensive testing of the complete Modal-based workflow system 
-          with performance optimization.
+          Test complete OAuth-based workflow from @claude mention to
+          PR creation without any API keys.
 
           ## Acceptance Criteria
-          - [ ] Complete workflow test with real GitHub issues
-          - [ ] Performance benchmarking and optimization
-          - [ ] Error scenario testing and recovery validation
-          - [ ] Documentation for Modal deployment
-          - [ ] Migration guide from existing system
+          - [ ] Complete workflow test using only OAuth tokens
+          - [ ] @claude mention triggers full workflow
+          - [ ] Natural language commands processed correctly
+          - [ ] OAuth token refresh during long workflows
+          - [ ] Performance comparison with API key approach
 
           ## Implementation Notes
-          - Test complete workflow from GitHub issue to PR merge
-          - Validate preservation of all existing capabilities
-          - Performance comparison with current system
-          - Create deployment and migration documentation
-          - Include load testing and scalability validation
+            - Test workflow: Issue → @claude investigate → implement → test → PR
+            - Validate OAuth token handling across all agents
+            - Test token expiration and refresh scenarios
+            - Measure Claude API usage within subscription limits
+            - Document OAuth setup process for team
         labels:
           - "sprint-6"
           - "phase-4"
+          - "oauth-testing"
           - "integration"
-          - "priority-high"
         dependencies:
-          - "Add Implementation Agent with Git Operations"
+          - "Add Implementation Agent with Claude Code Generation"
         estimate: "12 hours"
         assignee: "qa-engineer"
 
-      - title: "Security Audit and Production Readiness"
+      - title: "OAuth Security Audit and Best Practices"
         description: |
-          Complete security review and production deployment preparation 
-          for the Modal-based system.
+          Security review of OAuth implementation and credential
+          management across Modal infrastructure.
 
           ## Acceptance Criteria
-          - [ ] Security audit of secrets management
-          - [ ] Input validation and sanitization verification
-          - [ ] Network security and isolation testing
-          - [ ] Audit logging implementation
-          - [ ] Production deployment configuration
+          - [ ] OAuth token storage security validated
+          - [ ] Token refresh mechanism security audit
+          - [ ] No hardcoded credentials anywhere
+          - [ ] Audit logging for all OAuth operations
+          - [ ] Documentation of OAuth security best practices
+          - [ ] Penetration testing of OAuth endpoints
+          - [ ] Security incident response plan
 
           ## Implementation Notes
-          - Validate all secrets are properly managed
-          - Ensure input sanitization prevents injection attacks
-          - Implement comprehensive audit logging
-          - Create production deployment checklist
-          - Include monitoring and alerting setup
+            - Validate Modal Secrets encryption for OAuth tokens
+            - Ensure tokens never logged or exposed
+            - Implement token rotation schedule
+            - Create OAuth troubleshooting guide
+            - Document Claude subscription limit monitoring
+            - Set up security monitoring alerts
+
+      - title: "Implement Zero-Downtime Migration and Rollback Strategy"
+        description: |
+          Create comprehensive migration plan with feature flags and
+          instant rollback capabilities.
+
+          ## Acceptance Criteria
+          - [ ] Feature flag system for gradual migration
+          - [ ] Parallel running of old and new systems
+          - [ ] Traffic routing based on feature flags
+          - [ ] One-click rollback mechanism
+          - [ ] Data consistency validation
+          - [ ] Performance comparison dashboard
+          - [ ] Migration runbook with checkpoints
+
+          ## Implementation Notes
+            ```python
+            from enum import Enum
+            import json
+            from typing import Dict, Any
+            
+            class MigrationStage(Enum):
+                LEGACY_ONLY = "legacy_only"
+                CANARY_5_PERCENT = "canary_5"
+                CANARY_25_PERCENT = "canary_25"
+                CANARY_50_PERCENT = "canary_50"
+                MODAL_PRIMARY = "modal_primary"
+                MODAL_ONLY = "modal_only"
+            
+            class MigrationController:
+                def __init__(self):
+                    self.redis_client = get_redis_client()
+                    self.metrics_client = get_metrics_client()
+                    
+                async def get_current_stage(self) -> MigrationStage:
+                    stage = await self.redis_client.get("migration:stage")
+                    return MigrationStage(stage) if stage else MigrationStage.LEGACY_ONLY
+                
+                async def route_request(self, request_context: Dict[str, Any]):
+                    stage = await self.get_current_stage()
+                    
+                    # Check for forced routing (testing)
+                    if force_route := request_context.get("force_route"):
+                        return force_route
+                    
+                    # Determine routing based on stage
+                    if stage == MigrationStage.LEGACY_ONLY:
+                        return "legacy"
+                    elif stage == MigrationStage.MODAL_ONLY:
+                        return "modal"
+                    else:
+                        # Canary routing based on hash
+                        user_hash = hash(request_context["user_id"]) % 100
+                        canary_threshold = {
+                            MigrationStage.CANARY_5_PERCENT: 5,
+                            MigrationStage.CANARY_25_PERCENT: 25,
+                            MigrationStage.CANARY_50_PERCENT: 50,
+                            MigrationStage.MODAL_PRIMARY: 95
+                        }.get(stage, 0)
+                        
+                        route = "modal" if user_hash < canary_threshold else "legacy"
+                        
+                        # Track routing decision
+                        await self.metrics_client.increment(
+                            f"migration.routing.{route}",
+                            tags={"stage": stage.value}
+                        )
+                        
+                        return route
+                
+                async def advance_stage(self) -> bool:
+                    current = await self.get_current_stage()
+                    
+                    # Check health metrics before advancing
+                    if not await self._check_health_metrics():
+                        return False
+                    
+                    # Advance to next stage
+                    stages = list(MigrationStage)
+                    current_index = stages.index(current)
+                    
+                    if current_index < len(stages) - 1:
+                        next_stage = stages[current_index + 1]
+                        await self.redis_client.set("migration:stage", next_stage.value)
+                        
+                        # Log stage transition
+                        await self._log_stage_transition(current, next_stage)
+                        return True
+                    
+                    return False
+                
+                async def rollback(self, target_stage: MigrationStage = None):
+                    current = await self.get_current_stage()
+                    target = target_stage or MigrationStage.LEGACY_ONLY
+                    
+                    # Immediate rollback
+                    await self.redis_client.set("migration:stage", target.value)
+                    
+                    # Alert on rollback
+                    await self._send_rollback_alert(current, target)
+                    
+                    # Preserve state for analysis
+                    await self._capture_rollback_state(current, target)
+                
+                async def _check_health_metrics(self) -> bool:
+                    # Check error rates, latency, success rates
+                    metrics = await self.metrics_client.query({
+                        "error_rate": "rate(errors[5m])",
+                        "p99_latency": "histogram_quantile(0.99, latency[5m])",
+                        "success_rate": "rate(success[5m])"
+                    })
+                    
+                    return (
+                        metrics["error_rate"] < 0.01 and  # <1% errors
+                        metrics["p99_latency"] < 2000 and  # <2s p99
+                        metrics["success_rate"] > 0.99      # >99% success
+                    )
+            
+            # Usage in webhook handler
+            @modal.web_endpoint(method="POST")
+            async def github_webhook_with_migration(request: Request):
+                controller = MigrationController()
+                
+                # Determine routing
+                route = await controller.route_request({
+                    "user_id": request.headers.get("X-GitHub-Delivery"),
+                    "endpoint": "webhook"
+                })
+                
+                if route == "modal":
+                    return await github_webhook_modal(request)
+                else:
+                    return await github_webhook_legacy(request)
+            ```
         labels:
           - "sprint-6"
           - "phase-4"
-          - "security"
-          - "priority-high"
+          - "oauth-security"
+          - "production-ready"
         dependencies:
-          - "End-to-End Integration Testing"
+          - "End-to-End OAuth Workflow Testing"
         estimate: "10 hours"
         assignee: "security-engineer"
 
-# Team members and their roles
+      - title: "Implement Comprehensive Monitoring and Observability"
+        description: |
+          Set up monitoring, alerting, and observability for the Modal
+          OAuth infrastructure with real-time dashboards.
+
+          ## Acceptance Criteria
+          - [ ] OpenTelemetry integration for distributed tracing
+          - [ ] Prometheus metrics for all key operations
+          - [ ] Grafana dashboards for system health
+          - [ ] PagerDuty integration for critical alerts
+          - [ ] Cost tracking and budget alerts
+          - [ ] Performance baseline establishment
+          - [ ] SLO/SLA monitoring setup
+
+          ## Implementation Notes
+            ```python
+            from opentelemetry import trace, metrics
+            from opentelemetry.exporter.otlp.proto.grpc import (
+                trace_exporter, metrics_exporter
+            )
+            import time
+            from functools import wraps
+            
+            # Initialize telemetry
+            tracer = trace.get_tracer("modal-oauth-workflow")
+            meter = metrics.get_meter("modal-oauth-workflow")
+            
+            # Create metrics
+            workflow_counter = meter.create_counter(
+                "workflow_executions",
+                description="Number of workflow executions"
+            )
+            
+            oauth_refresh_histogram = meter.create_histogram(
+                "oauth_token_refresh_duration",
+                description="OAuth token refresh duration",
+                unit="ms"
+            )
+            
+            api_call_histogram = meter.create_histogram(
+                "claude_api_call_duration",
+                description="Claude API call duration",
+                unit="ms"
+            )
+            
+            def monitor_function(operation_name: str):
+                def decorator(func):
+                    @wraps(func)
+                    async def wrapper(*args, **kwargs):
+                        # Start trace span
+                        with tracer.start_as_current_span(
+                            operation_name,
+                            attributes={
+                                "function": func.__name__,
+                                "modal.function": True
+                            }
+                        ) as span:
+                            start_time = time.time()
+                            
+                            try:
+                                # Execute function
+                                result = await func(*args, **kwargs)
+                                
+                                # Record success metrics
+                                workflow_counter.add(
+                                    1,
+                                    {"status": "success", "operation": operation_name}
+                                )
+                                
+                                return result
+                                
+                            except Exception as e:
+                                # Record error
+                                span.record_exception(e)
+                                span.set_status(trace.Status(trace.StatusCode.ERROR))
+                                
+                                workflow_counter.add(
+                                    1,
+                                    {"status": "error", "operation": operation_name}
+                                )
+                                
+                                raise
+                                
+                            finally:
+                                # Record duration
+                                duration_ms = (time.time() - start_time) * 1000
+                                api_call_histogram.record(
+                                    duration_ms,
+                                    {"operation": operation_name}
+                                )
+                    
+                    return wrapper
+                return decorator
+            
+            # Cost tracking
+            class CostTracker:
+                def __init__(self):
+                    self.cost_meter = meter.create_counter(
+                        "estimated_cost_usd",
+                        description="Estimated cost in USD"
+                    )
+                    
+                async def track_modal_invocation(self, cpu_hours: float, memory_gb_hours: float):
+                    # Modal pricing (example rates)
+                    cpu_cost = cpu_hours * 0.00001  # $0.00001 per CPU millisecond
+                    memory_cost = memory_gb_hours * 0.0000015  # $0.0000015 per GB millisecond
+                    
+                    total_cost = cpu_cost + memory_cost
+                    
+                    self.cost_meter.add(
+                        total_cost,
+                        {
+                            "service": "modal",
+                            "resource": "compute"
+                        }
+                    )
+                
+                async def track_claude_api_usage(self, model: str, input_tokens: int, output_tokens: int):
+                    # Claude pricing per 1K tokens (example rates)
+                    rates = {
+                        "claude-3-opus": {"input": 0.015, "output": 0.075},
+                        "claude-3-sonnet": {"input": 0.003, "output": 0.015},
+                        "claude-3-haiku": {"input": 0.00025, "output": 0.00125}
+                    }
+                    
+                    rate = rates.get(model, rates["claude-3-sonnet"])
+                    cost = (input_tokens * rate["input"] + output_tokens * rate["output"]) / 1000
+                    
+                    self.cost_meter.add(
+                        cost,
+                        {
+                            "service": "claude",
+                            "model": model,
+                            "operation": "chat"
+                        }
+                    )
+            
+            # Grafana dashboard config (as code)
+            dashboard_config = {
+                "title": "Modal OAuth Workflow Dashboard",
+                "panels": [
+                    {
+                        "title": "Workflow Success Rate",
+                        "query": "rate(workflow_executions{status='success'}[5m]) / rate(workflow_executions[5m])"
+                    },
+                    {
+                        "title": "OAuth Token Refresh Latency",
+                        "query": "histogram_quantile(0.99, oauth_token_refresh_duration)"
+                    },
+                    {
+                        "title": "Cost per Hour",
+                        "query": "sum(rate(estimated_cost_usd[1h])) * 3600"
+                    },
+                    {
+                        "title": "Active Workflows",
+                        "query": "sum(up{job='modal-workflow'})"
+                    }
+                ]
+            }
+            ```
+        labels:
+          - "sprint-6"
+          - "phase-4"
+          - "monitoring"
+          - "observability"
+        dependencies:
+          - "Implement Zero-Downtime Migration and Rollback Strategy"
+        estimate: "14 hours"
+        assignee: "devops-engineer"
+
 team:
   - role: lead
     agent: architecture_agent
     responsibilities:
-      - "Sprint coordination and architecture oversight"
-      - "Modal infrastructure design"
-      - "Technical reviews and guidance"
+      - "OAuth architecture design and oversight"
+      - "Modal infrastructure with OAuth integration"
+      - "Natural language processing design"
 
   - role: implementation
     agent: backend_agent
     responsibilities:
-      - "Agent migration and implementation"
-      - "Git operations and workflow logic"
-      - "Integration development"
+      - "Claude OAuth client implementation"
+      - "Agent OAuth migration"
+      - "@claude mention handling"
 
   - role: ai_engineering
     agent: ai_agent
     responsibilities:
-      - "Claude API integration"
-      - "Agent behavior preservation"
-      - "Prompt engineering and optimization"
+      - "Claude SDK OAuth integration"
+      - "Natural language command processing"
+      - "Prompt optimization for OAuth context"
 
   - role: validation
     agent: qa_agent
     responsibilities:
-      - "Test migration and validation"
-      - "End-to-end testing"
-      - "Performance benchmarking"
+      - "OAuth workflow testing"
+      - "Token refresh validation"
+      - "Subscription limit monitoring"
 
   - role: security
     agent: security_agent
     responsibilities:
-      - "Security audit and validation"
-      - "Secrets management verification"
-      - "Production readiness assessment"
+      - "OAuth security audit"
+      - "Credential management validation"
+      - "Token rotation implementation"
 
-# Success metrics for this sprint
 success_metrics:
-  - metric: agent_migration_completion
+  - metric: oauth_migration_completion
     target: 100
     unit: percent
-    description: "All 5 agents successfully migrated to Modal"
+    description: "All agents migrated to OAuth authentication"
 
-  - metric: workflow_capability_preservation
-    target: 100
-    unit: percent
-    description: "All existing workflow features preserved"
+  - metric: api_key_elimination
+    target: 0
+    unit: count
+    description: "Zero API keys in codebase"
 
-  - metric: performance_improvement
-    target: 20
-    unit: percent
-    description: "Performance improvement over current system"
-
-  - metric: test_coverage_maintained
-    target: 71.82
-    unit: percent
-    description: "Maintain existing test coverage threshold"
-
-  - metric: security_audit_pass
-    target: 1
-    unit: boolean
-    description: "Complete security audit with no critical issues"
-
-  - metric: end_to_end_workflow_success
+  - metric: natural_language_accuracy
     target: 95
     unit: percent
-    description: "End-to-end workflow success rate"
+    description: "@claude mention command understanding"
 
-# Metadata for graph relationships
+  - metric: oauth_token_refresh_success
+    target: 100
+    unit: percent
+    description: "Successful token refresh rate"
+
+  - metric: subscription_limit_efficiency
+    target: 80
+    unit: percent
+    description: "Claude usage within subscription limits"
+
+  - metric: workflow_latency_improvement
+    target: 15
+    unit: percent
+    description: "Faster workflows with OAuth caching"
+
+  - metric: rollback_time
+    target: 60
+    unit: seconds
+    description: "Maximum time to rollback to legacy system"
+
+  - metric: zero_downtime_achieved
+    target: 100
+    unit: percent
+    description: "No service interruption during migration"
+
+  - metric: cost_reduction
+    target: 30
+    unit: percent
+    description: "Cost savings with Modal serverless vs current"
+
+  - metric: security_incidents
+    target: 0
+    unit: count
+    description: "Security incidents during migration"
+
+  - metric: modal_cold_start_p99
+    target: 2000
+    unit: milliseconds
+    description: "99th percentile cold start latency"
+
+  - metric: concurrent_workflow_capacity
+    target: 100
+    unit: workflows
+    description: "Parallel workflow execution capability"
+
 graph_metadata:
   node_type: sprint_document
   relationships:
     - type: modernizes
       target: workflow_issue_system
     - type: implements
-      target: modal_serverless_architecture
-    - type: follows
-      target: sprint-5-context-store
+      target: oauth_authentication_pattern
     - type: enables
-      target: scalable_workflow_automation
+      target: natural_language_workflows
+    - type: eliminates
+      target: api_key_management
 
-# Sprint-specific configuration
 config:
-  # Automatically create GitHub issues from tasks
+  oauth_config:
+    client_id: "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+    scopes: ["read:user", "read:org", "api:access"]
+    refresh_interval_hours: 4
+
+  webhook_config:
+    events: ["issues", "issue_comment", "pull_request", "pull_request_review_comment"]
+    mention_pattern: "@claude\\s+(.+)"
+
   auto_create_issues: true
-
-  # Issue template to use
   issue_template: "sprint-task.md"
-
-  # Default labels for all issues in this sprint
   default_labels:
     - "sprint-6"
-    - "modal-migration"
+    - "modal-oauth"
     - "architecture"
+  milestone: "Sprint 6 - Modal OAuth Migration"
 
-  # Milestone to create/assign issues to
-  milestone: "Sprint 6 - Modal Migration"
-
-  # Project board to add issues to
-  project_board: "Sprint Board"
+# ------------------------------------------------------------------
+# References
+# Modal Secret reference :contentReference[oaicite:0]{index=0}
+# Modal webhooks guide :contentReference[oaicite:1]{index=1}
+# Modal web endpoint example :contentReference[oaicite:2]{index=2}
+# Anthropic IAM & OAuth concepts :contentReference[oaicite:3]{index=3}
+# Anthropic SDK GitHub example :contentReference[oaicite:4]{index=4}
+# Claude SDK documentation :contentReference[oaicite:5]{index=5}
+# Anthropic Client SDKs overview :contentReference[oaicite:6]{index=6}
+# Modal Secrets guide :contentReference[oaicite:7]{index=7}
+# Modal Hello World proxy auth sample :contentReference[oaicite:8]{index=8}
+# Modal OAuth tokens article :contentReference[oaicite:9]{index=9}
