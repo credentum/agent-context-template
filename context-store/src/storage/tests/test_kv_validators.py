@@ -3,13 +3,9 @@
 Tests for kv_validators module
 """
 
-import os
-import sys
 from datetime import datetime, timedelta
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from src.validators.kv_validators import (  # noqa: E402
+from src.validators.kv_validators import (
     sanitize_metric_name,
     validate_cache_entry,
     validate_metric_event,

@@ -1,15 +1,12 @@
-"""
-Core utilities for the context store system.
-"""
+"""Core package for agent context template system.
 
-from .utils import (
-    get_environment,
-    get_secure_connection_config,
-    sanitize_error_message,
-)
+This package contains the fundamental base classes, utilities, and shared components
+that form the foundation of the agent context template system. These core components
+are used throughout the application to ensure consistency and code reuse.
 
-__all__ = [
-    "sanitize_error_message",
-    "get_environment",
-    "get_secure_connection_config",
-]
+Components:
+- Base classes for agents and tools
+- Common utilities and helper functions
+- Shared data structures and models
+- Core configuration management
+"""

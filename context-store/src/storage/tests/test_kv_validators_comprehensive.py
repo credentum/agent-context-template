@@ -5,14 +5,10 @@ Critical domain tests to boost coverage above 78.5% threshold
 """
 
 import json
-import os
-import sys
 from datetime import datetime, timedelta
 from typing import Any
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from src.validators.kv_validators import (  # noqa: E402
+from src.validators.kv_validators import (
     sanitize_metric_name,
     validate_cache_entry,
     validate_metric_event,
@@ -52,24 +48,14 @@ class TestValidateCacheEntry:
     def test_invalid_key_type(self) -> None:
         """Test validation fails for non-string keys"""
         invalid_entries: list[dict[str, Any]] = [
-            {
-                "key": 123,
-                "value": "test",
-                "created_at": "2025-07-16T10:00:00",
-                "ttl_seconds": 3600,
-            },
+            {"key": 123, "value": "test", "created_at": "2025-07-16T10:00:00", "ttl_seconds": 3600},
             {
                 "key": None,
                 "value": "test",
                 "created_at": "2025-07-16T10:00:00",
                 "ttl_seconds": 3600,
             },
-            {
-                "key": [],
-                "value": "test",
-                "created_at": "2025-07-16T10:00:00",
-                "ttl_seconds": 3600,
-            },
+            {"key": [], "value": "test", "created_at": "2025-07-16T10:00:00", "ttl_seconds": 3600},
         ]
 
         for entry in invalid_entries:

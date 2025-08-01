@@ -7,9 +7,7 @@ import re
 from typing import Any, List, Optional
 
 
-def sanitize_error_message(
-    error_msg: str, sensitive_values: Optional[List[str]] = None
-) -> str:
+def sanitize_error_message(error_msg: str, sensitive_values: Optional[List[str]] = None) -> str:
     """
     Sanitize error messages to remove sensitive information
 
@@ -80,9 +78,7 @@ def sanitize_error_message(
 
     # Handle patterns without capture groups
     # Match both JWT format (xxx.yyy.zzz) and simple tokens
-    sanitized = re.sub(
-        r"Bearer\s+[A-Za-z0-9\-_]+(?:\.[A-Za-z0-9\-_]+)*", "Bearer ***", sanitized
-    )
+    sanitized = re.sub(r"Bearer\s+[A-Za-z0-9\-_]+(?:\.[A-Za-z0-9\-_]+)*", "Bearer ***", sanitized)
     sanitized = re.sub(r"Basic\s+[A-Za-z0-9+/=]+", "Basic ***", sanitized)
 
     # Remove common password patterns in JSON/dict representations
@@ -118,9 +114,7 @@ def get_environment() -> str:
     import os
 
     # Check multiple environment variables
-    env = os.getenv(
-        "ENVIRONMENT", os.getenv("ENV", os.getenv("NODE_ENV", "development"))
-    ).lower()
+    env = os.getenv("ENVIRONMENT", os.getenv("ENV", os.getenv("NODE_ENV", "development"))).lower()
 
     # Map common variations
     if env in ["prod", "production"]:
@@ -131,9 +125,7 @@ def get_environment() -> str:
         return "development"
 
 
-def get_secure_connection_config(
-    config: dict[str, Any], service: str
-) -> dict[str, Any]:
+def get_secure_connection_config(config: dict[str, Any], service: str) -> dict[str, Any]:
     """
     Get secure connection configuration with SSL/TLS options
 

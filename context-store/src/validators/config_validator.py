@@ -78,23 +78,15 @@ class ConfigValidator:
 
         # Security warnings
         if config.get("qdrant", {}).get("ssl", False) is False:
-            self.warnings.append(
-                "SSL is disabled for Qdrant - consider enabling for production"
-            )
+            self.warnings.append("SSL is disabled for Qdrant - consider enabling for production")
         if config.get("neo4j", {}).get("ssl", False) is False:
-            self.warnings.append(
-                "SSL is disabled for Neo4j - consider enabling for production"
-            )
+            self.warnings.append("SSL is disabled for Neo4j - consider enabling for production")
         if config.get("redis", {}).get("ssl", False) is False:
-            self.warnings.append(
-                "SSL is disabled for Redis - consider enabling for production"
-            )
+            self.warnings.append("SSL is disabled for Redis - consider enabling for production")
 
         return len(self.errors) == 0
 
-    def validate_performance_config(
-        self, config_path: str = "performance.yaml"
-    ) -> bool:
+    def validate_performance_config(self, config_path: str = "performance.yaml") -> bool:
         """Validate performance configuration file"""
         try:
             with open(config_path, "r") as f:
@@ -117,9 +109,7 @@ class ConfigValidator:
                     not isinstance(embed.get("batch_size", 100), int)
                     or embed.get("batch_size", 100) < 1
                 ):
-                    self.errors.append(
-                        "vector_db.embedding.batch_size must be a positive integer"
-                    )
+                    self.errors.append("vector_db.embedding.batch_size must be a positive integer")
                 if (
                     not isinstance(embed.get("max_retries", 3), int)
                     or embed.get("max_retries", 3) < 0
@@ -139,9 +129,7 @@ class ConfigValidator:
             if "search" in vdb:
                 search = vdb["search"]
                 if search.get("max_limit", 100) < search.get("default_limit", 10):
-                    self.errors.append(
-                        "vector_db.search.max_limit must be >= default_limit"
-                    )
+                    self.errors.append("vector_db.search.max_limit must be >= default_limit")
 
         # Validate graph_db settings
         if "graph_db" in config:
@@ -151,9 +139,7 @@ class ConfigValidator:
             if "connection_pool" in gdb:
                 pool = gdb["connection_pool"]
                 if pool.get("max_size", 10) < pool.get("min_size", 1):
-                    self.errors.append(
-                        "graph_db.connection_pool.max_size must be >= min_size"
-                    )
+                    self.errors.append("graph_db.connection_pool.max_size must be >= min_size")
 
             # Query settings
             if "query" in gdb:
@@ -162,13 +148,10 @@ class ConfigValidator:
                     not isinstance(query.get("max_path_length", 5), int)
                     or query.get("max_path_length", 5) < 1
                 ):
-                    self.errors.append(
-                        "graph_db.query.max_path_length must be a positive integer"
-                    )
+                    self.errors.append("graph_db.query.max_path_length must be a positive integer")
                 if query.get("max_path_length", 5) > 10:
                     self.warnings.append(
-                        "graph_db.query.max_path_length > 10 may cause "
-                        "performance issues"
+                        "graph_db.query.max_path_length > 10 may cause performance issues"
                     )
 
         # Validate search settings
@@ -178,13 +161,9 @@ class ConfigValidator:
                 ranking = search["ranking"]
                 temporal_decay = ranking.get("temporal_decay_rate", 0.01)
                 if not isinstance(temporal_decay, (int, float)):
-                    self.errors.append(
-                        "search.ranking.temporal_decay_rate must be a number"
-                    )
+                    self.errors.append("search.ranking.temporal_decay_rate must be a number")
                 elif temporal_decay < 0 or temporal_decay > 1:
-                    self.errors.append(
-                        "search.ranking.temporal_decay_rate must be between 0 and 1"
-                    )
+                    self.errors.append("search.ranking.temporal_decay_rate must be between 0 and 1")
 
                 # Validate type boosts
                 if "type_boosts" in ranking:
@@ -208,9 +187,7 @@ class ConfigValidator:
                 or resources.get("max_cpu_percent", 80) < 1
                 or resources.get("max_cpu_percent", 80) > 100
             ):
-                self.errors.append(
-                    "resources.max_cpu_percent must be between 1 and 100"
-                )
+                self.errors.append("resources.max_cpu_percent must be between 1 and 100")
 
         # Validate KV store settings
         if "kv_store" in config:
@@ -223,8 +200,7 @@ class ConfigValidator:
                     pool = redis["connection_pool"]
                     if pool.get("max_size", 50) < pool.get("min_size", 5):
                         self.errors.append(
-                            "kv_store.redis.connection_pool.max_size must be >= "
-                            "min_size"
+                            "kv_store.redis.connection_pool.max_size must be >= min_size"
                         )
 
                 if "cache" in redis:
@@ -234,8 +210,7 @@ class ConfigValidator:
                         or cache.get("ttl_seconds", 3600) < 1
                     ):
                         self.errors.append(
-                            "kv_store.redis.cache.ttl_seconds must be a positive "
-                            "integer"
+                            "kv_store.redis.cache.ttl_seconds must be a positive integer"
                         )
 
             # DuckDB settings
@@ -243,13 +218,9 @@ class ConfigValidator:
                 duckdb = kv["duckdb"]
                 if "batch_insert" in duckdb:
                     batch = duckdb["batch_insert"]
-                    if (
-                        not isinstance(batch.get("size", 1000), int)
-                        or batch.get("size", 1000) < 1
-                    ):
+                    if not isinstance(batch.get("size", 1000), int) or batch.get("size", 1000) < 1:
                         self.errors.append(
-                            "kv_store.duckdb.batch_insert.size must be a positive "
-                            "integer"
+                            "kv_store.duckdb.batch_insert.size must be a positive integer"
                         )
 
                 if "analytics" in duckdb:
@@ -259,8 +230,7 @@ class ConfigValidator:
                         or analytics.get("retention_days", 90) < 1
                     ):
                         self.errors.append(
-                            "kv_store.duckdb.analytics.retention_days must be a "
-                            "positive integer"
+                            "kv_store.duckdb.analytics.retention_days must be a positive integer"
                         )
 
         return len(self.errors) == 0
@@ -281,9 +251,7 @@ class ConfigValidator:
 
 @click.command()
 @click.option("--config", default=".ctxrc.yaml", help="Main configuration file")
-@click.option(
-    "--perf-config", default="performance.yaml", help="Performance configuration file"
-)
+@click.option("--perf-config", default="performance.yaml", help="Performance configuration file")
 @click.option("--strict", is_flag=True, help="Treat warnings as errors")
 def main(config: str, perf_config: str, strict: bool):
     """Validate configuration files"""
