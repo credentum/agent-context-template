@@ -59,9 +59,9 @@ for repo in config.get('repos', []):
             hook['args'] = hook.get('args', []) + ['--check', '--diff']
         elif hook_id == 'isort':
             hook['args'] = hook.get('args', []) + ['--check-only', '--diff']
-        elif hook_id in ['trailing-whitespace', 'end-of-file-fixer']:
-            # These hooks don't have check-only mode, we'll handle them separately
-            hook['args'] = hook.get('args', []) + ['--diff']
+        elif hook_id in ['trailing-whitespace', 'end-of-file-fixer', 'mixed-line-ending']:
+            # These hooks don't have check-only mode, skip them in CI
+            hook['exclude'] = '.*'  # Exclude all files to skip these hooks
             
 # Save modified config
 with open("$TEMP_CONFIG", 'w') as f:
