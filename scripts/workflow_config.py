@@ -13,8 +13,10 @@ class WorkflowConfig:
 
     # Configurable timeout per phase (can be overridden by env var)
     PHASE_TIMEOUT_SECONDS = int(os.environ.get("WORKFLOW_PHASE_TIMEOUT", "90"))
-    
+
     # Validation phase needs longer timeout for full CI execution (15 minutes)
+    # This extended timeout allows for comprehensive Docker CI checks, test suite,
+    # coverage analysis, and quality validations that can take 10-12 minutes
     VALIDATION_PHASE_TIMEOUT_SECONDS = int(os.environ.get("WORKFLOW_VALIDATION_TIMEOUT", "900"))
 
     # Default background process timeout
@@ -31,3 +33,17 @@ class WorkflowConfig:
 
     # Coverage requirement for validators directory (percentage)
     VALIDATORS_COVERAGE_THRESHOLD = float(os.environ.get("VALIDATORS_COVERAGE_THRESHOLD", "90.0"))
+
+    @classmethod
+    def get_phase_timeout(cls, phase_name: str) -> int:
+        """Get timeout for a specific phase.
+
+        Args:
+            phase_name: Name of the workflow phase
+
+        Returns:
+            Timeout in seconds for the specified phase
+        """
+        if phase_name == "validation":
+            return cls.VALIDATION_PHASE_TIMEOUT_SECONDS
+        return cls.PHASE_TIMEOUT_SECONDS

@@ -131,11 +131,15 @@ class PhaseRunner:
 
         # Get phase-specific timeout
         phase_name = self.PHASES[phase_num][0]
+        timeout = WorkflowConfig.get_phase_timeout(phase_name)
+
         if phase_name == "validation":
-            timeout = WorkflowConfig.VALIDATION_PHASE_TIMEOUT_SECONDS
-            print(f"⏰ Using extended timeout for validation phase: {timeout}s ({timeout//60} minutes)")
-        else:
-            timeout = WorkflowConfig.PHASE_TIMEOUT_SECONDS
+            print(
+                f"⏰ Using extended timeout for validation phase: {timeout}s ({timeout//60} minutes)"
+            )
+            print(
+                "   This allows full CI execution including Docker tests, coverage, and quality checks"
+            )
 
         try:
             # Run with phase-specific timeout
