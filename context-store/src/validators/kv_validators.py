@@ -75,7 +75,9 @@ def sanitize_metric_name(name: str) -> str:
     return sanitized
 
 
-def validate_time_range(start_time: datetime, end_time: datetime, max_days: int = 90) -> bool:
+def validate_time_range(
+    start_time: datetime, end_time: datetime, max_days: int = 90
+) -> bool:
     """Validate time range for queries"""
     if start_time >= end_time:
         return False

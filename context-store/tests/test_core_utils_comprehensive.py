@@ -4,14 +4,14 @@ Comprehensive tests for src/core/utils.py
 Targeted to boost critical domain coverage above 78.5% threshold
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+import sys
 import warnings
 from unittest.mock import patch
 
-from src.core.utils import (
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.core.utils import (  # noqa: E402
     get_environment,
     get_secure_connection_config,
     sanitize_error_message,

@@ -29,7 +29,9 @@ def load_schema(filepath: str) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
         file_size = file_path.stat().st_size
 
         if file_size > MAX_SCHEMA_SIZE:
-            raise ValueError(f"Schema file too large: {file_size} bytes (max: {MAX_SCHEMA_SIZE})")
+            raise ValueError(
+                f"Schema file too large: {file_size} bytes (max: {MAX_SCHEMA_SIZE})"
+            )
 
         with open(filepath, "r") as f:
             content = f.read()
@@ -38,7 +40,9 @@ def load_schema(filepath: str) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
         raise
 
     # Check if it's a multi-document YAML (legacy format)
-    if "\n---\n" in content or (content.startswith("---\n") and content.count("\n---\n") > 0):
+    if "\n---\n" in content or (
+        content.startswith("---\n") and content.count("\n---\n") > 0
+    ):
         warnings.warn(
             f"Schema file {filepath} uses deprecated multi-document format. "
             "Please migrate to single-document format.",
@@ -99,7 +103,9 @@ def validate_schema_format(filepath: str) -> bool:
     starts_with_separator = content.startswith("---\n")
 
     # It's multi-doc if it has separators in the middle or starts with --- and has more
-    return not (has_separator or (starts_with_separator and content.count("\n---\n") > 0))
+    return not (
+        has_separator or (starts_with_separator and content.count("\n---\n") > 0)
+    )
 
 
 if __name__ == "__main__":
@@ -114,4 +120,7 @@ if __name__ == "__main__":
         if isinstance(schema, list):
             print(f"Number of documents: {len(schema)}")
         else:
-            print(f"Top-level keys: {list(schema.keys()) if isinstance(schema, dict) else 'N/A'}")
+            print(
+                f"Top-level keys: "
+                f"{list(schema.keys()) if isinstance(schema, dict) else 'N/A'}"
+            )

@@ -4,17 +4,18 @@ Tests for config_validator module
 """
 
 import os
+import sys
 import tempfile
 from typing import Any, Dict
 
-import yaml
-from click.testing import CliRunner
-
-import sys
-import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.validators.config_validator import ConfigValidator, main
+# Third-party imports
+import yaml  # noqa: E402
+from click.testing import CliRunner  # noqa: E402
+
+# Local imports
+from src.validators.config_validator import ConfigValidator, main  # noqa: E402
 
 
 class TestConfigValidator:
@@ -81,7 +82,9 @@ class TestConfigValidator:
         assert self.validator.validate_main_config(config_path) is False
         assert len(self.validator.errors) == 4
         for section in ["qdrant", "neo4j", "storage", "agents"]:
-            assert any(section in error for error in self.validator.errors)
+            assert any(
+                section in error for error in self.validator.errors
+            )
 
     def test_invalid_qdrant_port(self) -> None:
         """Test with invalid Qdrant port"""
@@ -98,15 +101,20 @@ class TestConfigValidator:
         # Create a new validator instance for each test
         validator = ConfigValidator()
         assert validator.validate_main_config(config_path) is False
-        assert any("qdrant.port must be an integer" in e for e in validator.errors)
+        assert any(
+            "qdrant.port must be an integer" in e for e in validator.errors
+        )
 
         # Port out of range
-        config["qdrant"]["port"] = 99999  # type: ignore[assignment]  # Out of range integer
+        # Out of range integer
+        config["qdrant"]["port"] = 99999  # type: ignore[assignment]
         config_path = self.create_config_file(".ctxrc2.yaml", config)
 
         validator2 = ConfigValidator()
         assert validator2.validate_main_config(config_path) is False
-        assert any("qdrant.port must be between" in e for e in validator2.errors)
+        assert any(
+            "qdrant.port must be between" in e for e in validator2.errors
+        )
 
     def test_invalid_neo4j_port(self) -> None:
         """Test with invalid Neo4j port"""
@@ -122,7 +130,9 @@ class TestConfigValidator:
 
         validator = ConfigValidator()
         assert validator.validate_main_config(config_path) is False
-        assert any("neo4j.port must be an integer" in e for e in validator.errors)
+        assert any(
+            "neo4j.port must be an integer" in e for e in validator.errors
+        )
 
         # Port out of range
         # Out of range integer (port 0 is invalid)
@@ -131,7 +141,9 @@ class TestConfigValidator:
 
         validator2 = ConfigValidator()
         assert validator2.validate_main_config(config_path) is False
-        assert any("neo4j.port must be between" in e for e in validator2.errors)
+        assert any(
+            "neo4j.port must be between" in e for e in validator2.errors
+        )
 
     def test_redis_configuration(self) -> None:
         """Test Redis configuration validation"""
@@ -148,7 +160,9 @@ class TestConfigValidator:
 
         validator = ConfigValidator()
         assert validator.validate_main_config(config_path) is False
-        assert any("redis.port must be an integer" in e for e in validator.errors)
+        assert any(
+            "redis.port must be an integer" in e for e in validator.errors
+        )
 
         # Port out of range
         config["redis"]["port"] = 70000
@@ -156,7 +170,9 @@ class TestConfigValidator:
 
         validator2 = ConfigValidator()
         assert validator2.validate_main_config(config_path) is False
-        assert any("redis.port must be between" in e for e in validator2.errors)
+        assert any(
+            "redis.port must be between" in e for e in validator2.errors
+        )
 
         # Invalid database
         config["redis"] = {"port": 6379, "database": -1}
@@ -164,7 +180,9 @@ class TestConfigValidator:
 
         validator3 = ConfigValidator()
         assert validator3.validate_main_config(config_path) is False
-        assert any("redis.database must be a non-negative" in e for e in validator3.errors)
+        assert any(
+            "redis.database must be a non-negative" in e for e in validator3.errors
+        )
 
     def test_duckdb_configuration(self) -> None:
         """Test DuckDB configuration validation"""
@@ -181,7 +199,9 @@ class TestConfigValidator:
         self.validator.errors = []
 
         assert self.validator.validate_main_config(config_path) is False
-        assert any("duckdb.database_path is required" in e for e in self.validator.errors)
+        assert any(
+            "duckdb.database_path is required" in e for e in self.validator.errors
+        )
 
         # Invalid threads
         invalid_duckdb_config: Any = {
@@ -193,7 +213,9 @@ class TestConfigValidator:
         self.validator.errors = []
 
         assert self.validator.validate_main_config(config_path) is False
-        assert any("duckdb.threads must be a positive" in e for e in self.validator.errors)
+        assert any(
+            "duckdb.threads must be a positive" in e for e in self.validator.errors
+        )
 
     def test_ssl_warnings(self) -> None:
         """Test SSL warnings for services"""
@@ -221,9 +243,13 @@ class TestConfigValidator:
 
     def test_performance_config_invalid_yaml(self) -> None:
         """Test with invalid YAML in performance config"""
-        config_path = self.create_config_file("performance.yaml", "invalid: yaml: content:")
+        config_path = self.create_config_file(
+            "performance.yaml", "invalid: yaml: content:"
+        )
         assert self.validator.validate_performance_config(config_path) is False
-        assert any("Invalid YAML" in e for e in self.validator.errors)
+        assert any(
+            "Invalid YAML" in e for e in self.validator.errors
+        )
 
     def test_vector_db_embedding_validation(self) -> None:
         """Test vector DB embedding settings validation"""
@@ -240,9 +266,15 @@ class TestConfigValidator:
         self.validator.errors = []
 
         assert self.validator.validate_performance_config(config_path) is False
-        assert any("batch_size must be a positive" in e for e in self.validator.errors)
-        assert any("max_retries must be a non-negative" in e for e in self.validator.errors)
-        assert any("request_timeout must be a positive" in e for e in self.validator.errors)
+        assert any(
+            "batch_size must be a positive" in e for e in self.validator.errors
+        )
+        assert any(
+            "max_retries must be a non-negative" in e for e in self.validator.errors
+        )
+        assert any(
+            "request_timeout must be a positive" in e for e in self.validator.errors
+        )
 
     def test_vector_db_search_validation(self) -> None:
         """Test vector DB search settings validation"""
@@ -258,7 +290,9 @@ class TestConfigValidator:
         self.validator.errors = []
 
         assert self.validator.validate_performance_config(config_path) is False
-        assert any("max_limit must be >= default_limit" in e for e in self.validator.errors)
+        assert any(
+            "max_limit must be >= default_limit" in e for e in self.validator.errors
+        )
 
     def test_graph_db_connection_pool(self) -> None:
         """Test graph DB connection pool validation"""
@@ -274,7 +308,9 @@ class TestConfigValidator:
         self.validator.errors = []
 
         assert self.validator.validate_performance_config(config_path) is False
-        assert any("max_size must be >= min_size" in e for e in self.validator.errors)
+        assert any(
+            "max_size must be >= min_size" in e for e in self.validator.errors
+        )
 
     def test_graph_db_query_settings(self) -> None:
         """Test graph DB query settings validation"""
@@ -283,7 +319,9 @@ class TestConfigValidator:
         self.validator.errors = []
 
         assert self.validator.validate_performance_config(config_path) is False
-        assert any("max_path_length must be a positive" in e for e in self.validator.errors)
+        assert any(
+            "max_path_length must be a positive" in e for e in self.validator.errors
+        )
 
         # Test warning for large path length
         config["graph_db"]["query"]["max_path_length"] = 15
@@ -292,7 +330,9 @@ class TestConfigValidator:
         self.validator.warnings = []
 
         assert self.validator.validate_performance_config(config_path) is True
-        assert any("max_path_length > 10 may cause" in w for w in self.validator.warnings)
+        assert any(
+            "max_path_length > 10 may cause" in w for w in self.validator.warnings
+        )
 
     def test_search_ranking_validation(self) -> None:
         """Test search ranking settings validation"""
@@ -303,7 +343,8 @@ class TestConfigValidator:
 
         assert self.validator.validate_performance_config(config_path) is False
         assert any(
-            "temporal_decay_rate must be between 0 and 1" in e for e in self.validator.errors
+            "temporal_decay_rate must be between 0 and 1" in e
+            for e in self.validator.errors
         )
 
         # Test with negative value
@@ -313,17 +354,22 @@ class TestConfigValidator:
 
         assert self.validator.validate_performance_config(config_path) is False
         assert any(
-            "temporal_decay_rate must be between 0 and 1" in e for e in self.validator.errors
+            "temporal_decay_rate must be between 0 and 1" in e
+            for e in self.validator.errors
         )
 
         # Test with non-numeric value (covers line 163)
         # Test with non-numeric value
-        config["search"]["ranking"]["temporal_decay_rate"] = "not-a-number"  # type: ignore
+        config["search"]["ranking"]["temporal_decay_rate"] = (
+            "not-a-number"  # type: ignore
+        )
         config_path = self.create_config_file("performance3.yaml", config)
         self.validator.errors = []
 
         assert self.validator.validate_performance_config(config_path) is False
-        assert any("temporal_decay_rate must be a number" in e for e in self.validator.errors)
+        assert any(
+            "temporal_decay_rate must be a number" in e for e in self.validator.errors
+        )
 
     def test_type_boosts_validation(self) -> None:
         """Test type boosts validation"""
@@ -343,9 +389,13 @@ class TestConfigValidator:
 
         assert self.validator.validate_performance_config(config_path) is False
         assert any(
-            "type_boosts.decision must be a non-negative" in e for e in self.validator.errors
+            "type_boosts.decision must be a non-negative" in e
+            for e in self.validator.errors
         )
-        assert any("type_boosts.trace must be a non-negative" in e for e in self.validator.errors)
+        assert any(
+            "type_boosts.trace must be a non-negative" in e
+            for e in self.validator.errors
+        )
 
     def test_resources_validation(self) -> None:
         """Test resources validation"""
@@ -359,8 +409,13 @@ class TestConfigValidator:
         self.validator.errors = []
 
         assert self.validator.validate_performance_config(config_path) is False
-        assert any("max_memory_gb must be at least 0.5" in e for e in self.validator.errors)
-        assert any("max_cpu_percent must be between 1 and 100" in e for e in self.validator.errors)
+        assert any(
+            "max_memory_gb must be at least 0.5" in e for e in self.validator.errors
+        )
+        assert any(
+            "max_cpu_percent must be between 1 and 100" in e
+            for e in self.validator.errors
+        )
 
     def test_kv_store_redis_validation(self) -> None:
         """Test KV store Redis settings validation"""
@@ -377,9 +432,12 @@ class TestConfigValidator:
 
         assert self.validator.validate_performance_config(config_path) is False
         assert any(
-            "redis.connection_pool.max_size must be >= min_size" in e for e in self.validator.errors
+            "redis.connection_pool.max_size must be >= min_size" in e
+            for e in self.validator.errors
         )
-        assert any("ttl_seconds must be a positive" in e for e in self.validator.errors)
+        assert any(
+            "ttl_seconds must be a positive" in e for e in self.validator.errors
+        )
 
     def test_kv_store_duckdb_validation(self) -> None:
         """Test KV store DuckDB settings validation"""
@@ -395,8 +453,12 @@ class TestConfigValidator:
         self.validator.errors = []
 
         assert self.validator.validate_performance_config(config_path) is False
-        assert any("batch_insert.size must be a positive" in e for e in self.validator.errors)
-        assert any("retention_days must be a positive" in e for e in self.validator.errors)
+        assert any(
+            "batch_insert.size must be a positive" in e for e in self.validator.errors
+        )
+        assert any(
+            "retention_days must be a positive" in e for e in self.validator.errors
+        )
 
     def test_validate_all(self) -> None:
         """Test validate_all method"""
@@ -517,6 +579,8 @@ class TestCLI:
         perf_config = {"resources": {"max_memory_gb": 4}}
         perf_path = self.create_config_file("custom-perf.yaml", perf_config)
 
-        result = self.runner.invoke(main, ["--config", main_path, "--perf-config", perf_path])
+        result = self.runner.invoke(
+            main, ["--config", main_path, "--perf-config", perf_path]
+        )
         assert result.exit_code == 0
         assert f"Validating {perf_path}" in result.output
