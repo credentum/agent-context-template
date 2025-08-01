@@ -5,6 +5,8 @@ Centralized configuration for workflow execution.
 
 import os
 
+__all__ = ['WorkflowConfig']
+
 
 class WorkflowConfig:
     """Centralized configuration for workflow timeouts and settings."""

@@ -5,7 +5,6 @@ Each phase runs in its own process with automatic progression.
 """
 
 import json
-import os
 import subprocess
 import sys
 import time

@@ -285,6 +285,7 @@ class TestAsyncWorkflowExecutorCLI(unittest.TestCase):
                 main()
                 
         mock_exit.assert_called_once_with(1)
+        mock_help.assert_called_once()
 
 
 if __name__ == "__main__":
