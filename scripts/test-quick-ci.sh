@@ -47,7 +47,7 @@ run_check() {
 echo -e "\n${YELLOW}📋 SECTION 1: PRE-COMMIT HOOKS${NC}"
 echo "================================"
 echo "Running pre-commit hooks first as they include formatting checks..."
-run_check "Pre-commit hooks" "pre-commit run --all-files" "1/4"
+run_check "Pre-commit hooks" "/bin/bash scripts/run-precommit-ci-safe.sh" "1/4"
 
 # Section 2: Quick MyPy check (with fix for duplicate modules)
 echo -e "\n${YELLOW}📋 SECTION 2: TYPE CHECKING${NC}"

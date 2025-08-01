@@ -576,8 +576,10 @@ automated_issues:
 
             # Only flag hardcoded thresholds if they match our constants
             elif (
-                (str(WorkflowConfig.COVERAGE_BASELINE) in line
-                 or str(WorkflowConfig.VALIDATORS_COVERAGE_THRESHOLD) in line)
+                (
+                    str(WorkflowConfig.COVERAGE_BASELINE) in line
+                    or str(WorkflowConfig.VALIDATORS_COVERAGE_THRESHOLD) in line
+                )
                 and ("if " in line or ">=" in line or "<" in line)
                 and ("coverage" in line or "baseline" in line)
                 and "# " not in line
@@ -586,8 +588,7 @@ automated_issues:
                 issues["warnings"].append(
                     {
                         "description": (
-                            f"Hardcoded coverage thresholds in "
-                            f"{file_path.split('/')[-1]}"
+                            f"Hardcoded coverage thresholds in " f"{file_path.split('/')[-1]}"
                         ),
                         "file": file_path,
                         "line": i,
