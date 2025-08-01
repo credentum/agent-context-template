@@ -117,7 +117,7 @@ if [[ -z "$PERSONAL_ACCESS_TOKEN" ]]; then
     print_error "PERSONAL_ACCESS_TOKEN not found. Please set it as a codespace secret."
     echo ""
     echo "To fix:"
-    echo "1. Go to: https://github.com/$(echo $REPO | cut -d'/' -f1)/$(basename $(pwd))/settings/codespaces"
+    echo "1. Go to: https://github.com/$(echo "$REPO" | cut -d'/' -f1)/$(basename "$(pwd)")/settings/codespaces"
     echo "2. Add secret: PERSONAL_ACCESS_TOKEN"
     echo "3. Generate token at: https://github.com/settings/tokens"
     echo "4. Required scopes: repo, workflow, read:org"
