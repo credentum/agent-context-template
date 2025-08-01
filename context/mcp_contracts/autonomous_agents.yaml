@@ -1,0 +1,508 @@
+schema_version: 1.0.0
+document_type: mcp_contracts
+id: "autonomous-pipeline-agents"
+title: "MCP Tool Contracts for Autonomous Pipeline Agents"
+description: "Defines MCP-compliant tool contracts for all autonomous agents in Sprint 6"
+created_date: "2025-02-01"
+last_modified: "2025-02-01"
+
+contracts:
+  - name: "issue_classifier"
+    description: "Classifies GitHub issues for autonomous eligibility and complexity scoring"
+    version: "1.0.0"
+    category: "analysis"
+    
+    input_schema:
+      type: "object"
+      required: ["issue", "repository_context"]
+      properties:
+        issue:
+          type: "object"
+          required: ["number", "title", "body", "labels"]
+          properties:
+            number:
+              type: "integer"
+              description: "GitHub issue number"
+            title:
+              type: "string"
+              description: "Issue title"
+            body:
+              type: "string"
+              description: "Issue description"
+            labels:
+              type: "array"
+              items:
+                type: "string"
+              description: "Issue labels"
+        repository_context:
+          type: "object"
+          properties:
+            language:
+              type: "string"
+              description: "Primary programming language"
+            size:
+              type: "string"
+              enum: ["small", "medium", "large"]
+            test_coverage:
+              type: "number"
+              minimum: 0
+              maximum: 100
+    
+    output_schema:
+      type: "object"
+      required: ["classification", "confidence", "reasoning"]
+      properties:
+        classification:
+          type: "object"
+          required: ["complexity_score", "autonomy_eligible", "issue_type"]
+          properties:
+            complexity_score:
+              type: "number"
+              minimum: 0
+              maximum: 1
+              description: "0-1 complexity score"
+            autonomy_eligible:
+              type: "boolean"
+              description: "Whether issue can be handled autonomously"
+            issue_type:
+              type: "string"
+              enum: ["bug", "feature", "enhancement", "documentation", "refactor"]
+            suggested_approach:
+              type: "string"
+              description: "Recommended implementation approach"
+        confidence:
+          type: "number"
+          minimum: 0
+          maximum: 1
+          description: "Confidence in classification"
+        reasoning:
+          type: "string"
+          description: "Explanation of classification decision"
+        escalation_triggers:
+          type: "array"
+          items:
+            type: "string"
+          description: "Reasons for human escalation if applicable"
+    
+    capabilities:
+      - "Pattern recognition from historical issues"
+      - "Complexity analysis based on code impact"
+      - "Security sensitivity detection"
+      - "Breaking change risk assessment"
+      - "Test coverage evaluation"
+
+  - name: "autonomous_investigator"
+    description: "Performs root cause analysis with multiple hypotheses and confidence scoring"
+    version: "1.0.0"
+    category: "analysis"
+    
+    input_schema:
+      type: "object"
+      required: ["issue", "classification", "similar_issues"]
+      properties:
+        issue:
+          type: "object"
+          description: "GitHub issue object"
+        classification:
+          type: "object"
+          description: "Issue classification from issue_classifier"
+        similar_issues:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              issue_id:
+                type: "string"
+              similarity_score:
+                type: "number"
+              resolution_summary:
+                type: "string"
+    
+    output_schema:
+      type: "object"
+      required: ["investigation_result", "confidence", "hypotheses"]
+      properties:
+        investigation_result:
+          type: "object"
+          required: ["root_cause", "affected_components", "recommended_approach"]
+          properties:
+            root_cause:
+              type: "string"
+              description: "Identified root cause"
+            affected_components:
+              type: "array"
+              items:
+                type: "string"
+              description: "System components affected"
+            recommended_approach:
+              type: "string"
+              description: "Recommended fix approach"
+            estimated_effort:
+              type: "string"
+              enum: ["trivial", "small", "medium", "large", "extra_large"]
+        confidence:
+          type: "number"
+          minimum: 0
+          maximum: 1
+        hypotheses:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              hypothesis:
+                type: "string"
+              confidence:
+                type: "number"
+              evidence:
+                type: "array"
+                items:
+                  type: "string"
+        needs_human_review:
+          type: "boolean"
+        escalation_reasons:
+          type: "array"
+          items:
+            type: "string"
+
+  - name: "implementation_engine"
+    description: "Generates code with incremental validation and self-healing capabilities"
+    version: "1.0.0"
+    category: "generation"
+    
+    input_schema:
+      type: "object"
+      required: ["investigation", "target_branch", "repository_path"]
+      properties:
+        investigation:
+          type: "object"
+          description: "Investigation result from autonomous_investigator"
+        target_branch:
+          type: "string"
+          description: "Target branch for implementation"
+        repository_path:
+          type: "string"
+          description: "Path to repository"
+        approach_override:
+          type: "object"
+          description: "Optional alternative approach"
+          properties:
+            strategy:
+              type: "string"
+            steps:
+              type: "array"
+              items:
+                type: "object"
+    
+    output_schema:
+      type: "object"
+      required: ["success", "implementation_result"]
+      properties:
+        success:
+          type: "boolean"
+        implementation_result:
+          type: "object"
+          required: ["files_changed", "branch_name", "confidence"]
+          properties:
+            files_changed:
+              type: "array"
+              items:
+                type: "object"
+                properties:
+                  path:
+                    type: "string"
+                  additions:
+                    type: "integer"
+                  deletions:
+                    type: "integer"
+                  change_type:
+                    type: "string"
+                    enum: ["added", "modified", "deleted"]
+            branch_name:
+              type: "string"
+            confidence:
+              type: "number"
+              minimum: 0
+              maximum: 1
+            tests_added:
+              type: "array"
+              items:
+                type: "string"
+            self_healing_count:
+              type: "integer"
+              description: "Number of self-healing attempts"
+            implementation_time:
+              type: "number"
+              description: "Time in seconds"
+        partial_implementation:
+          type: "object"
+          description: "Partial results if failed"
+        needs_human_intervention:
+          type: "boolean"
+        escalation_reason:
+          type: "string"
+    
+    capabilities:
+      - "Incremental code generation with validation"
+      - "Self-healing on test failures"
+      - "Automatic rollback on confidence drop"
+      - "Git worktree isolation"
+      - "Alternative approach generation"
+
+  - name: "test_validator"
+    description: "Validates implementation with predictive testing and auto-generation"
+    version: "1.0.0"
+    category: "validation"
+    
+    input_schema:
+      type: "object"
+      required: ["implementation", "investigation"]
+      properties:
+        implementation:
+          type: "object"
+          description: "Implementation result from implementation_engine"
+        investigation:
+          type: "object"
+          description: "Investigation result for context"
+        test_predictions:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              test_name:
+                type: "string"
+              failure_probability:
+                type: "number"
+    
+    output_schema:
+      type: "object"
+      required: ["success", "confidence", "test_results"]
+      properties:
+        success:
+          type: "boolean"
+        confidence:
+          type: "number"
+          minimum: 0
+          maximum: 1
+        test_results:
+          type: "object"
+          required: ["pass_rate", "coverage", "execution_time"]
+          properties:
+            pass_rate:
+              type: "number"
+              minimum: 0
+              maximum: 1
+            coverage:
+              type: "number"
+              minimum: 0
+              maximum: 100
+              description: "Test coverage percentage"
+            execution_time:
+              type: "number"
+              description: "Total test execution time in seconds"
+            failures:
+              type: "array"
+              items:
+                type: "object"
+                properties:
+                  test_name:
+                    type: "string"
+                  error:
+                    type: "string"
+                  stack_trace:
+                    type: "string"
+            healed_tests:
+              type: "array"
+              items:
+                type: "string"
+        production_risk:
+          type: "number"
+          minimum: 0
+          maximum: 1
+          description: "Estimated production risk score"
+        generated_tests:
+          type: "integer"
+          description: "Number of tests auto-generated"
+        test_report:
+          type: "string"
+          description: "Comprehensive test report"
+        needs_implementation_fix:
+          type: "boolean"
+        bug_found:
+          type: "object"
+          properties:
+            description:
+              type: "string"
+            severity:
+              type: "string"
+              enum: ["low", "medium", "high", "critical"]
+    
+    capabilities:
+      - "Predictive test failure analysis"
+      - "Automatic test generation for uncovered paths"
+      - "Test prioritization and optimization"
+      - "Self-healing test fixes"
+      - "Production impact prediction"
+
+  - name: "pr_manager"
+    description: "Manages PR creation, review responses, and auto-merge decisions"
+    version: "1.0.0"
+    category: "deployment"
+    
+    input_schema:
+      type: "object"
+      required: ["implementation", "test_validation", "investigation", "repository"]
+      properties:
+        implementation:
+          type: "object"
+          description: "Implementation result"
+        test_validation:
+          type: "object"
+          description: "Test validation result"
+        investigation:
+          type: "object"
+          description: "Investigation result for context"
+        repository:
+          type: "object"
+          properties:
+            full_name:
+              type: "string"
+              description: "owner/repo format"
+            default_branch:
+              type: "string"
+    
+    output_schema:
+      type: "object"
+      required: ["pr_number", "pr_url", "status", "merge_confidence"]
+      properties:
+        pr_number:
+          type: "integer"
+        pr_url:
+          type: "string"
+          format: "uri"
+        status:
+          type: "string"
+          enum: ["auto_merged", "awaiting_human_review", "draft", "failed"]
+        merge_confidence:
+          type: "number"
+          minimum: 0
+          maximum: 1
+          description: "Confidence score for auto-merge decision"
+        self_review_issues:
+          type: "integer"
+          description: "Number of issues found in self-review"
+        auto_fixes_applied:
+          type: "integer"
+          description: "Number of review comments auto-addressed"
+        labels_applied:
+          type: "array"
+          items:
+            type: "string"
+        reviewers_requested:
+          type: "array"
+          items:
+            type: "string"
+        monitoring_enabled:
+          type: "boolean"
+          description: "Whether post-merge monitoring is active"
+    
+    capabilities:
+      - "Optimal PR description generation"
+      - "AI-powered self code review"
+      - "Review comment analysis and response"
+      - "Auto-merge decision making"
+      - "Conflict resolution assistance"
+      - "Post-merge production monitoring"
+
+  - name: "pipeline_orchestrator"
+    description: "Master orchestrator coordinating all autonomous agents"
+    version: "1.0.0"
+    category: "orchestration"
+    
+    input_schema:
+      type: "object"
+      required: ["issue", "repository"]
+      properties:
+        issue:
+          type: "object"
+          description: "GitHub issue to process"
+        repository:
+          type: "object"
+          description: "Repository context"
+        command:
+          type: "string"
+          description: "Optional natural language command"
+        confidence_threshold:
+          type: "number"
+          minimum: 0
+          maximum: 1
+          default: 0.7
+          description: "Minimum confidence for autonomous operation"
+    
+    output_schema:
+      type: "object"
+      required: ["success", "pipeline_result"]
+      properties:
+        success:
+          type: "boolean"
+        pipeline_result:
+          type: "object"
+          required: ["issue_id", "total_time", "phases_completed"]
+          properties:
+            issue_id:
+              type: "integer"
+            pr_number:
+              type: "integer"
+              description: "PR number if created"
+            total_time:
+              type: "number"
+              description: "Total execution time in seconds"
+            confidence_score:
+              type: "number"
+              minimum: 0
+              maximum: 1
+              description: "Overall pipeline confidence"
+            autonomous_completion:
+              type: "boolean"
+              description: "Whether completed without human intervention"
+            phases_completed:
+              type: "array"
+              items:
+                type: "object"
+                properties:
+                  phase:
+                    type: "string"
+                  status:
+                    type: "string"
+                    enum: ["completed", "failed", "skipped"]
+                  confidence:
+                    type: "number"
+            self_healing_count:
+              type: "integer"
+            metrics:
+              type: "object"
+              description: "Pipeline execution metrics"
+        needs_human_intervention:
+          type: "boolean"
+        escalation_reason:
+          type: "string"
+        partial_progress:
+          type: "object"
+          description: "Progress made before escalation"
+    
+    capabilities:
+      - "End-to-end workflow orchestration"
+      - "Parallel agent execution"
+      - "Confidence-based routing"
+      - "Graceful human escalation"
+      - "Real-time learning integration"
+      - "State persistence and recovery"
+
+graph_metadata:
+  node_type: mcp_contracts
+  relationships:
+    - type: defines_contract_for
+      target: autonomous_pipeline
+    - type: enables
+      target: modal_integration
+    - type: supports
+      target: sprint_6_implementation
