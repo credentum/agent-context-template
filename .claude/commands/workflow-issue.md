@@ -2,6 +2,18 @@
 
 Execute the complete issue-to-PR workflow with direct phase execution to ensure all changes persist in the repository.
 
+## Important: Timeout Considerations
+
+Due to Claude's 2-minute command timeout limit, use the phase-based runner for reliable execution:
+
+```bash
+# Recommended: Use phase-based runner (timeout-safe)
+python /workspaces/agent-context-template/scripts/workflow_phase_runner.py {issue_number} --hybrid
+
+# Alternative: Direct execution (may timeout)
+/workflow-issue {issue_number} --hybrid
+```
+
 ## Pre-Execution
 
 ### Step 1: Set up Isolated Workspace (Git Worktree)
