@@ -14,6 +14,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+__all__ = ['AsyncWorkflowExecutor']
+
 
 class AsyncWorkflowExecutor:
     """Execute workflow asynchronously with progress tracking."""
@@ -48,12 +50,8 @@ class AsyncWorkflowExecutor:
         # Start in background (platform-specific)
         with open(self.log_file, "w") as log:
             if platform.system() == "Windows":
-                # Windows uses CREATE_NEW_PROCESS_GROUP (0x00000200)
-                try:
-                    # On Windows systems, this constant should be available
-                    creation_flags = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0x00000200)
-                except AttributeError:
-                    creation_flags = 0x00000200
+                # Windows uses CREATE_NEW_PROCESS_GROUP
+                creation_flags = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0x00000200)
                 
                 process = subprocess.Popen(
                     cmd,
@@ -89,7 +87,7 @@ class AsyncWorkflowExecutor:
 
         try:
             with open(self.status_file) as f:
-                status = json.load(f)
+                status: Dict[str, Any] = json.load(f)
 
             # Check if process is still running
             if status.get("status") == "running" and not self._is_running():
@@ -144,7 +142,10 @@ class AsyncWorkflowExecutor:
                 print(f"Permission denied to stop process {pid}")
                 return False
             except subprocess.CalledProcessError as e:
-                print(f"Failed to stop process {pid}: {e}")
+                if platform.system() == "Windows":
+                    print(f"Windows taskkill failed for process {pid}: {e}")
+                else:
+                    print(f"Unix killpg failed for process {pid}: {e}")
                 return False
 
             self._update_status("stopped", "Workflow stopped by user")

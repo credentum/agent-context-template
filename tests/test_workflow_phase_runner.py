@@ -46,7 +46,8 @@ class TestPhaseRunner(unittest.TestCase):
         
     def test_phase_timeout_constant(self):
         """Test that PHASE_TIMEOUT_SECONDS is defined."""
-        self.assertEqual(self.runner.PHASE_TIMEOUT_SECONDS, 90)
+        from workflow_config import WorkflowConfig
+        self.assertEqual(WorkflowConfig.PHASE_TIMEOUT_SECONDS, 90)
         
     @patch.object(PhaseRunner, "_run_single_phase")
     @patch.object(PhaseRunner, "_cleanup_state")
@@ -164,8 +165,9 @@ class TestPhaseRunner(unittest.TestCase):
             result = self.runner._run_single_phase(4)
             
         self.assertFalse(result)
+        from workflow_config import WorkflowConfig
         mock_print.assert_called_with(
-            f"⏱️  Phase timed out after {self.runner.PHASE_TIMEOUT_SECONDS} seconds"
+            f"⏱️  Phase timed out after {WorkflowConfig.PHASE_TIMEOUT_SECONDS} seconds"
         )
         
     def test_load_state_no_file(self):

@@ -5,18 +5,18 @@ Each phase runs in its own process with automatic progression.
 """
 
 import json
+import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import List, Optional
 
+from workflow_config import WorkflowConfig
+
 
 class PhaseRunner:
     """Runs workflow phases individually with timeout protection."""
-
-    # Configurable timeout per phase
-    PHASE_TIMEOUT_SECONDS = 90
     
     PHASES = [
         ("investigation", 0, "Analyze issue scope and requirements"),
@@ -34,7 +34,18 @@ class PhaseRunner:
         self.state_file = Path(f".workflow-phase-state-{issue_number}.json")
 
     def run_all_phases(self, skip_phases: Optional[List[int]] = None) -> bool:
-        """Run all phases with automatic progression."""
+        """
+        Run all workflow phases with automatic progression.
+        
+        Args:
+            skip_phases: Optional list of phase numbers (0-5) to skip
+            
+        Returns:
+            bool: True if all phases completed successfully, False if any phase failed
+            
+        The method will load any previous state, execute each phase in order,
+        save state after each successful phase, and clean up state on completion.
+        """
         skip_phases = skip_phases or []
 
         print(f"🚀 Starting phase-based workflow for issue #{self.issue_number}")
@@ -101,7 +112,7 @@ class PhaseRunner:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=self.PHASE_TIMEOUT_SECONDS,
+                timeout=WorkflowConfig.PHASE_TIMEOUT_SECONDS,
                 cwd=Path.cwd(),
                 shell=False,  # Explicit for security
             )
@@ -115,7 +126,7 @@ class PhaseRunner:
                 return False
 
         except subprocess.TimeoutExpired:
-            print(f"⏱️  Phase timed out after {self.PHASE_TIMEOUT_SECONDS} seconds")
+            print(f"⏱️  Phase timed out after {WorkflowConfig.PHASE_TIMEOUT_SECONDS} seconds")
             return False
         except Exception as e:
             print(f"❌ Unexpected error: {e}")
@@ -145,7 +156,10 @@ class PhaseRunner:
     def _cleanup_state(self) -> None:
         """Remove state file after successful completion."""
         if self.state_file.exists():
-            self.state_file.unlink()
+            try:
+                self.state_file.unlink()
+            except (OSError, PermissionError) as e:
+                print(f"⚠️  Could not remove state file: {e}")
 
 
 def main() -> None:
