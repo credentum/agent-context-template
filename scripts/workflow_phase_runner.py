@@ -98,7 +98,12 @@ class PhaseRunner:
         try:
             # Run with configurable timeout per phase (under 2-minute limit)
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=self.PHASE_TIMEOUT_SECONDS, cwd=Path.cwd()
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=self.PHASE_TIMEOUT_SECONDS,
+                cwd=Path.cwd(),
+                shell=False,  # Explicit for security
             )
 
             if result.returncode == 0:

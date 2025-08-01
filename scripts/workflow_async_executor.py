@@ -6,6 +6,7 @@ Avoids timeout by launching workflow in background and providing status updates.
 
 import json
 import os
+import platform
 import signal
 import subprocess
 import sys
@@ -44,14 +45,30 @@ class AsyncWorkflowExecutor:
         if skip_phases:
             cmd.extend(["--skip-phases"] + [str(p) for p in skip_phases])
 
-        # Start in background
+        # Start in background (platform-specific)
         with open(self.log_file, "w") as log:
-            process = subprocess.Popen(
-                cmd,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                start_new_session=True,  # Detach from parent
-            )
+            if platform.system() == "Windows":
+                # Windows uses CREATE_NEW_PROCESS_GROUP (0x00000200)
+                try:
+                    # On Windows systems, this constant should be available
+                    creation_flags = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0x00000200)
+                except AttributeError:
+                    creation_flags = 0x00000200
+                
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    creationflags=creation_flags,
+                )
+            else:
+                # Unix-like systems use start_new_session
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,  # Detach from parent
+                )
 
         # Save PID
         with open(self.pid_file, "w") as f:
@@ -107,14 +124,27 @@ class AsyncWorkflowExecutor:
             with open(self.pid_file) as f:
                 pid = int(f.read().strip())
 
-            # Terminate process group
+            # Terminate process group (platform-specific)
             try:
-                os.killpg(os.getpgid(pid), signal.SIGTERM)
+                if platform.system() == "Windows":
+                    # Windows doesn't support process groups in the same way
+                    # Use taskkill command for Windows
+                    subprocess.run(
+                        ["taskkill", "/F", "/PID", str(pid), "/T"],
+                        check=True,
+                        capture_output=True
+                    )
+                else:
+                    # Unix-like systems (Linux, macOS)
+                    os.killpg(os.getpgid(pid), signal.SIGTERM)
             except ProcessLookupError:
                 print(f"Process {pid} not found")
                 return False
             except PermissionError:
                 print(f"Permission denied to stop process {pid}")
+                return False
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to stop process {pid}: {e}")
                 return False
 
             self._update_status("stopped", "Workflow stopped by user")
@@ -152,7 +182,7 @@ class AsyncWorkflowExecutor:
             json.dump(data, f, indent=2)
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     import argparse
 
