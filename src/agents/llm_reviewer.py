@@ -321,11 +321,17 @@ automated_issues:
         if coverage_pct < 75.0:  # More lenient threshold to reduce noise
             issues["blocking"].append(
                 {
-                    "description": f"Overall test coverage {coverage_pct}% below baseline {WorkflowConfig.COVERAGE_BASELINE}%",
+                    "description": (
+                        f"Overall test coverage {coverage_pct}% below baseline "
+                        f"{WorkflowConfig.COVERAGE_BASELINE}%"
+                    ),
                     "file": "test_coverage",
                     "line": 0,
                     "category": "test_coverage",
-                    "fix_guidance": f"Improve test coverage to meet {WorkflowConfig.COVERAGE_BASELINE}% baseline requirement",
+                    "fix_guidance": (
+                        f"Improve test coverage to meet "
+                        f"{WorkflowConfig.COVERAGE_BASELINE}% baseline requirement"
+                    ),
                 }
             )
 
@@ -350,7 +356,10 @@ automated_issues:
                                     "file": file_path,
                                     "line": 1,
                                     "category": "context_integrity",
-                                    "fix_guidance": "Add YAML frontmatter with schema_version or exclude from validation",
+                                    "fix_guidance": (
+                                        "Add YAML frontmatter with schema_version "
+                                        "or exclude from validation"
+                                    ),
                                 }
                             )
                     except Exception:
@@ -443,9 +452,15 @@ automated_issues:
             return  # Skip test files themselves
 
         # Only flag major new implementations like PR reviewer does
-        if "workflow_executor.py" in file_path and "execute_validation" in content:
+        if (
+            "workflow_executor.py" in file_path
+            and "execute_validation" in content
+        ):
             # Check for the specific two-phase CI implementation
-            if "def execute_validation" in content and "two-phase" in content.lower():
+            if (
+                "def execute_validation" in content
+                and "two-phase" in content.lower()
+            ):
                 issues["warnings"].append(
                     {
                         "description": "No test coverage for two-phase CI implementation",
@@ -465,8 +480,8 @@ automated_issues:
                     and "def " in line
                     and "def _" not in line
                     and "def __" not in line
-                    and len(line) > 20
-                ):  # Only substantial new functions
+                    and len(line) > 20  # Only substantial new functions
+                ):
                     new_major_functions.append(line.strip()[1:].strip())
 
             if len(new_major_functions) > 2:  # Only if many new functions
@@ -490,7 +505,9 @@ automated_issues:
             # Only flag problematic bare except patterns like PR reviewer
             if ("except Exception:" in line or "except:" in line) and "# " not in line:
                 # Check if it's followed by pass and no other meaningful handling
-                next_lines = lines[i : i + 3] if i < len(lines) - 2 else lines[i:]
+                next_lines = (
+                    lines[i : i + 3] if i < len(lines) - 2 else lines[i:]
+                )
                 has_pass = any("pass" in next_line.strip() for next_line in next_lines)
                 has_meaningful_handling = any(
                     any(keyword in next_line for keyword in ["print", "log", "raise", "return"])
@@ -505,7 +522,10 @@ automated_issues:
                             "file": file_path,
                             "line": i,
                             "category": "error_handling",
-                            "fix_guidance": "Be more specific about exceptions and add logging for debugging",
+                            "fix_guidance": (
+                                "Be more specific about exceptions and add "
+                                "logging for debugging"
+                            ),
                         }
                     )
 
@@ -520,18 +540,28 @@ automated_issues:
 
             # Look for hardcoded timeout values - match PR reviewer exactly
             # Check for timeout=300, timeout=180, timeout=120, timeout=60, timeout=30
-            if "timeout=" in line and "# " not in line and "any(val in line for val in" not in line:
+            if (
+                "timeout=" in line
+                and "# " not in line
+                and "any(val in line for val in" not in line
+            ):
                 timeout_match = self._extract_timeout_value(line)
                 if timeout_match and timeout_match in ["300", "180", "120", "60", "30"]:
                     # Exclude WorkflowConfig references
                     if "WorkflowConfig" not in line:
                         issues["blocking"].append(
                             {
-                                "description": f"Hardcoded timeout value in {file_path.split('/')[-1]}",
+                                "description": (
+                                    f"Hardcoded timeout value in "
+                                    f"{file_path.split('/')[-1]}"
+                                ),
                                 "file": file_path,
                                 "line": i,
                                 "category": "code_quality",
-                                "fix_guidance": f"Replace hardcoded timeout={timeout_match} with WorkflowConfig constant",
+                                "fix_guidance": (
+                                    f"Replace hardcoded timeout={timeout_match} "
+                                    f"with WorkflowConfig constant"
+                                ),
                             }
                         )
 
@@ -541,7 +571,10 @@ automated_issues:
                 if "WorkflowConfig" not in line and "COVERAGE_BASELINE" not in line:
                     issues["blocking"].append(
                         {
-                            "description": f"Hardcoded coverage threshold in {file_path.split('/')[-1]}",
+                            "description": (
+                                f"Hardcoded coverage threshold in "
+                                f"{file_path.split('/')[-1]}"
+                            ),
                             "file": file_path,
                             "line": i,
                             "category": "code_quality",
