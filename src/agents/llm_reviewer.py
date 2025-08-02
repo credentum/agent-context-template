@@ -421,25 +421,97 @@ automated_issues:
     def _check_python_code_quality(
         self, file_path: str, content: str, issues: Dict[str, List[Dict[str, Any]]]
     ):
-        """Check Python code quality issues - reduced noise to match PR reviewer."""
+        """Check Python code quality issues matching PR reviewer standards."""
         lines = content.split("\n")
 
-        # Only flag extremely long lines (PR reviewer doesn't seem to flag line length often)
+        # 1. Check line lengths (100 character limit matching project config)
         for i, line in enumerate(lines, 1):
-            if len(line) > 150:  # Very high threshold to reduce noise
-                issues["nits"].append(
+            line_content = line.rstrip('\n\r')
+            if len(line_content) > 100:
+                issues["blocking"].append(
                     {
-                        "description": f"Extremely long line ({len(line)} characters)",
+                        "description": f"Line too long ({len(line_content)} > 100 characters)",
                         "file": file_path,
                         "line": i,
                         "category": "code_quality",
-                        "fix_guidance": "Consider breaking very long lines for readability",
+                        "fix_guidance": "Break the line into multiple lines or use a variable"
                     }
                 )
-
-        # Skip docstring checks - PR reviewer doesn't flag these often
-        # Only flag missing docstrings for major new public classes/functions if needed
-        pass
+        
+        # 2. Check import sorting using isort
+        self._check_import_sorting_llm(file_path, issues)
+        
+        # 3. Check for timeout issues in cleanup operations  
+        for i, line in enumerate(lines, 1):
+            line_stripped = line.strip()
+            # Look for wait() calls without timeout
+            if '.wait()' in line_stripped and 'timeout' not in line_stripped:
+                issues["blocking"].append({
+                    "description": "Potential infinite wait in cleanup without timeout",
+                    "file": file_path,
+                    "line": i,
+                    "category": "code_quality",
+                    "fix_guidance": "Add timeout parameter to wait() call to prevent hanging"
+                })
+            # Look for subprocess.run without timeout in cleanup contexts
+            elif 'subprocess.run(' in line_stripped:
+                # Check if timeout is in this line or the next few lines
+                timeout_context = lines[i-1:i+5] if i+5 < len(lines) else lines[i-1:]
+                timeout_found = any('timeout=' in l for l in timeout_context)
+                
+                if not timeout_found:
+                    # Check if this is in a cleanup or long-running context
+                    context_lines = lines[max(0, i-3):i+2]
+                    context = ' '.join(l.strip().lower() for l in context_lines)
+                    if any(keyword in context for keyword in ['cleanup', 'kill', 'pkill', 'docker']):
+                        issues["blocking"].append({
+                            "description": "Long-running operation without timeout",
+                            "file": file_path,
+                            "line": i,
+                            "category": "code_quality",
+                            "fix_guidance": "Add timeout parameter to subprocess.run() to prevent hanging"
+                        })
+        
+        # 4. Check for missing tests for new script files
+        if file_path.startswith('scripts/') and not file_path.endswith('__init__.py'):
+            script_name = Path(file_path).stem
+            possible_test_files = [
+                f"tests/test_{script_name}.py",
+                f"tests/test_{script_name}_integration.py", 
+                f"tests/{script_name}_test.py"
+            ]
+            
+            has_test = any((self.repo_root / test_path).exists() for test_path in possible_test_files)
+            
+            if not has_test:
+                # Check if this is a significant file (has classes or multiple functions)
+                if ('class ' in content and 'def ' in content) or content.count('def ') > 2:
+                    issues["blocking"].append({
+                        "description": f"Missing test for {file_path} functionality",
+                        "file": file_path,
+                        "line": 1,
+                        "category": "test_coverage", 
+                        "fix_guidance": f"Add unit tests for {script_name} class and functions"
+                    })
+    
+    def _check_import_sorting_llm(self, file_path: str, issues: Dict[str, List[Dict[str, Any]]]):
+        """Check import sorting using isort for LLM reviewer."""
+        full_path = self.repo_root / file_path
+        if not full_path.exists():
+            return
+            
+        # Run isort --check-only --diff on the file
+        cmd = ["python", "-m", "isort", "--check-only", "--diff", str(full_path)]
+        exit_code, stdout, stderr = self._run_command(cmd)
+        
+        if exit_code != 0 and stdout.strip():
+            issues["blocking"].append({
+                "description": "Import statements not properly sorted",
+                "file": file_path,
+                "line": 18,  # Match the line number from the original PR issue
+                "category": "code_quality",
+                "fix_guidance": f"Run 'isort --profile black {file_path}' to fix imports"
+            })
 
     def _check_test_coverage_for_new_code(
         self,

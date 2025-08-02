@@ -238,9 +238,8 @@ def test_divide():
 """
         (repo_path / "tests" / "test_math_utils.py").write_text(test_content)
 
-        os.system(
-            f"cd {repo_path} && git add . && git commit -m 'fix: handle zero division in divide function' -q"
-        )
+        commit_msg = 'fix: handle zero division in divide function'
+        os.system(f"cd {repo_path} && git add . && git commit -m '{commit_msg}' -q")
 
     def _simulate_documentation_only(self, repo_path: Path):
         """Simulate documentation-only changes (the bug)."""
@@ -263,9 +262,8 @@ def test_divide():
     return data.upper()
 """
         (repo_path / "src" / "processor.py").write_text(modified_code)
-        os.system(
-            f"cd {repo_path} && git add . && git commit -m 'fix: handle None values in processor' -q"
-        )
+        commit_msg = 'fix: handle None values in processor'
+        os.system(f"cd {repo_path} && git add . && git commit -m '{commit_msg}' -q")
 
 
 # Verification helper functions
