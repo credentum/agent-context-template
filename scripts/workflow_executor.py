@@ -26,7 +26,7 @@ class WorkflowConfig:
 
     DOCKER_CI_TIMEOUT = 720  # 12 minutes for comprehensive Docker CI operations
     ARC_REVIEWER_TIMEOUT = 180  # 3 minutes for ARC reviewer
-    COVERAGE_BASELINE = 71.82  # Minimum coverage percentage required
+    COVERAGE_BASELINE = 78.0  # Minimum coverage percentage required
     GENERAL_TIMEOUT = 120  # 2 minutes for general operations
     VERIFICATION_TIMEOUT = 30  # 30 seconds for verification git operations
 

@@ -352,20 +352,23 @@ class ARCReviewer:
                             "file": file_path,
                             "line": line_num,
                             "category": "code_quality",
-                            "fix_guidance": "Add timeout parameter to wait() call to prevent hanging"
+                            "fix_guidance": "Add timeout parameter to wait() call"
                         })
                     # Look for subprocess.run without timeout
                     elif 'subprocess.run(' in line_stripped and 'timeout=' not in line_stripped:
                         # Check if this is in a cleanup or long-running context
                         context_lines = lines[max(0, line_num-3):line_num+2]
-                        context = ' '.join(l.strip().lower() for l in context_lines)
-                        if any(keyword in context for keyword in ['cleanup', 'kill', 'pkill', 'docker']):
+                        context = ' '.join(line.strip().lower() for line in context_lines)
+                        keywords = ['cleanup', 'kill', 'pkill', 'docker']
+                if any(keyword in context for keyword in keywords):
                             issues.append({
                                 "description": "Long-running operation without timeout",
                                 "file": file_path,
                                 "line": line_num,
                                 "category": "code_quality",
-                                "fix_guidance": "Add timeout parameter to subprocess.run() to prevent hanging"
+                                "fix_guidance": (
+                            "Add timeout parameter to subprocess.run() to prevent hanging"
+                        )
                             })
             except (UnicodeDecodeError, FileNotFoundError):
                 continue
@@ -377,7 +380,10 @@ class ARCReviewer:
         issues = []
         
         # Look for new Python files in scripts/ that don't have corresponding tests
-        script_files = [f for f in python_files if f.startswith('scripts/') and not f.endswith('__init__.py')]
+        script_files = [
+            f for f in python_files 
+            if f.startswith('scripts/') and not f.endswith('__init__.py')
+        ]
         
         for script_file in script_files:
             # Check if corresponding test file exists
@@ -388,7 +394,9 @@ class ARCReviewer:
                 f"tests/{script_name}_test.py"
             ]
             
-            has_test = any((self.repo_root / test_path).exists() for test_path in possible_test_files)
+            has_test = any(
+                (self.repo_root / test_path).exists() for test_path in possible_test_files
+            )
             
             if not has_test:
                 # Check if this is a significant new file (not just a small utility)
@@ -398,13 +406,17 @@ class ARCReviewer:
                         with open(full_path, 'r', encoding='utf-8') as f:
                             content = f.read()
                             # If file has classes or significant functions, it needs tests
-                            if ('class ' in content and 'def ' in content) or content.count('def ') > 2:
+                            has_class_and_def = 'class ' in content and 'def ' in content
+                            has_many_functions = content.count('def ') > 2
+                            if has_class_and_def or has_many_functions:
                                 issues.append({
                                     "description": f"Missing test for {script_file} functionality",
                                     "file": script_file,
                                     "line": 1,
                                     "category": "test_coverage",
-                                    "fix_guidance": f"Add unit tests for {script_name} class and functions"
+                                    "fix_guidance": (
+                                        f"Add unit tests for {script_name} class and functions"
+                                    )
                                 })
                     except (UnicodeDecodeError, FileNotFoundError):
                         continue

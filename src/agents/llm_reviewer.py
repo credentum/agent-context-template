@@ -463,13 +463,16 @@ automated_issues:
                     # Check if this is in a cleanup or long-running context
                     context_lines = lines[max(0, i-3):i+2]
                     context = ' '.join(l.strip().lower() for l in context_lines)
-                    if any(keyword in context for keyword in ['cleanup', 'kill', 'pkill', 'docker']):
+                    keywords = ['cleanup', 'kill', 'pkill', 'docker']
+                if any(keyword in context for keyword in keywords):
                         issues["blocking"].append({
                             "description": "Long-running operation without timeout",
                             "file": file_path,
                             "line": i,
                             "category": "code_quality",
-                            "fix_guidance": "Add timeout parameter to subprocess.run() to prevent hanging"
+                            "fix_guidance": (
+                            "Add timeout parameter to subprocess.run() to prevent hanging"
+                        )
                         })
         
         # 4. Check for missing tests for new script files
@@ -481,7 +484,9 @@ automated_issues:
                 f"tests/{script_name}_test.py"
             ]
             
-            has_test = any((self.repo_root / test_path).exists() for test_path in possible_test_files)
+            has_test = any(
+                (self.repo_root / test_path).exists() for test_path in possible_test_files
+            )
             
             if not has_test:
                 # Check if this is a significant file (has classes or multiple functions)
