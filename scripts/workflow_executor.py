@@ -17,7 +17,7 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 
 # Configuration constants to avoid hardcoded values
@@ -258,7 +258,7 @@ class WorkflowExecutor:
         print("    ⚠️  Could not extract coverage data, using defaults")
         return coverage_percentage, coverage_maintained
 
-    def _analyze_ci_failure(self, stdout_output: str, exception) -> bool:
+    def _analyze_ci_failure(self, stdout_output: str, exception: Exception) -> bool:
         """Analyze CI failure to determine if tests actually failed or just lint issues."""
 
         # Ensure stdout_output is a string
@@ -310,7 +310,9 @@ class WorkflowExecutor:
         print("    🔍 Could not determine failure type, assuming test failure")
         return True
 
-    def _generate_template_content(self, issue_title: str, issue_body: str, labels: list) -> str:
+    def _generate_template_content(
+        self, issue_title: str, issue_body: str, labels: List[str]
+    ) -> str:
         """Generate task template content."""
         labels_str = ", ".join(labels) if labels else "None"
         title_slug = issue_title.lower().replace(" ", "-")[:50]
@@ -404,7 +406,7 @@ class WorkflowExecutor:
             print(f"Warning: Regex error in title slug generation: {e}")
             return title.lower().replace(" ", "-")[:50].rstrip("-")
 
-    def _determine_branch_type(self, labels: list) -> str:
+    def _determine_branch_type(self, labels: List[Dict[str, Any]]) -> str:
         """Determine branch type based on issue labels."""
         label_names = [label.get("name", "").lower() for label in labels]
 

@@ -3,7 +3,15 @@
 Workflow Task Bridge - Enables Task tool integration for workflow implementation phase.
 
 This module provides a bridge between the workflow executor subprocess and Claude Code's
-Task tool, allowing automated code implementation during the workflow.
+Task tool, allowing automated code implementation during the workflow. The bridge works
+by creating marker files that signal the parent Claude Code process to execute the Task
+tool with specific prompts, enabling seamless integration between workflow automation
+and actual code implementation.
+
+Key Components:
+- WorkflowTaskBridge: Creates task requests and manages communication
+- create_implementation_script: Generates executable scripts for Task tool integration
+- File-based communication protocol for subprocess-to-parent process signaling
 """
 
 import json

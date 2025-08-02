@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
+@pytest.mark.e2e
 class TestWorkflowPipelineE2E:
     """End-to-end tests for the complete workflow pipeline."""
 

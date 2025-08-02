@@ -1,5 +1,5 @@
 {
-  "number": 99991,
+  "number": 999991,
   "title": "Add goodbye function to example module",
   "body": "## Problem Description\nWe need a goodbye function in the example module to complement the hello function.\n\n## Acceptance Criteria\n- [ ] Add `goodbye()` function to `src/example.py`\n- [ ] Function should return 'Goodbye, World!'\n- [ ] Add test for the new function in `tests/test_example.py`\n- [ ] Ensure all tests pass",
   "labels": [
