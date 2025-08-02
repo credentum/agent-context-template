@@ -22,22 +22,48 @@ if [[ -n "$CI_EXTRA_ARGS" ]]; then
     fi
 fi
 
+# Track PIDs of all spawned processes
+declare -a CHILD_PIDS=()
+
 # Signal handling for clean shutdown
 cleanup() {
     echo -e "\n${YELLOW}Caught signal, cleaning up...${NC}"
+
+    # First try to kill all pytest processes specifically
+    pkill -TERM -f "pytest" 2>/dev/null
+    pkill -TERM -f "mypy" 2>/dev/null
+    pkill -TERM -f "flake8" 2>/dev/null
+    pkill -TERM -f "black" 2>/dev/null
+    pkill -TERM -f "isort" 2>/dev/null
+
+    # Give processes 2 seconds to terminate gracefully
+    sleep 2
+
+    # Force kill if still running
+    pkill -9 -f "pytest" 2>/dev/null
+    pkill -9 -f "mypy" 2>/dev/null
+    pkill -9 -f "flake8" 2>/dev/null
+    pkill -9 -f "black" 2>/dev/null
+    pkill -9 -f "isort" 2>/dev/null
+
     # Kill all child processes in this process group
-    jobs -p | xargs -r kill 2>/dev/null
-    # Wait briefly for processes to exit gracefully
+    jobs -p | xargs -r kill -TERM 2>/dev/null
     sleep 1
-    # Force kill any remaining processes
     jobs -p | xargs -r kill -9 2>/dev/null
+
+    # Final cleanup - kill entire process group
+    kill -TERM -- -$$ 2>/dev/null
+
     wait
     echo -e "${GREEN}Cleanup completed${NC}"
     exit 0
 }
 
 # Set up signal handlers
-trap cleanup EXIT SIGTERM SIGINT
+trap cleanup EXIT SIGTERM SIGINT SIGHUP
+
+# Enable job control for better process management
+set -m
 
 # Colors for output
 RED='\033[0;31m'

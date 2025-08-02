@@ -1,0 +1,13 @@
+{
+  "number": 999992,
+  "title": "Create calculator module with basic operations",
+  "body": "## Problem Description\nWe need a new calculator module to handle basic mathematical operations.\n\n## Background\nThe application needs to perform calculations and we want to organize this functionality in a dedicated module.\n\n## Acceptance Criteria\n- [ ] Create `src/calculator.py` module\n- [ ] Implement `add(a, b)` function that returns sum of two numbers\n- [ ] Implement `subtract(a, b)` function that returns difference\n- [ ] Implement `multiply(a, b)` function that returns product\n- [ ] Implement `divide(a, b)` function with zero division handling\n- [ ] Create comprehensive tests in `tests/test_calculator.py`\n- [ ] Ensure 100% test coverage for the module",
+  "labels": [
+    {"name": "feature"},
+    {"name": "priority-high"}
+  ],
+  "state": "open",
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-01T00:00:00Z",
+  "user": {"login": "test-user"}
+}

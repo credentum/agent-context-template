@@ -39,7 +39,7 @@ services:
       - PYTHON_VERSION=3.11
     command: ["/bin/bash", "scripts/test-comprehensive-ci.sh"]
     stop_signal: SIGTERM
-    stop_grace_period: 720s
+    stop_grace_period: 30s
     deploy:
       resources:
         limits:

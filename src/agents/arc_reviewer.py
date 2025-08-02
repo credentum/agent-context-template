@@ -241,14 +241,30 @@ class ARCReviewer:
         return coverage_data
 
     def _check_code_quality(self, changed_files: List[str]) -> List[Dict[str, Any]]:
-        """Check code quality using pre-commit hooks."""
+        """Check code quality using comprehensive linting tools."""
         issues = []
+        python_files = [f for f in changed_files if f.endswith('.py')]
+        
+        if not python_files:
+            return issues
 
-        # Run pre-commit on all files
+        # 1. Check line lengths with flake8 (100 character limit)
+        issues.extend(self._check_line_lengths(python_files))
+        
+        # 2. Check import sorting with isort
+        issues.extend(self._check_import_sorting(python_files))
+        
+        # 3. Check for timeout issues in cleanup operations
+        issues.extend(self._check_timeout_issues(python_files))
+        
+        # 4. Check for missing tests
+        issues.extend(self._check_missing_tests(python_files))
+        
+        # 5. Run pre-commit hooks (if available)
         cmd = ["pre-commit", "run", "--all-files"]
         exit_code, stdout, stderr = self._run_command(cmd)
 
-        if exit_code != 0:
+        if exit_code != 0 and "command not found" not in stderr.lower():
             issues.append(
                 {
                     "description": "Pre-commit hooks failed",
@@ -259,6 +275,152 @@ class ARCReviewer:
                 }
             )
 
+        return issues
+    
+    def _check_line_lengths(self, python_files: List[str]) -> List[Dict[str, Any]]:
+        """Check for lines exceeding 100 character limit."""
+        issues = []
+        
+        for file_path in python_files:
+            full_path = self.repo_root / file_path
+            if not full_path.exists():
+                continue
+                
+            try:
+                with open(full_path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    
+                for line_num, line in enumerate(lines, 1):
+                    # Remove newline for length check but preserve for context
+                    line_content = line.rstrip('\n\r')
+                    if len(line_content) > 100:
+                        issues.append({
+                            "description": f"Line too long ({len(line_content)} > 100 characters)",
+                            "file": file_path,
+                            "line": line_num,
+                            "category": "code_quality",
+                            "fix_guidance": "Break the line into multiple lines or use variables"
+                        })
+            except (UnicodeDecodeError, FileNotFoundError):
+                continue
+                
+        return issues
+    
+    def _check_import_sorting(self, python_files: List[str]) -> List[Dict[str, Any]]:
+        """Check import sorting with isort."""
+        issues = []
+        
+        for file_path in python_files:
+            full_path = self.repo_root / file_path
+            if not full_path.exists():
+                continue
+                
+            # Run isort --check-only --diff on the file
+            cmd = ["python", "-m", "isort", "--check-only", "--diff", str(full_path)]
+            exit_code, stdout, stderr = self._run_command(cmd)
+            
+            if exit_code != 0 and stdout.strip():
+                issues.append({
+                    "description": "Import statements not properly sorted",
+                    "file": file_path,
+                    "line": 1,  # Import issues are typically at the top
+                    "category": "code_quality",
+                    "fix_guidance": f"Run 'isort --profile black {file_path}' to fix imports"
+                })
+                
+        return issues
+    
+    def _check_timeout_issues(self, python_files: List[str]) -> List[Dict[str, Any]]:
+        """Check for potential infinite wait operations without timeout."""
+        issues = []
+        
+        for file_path in python_files:
+            full_path = self.repo_root / file_path
+            if not full_path.exists():
+                continue
+                
+            try:
+                with open(full_path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    
+                for line_num, line in enumerate(lines, 1):
+                    line_stripped = line.strip()
+                    # Look for wait() calls without timeout
+                    if '.wait()' in line_stripped and 'timeout' not in line_stripped:
+                        issues.append({
+                            "description": "Potential infinite wait in cleanup without timeout",
+                            "file": file_path,
+                            "line": line_num,
+                            "category": "code_quality",
+                            "fix_guidance": "Add timeout parameter to wait() call"
+                        })
+                    # Look for subprocess.run without timeout
+                    elif 'subprocess.run(' in line_stripped and 'timeout=' not in line_stripped:
+                        # Check if this is in a cleanup or long-running context
+                        context_lines = lines[max(0, line_num-3):line_num+2]
+                        context = ' '.join(line.strip().lower() for line in context_lines)
+                        keywords = ['cleanup', 'kill', 'pkill', 'docker']
+                if any(keyword in context for keyword in keywords):
+                            issues.append({
+                                "description": "Long-running operation without timeout",
+                                "file": file_path,
+                                "line": line_num,
+                                "category": "code_quality",
+                                "fix_guidance": (
+                            "Add timeout parameter to subprocess.run() to prevent hanging"
+                        )
+                            })
+            except (UnicodeDecodeError, FileNotFoundError):
+                continue
+                
+        return issues
+        
+    def _check_missing_tests(self, python_files: List[str]) -> List[Dict[str, Any]]:
+        """Check for missing test files for new functionality."""
+        issues = []
+        
+        # Look for new Python files in scripts/ that don't have corresponding tests
+        script_files = [
+            f for f in python_files 
+            if f.startswith('scripts/') and not f.endswith('__init__.py')
+        ]
+        
+        for script_file in script_files:
+            # Check if corresponding test file exists
+            script_name = Path(script_file).stem
+            possible_test_files = [
+                f"tests/test_{script_name}.py",
+                f"tests/test_{script_name}_integration.py",
+                f"tests/{script_name}_test.py"
+            ]
+            
+            has_test = any(
+                (self.repo_root / test_path).exists() for test_path in possible_test_files
+            )
+            
+            if not has_test:
+                # Check if this is a significant new file (not just a small utility)
+                full_path = self.repo_root / script_file
+                if full_path.exists():
+                    try:
+                        with open(full_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            # If file has classes or significant functions, it needs tests
+                            has_class_and_def = 'class ' in content and 'def ' in content
+                            has_many_functions = content.count('def ') > 2
+                            if has_class_and_def or has_many_functions:
+                                issues.append({
+                                    "description": f"Missing test for {script_file} functionality",
+                                    "file": script_file,
+                                    "line": 1,
+                                    "category": "test_coverage",
+                                    "fix_guidance": (
+                                        f"Add unit tests for {script_name} class and functions"
+                                    )
+                                })
+                    except (UnicodeDecodeError, FileNotFoundError):
+                        continue
+                        
         return issues
 
     def _check_context_integrity(self, changed_files: List[str]) -> List[Dict[str, Any]]:
