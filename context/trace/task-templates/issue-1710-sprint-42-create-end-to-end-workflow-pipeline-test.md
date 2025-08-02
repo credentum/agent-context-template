@@ -1,3 +1,7 @@
+---
+schema_version: '1.0'
+---
+
 # ────────────────────────────────────────────────────────────────────────
 # TASK: issue-1710-[sprint-4.2]-create-end-to-end-workflow-pipeline-t
 # Generated from GitHub Issue #1710

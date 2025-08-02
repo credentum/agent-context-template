@@ -57,8 +57,9 @@ class WorkflowExecutor:
                     )
                     if result.returncode == 0:
                         test_processes_killed += 1
-                except Exception:
-                    pass
+                except (subprocess.SubprocessError, OSError) as e:
+                    # Process might not exist or already terminated, continue cleanup
+                    print(f"    ⚠️  Could not kill process: {e}")
 
             if test_processes_killed > 0:
                 print(f"    🔪 Killed {test_processes_killed} types of test processes")
@@ -86,8 +87,9 @@ class WorkflowExecutor:
                             timeout=15,
                         )
                         containers_stopped += 1
-                    except Exception:
-                        pass  # Some containers might already be stopping
+                    except (subprocess.SubprocessError, OSError) as e:
+                        # Container might not exist or already stopped
+                        print(f"    ⚠️  Could not stop container {container_id}: {e}")
 
                 if containers_stopped > 0:
                     print(f"    🐳 Stopped {containers_stopped} Docker containers")
@@ -113,8 +115,9 @@ class WorkflowExecutor:
                 capture_output=True,
                 timeout=5,
             )
-        except Exception:
-            pass
+        except (subprocess.SubprocessError, OSError, FileNotFoundError) as e:
+            # pkill command might not exist or no matching processes
+            print(f"    ⚠️  Could not kill coverage processes: {e}")
 
         # Step 5: Extended wait for cleanup completion
         print("    ⏳ Waiting for cleanup to complete...")
@@ -130,8 +133,9 @@ class WorkflowExecutor:
             )
             if result.returncode == 0:
                 remaining_processes = len(result.stdout.decode().strip().split("\n"))
-        except Exception:
-            pass
+        except (subprocess.SubprocessError, OSError, UnicodeDecodeError) as e:
+            # Command might fail or output might be invalid
+            print(f"    ⚠️  Could not check remaining processes: {e}")
 
         remaining_containers = 0
         try:
@@ -143,8 +147,9 @@ class WorkflowExecutor:
             )
             if result.returncode == 0 and result.stdout.strip():
                 remaining_containers = len(result.stdout.strip().split("\n"))
-        except Exception:
-            pass
+        except (subprocess.SubprocessError, OSError) as e:
+            # Docker command might fail or not be available
+            print(f"    ⚠️  Could not check Docker containers: {e}")
 
         if remaining_processes > 0 or remaining_containers > 0:
             print(
