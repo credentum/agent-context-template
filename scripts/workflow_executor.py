@@ -741,7 +741,8 @@ class WorkflowExecutor:
             else self._extract_section(issue_body, "Acceptance Criteria")
         )
 
-        implementation_prompt = f"""You are implementing code changes for GitHub Issue #{self.issue_number}.
+        issue_num = self.issue_number
+        implementation_prompt = f"""You are implementing code changes for GitHub Issue #{issue_num}.
 
 Issue Title: {issue_title}
 
@@ -852,7 +853,8 @@ task_prompt = \"\"\"
 \"\"\"
 
 # Execute with Task tool
-# task --description "Implement issue #{self.issue_number}" --prompt task_prompt --subagent_type "general-purpose"
+# task --description "Implement issue #{issue_num}" \\
+#      --prompt task_prompt --subagent_type "general-purpose"
 ```
 
 ### Option 2: Manual Implementation
@@ -1046,7 +1048,7 @@ Manual implementation required following the task template.
                         "git",
                         "commit",
                         "-m",
-                        f"docs(error): document implementation error for issue #{self.issue_number}",
+                        f"docs(error): implementation error for issue #{self.issue_number}",
                     ],
                     check=True,
                 )
@@ -1656,7 +1658,7 @@ Manual implementation required following the task template.
 
             print(f"📄 Code files changed: {modified_code_files}")
             print(
-                f"📊 Total changed files: {len(changed_files)}, Code changes: {len(modified_code_files)}"
+                f"📊 Total files: {len(changed_files)}, Code changes: {len(modified_code_files)}"
             )
 
             return len(modified_code_files) > 0
